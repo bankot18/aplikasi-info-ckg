@@ -37,16 +37,46 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadStoredUserDatabase() {
-  const saved = localStorage.getItem('ckg_user_db');
-  if (saved) {
-    try { usersDb = JSON.parse(saved); }
-    catch (e) { usersDb = INITIAL_USERS_DB; }
+  // Force clean stale local storage keys from previous test sessions
+  const isV2Synced = localStorage.getItem('ckg_user_db_v2_synced');
+
+  if (!isV2Synced) {
+    localStorage.removeItem('ckg_user_db');
+    localStorage.setItem('ckg_user_db_v2_synced', 'true');
+    usersDb = [...INITIAL_USERS_DB];
   } else {
-    usersDb = INITIAL_USERS_DB;
-    saveUserDatabaseToStorage();
+    const saved = localStorage.getItem('ckg_user_db');
+    let loaded = null;
+    if (saved) {
+      try { loaded = JSON.parse(saved); } catch (e) { loaded = null; }
+    }
+
+    const legacyBlacklist = ['babeh', 'babcri', 'testuser', 'demo'];
+
+    if (Array.isArray(loaded) && loaded.length > 0) {
+      usersDb = loaded.filter(u => u && u.nama_user && !legacyBlacklist.includes(String(u.nama_user).toLowerCase().trim()));
+
+      INITIAL_USERS_DB.forEach(initUser => {
+        if (!usersDb.some(u => u.nama_user === initUser.nama_user)) {
+          usersDb.push(initUser);
+        }
+      });
+    } else {
+      usersDb = [...INITIAL_USERS_DB];
+    }
   }
+
+  saveUserDatabaseToStorage();
   populateUserDropdowns();
   fetchCloudUsers();
+}
+
+function resetUserDatabaseToDefault() {
+  usersDb = JSON.parse(JSON.stringify(INITIAL_USERS_DB));
+  localStorage.setItem('ckg_user_db', JSON.stringify(usersDb));
+  localStorage.setItem('ckg_user_db_v2_synced', 'true');
+  populateUserDropdowns();
+  if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
 }
 
 function saveUserDatabaseToStorage() {
@@ -1631,6 +1661,28 @@ function closeInputModal() {
 
 function openAddUserModal() {
   document.getElementById('addUserForm').reset();
+  document.getElementById('editingUserOriginalName').value = '';
+  const titleEl = document.getElementById('userModalTitle');
+  const btnSubmit = document.getElementById('btnSubmitUser');
+  if (titleEl) titleEl.innerHTML = '<i class="bi bi-person-plus-fill" style="color: var(--primary);"></i> Tambah User Database Baru';
+  if (btnSubmit) btnSubmit.textContent = 'Simpan User';
+  document.getElementById('userModalOverlay').classList.add('open');
+}
+
+function openEditUserModal(namaUser) {
+  const user = usersDb.find(u => u.nama_user === namaUser);
+  if (!user) return;
+
+  document.getElementById('editingUserOriginalName').value = namaUser;
+  document.getElementById('newNamaUser').value = user.nama_user;
+  document.getElementById('newPassword').value = user.password || '';
+  document.getElementById('newRole').value = user.role || 'Petugas';
+
+  const titleEl = document.getElementById('userModalTitle');
+  const btnSubmit = document.getElementById('btnSubmitUser');
+  if (titleEl) titleEl.innerHTML = '<i class="bi bi-pencil-square" style="color: var(--amber);"></i> Edit Data User Database';
+  if (btnSubmit) btnSubmit.textContent = 'Simpan Perubahan';
+
   document.getElementById('userModalOverlay').classList.add('open');
 }
 
@@ -1640,6 +1692,7 @@ function closeAddUserModal() {
 
 function handleAddUserSubmit(e) {
   e.preventDefault();
+  const originalName = document.getElementById('editingUserOriginalName').value;
   const namaUser = document.getElementById('newNamaUser').value.trim();
   const password = document.getElementById('newPassword').value.trim();
   const role = document.getElementById('newRole').value;
@@ -1649,19 +1702,39 @@ function handleAddUserSubmit(e) {
     return;
   }
 
-  const existing = usersDb.find(u => u.nama_user.toLowerCase() === namaUser.toLowerCase());
-  if (existing) {
-    showToast('User dengan Nama User ini sudah terdaftar!', 'error');
-    return;
+  const isEdit = !!originalName;
+
+  if (isEdit) {
+    const duplicate = usersDb.find(u => u.nama_user.toLowerCase() === namaUser.toLowerCase() && u.nama_user !== originalName);
+    if (duplicate) {
+      showToast('User dengan Nama User ini sudah terdaftar!', 'error');
+      return;
+    }
+
+    const index = usersDb.findIndex(u => u.nama_user === originalName);
+    if (index !== -1) {
+      usersDb[index] = { nama_user: namaUser, password: password, role: role };
+    }
+
+    if (originalName !== namaUser) {
+      deleteUserFromCloud(originalName);
+    }
+  } else {
+    const existing = usersDb.find(u => u.nama_user.toLowerCase() === namaUser.toLowerCase());
+    if (existing) {
+      showToast('User dengan Nama User ini sudah terdaftar!', 'error');
+      return;
+    }
+
+    const newUser = { nama_user: namaUser, password: password, role: role };
+    usersDb.unshift(newUser);
   }
 
-  const newUser = { nama_user: namaUser, password: password, role: role };
-  usersDb.unshift(newUser);
   saveUserDatabaseToStorage();
-  syncUsersToCloud([newUser]);
+  syncUsersToCloud(usersDb);
   closeAddUserModal();
   renderUserDatabaseTable();
-  showToast(`User Baru (${namaUser}) Berhasil Ditambahkan ke Database!`, 'success');
+  showToast(isEdit ? `User (${namaUser}) Berhasil Diperbarui!` : `User Baru (${namaUser}) Berhasil Ditambahkan ke Database!`, 'success');
 }
 
 function deleteUser(namaUser) {
@@ -1848,6 +1921,8 @@ function renderUserDatabaseTable() {
     if (u.role === 'Admin') roleBadge = `<span class="badge badge-rose">Admin</span>`;
     if (u.role === 'Koordinator') roleBadge = `<span class="badge badge-amber">Koordinator</span>`;
 
+    const safeNama = u.nama_user.replace(/'/g, "\\'");
+
     return `
       <tr>
         <td>${i + 1}</td>
@@ -1856,11 +1931,16 @@ function renderUserDatabaseTable() {
         <td>${roleBadge}</td>
         <td>${isCurrentActive ? '<span class="badge badge-emerald"><i class="bi bi-circle-fill" style="font-size:8px;"></i> Session Aktif</span>' : '<span class="badge badge-cyan">Offline</span>'}</td>
         <td>
-          ${u.nama_user !== "Mochamad Fauzie, S.Gz" ? `
-            <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.nama_user}')" title="Hapus User">
-              <i class="bi bi-trash"></i> Hapus
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button class="btn btn-amber btn-sm" onclick="openEditUserModal('${safeNama}')" title="Edit User">
+              <i class="bi bi-pencil-square"></i> Edit
             </button>
-          ` : '<span style="font-size: 11px; color: var(--text-muted); font-style: italic;">Admin Utama</span>'}
+            ${u.nama_user !== "Mochamad Fauzie, S.Gz" ? `
+              <button class="btn btn-danger btn-sm" onclick="deleteUser('${safeNama}')" title="Hapus User">
+                <i class="bi bi-trash"></i> Hapus
+              </button>
+            ` : ''}
+          </div>
         </td>
       </tr>
     `;
