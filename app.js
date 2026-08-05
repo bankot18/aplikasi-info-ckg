@@ -143,6 +143,7 @@ function loadStoredSimpusRecords() {
 
 function saveSimpusRecordsToStorage() {
   localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+  syncSimpusToCloud(simpusRecords);
 }
 
 function checkAuthSession() {
@@ -2428,4 +2429,123 @@ function renderDukcapilResultCard(data, isOfficial = false, isValid = true) {
     </div>
   `;
 }
+
+/* ==========================================================================
+   CLOUDFLARE D1 DATABASE CLOUD SYNC ENGINE
+   ========================================================================== */
+
+let isSyncingWithCloud = false;
+
+// Async function to pull latest SIMPUS data from Cloudflare D1 Database
+async function fetchCloudSimpusRecords(silent = false) {
+  try {
+    const res = await fetch('/api/simpus', { method: 'GET' });
+    if (!res.ok) throw new Error('API Endpoint /api/simpus not available');
+
+    const result = await res.json();
+    if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
+      // Merge Cloud D1 records into local state
+      simpusRecords = result.data;
+      localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+
+      // Re-render UI views if active
+      if (typeof renderSimpusView === 'function') renderSimpusView();
+      if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+
+      updateCloudSyncPill(true, `D1 Online (${result.count} Rec)`);
+      if (!silent && typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'success',
+          title: 'Cloud Sync Berhasil',
+          text: `Data (${result.count} Pasien) berhasil disinkronisasi dari Cloudflare D1 Database!`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+      return true;
+    } else if (result && result.success && result.count === 0 && simpusRecords.length > 0) {
+      // D1 Database empty, push local records to Cloud D1
+      syncSimpusToCloud(simpusRecords);
+      updateCloudSyncPill(true, 'D1 Synced');
+    }
+  } catch (err) {
+    updateCloudSyncPill(false, 'Mode Offline / LocalStorage');
+  }
+  return false;
+}
+
+// Async function to push SIMPUS data to Cloudflare D1 Database
+async function syncSimpusToCloud(records) {
+  if (!records || records.length === 0 || isSyncingWithCloud) return;
+
+  isSyncingWithCloud = true;
+  updateCloudSyncPill('syncing', 'Syncing...');
+
+  try {
+    const res = await fetch('/api/simpus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(records)
+    });
+
+    if (res.ok) {
+      updateCloudSyncPill(true, 'D1 Synced');
+    } else {
+      updateCloudSyncPill(false, 'Local Storage');
+    }
+  } catch (err) {
+    updateCloudSyncPill(false, 'Local Storage');
+  } finally {
+    isSyncingWithCloud = false;
+  }
+}
+
+// Update the Cloud Sync Badge pill in the top header
+function updateCloudSyncPill(status, text) {
+  const pill = document.getElementById('cloudSyncPill');
+  const icon = document.getElementById('cloudSyncIcon');
+  const textEl = document.getElementById('cloudSyncStatusText');
+
+  if (!pill || !icon || !textEl) return;
+
+  if (status === true) {
+    pill.style.background = '#f0fdf4';
+    pill.style.border = '1px solid #86efac';
+    pill.style.color = '#166534';
+    icon.className = 'bi bi-cloud-check-fill';
+    icon.style.color = '#22c55e';
+    textEl.innerHTML = `Cloud Sync: <strong>${text || 'D1 Online'}</strong>`;
+  } else if (status === 'syncing') {
+    pill.style.background = '#fefce8';
+    pill.style.border = '1px solid #fef08a';
+    pill.style.color = '#854d0e';
+    icon.className = 'bi bi-cloud-arrow-up-fill';
+    icon.style.color = '#eab308';
+    textEl.innerHTML = `Cloud Sync: <strong>${text || 'Mengirim...'}</strong>`;
+  } else {
+    pill.style.background = '#eff6ff';
+    pill.style.border = '1px solid #bfdbfe';
+    pill.style.color = '#1e40af';
+    icon.className = 'bi bi-hdd-fill';
+    icon.style.color = '#3b82f6';
+    textEl.innerHTML = `Storage: <strong>${text || 'Local Browser'}</strong>`;
+  }
+}
+
+// Force manual sync on header pill click
+async function forceSyncWithCloud(showToast = true) {
+  updateCloudSyncPill('syncing', 'Syncing...');
+  const success = await fetchCloudSimpusRecords(!showToast);
+  if (!success && simpusRecords.length > 0) {
+    await syncSimpusToCloud(simpusRecords);
+  }
+}
+
+// Auto-trigger Cloud Sync on app startup
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    fetchCloudSimpusRecords(true);
+  }, 1000);
+});
+
 

@@ -7,8 +7,8 @@ Panduan lengkap untuk mempublikasikan **Sistem Informasi CKG Puskesmas Banjaran 
 ## 📋 Ringkasan Arsitektur
 - **Frontend & App Logic**: Cloudflare Pages (Static Assets + Single Page Application)
 - **Database Storage**:
-  - **Primary**: LocalStorage / IndexedDB dengan Fitur Import/Export XLSX terintegrasi.
-  - **Cloud Database (Optional)**: Cloudflare D1 (Serverless SQL Database) menggunakan file `schema.sql`.
+  - **Cloud Sync**: Cloudflare Pages Functions (`/api/simpus`, `/api/users`) yang terhubung langsung secara real-time ke **Cloudflare D1 Database** (`ckg_database`). Data otomatis sinkron di semua HP/device petugas!
+  - **Offline Fallback**: LocalStorage + Fitur Import/Export XLSX terintegrasi saat offline.
 - **Dukcapil Service**: Dual-Engine (Automated Spring Boot 8081 Connector + Fallback Local NIK Parser).
 
 ---
