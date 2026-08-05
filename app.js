@@ -46,6 +46,7 @@ function loadStoredUserDatabase() {
     saveUserDatabaseToStorage();
   }
   populateUserDropdowns();
+  fetchCloudUsers();
 }
 
 function saveUserDatabaseToStorage() {
@@ -58,26 +59,33 @@ function populateUserDropdowns() {
   const targetSelect = document.getElementById('targetPetugasSelect');
 
   if (loginSelect) {
+    const prevVal = loginSelect.value;
     loginSelect.innerHTML = '<option value="">-- Pilih Nama Pegawai --</option>';
-    usersDb.forEach((u, idx) => {
+    usersDb.forEach((u) => {
       const opt = document.createElement('option');
       opt.value = u.nama_user;
       opt.dataset.role = u.role || 'Petugas';
       opt.dataset.needPass = (u.password && u.password.trim() !== '') ? 'true' : 'false';
       opt.textContent = `${u.nama_user}${u.role !== 'Petugas' ? ' (' + u.role + ')' : ''}`;
-      if (idx === 0) opt.selected = true;
+      if (prevVal && u.nama_user === prevVal) opt.selected = true;
       loginSelect.appendChild(opt);
     });
   }
 
   if (targetSelect) {
+    const prevTarget = targetSelect.value;
     targetSelect.innerHTML = '<option value="">-- Pilih Petugas --</option>';
     usersDb.forEach(u => {
       const opt = document.createElement('option');
       opt.value = u.nama_user;
       opt.textContent = u.nama_user;
+      if (prevTarget && u.nama_user === prevTarget) opt.selected = true;
       targetSelect.appendChild(opt);
     });
+  }
+
+  if (typeof updatePasswordVisibility === 'function') {
+    updatePasswordVisibility();
   }
 }
 
@@ -1647,8 +1655,10 @@ function handleAddUserSubmit(e) {
     return;
   }
 
-  usersDb.unshift({ nama_user: namaUser, password: password, role: role });
+  const newUser = { nama_user: namaUser, password: password, role: role };
+  usersDb.unshift(newUser);
   saveUserDatabaseToStorage();
+  syncUsersToCloud([newUser]);
   closeAddUserModal();
   renderUserDatabaseTable();
   showToast(`User Baru (${namaUser}) Berhasil Ditambahkan ke Database!`, 'success');
@@ -1663,6 +1673,7 @@ function deleteUser(namaUser) {
   if (confirm(`Apakah Anda yakin ingin menghapus User [${namaUser}] dari Database?`)) {
     usersDb = usersDb.filter(u => u.nama_user !== namaUser);
     saveUserDatabaseToStorage();
+    deleteUserFromCloud(namaUser);
     renderUserDatabaseTable();
     showToast(`User ${namaUser} Berhasil Dihapus!`, 'success');
   }
@@ -2501,18 +2512,40 @@ async function fetchCloudUsers() {
       if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
         usersDb = result.data;
         saveUserDatabaseToStorage();
-        if (typeof renderUserTable === 'function') renderUserTable();
+        if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
       }
     }
   } catch (e) {}
 }
 
+async function syncUsersToCloud(users) {
+  try {
+    await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(users)
+    });
+  } catch (e) {
+    console.warn('[Cloud Sync Error] Users failed to push to D1:', e);
+  }
+}
+
+async function deleteUserFromCloud(namaUser) {
+  try {
+    await fetch(`/api/users?nama_user=${encodeURIComponent(namaUser)}`, {
+      method: 'DELETE'
+    });
+  } catch (e) {
+    console.warn('[Cloud Sync Error] User delete failed in D1:', e);
+  }
+}
+
 // Auto-trigger Cloud Sync on app startup
 document.addEventListener('DOMContentLoaded', () => {
+  fetchCloudUsers();
   setTimeout(() => {
-    fetchCloudUsers();
     fetchCloudSimpusRecords(true);
-  }, 1000);
+  }, 500);
 });
 
 
