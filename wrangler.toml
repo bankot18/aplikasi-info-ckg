@@ -1,7 +1,10 @@
 # Cloudflare Pages & Workers Configuration
 name = "aplikasi-info-ckg"
 compatibility_date = "2024-08-01"
-pages_build_output_dir = "."
+
+[assets]
+directory = "."
+
 
 # Cloudflare D1 Database Binding (Serverless SQL Database)
 # To bind D1 Database, create database in Cloudflare dashboard and uncomment below:
