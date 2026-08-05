@@ -125,19 +125,11 @@ function loadStoredSimpusRecords() {
   if (saved) {
     try {
       simpusRecords = JSON.parse(saved);
-      // Ensure divided sample records exist if only un-divided items were saved
-      const hasDivided = simpusRecords.some(r => r.is_divided);
-      if (!hasDivided) {
-        simpusRecords = INITIAL_SIMPUS_RECORDS;
-        saveSimpusRecordsToStorage();
-      }
     } catch (e) {
-      simpusRecords = INITIAL_SIMPUS_RECORDS;
-      saveSimpusRecordsToStorage();
+      simpusRecords = [];
     }
   } else {
-    simpusRecords = INITIAL_SIMPUS_RECORDS;
-    saveSimpusRecordsToStorage();
+    simpusRecords = [];
   }
 }
 
