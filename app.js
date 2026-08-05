@@ -9,83 +9,14 @@ const INITIAL_USERS_DB = [
   { nama_user: "Teti Nuryati, S.Keb, Bdn", password: "", role: "Petugas" }
 ];
 
-// Sample Officers List matching Reference Screenshot
-const OFFICERS_DATA = [
-  { nama: "Anisa Rohmatunisa, AM.Keb", luarCount: 131, dalamCount: 0 },
-  { nama: "Neng Yulia Trisnawati, AM.Keb", luarCount: 1, dalamCount: 94 },
-  { nama: "Mochamad Fauzie, S.Gz", luarCount: 83, dalamCount: 0 },
-  { nama: "Teti Nuryati, S.Keb, Bdn", luarCount: 6, dalamCount: 71 },
-  { nama: "Indri Yusnita, Amd.Kep", luarCount: 7, dalamCount: 67 },
-  { nama: "Muhamad Faridz Alparizy, Amd.Kep", luarCount: 32, dalamCount: 12 },
-  { nama: "N. Yayat Rohayati, AM.Keb", luarCount: 4, dalamCount: 31 },
-  { nama: "Nong Sahtri NurLidyawati", luarCount: 31, dalamCount: 0 },
-  { nama: "Suhera", luarCount: 5, dalamCount: 26 },
-  { nama: "Dsi Tati Mulyati, Amd.Kep", luarCount: 4, dalamCount: 14 },
-  { nama: "Irawan Winarso, AM.Keb", luarCount: 0, dalamCount: 16 },
-  { nama: "Andriana Meihardyntie, Amd.Keb", luarCount: 0, dalamCount: 12 },
-  { nama: "Sabrianita, SKM", luarCount: 10, dalamCount: 0 },
-  { nama: "Rini Julianti, SE", luarCount: 9, dalamCount: 0 },
-  { nama: "Ritza NurMutiari, A.Md.AK", luarCount: 2, dalamCount: 5 }
-];
+// Officers List (Populated dynamically from database)
+const OFFICERS_DATA = [];
 
-// Initial SIMPUS Mock Data matching exact user screenshots
-const INITIAL_SIMPUS_RECORDS = [
-  // Data Belum Di-Bagi
-  { id: "S-3888", no: 3888, tanggal: "30/07/2026", nama: "TITIN JULAEHA", nik: "3204134108800005", alamat: "PAJAGALAN 2/12", dob: "08/01/1980", usia: 46, bb: 75, tb: 160, imt: 29.3, sistol: 99, diastol: 63, gula: 106, kolesterol: "-", keterangan: "Dewasa", is_divided: false, assigned_to: "", entry_status: "berhasil" },
-  { id: "S-3889", no: 3889, tanggal: "30/07/2026", nama: "HERMAWAN", nik: "3204131001490004", alamat: "BABAKAN STASION 1/4", dob: "01/10/1949", usia: 76, bb: 83, tb: 158, imt: 33.2, sistol: 119, diastol: 85, gula: 91, kolesterol: "-", keterangan: "Lansia", is_divided: false, assigned_to: "", entry_status: "berhasil" },
-  { id: "S-3890", no: 3890, tanggal: "30/07/2026", nama: "LIA MOELYANTI", nik: "3204136810700005", alamat: "PASUNDAN 2/5", dob: "28/09/1970", usia: 55, bb: 54, tb: 150, imt: 24, sistol: 123, diastol: 72, gula: 91, kolesterol: "-", keterangan: "Lansia", is_divided: false, assigned_to: "", entry_status: "berhasil" },
-  { id: "S-3891", no: 3891, tanggal: "30/07/2026", nama: "IMAS DARMINAH", nik: "3204134910700002", alamat: "BABAKAN PASUNDAN 4/5", dob: "10/09/1970", usia: 55, bb: 54, tb: 156, imt: 22.2, sistol: 99, diastol: 83, gula: 102, kolesterol: "-", keterangan: "Dewasa", is_divided: false, assigned_to: "", entry_status: "berhasil" },
-  { id: "S-3892", no: 3892, tanggal: "30/07/2026", nama: "NY TOTO", nik: "3204135010600013", alamat: "BABAKAN STASION 2/4", dob: "10/10/1960", usia: 65, bb: 44, tb: 157, imt: 17.9, sistol: 119, diastol: 63, gula: 87, kolesterol: "-", keterangan: "Lansia", is_divided: false, assigned_to: "", entry_status: "berhasil" },
-  { id: "S-3893", no: 3893, tanggal: "30/07/2026", nama: "IIS N AISYAH", nik: "3204135512610008", alamat: "PASUNDAN 3/5", dob: "15/12/1961", usia: 64, bb: 55, tb: 150, imt: 24.4, sistol: 123, diastol: 85, gula: 72, kolesterol: "-", keterangan: "Lansia", is_divided: false, assigned_to: "", entry_status: "berhasil" },
-  { id: "S-3894", no: 3894, tanggal: "30/07/2026", nama: "YATI NURHAYATI", nik: "3204136507560001", alamat: "STASION 1/4", dob: "25/07/1956", usia: 70, bb: 47, tb: 150, imt: 20.9, sistol: 99, diastol: 72, gula: 98, kolesterol: "-", keterangan: "Lansia", is_divided: false, assigned_to: "", entry_status: "berhasil" },
-  { id: "S-3895", no: 3895, tanggal: "30/07/2026", nama: "YANTI HERYANTI", nik: "3204135808570007", alamat: "STASION TIMUR 1/4", dob: "18/08/1957", usia: 68, bb: 58, tb: 164, imt: 21.6, sistol: 119, diastol: 83, gula: 98, kolesterol: "-", keterangan: "Lansia", is_divided: false, assigned_to: "", entry_status: "berhasil" },
-  { id: "S-3896", no: 3896, tanggal: "30/07/2026", nama: "ELSA", nik: "3204136003620004", alamat: "STASIONI/4", dob: "20-31-1962", usia: 98, bb: 67, tb: 150, imt: 29.8, sistol: 123, diastol: 63, gula: 102, kolesterol: "-", keterangan: "Lansia", is_divided: false, assigned_to: "", entry_status: "berhasil" },
-  { id: "S-3897", no: 3897, tanggal: "30/07/2026", nama: "DEWI", nik: "3204134606610007", alamat: "STASIONI/4", dob: "06/06/1961", usia: 65, bb: 55, tb: 165, imt: 20.2, sistol: 99, diastol: 85, gula: 102, kolesterol: "-", keterangan: "Lansia", is_divided: false, assigned_to: "", entry_status: "berhasil" },
-  // Data Sudah Di-Bagi
-  { id: "S-3850", no: 3850, tanggal: "29/07/2026", nama: "NANI SUMARNI", nik: "3204135205750003", alamat: "CIAPUS RT 02/05", dob: "12/05/1975", usia: 51, bb: 62, tb: 155, imt: 25.8, sistol: 120, diastol: 80, gula: 110, kolesterol: "185", keterangan: "Dewasa", is_divided: true, assigned_to: "Anisa Rohmatunisa, AM.Keb", entry_status: "berhasil" },
-  { id: "S-3851", no: 3851, tanggal: "29/07/2026", nama: "SUHANA", nik: "3204131508600002", alamat: "KAMASAN RT 01/03", dob: "15/08/1960", usia: 65, bb: 70, tb: 162, imt: 26.6, sistol: 135, diastol: 85, gula: 145, kolesterol: "210", keterangan: "Lansia", is_divided: true, assigned_to: "Neng Yulia Trisnawati, AM.Keb", entry_status: "sudah" },
-  { id: "S-3852", no: 3852, tanggal: "29/07/2026", nama: "AEP SAEPUDIN", nik: "3204130203680004", alamat: "KIANGROKE RT 04/01", dob: "02/03/1968", usia: 58, bb: 68, tb: 165, imt: 24.9, sistol: 125, diastol: 82, gula: 115, kolesterol: "-", keterangan: "Dewasa", is_divided: true, assigned_to: "Teti Nuryati, S.Keb, Bdn", entry_status: "berhasil" },
-  { id: "S-3853", no: 3853, tanggal: "29/07/2026", nama: "MAMAN SURAHMAN", nik: "3204131011550001", alamat: "MARGAHURIP RT 03/02", dob: "10/11/1955", usia: 70, bb: 58, tb: 158, imt: 23.2, sistol: 140, diastol: 90, gula: 160, kolesterol: "225", keterangan: "Lansia", is_divided: true, assigned_to: "Mochamad Fauzie, S.Gz", entry_status: "berhasil" }
-];
+// SIMPUS Records (Populated dynamically from Cloudflare D1 Database)
+const INITIAL_SIMPUS_RECORDS = [];
 
-// Initial Mock Records
-const INITIAL_MOCK_RECORDS = [
-  {
-    id: "CKG-2026-001",
-    jenis_kegiatan: "Luar Gedung",
-    pos_lokasi: "Posyandu Melati RT 04",
-    nik: "3174011508850001",
-    nama: "Budi Santoso",
-    tanggal_lahir: "1985-08-15",
-    usia: 40,
-    jenis_kelamin: "L",
-    no_whatsapp: "081298765432",
-    status_pernikahan: "Kawin",
-    provinsi: "DKI Jakarta",
-    kab_kota: "Jakarta Selatan",
-    kecamatan: "Kebayoran Baru",
-    kelurahan: "Senayan",
-    alamat: "Jl. Pakubuwono VI No. 12",
-    pekerjaan: "Karyawan Swasta",
-    merokok: "Ya",
-    bb: 82.5,
-    tb: 168.0,
-    lp: 94.0,
-    imt: 29.23,
-    td_sistolik: 148,
-    td_diastolik: 92,
-    gula_darah: 215,
-    kolesterol: 230,
-    hb: 14.5,
-    telinga: "Normal",
-    mata: "Normal",
-    gigi: "Ada Kelainan",
-    katarak: "Tidak",
-    status_validasi: "Terverifikasi",
-    created_by: "petugas_ahmad",
-    created_at: "2026-08-01 09:30"
-  }
-];
+// CKG Screening Records (Populated dynamically from Cloudflare D1 Database)
+const INITIAL_MOCK_RECORDS = [];
 
 let usersDb = [];
 let records = [];
@@ -648,13 +579,15 @@ function calculateIMT() {
 // ----------------------------------------------------
 function renderSimpusView() {
   const belumBagiCount = simpusRecords.filter(r => !r.is_divided).length;
-  const sudahBagiCount = simpusRecords.filter(r => r.is_divided).length + 4613; // Match 4623 total from screenshot
+  const sudahBagiCount = simpusRecords.filter(r => r.is_divided).length;
 
   const countBelumEl = document.getElementById('countBelumBagi');
   const countSudahEl = document.getElementById('countSudahBagi');
+  const totalEntryEl = document.getElementById('totalEntryMonth');
 
   if (countBelumEl) countBelumEl.textContent = belumBagiCount;
   if (countSudahEl) countSudahEl.textContent = sudahBagiCount;
+  if (totalEntryEl) totalEntryEl.textContent = simpusRecords.length;
 
   renderSimpusTableRecords();
 }
@@ -2465,17 +2398,18 @@ async function fetchCloudSimpusRecords(silent = false) {
     if (!res.ok) throw new Error('API Endpoint /api/simpus not available');
 
     const result = await res.json();
-    if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
-      // Merge Cloud D1 records into local state
+    if (result && result.success && Array.isArray(result.data)) {
+      // Set simpusRecords exclusively to what's inside Cloudflare D1 Database!
       simpusRecords = result.data;
       localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
 
-      // Re-render UI views if active
+      // Re-render UI views
       if (typeof renderSimpusView === 'function') renderSimpusView();
       if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+      if (typeof renderTableRecords === 'function') renderTableRecords();
 
       updateCloudSyncPill(true, `D1 Online (${result.count} Rec)`);
-      if (!silent && typeof Swal !== 'undefined') {
+      if (!silent && typeof Swal !== 'undefined' && result.count > 0) {
         Swal.fire({
           icon: 'success',
           title: 'Cloud Sync Berhasil',
@@ -2485,10 +2419,6 @@ async function fetchCloudSimpusRecords(silent = false) {
         });
       }
       return true;
-    } else if (result && result.success && result.count === 0 && simpusRecords.length > 0) {
-      // D1 Database empty, push local records to Cloud D1
-      syncSimpusToCloud(simpusRecords);
-      updateCloudSyncPill(true, 'D1 Synced');
     }
   } catch (err) {
     updateCloudSyncPill(false, 'Mode Offline / LocalStorage');
