@@ -114,10 +114,40 @@ function loadStoredUserDatabase() {
     usersDb = INITIAL_USERS_DB;
     saveUserDatabaseToStorage();
   }
+  populateUserDropdowns();
 }
 
 function saveUserDatabaseToStorage() {
   localStorage.setItem('ckg_user_db', JSON.stringify(usersDb));
+  populateUserDropdowns();
+}
+
+function populateUserDropdowns() {
+  const loginSelect = document.getElementById('loginPegawaiSelect');
+  const targetSelect = document.getElementById('targetPetugasSelect');
+
+  if (loginSelect) {
+    loginSelect.innerHTML = '<option value="">-- Pilih Nama Pegawai --</option>';
+    usersDb.forEach((u, idx) => {
+      const opt = document.createElement('option');
+      opt.value = u.nama_user;
+      opt.dataset.role = u.role || 'Petugas';
+      opt.dataset.needPass = (u.password && u.password.trim() !== '') ? 'true' : 'false';
+      opt.textContent = `${u.nama_user}${u.role !== 'Petugas' ? ' (' + u.role + ')' : ''}`;
+      if (idx === 0) opt.selected = true;
+      loginSelect.appendChild(opt);
+    });
+  }
+
+  if (targetSelect) {
+    targetSelect.innerHTML = '<option value="">-- Pilih Petugas --</option>';
+    usersDb.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.nama_user;
+      opt.textContent = u.nama_user;
+      targetSelect.appendChild(opt);
+    });
+  }
 }
 
 function loadStoredSimpusRecords() {
@@ -2533,9 +2563,24 @@ async function forceSyncWithCloud(showToast = true) {
   }
 }
 
+async function fetchCloudUsers() {
+  try {
+    const res = await fetch('/api/users', { method: 'GET' });
+    if (res.ok) {
+      const result = await res.json();
+      if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
+        usersDb = result.data;
+        saveUserDatabaseToStorage();
+        if (typeof renderUserTable === 'function') renderUserTable();
+      }
+    }
+  } catch (e) {}
+}
+
 // Auto-trigger Cloud Sync on app startup
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
+    fetchCloudUsers();
     fetchCloudSimpusRecords(true);
   }, 1000);
 });
