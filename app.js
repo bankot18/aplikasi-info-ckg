@@ -3732,7 +3732,7 @@ function handleImportFileSelect(event) {
 function downloadXLSXTemplate() {
   try {
     const headers = [
-      "Jenis Kegiatan", "NIK", "Nama Pasien", "Tanggal Lahir", "Usia",
+      "Jenis Kegiatan", "Tanggal Entry", "NIK", "Nama Pasien", "Tanggal Lahir", "Usia",
       "Jenis Kelamin", "No WhatsApp", "Status Pernikahan", "Provinsi", "Kab/Kota",
       "Kecamatan", "Kelurahan", "Alamat Lengkap", "Pekerjaan", "Merokok",
       "BB (kg)", "TB (cm)", "LP (cm)", "IMT", "TD Sistolik", "TD Diastolik",
@@ -3741,7 +3741,7 @@ function downloadXLSXTemplate() {
     ];
 
     const sampleRow1 = [
-      "Luar Gedung", "3204123456780001", "Ahmad Fauzi", "1992-05-14", 34,
+      "Luar Gedung", "2026-07-15", "3204123456780001", "Ahmad Fauzi", "1992-05-14", 34,
       "L", "081234567890", "Kawin", "Jawa Barat", "Kab. Bandung",
       "Banjaran", "Banjaran Kota", "Jl. Raya Banjaran No. 45 RT 02/05", "Wiraswasta", "Tidak",
       65, 168, 82, 23.03, 120, 80,
@@ -3750,7 +3750,7 @@ function downloadXLSXTemplate() {
     ];
 
     const sampleRow2 = [
-      "Dalam Gedung", "3204987654320002", "Siti Aminah", "1988-11-20", 37,
+      "Dalam Gedung", "2026-08-05", "3204987654320002", "Siti Aminah", "1988-11-20", 37,
       "P", "085712345678", "Kawin", "Jawa Barat", "Kab. Bandung",
       "Banjaran", "Sindangpanon", "Kp. Sindangpanon RT 01/03", "Ibu Rumah Tangga", "Tidak",
       58, 155, 78, 24.14, 130, 85,
