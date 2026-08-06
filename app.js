@@ -1397,7 +1397,7 @@ function renderSimpusTableRecords() {
   if (dataset.length === 0) {
     container.innerHTML = `
       <tr>
-        <td colspan="20" style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <td colspan="19" style="text-align: center; padding: 40px; color: var(--text-muted);">
           <i class="bi bi-inbox" style="font-size: 36px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
           <strong style="font-size: 15px;">Tidak Ada Data Pasien SIMPUS</strong>
           <p style="font-size: 12.5px; margin-top: 4px;">Tidak ada data yang sesuai dengan filter atau kategori status saat ini.</p>
@@ -1426,7 +1426,6 @@ function renderSimpusTableRecords() {
         </td>
         <td><strong>${r.nama}</strong></td>
         <td><span style="font-family: monospace; font-size: 12px;">${r.nik}</span></td>
-        <td>${r.tanggal}</td>
         <td>${r.dob}</td>
         <td style="text-align: center;"><span class="badge badge-amber">${r.usia} th</span></td>
         <td>${statusPernikahan}</td>
