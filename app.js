@@ -591,22 +591,9 @@ function performLoginSuccess(user) {
     checkAuthSession();
     hideLoadingOverlay();
 
-    // Success notification
-    Swal.fire({
-      icon: 'success',
-      title: 'Login Berhasil!',
-      html: `<div style="font-size:14px;">Selamat Datang, <strong>${user.nama_user}</strong></div>
-             <div style="font-size:12px; color:#64748b; margin-top:4px;">Role: ${user.role || 'Petugas'}</div>`,
-      timer: 1800,
-      timerProgressBar: true,
-      showConfirmButton: false,
-      background: '#ffffff',
-      customClass: { popup: 'animate__animated animate__fadeInDown' }
-    }).then(() => {
-      // Trigger announcement modal right after login success alert closes!
-      setTimeout(checkAndShowAnnouncement, 200);
-    });
-  }, 800);
+    // Directly open Announcement popup (no "Login Berhasil" SweetAlert overlay)
+    setTimeout(checkAndShowAnnouncement, 300);
+  }, 600);
 }
 
 function handleLogout() {
