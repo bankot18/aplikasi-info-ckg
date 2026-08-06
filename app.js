@@ -195,27 +195,11 @@ function checkAuthSession() {
 }
 
 function setupAuthFormEvents() {
-  const selectEl = document.getElementById('loginPegawaiSelect');
-  if (selectEl) {
-    selectEl.addEventListener('change', updatePasswordVisibility);
-    updatePasswordVisibility();
-  }
+  // No need for change listener anymore since password is popup-based
 }
 
 function updatePasswordVisibility() {
-  const passContainer = document.getElementById('passwordContainer');
-  const passInput = document.getElementById('loginPassword');
-  const noticeBadge = document.getElementById('authNoticeBadge');
-  const noticeText = document.getElementById('authNoticeText');
-
-  if (passContainer) passContainer.style.display = 'block';
-  if (passInput) passInput.required = true;
-  if (noticeBadge) {
-    noticeBadge.style.background = 'var(--cyan-light)';
-    noticeBadge.style.borderColor = 'rgba(2, 132, 199, 0.2)';
-    noticeBadge.style.color = 'var(--cyan)';
-  }
-  if (noticeText) noticeText.textContent = 'Autentikasi terintegrasi dengan Database User. Masukkan Password yang sesuai.';
+  // Removed — password is now handled via SweetAlert2 popup
 }
 
 function selectPegawaiQuick(namaPegawai) {
@@ -228,83 +212,135 @@ function selectPegawaiQuick(namaPegawai) {
       break;
     }
   }
-  updatePasswordVisibility();
 }
+
+/* ==========================================================================
+   📊 LOADING OVERLAY HELPERS
+   ========================================================================== */
+
+function showLoadingOverlay(text = 'Memuat Data...', subtext = 'Menghubungkan ke Database Cloudflare D1') {
+  const overlay = document.getElementById('loadingOverlay');
+  const textEl = document.getElementById('loadingText');
+  const subtextEl = document.getElementById('loadingSubtext');
+  if (textEl) textEl.textContent = text;
+  if (subtextEl) subtextEl.textContent = subtext;
+  if (overlay) overlay.classList.add('active');
+}
+
+function hideLoadingOverlay() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+/* ==========================================================================
+   🔐 LOGIN HANDLER WITH SWEETALERT2 PASSWORD POPUP
+   ========================================================================== */
 
 function handleLogin(e) {
   e.preventDefault();
   const selectEl = document.getElementById('loginPegawaiSelect');
-  const passInput = document.getElementById('loginPassword');
 
   if (!selectEl || !selectEl.value) {
-    if (typeof Swal !== 'undefined') {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Nama Pegawai Belum Dipilih',
-        text: 'Silakan pilih Nama Pegawai terlebih dahulu dari daftar.',
-        confirmButtonColor: '#2563eb'
-      });
-    } else {
-      showToast('Silakan pilih Nama Pegawai terlebih dahulu!', 'error');
-    }
+    Swal.fire({
+      icon: 'warning',
+      title: 'Nama Pegawai Belum Dipilih',
+      text: 'Silakan pilih Nama Pegawai terlebih dahulu dari daftar.',
+      confirmButtonColor: '#2563eb'
+    });
     return;
   }
 
   const selectedPegawai = selectEl.value.trim();
-  const inputPass = passInput ? passInput.value.trim() : '';
 
   // Match against usersDb database
   const user = usersDb.find(u => u.nama_user.toLowerCase() === selectedPegawai.toLowerCase());
 
   if (!user) {
-    if (typeof Swal !== 'undefined') {
-      Swal.fire({
-        icon: 'error',
-        title: 'Login Gagal',
-        text: `User [${selectedPegawai}] tidak terdaftar di database!`,
-        confirmButtonColor: '#dc2626'
-      });
-    } else {
-      showToast('Username tidak terdaftar di database user!', 'error');
-    }
+    Swal.fire({
+      icon: 'error',
+      title: 'Login Gagal',
+      html: `User <strong>${selectedPegawai}</strong> tidak terdaftar di Database!`,
+      confirmButtonColor: '#dc2626'
+    });
     return;
   }
 
   const dbPassword = (user.password || '').trim();
 
-  if (inputPass !== dbPassword) {
-    if (typeof Swal !== 'undefined') {
-      Swal.fire({
-        icon: 'error',
-        title: 'Login Gagal!',
-        text: 'Username atau Kata Sandi yang Anda masukkan tidak sesuai dengan Database User.',
-        confirmButtonColor: '#dc2626',
-        confirmButtonText: 'Coba Lagi'
-      });
-    } else {
-      showToast('Kata Sandi tidak sesuai dengan Database User!', 'error');
-    }
+  // If user has NO password → login directly
+  if (dbPassword === '') {
+    performLoginSuccess(user);
     return;
   }
 
-  // Authentication Successful
-  sessionStorage.setItem('ckg_logged_in', 'true');
-  sessionStorage.setItem('ckg_user_name', user.nama_user);
-  sessionStorage.setItem('ckg_user_role', user.role || 'Petugas');
+  // If user HAS a password → show SweetAlert2 password popup
+  Swal.fire({
+    title: 'Masukkan Kata Sandi',
+    html: `<div style="text-align:center; margin-bottom: 8px;">
+             <div style="width:48px; height:48px; border-radius:50%; background: linear-gradient(135deg, #2563eb, #0284c7); display:inline-flex; align-items:center; justify-content:center; margin-bottom:8px;">
+               <i class="bi bi-shield-lock-fill" style="color:#fff; font-size:22px;"></i>
+             </div>
+             <div style="font-size:13px; color:#64748b; font-weight:600;">
+               Verifikasi akses <strong style="color:#0f172a;">${user.nama_user}</strong> (${user.role})
+             </div>
+           </div>`,
+    input: 'password',
+    inputPlaceholder: 'Masukkan kata sandi database...',
+    inputAttributes: {
+      autocapitalize: 'off',
+      autocorrect: 'off'
+    },
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-box-arrow-in-right"></i> Masuk',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#2563eb',
+    cancelButtonColor: '#64748b',
+    showLoaderOnConfirm: true,
+    allowOutsideClick: () => !Swal.isLoading(),
+    preConfirm: (inputPass) => {
+      if (!inputPass || inputPass.trim() === '') {
+        Swal.showValidationMessage('Kata sandi tidak boleh kosong!');
+        return false;
+      }
+      if (inputPass.trim() !== dbPassword) {
+        Swal.showValidationMessage('Kata sandi salah! Tidak sesuai dengan database.');
+        return false;
+      }
+      return inputPass;
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      performLoginSuccess(user);
+    }
+  });
+}
 
-  checkAuthSession();
+function performLoginSuccess(user) {
+  // Show loading animation
+  showLoadingOverlay('Memverifikasi Akses...', `Login sebagai ${user.nama_user}`);
 
-  if (typeof Swal !== 'undefined') {
+  setTimeout(() => {
+    // Set session
+    sessionStorage.setItem('ckg_logged_in', 'true');
+    sessionStorage.setItem('ckg_user_name', user.nama_user);
+    sessionStorage.setItem('ckg_user_role', user.role || 'Petugas');
+
+    checkAuthSession();
+    hideLoadingOverlay();
+
+    // Success notification
     Swal.fire({
       icon: 'success',
       title: 'Login Berhasil!',
-      text: `Selamat Datang, ${user.nama_user} (${user.role})`,
-      timer: 2000,
-      showConfirmButton: false
+      html: `<div style="font-size:14px;">Selamat Datang, <strong>${user.nama_user}</strong></div>
+             <div style="font-size:12px; color:#64748b; margin-top:4px;">Role: ${user.role || 'Petugas'}</div>`,
+      timer: 2200,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      background: '#ffffff',
+      customClass: { popup: 'animate__animated animate__fadeInDown' }
     });
-  } else {
-    showToast(`Login Berhasil! Selamat Datang, ${user.nama_user}`, 'success');
-  }
+  }, 800);
 }
 
 function handleLogout() {
@@ -441,11 +477,19 @@ function switchView(viewId) {
   });
 
   document.querySelectorAll('.view-panel').forEach(panel => {
-    panel.classList.toggle('active', panel.id === `view-${viewId}`);
+    const isTarget = panel.id === `view-${viewId}`;
+    panel.classList.toggle('active', isTarget);
+    // Re-trigger fade animation on switch
+    if (isTarget) {
+      panel.style.animation = 'none';
+      panel.offsetHeight; // force reflow
+      panel.style.animation = '';
+    }
   });
 
   if (viewId === 'dashboard' && typeof initDashboardCharts === 'function') {
-    setTimeout(() => initDashboardCharts(OFFICERS_DATA), 50);
+    const officersData = typeof getOfficerPerformanceData === 'function' ? getOfficerPerformanceData() : OFFICERS_DATA;
+    setTimeout(() => initDashboardCharts(officersData), 50);
   } else if (viewId === 'simpus') {
     renderSimpusView();
   }
@@ -2710,12 +2754,14 @@ function updateCloudSyncPill(status, text) {
 }
 
 // Force manual sync on header pill click
-async function forceSyncWithCloud(showToast = true) {
+async function forceSyncWithCloud(showToastMsg = true) {
+  showLoadingOverlay('Sinkronisasi Data...', 'Mengambil data terbaru dari Cloudflare D1 Database');
   updateCloudSyncPill('syncing', 'Syncing...');
-  const success = await fetchCloudSimpusRecords(!showToast);
+  const success = await fetchCloudSimpusRecords(!showToastMsg);
   if (!success && simpusRecords.length > 0) {
     await syncSimpusToCloud(simpusRecords);
   }
+  hideLoadingOverlay();
 }
 
 async function fetchCloudUsers() {
@@ -2754,12 +2800,20 @@ async function deleteUserFromCloud(namaUser) {
   }
 }
 
-// Auto-trigger Cloud Sync on app startup
+// Auto-trigger Cloud Sync on app startup with loading animation
 document.addEventListener('DOMContentLoaded', () => {
-  fetchCloudUsers();
-  setTimeout(() => {
-    fetchCloudSimpusRecords(true);
-  }, 500);
-});
+  const isLoggedIn = sessionStorage.getItem('ckg_logged_in') === 'true';
 
+  if (isLoggedIn) {
+    showLoadingOverlay('Memuat Aplikasi...', 'Menyinkronkan data dari Database Cloud');
+  }
+
+  fetchCloudUsers().then(() => {
+    return fetchCloudSimpusRecords(true);
+  }).finally(() => {
+    if (isLoggedIn) {
+      setTimeout(() => hideLoadingOverlay(), 600);
+    }
+  });
+});
 

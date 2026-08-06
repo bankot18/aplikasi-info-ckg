@@ -96,7 +96,7 @@
           
           <div class="auth-header-text">
             <h2>Selamat Datang Kembali 👋</h2>
-            <p>Silakan pilih Nama Pegawai dan masukkan Kata Sandi terdaftar Anda.</p>
+            <p>Silakan pilih Nama Pegawai Anda untuk masuk ke sistem CKG.</p>
           </div>
 
           <form id="loginForm" class="login-form">
@@ -111,24 +111,8 @@
               </div>
             </div>
 
-            <!-- Password Container (Required for ALL Users) -->
-            <div id="passwordContainer" class="form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <label class="form-label" for="loginPassword">Kata Sandi / Password <span class="required">*</span></label>
-              </div>
-              <div class="input-with-icon">
-                <i class="bi bi-lock-fill"></i>
-                <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan Kata Sandi Database" required>
-              </div>
-            </div>
-
-            <!-- Helper Notice Badge -->
-            <div id="authNoticeBadge" style="background: var(--cyan-light); border: 1px solid rgba(2, 132, 199, 0.2); border-radius: var(--radius-md); padding: 10px 12px; font-size: 12px; color: var(--cyan); font-weight: 600; display: flex; align-items: center; gap: 8px;">
-              <i class="bi bi-shield-lock-fill"></i> <span id="authNoticeText">Autentikasi terintegrasi dengan Database User. Masukkan Password yang sesuai.</span>
-            </div>
-
             <!-- Primary CTA Button -->
-            <button type="submit" class="btn btn-primary" style="height: 48px; font-size: 14.5px; border-radius: var(--radius-md); font-weight: 800; background: linear-gradient(135deg, #0284c7, #2563eb); margin-top: 6px;">
+            <button type="submit" class="btn btn-primary" id="btnLoginSubmit" style="height: 48px; font-size: 14.5px; border-radius: var(--radius-md); font-weight: 800; background: linear-gradient(135deg, #0284c7, #2563eb); margin-top: 6px;">
               Masuk Aplikasi <i class="bi bi-box-arrow-in-right" style="font-size: 16px;"></i>
             </button>
 
@@ -1214,6 +1198,13 @@
   </div>
 
   <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Fullscreen Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner-ring"></div>
+    <div class="loading-text" id="loadingText">Memuat Data...</div>
+    <div class="loading-subtext" id="loadingSubtext">Menghubungkan ke Database Cloudflare D1</div>
+  </div>
 
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
