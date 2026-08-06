@@ -3167,32 +3167,36 @@ function openImportModal() {
   // Populate & handle Target Petugas select dropdown based on Role
   const targetSelect = document.getElementById('importTargetPetugas');
   const targetHint = document.getElementById('importTargetPetugasHint');
-  const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Admin';
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Mochamad Fauzie, S.Gz';
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
 
   if (targetSelect) {
     targetSelect.innerHTML = '';
     
-    // Get list of users from system users DB
+    // Get list of registered users from active usersDb state & local storage
     let userList = [];
-    try {
-      const storedUsers = JSON.parse(localStorage.getItem('ckg_users_db') || '[]');
-      if (Array.isArray(storedUsers) && storedUsers.length > 0) {
-        userList = storedUsers.map(u => typeof u === 'string' ? u : (u.nama || u.nama_user));
-      }
-    } catch (_) {}
-
-    if (userList.length === 0) {
-      userList = ["Mochamad Fauzie, S.Gz", "Admin Puskesmas", "Petugas CKG 1", "Petugas CKG 2", "Koordinator CKG"];
+    if (Array.isArray(usersDb) && usersDb.length > 0) {
+      userList = usersDb.map(u => (u.nama_user || u.nama || '').trim()).filter(Boolean);
     }
     
+    if (userList.length === 0) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('ckg_user_db') || '[]');
+        if (Array.isArray(stored) && stored.length > 0) {
+          userList = stored.map(u => (u.nama_user || u.nama || '').trim()).filter(Boolean);
+        }
+      } catch (_) {}
+    }
+
+    // Deduplicate user list
+    userList = Array.from(new Set(userList));
+
     // Ensure loggedUser is in the list
-    if (!userList.includes(loggedUser)) {
+    if (loggedUser && !userList.includes(loggedUser)) {
       userList.unshift(loggedUser);
     }
 
     userList.forEach(uName => {
-      if (!uName) return;
       const opt = document.createElement('option');
       opt.value = uName;
       opt.textContent = uName;
@@ -3205,7 +3209,7 @@ function openImportModal() {
       targetSelect.style.backgroundColor = '#ffffff';
       targetSelect.style.cursor = 'pointer';
       if (targetHint) {
-        targetHint.innerHTML = `<i class="bi bi-unlock-fill" style="color: #059669; font-size: 13px;"></i> <strong style="color: #059669;">Akses Admin Unlocked:</strong> Anda dapat mengarahkan/mengalokasikan data import ini ke petugas mana saja.`;
+        targetHint.innerHTML = `<i class="bi bi-unlock-fill" style="color: #059669; font-size: 13px;"></i> <strong style="color: #059669;">Akses Admin Unlocked:</strong> Memilih dari total ${userList.length} User Terdaftar di Database.`;
       }
     } else {
       // Role Koordinator & Petugas -> LOCKED
@@ -3226,8 +3230,8 @@ function closeImportModal() {
 }
 
 function openAccountSettingsModal() {
-  const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Admin';
-  const role = sessionStorage.getItem('ckg_user_role') || 'Petugas';
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Mochamad Fauzie, S.Gz';
+  const role = sessionStorage.getItem('ckg_user_role') || 'Admin';
   
   const namaInput = document.getElementById('accountSettingNamaUser');
   const roleBadge = document.getElementById('accountSettingRole');
@@ -3251,7 +3255,7 @@ function closeAccountSettingsModal() {
 async function handleSaveAccountSettings(e) {
   if (e) e.preventDefault();
   
-  const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Admin';
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Mochamad Fauzie, S.Gz';
   const newPass = (document.getElementById('accountSettingNewPassword')?.value || '').trim();
   const confirmPass = (document.getElementById('accountSettingConfirmPassword')?.value || '').trim();
 
@@ -3268,23 +3272,18 @@ async function handleSaveAccountSettings(e) {
   showLoadingOverlay('Menyimpan Password...', 'Memperbarui kredensial akun user');
 
   try {
-    // 1. Update local storage ckg_users_db
-    let usersDb = [];
-    try {
-      usersDb = JSON.parse(localStorage.getItem('ckg_users_db') || '[]');
-    } catch (_) {}
-
-    let foundUser = usersDb.find(u => (u.nama || u.nama_user) === loggedUser);
+    // 1. Update global usersDb & local storage ckg_user_db
+    let foundUser = usersDb.find(u => (u.nama_user || u.nama) === loggedUser);
     if (foundUser) {
       foundUser.password = newPass;
     } else {
       usersDb.push({
-        nama: loggedUser,
+        nama_user: loggedUser,
         password: newPass,
         role: sessionStorage.getItem('ckg_user_role') || 'Petugas'
       });
     }
-    localStorage.setItem('ckg_users_db', JSON.stringify(usersDb));
+    saveUserDatabaseToStorage();
 
     // 2. Sync password to Cloud D1 Database via /api/users
     try {
