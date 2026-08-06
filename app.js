@@ -274,6 +274,50 @@ function populateUserDropdowns() {
   if (typeof updatePasswordVisibility === 'function') {
     updatePasswordVisibility();
   }
+
+  applyPetugasFilterLock();
+}
+
+function applyPetugasFilterLock() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const isPrivileged = (role === 'admin' || role === 'koordinator');
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || '';
+
+  const filterPetugasSelect = document.getElementById('filterPetugas');
+  if (filterPetugasSelect) {
+    if (!isPrivileged && loggedUser) {
+      filterPetugasSelect.value = loggedUser;
+      filterPetugasSelect.disabled = true;
+      filterPetugasSelect.title = `Terkunci: Hak Akses Petugas hanya melihat data sendiri (${loggedUser})`;
+      filterPetugasSelect.style.backgroundColor = '#f1f5f9';
+      filterPetugasSelect.style.cursor = 'not-allowed';
+      filterPetugasSelect.style.opacity = '0.85';
+    } else {
+      filterPetugasSelect.disabled = false;
+      filterPetugasSelect.title = '';
+      filterPetugasSelect.style.backgroundColor = '';
+      filterPetugasSelect.style.cursor = '';
+      filterPetugasSelect.style.opacity = '';
+    }
+  }
+
+  const filterSimpusSelect = document.getElementById('filterSimpusPetugas');
+  if (filterSimpusSelect) {
+    if (!isPrivileged && loggedUser) {
+      filterSimpusSelect.value = loggedUser;
+      filterSimpusSelect.disabled = true;
+      filterSimpusSelect.title = `Terkunci: Hak Akses Petugas hanya melihat data sendiri (${loggedUser})`;
+      filterSimpusSelect.style.backgroundColor = '#f1f5f9';
+      filterSimpusSelect.style.cursor = 'not-allowed';
+      filterSimpusSelect.style.opacity = '0.85';
+    } else {
+      filterSimpusSelect.disabled = false;
+      filterSimpusSelect.title = '';
+      filterSimpusSelect.style.backgroundColor = '';
+      filterSimpusSelect.style.cursor = '';
+      filterSimpusSelect.style.opacity = '';
+    }
+  }
 }
 
 function loadStoredRecords() {
@@ -1031,6 +1075,8 @@ function updateRoleUI() {
     roleBadgeEl.textContent = role.toUpperCase();
     roleBadgeEl.className = 'badge-role-pill role-' + role;
   }
+
+  applyPetugasFilterLock();
 }
 
 // API Wilayah Indonesia (Emsifa API) Integration
@@ -2564,10 +2610,21 @@ async function handleFormSubmit(e) {
 }
 
 function resetFilters() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const isPrivileged = (role === 'admin' || role === 'koordinator');
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || '';
+
   ['filterKegiatan', 'filterBulan', 'filterTahun', 'filterTanggal', 'filterPetugas', 'filterUmur'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.value = '';
+    if (el) {
+      if (id === 'filterPetugas' && !isPrivileged && loggedUser) {
+        el.value = loggedUser;
+      } else {
+        el.value = '';
+      }
+    }
   });
+  applyPetugasFilterLock();
   renderTableRecords();
   showToast('Filter telah di-reset.', 'info');
 }
@@ -2953,6 +3010,8 @@ function getRecordEntryDate(r) {
 function renderTableRecords() {
   const tbody = document.getElementById('tableBodyDataRecords');
   if (!tbody) return;
+
+  applyPetugasFilterLock();
 
   const filterKegiatanVal = document.getElementById('filterKegiatan')?.value || '';
   const filterBulanVal = document.getElementById('filterBulan')?.value || '';
