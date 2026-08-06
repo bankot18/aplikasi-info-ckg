@@ -77,24 +77,45 @@ function loadStoredUserDatabase() {
   fetchCloudUsers();
 }
 
+function getRolePriority(role) {
+  const r = String(role || '').toLowerCase().trim();
+  if (r.includes('admin')) return 1;
+  if (r.includes('koordinator') || r.includes('kordinator')) return 2;
+  return 3; // Petugas or default
+}
+
+function sortUsersDbByRoleHierarchy() {
+  if (!Array.isArray(usersDb)) return;
+  usersDb.sort((a, b) => {
+    const pA = getRolePriority(a ? a.role : '');
+    const pB = getRolePriority(b ? b.role : '');
+    if (pA !== pB) return pA - pB;
+    const nameA = String((a && (a.nama_user || a.nama)) || '');
+    const nameB = String((b && (b.nama_user || b.nama)) || '');
+    return nameA.localeCompare(nameB);
+  });
+}
+
 function resetUserDatabaseToDefault() {
   usersDb = JSON.parse(JSON.stringify(INITIAL_USERS_DB));
-  localStorage.setItem('ckg_user_db', JSON.stringify(usersDb));
-  localStorage.setItem('ckg_user_db_v2_synced', 'true');
-  populateUserDropdowns();
+  saveUserDatabaseToStorage();
   if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
 }
 
 function saveUserDatabaseToStorage() {
+  sortUsersDbByRoleHierarchy();
   localStorage.setItem('ckg_user_db', JSON.stringify(usersDb));
   populateUserDropdowns();
 }
 
 function populateUserDropdowns() {
+  sortUsersDbByRoleHierarchy();
+
   const loginSelect = document.getElementById('loginPegawaiSelect');
   const targetSelect = document.getElementById('targetPetugasSelect');
   const filterPetugasSelect = document.getElementById('filterPetugas');
   const filterSimpusSelect = document.getElementById('filterSimpusPetugas');
+  const importTargetSelect = document.getElementById('importTargetPetugas');
 
   if (loginSelect) {
     const prevVal = loginSelect.value;
@@ -143,6 +164,18 @@ function populateUserDropdowns() {
       opt.textContent = u.nama_user;
       if (prevSimpusFilter && u.nama_user === prevSimpusFilter) opt.selected = true;
       filterSimpusSelect.appendChild(opt);
+    });
+  }
+
+  if (importTargetSelect && !importTargetSelect.disabled) {
+    const prevImportTarget = importTargetSelect.value;
+    importTargetSelect.innerHTML = '';
+    usersDb.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.nama_user;
+      opt.textContent = u.nama_user;
+      if (prevImportTarget && u.nama_user === prevImportTarget) opt.selected = true;
+      importTargetSelect.appendChild(opt);
     });
   }
 
@@ -2498,6 +2531,8 @@ function renderUserDatabaseTable() {
   const tbody = document.getElementById('userTableBody');
   if (!tbody) return;
 
+  sortUsersDbByRoleHierarchy();
+
   const activeUser = sessionStorage.getItem('ckg_user_name');
 
   tbody.innerHTML = usersDb.map((u, i) => {
@@ -3173,7 +3208,9 @@ function openImportModal() {
   if (targetSelect) {
     targetSelect.innerHTML = '';
     
-    // Get list of registered users from active usersDb state & local storage
+    // Get list of registered users sorted by role hierarchy (Admin -> Koordinator -> Petugas)
+    sortUsersDbByRoleHierarchy();
+
     let userList = [];
     if (Array.isArray(usersDb) && usersDb.length > 0) {
       userList = usersDb.map(u => (u.nama_user || u.nama || '').trim()).filter(Boolean);
@@ -3188,7 +3225,7 @@ function openImportModal() {
       } catch (_) {}
     }
 
-    // Deduplicate user list
+    // Deduplicate user list while preserving sorted role order
     userList = Array.from(new Set(userList));
 
     // Ensure loggedUser is in the list
@@ -3950,12 +3987,20 @@ async function fetchCloudUsers() {
     if (res.ok) {
       const result = await res.json();
       if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
-        usersDb = result.data;
+        usersDb = result.data.map(u => ({
+          nama_user: u.nama_user || u.nama || u.username,
+          password: u.password || '',
+          role: u.role || 'Petugas',
+          is_banned: !!u.is_banned,
+          banned_duration_label: u.banned_duration_label || ''
+        }));
         saveUserDatabaseToStorage();
         if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[Cloud Sync Warning] Failed to fetch users from D1:', e);
+  }
 }
 
 async function syncUsersToCloud(users) {
