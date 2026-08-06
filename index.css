@@ -1589,6 +1589,16 @@ body {
   border: 1px solid #a7f3d0;
 }
 
+/* Role Visibility Control */
+body.role-petugas .admin-only,
+body.role-petugas .admin-koordinator-only {
+  display: none !important;
+}
+
+body.role-koordinator .admin-only {
+  display: none !important;
+}
+
 /* ==========================================================================
    🎬 SMOOTH TRANSITION ANIMATIONS SYSTEM
    ========================================================================== */

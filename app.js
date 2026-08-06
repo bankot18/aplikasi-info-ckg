@@ -21,6 +21,8 @@ const INITIAL_MOCK_RECORDS = [];
 let usersDb = [];
 let records = [];
 let simpusRecords = [];
+let recycleBin = [];
+let announcementData = null;
 let activeSimpusTab = 'belum_bagi'; // 'belum_bagi' or 'sudah_bagi'
 let currentRole = 'Admin';
 let currentEditingId = null;
@@ -30,6 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
   loadStoredUserDatabase();
   loadStoredRecords();
   loadStoredSimpusRecords();
+  loadStoredRecycleBin();
+  loadStoredAnnouncement();
+  setupImportDropzone();
   startLiveClock();
   initWilayahDropdowns();
   setupEventListeners();
@@ -164,6 +169,171 @@ function saveSimpusRecordsToStorage() {
   syncSimpusToCloud(simpusRecords);
 }
 
+function loadStoredRecycleBin() {
+  const saved = localStorage.getItem('ckg_recycle_bin');
+  if (saved) {
+    try {
+      recycleBin = JSON.parse(saved);
+    } catch (_) {
+      recycleBin = [];
+    }
+  } else {
+    recycleBin = [];
+  }
+}
+
+function saveRecycleBinToStorage() {
+  localStorage.setItem('ckg_recycle_bin', JSON.stringify(recycleBin));
+}
+
+function loadStoredAnnouncement() {
+  const saved = localStorage.getItem('ckg_announcement');
+  if (saved) {
+    try {
+      announcementData = JSON.parse(saved);
+    } catch (_) {
+      announcementData = null;
+    }
+  }
+  if (!announcementData) {
+    announcementData = {
+      title: 'Pengumuman Sistem CKG',
+      content: 'Selamat datang di Aplikasi Pencatatan CKG Puskesmas Banjaran Kota. Mohon lakukan verifikasi dan pencatatan data pasien dengan teliti.',
+      author: 'Admin Utama',
+      date: new Date().toISOString().substring(0, 10),
+      active: true
+    };
+  }
+}
+
+function checkAndShowAnnouncement() {
+  if (!announcementData || !announcementData.active || !announcementData.content) return;
+  
+  const titleEl = document.getElementById('announcementPopupTitle');
+  const authorEl = document.getElementById('announcementPopupAuthor');
+  const dateEl = document.getElementById('announcementPopupDate');
+  const contentEl = document.getElementById('announcementPopupContent');
+  
+  if (titleEl) titleEl.textContent = announcementData.title || 'Pengumuman Sistem CKG';
+  if (authorEl) authorEl.innerHTML = `<i class="bi bi-person-fill"></i> Oleh: ${announcementData.author || 'Admin'}`;
+  if (dateEl) dateEl.innerHTML = `<i class="bi bi-clock-history"></i> Tanggal: ${announcementData.date || '-'}`;
+  if (contentEl) contentEl.textContent = announcementData.content;
+  
+  const modal = document.getElementById('announcementModal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeAnnouncementModal() {
+  const modal = document.getElementById('announcementModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function openEditAnnouncementModal() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (role !== 'admin' && role !== 'koordinator') {
+    Swal.fire('Akses Ditolak', 'Hanya Admin & Koordinator yang dapat mengelola pengumuman.', 'error');
+    return;
+  }
+
+  Swal.fire({
+    title: 'Kelola Pengumuman Sistem',
+    html: `
+      <div style="text-align: left; font-size: 13px;">
+        <label class="form-label" style="font-weight:700; margin-bottom:4px; display:block;">Judul Pengumuman:</label>
+        <input type="text" id="swalAnnTitle" class="swal2-input" style="margin: 0 0 12px 0; width: 100%; font-size: 13px;" value="${announcementData?.title || ''}" placeholder="Judul Pengumuman">
+        
+        <label class="form-label" style="font-weight:700; margin-bottom:4px; display:block;">Isi Pesan Pengumuman:</label>
+        <textarea id="swalAnnContent" class="swal2-textarea" style="margin: 0 0 12px 0; width: 100%; height: 110px; font-size: 13px; line-height: 1.5;" placeholder="Tuliskan pesan...">${announcementData?.content || ''}</textarea>
+
+        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; margin-top: 6px;">
+          <input type="checkbox" id="swalAnnActive" ${announcementData?.active ? 'checked' : ''}> Tampilkan Pengumuman Ini Saat User Log In
+        </label>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Simpan Pengumuman',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#2563eb',
+    preConfirm: () => {
+      const title = document.getElementById('swalAnnTitle').value.trim();
+      const content = document.getElementById('swalAnnContent').value.trim();
+      const active = document.getElementById('swalAnnActive').checked;
+      
+      if (!content) {
+        Swal.showValidationMessage('Isi pengumuman tidak boleh kosong!');
+        return false;
+      }
+      return { title: title || 'Pengumuman Sistem CKG', content, active };
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      announcementData = {
+        title: result.value.title,
+        content: result.value.content,
+        author: sessionStorage.getItem('ckg_user_name') || 'Admin',
+        date: new Date().toISOString().substring(0, 10),
+        active: result.value.active
+      };
+      localStorage.setItem('ckg_announcement', JSON.stringify(announcementData));
+      Swal.fire('Berhasil!', 'Pengumuman sistem berhasil disimpan.', 'success');
+    }
+  });
+}
+
+function getVisibleRecords(dataArray) {
+  if (!Array.isArray(dataArray)) return [];
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  
+  // Admin and Koordinator can see ALL records
+  if (role === 'admin' || role === 'koordinator') {
+    return dataArray;
+  }
+  
+  // Petugas can ONLY see their own records
+  const loggedUser = (sessionStorage.getItem('ckg_user_name') || '').toLowerCase().trim();
+  
+  return dataArray.filter(r => {
+    const creator = (r.created_by || r.petugas_entry || r.petugas || r.assigned_to || '').toLowerCase().trim();
+    return creator === loggedUser || creator === '' || creator.includes(loggedUser);
+  });
+}
+
+function setupImportDropzone() {
+  const dropzone = document.getElementById('importDropzone');
+  if (!dropzone) return;
+
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    }, false);
+  });
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropzone.addEventListener(eventName, () => {
+      dropzone.classList.add('drag-over');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropzone.addEventListener(eventName, () => {
+      dropzone.classList.remove('drag-over');
+    }, false);
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt ? dt.files : null;
+    if (files && files.length > 0) {
+      const fileInput = document.getElementById('importFileInput');
+      if (fileInput) {
+        fileInput.files = files;
+        handleImportFileSelect({ target: { files: files } });
+      }
+    }
+  }, false);
+}
+
 function checkAuthSession() {
   const isLoggedIn = sessionStorage.getItem('ckg_logged_in') === 'true';
   const loginOverlay = document.getElementById('loginViewContainer');
@@ -176,6 +346,9 @@ function checkAuthSession() {
     const savedName = sessionStorage.getItem('ckg_user_name') || 'Mochamad Fauzie, S.Gz';
     const savedRole = sessionStorage.getItem('ckg_user_role') || 'Admin';
     currentRole = savedRole;
+
+    document.body.classList.remove('role-admin', 'role-koordinator', 'role-petugas');
+    document.body.classList.add('role-' + (savedRole || 'Petugas').toLowerCase());
 
     const nameEl = document.getElementById('headerUserName');
     const roleBadgeEl = document.getElementById('headerUserRoleBadge');
@@ -193,6 +366,7 @@ function checkAuthSession() {
     }
 
     renderApp();
+    setTimeout(checkAndShowAnnouncement, 500);
   } else {
     if (loginOverlay) loginOverlay.classList.remove('hidden');
     if (mainApp) mainApp.style.display = 'none';
@@ -502,6 +676,30 @@ function setupEventListeners() {
 }
 
 function switchView(viewId) {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+
+  if (role === 'petugas') {
+    if (viewId === 'laporan' || viewId === 'recycle-data' || viewId === 'admin-panel') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Akses Ditolak',
+        text: 'Menu ini hanya dapat diakses oleh Role Admin dan Koordinator.',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+  } else if (role === 'koordinator') {
+    if (viewId === 'admin-panel') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Akses Ditolak',
+        text: 'Admin Panel hanya dapat diakses oleh Admin.',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+  }
+
   document.querySelectorAll('.nav-tab-btn').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-view') === viewId);
   });
@@ -522,13 +720,22 @@ function switchView(viewId) {
     setTimeout(() => initDashboardCharts(officersData), 50);
   } else if (viewId === 'simpus') {
     renderSimpusView();
+  } else if (viewId === 'recycle-data') {
+    renderRecycleTable();
   }
 }
 
 function updateRoleUI() {
-  document.querySelectorAll('.admin-only').forEach(el => {
-    el.style.display = (currentRole === 'Admin' || currentRole === 'admin') ? '' : 'none';
-  });
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  
+  document.body.classList.remove('role-admin', 'role-koordinator', 'role-petugas');
+  document.body.classList.add('role-' + role);
+
+  const roleBadgeEl = document.getElementById('headerUserRoleBadge');
+  if (roleBadgeEl) {
+    roleBadgeEl.textContent = role.toUpperCase();
+    roleBadgeEl.className = 'badge-role-pill role-' + role;
+  }
 }
 
 // API Wilayah Indonesia (Emsifa API) Integration
@@ -2046,6 +2253,8 @@ function renderApp() {
   renderTableRecords();
   renderSimpusView();
   renderUserDatabaseTable();
+  renderRecycleTable();
+  updateTotalEntryMonthMetric();
   if (typeof initDashboardCharts === 'function') {
     initDashboardCharts(officersData);
   }
@@ -2073,9 +2282,40 @@ function renderDashboardMetrics(officersData = getOfficerPerformanceData()) {
   if (dalamEl) dalamEl.textContent = totalDalam;
   if (targetEl) targetEl.textContent = `${targetAchievedCount} / ${officersData.length}`;
 
-  const totalMonthHeader = document.getElementById('totalEntryMonth');
-  if (totalMonthHeader) totalMonthHeader.textContent = totalAll;
+  updateTotalEntryMonthMetric();
 }
+
+function updateTotalEntryMonthMetric() {
+  const totalEl = document.getElementById('totalEntryMonth');
+  if (!totalEl) return;
+
+  const now = new Date();
+  const yearStr = now.getFullYear().toString();
+  const monthStr = String(now.getMonth() + 1).padStart(2, '0');
+  const currentYM = `${yearStr}-${monthStr}`;
+
+  const visibleRecords = getVisibleRecords(records);
+  
+  // Count records filled for Luar Gedung and Dalam Gedung in current month
+  const monthRecords = visibleRecords.filter(r => {
+    const d = r.created_at || r.tanggal_entry || r.created_date || '';
+    if (!d) return true; // default include if date unset
+    if (d.startsWith(currentYM)) return true;
+    if (d.includes('/')) {
+      const parts = d.split('/');
+      if (parts.length === 3) {
+        const m = parts[1].padStart(2, '0');
+        const y = parts[2];
+        return `${y}-${m}` === currentYM;
+      }
+    }
+    return false;
+  });
+
+  totalEl.textContent = monthRecords.length;
+}
+
+
 
 function renderOfficerPerformanceTable(officersData = getOfficerPerformanceData()) {
   const tbody = document.getElementById('officerPerformanceTableBody');
@@ -2298,7 +2538,8 @@ function renderTableRecords() {
   const filterPetugasVal = document.getElementById('filterPetugas')?.value || '';
   const filterUmurVal = document.getElementById('filterUmur')?.value || '';
 
-  let filtered = [...records];
+  // Apply Row-Level Data Visibility (Petugas only sees own records; Admin & Koordinator see all)
+  let filtered = getVisibleRecords(records);
 
   if (filterKegiatanVal) {
     filtered = filtered.filter(r => r.jenis_kegiatan === filterKegiatanVal);
@@ -2376,16 +2617,218 @@ function buildTableRowsHtml(data) {
             <button class="btn btn-cyan btn-sm" onclick="editRecord('${r.id}')" title="Edit">
               <i class="bi bi-pencil"></i>
             </button>
-            ${(currentRole === 'Admin' || currentRole === 'admin') ? `
-              <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')" title="Hapus">
-                <i class="bi bi-trash"></i>
-              </button>
-            ` : ''}
+            <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')" title="Hapus ke Tempat Sampah">
+              <i class="bi bi-trash"></i>
+            </button>
           </div>
         </td>
       </tr>
     `;
   }).join('');
+}
+
+function deleteRecord(id) {
+  const targetRecord = records.find(r => r.id === id);
+  if (!targetRecord) {
+    showToast('Data CKG tidak ditemukan!', 'error');
+    return;
+  }
+
+  Swal.fire({
+    title: 'Hapus Data CKG?',
+    html: `Apakah Anda yakin ingin menghapus data <strong>[${targetRecord.nama}]</strong>?<br><span style="font-size:12px; color:#64748b;">Data akan dipindahkan ke Recycle Data.</span>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Pindahkan ke Recycle!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      records = records.filter(r => r.id !== id);
+      targetRecord.deleted_at = new Date().toISOString().substring(0, 10) + ' ' + new Date().toLocaleTimeString('id-ID');
+      targetRecord.deleted_by = sessionStorage.getItem('ckg_user_name') || 'Admin';
+      targetRecord.original_source = 'BNBA Skrining CKG';
+      recycleBin.unshift(targetRecord);
+      saveRecordsToStorage();
+      saveRecycleBinToStorage();
+      renderApp();
+      Swal.fire('Dipindahkan!', 'Data CKG berhasil dipindahkan ke Recycle Data.', 'success');
+    }
+  });
+}
+
+function deleteSimpusRecord(id) {
+  const targetSimpus = simpusRecords.find(r => (r.id || r.nik || '') === id);
+  if (!targetSimpus) {
+    showToast('Data SIMPUS tidak ditemukan!', 'error');
+    return;
+  }
+
+  Swal.fire({
+    title: 'Hapus Data SIMPUS?',
+    html: `Apakah Anda yakin ingin menghapus data SIMPUS <strong>[${targetSimpus.nama || targetSimpus.nik}]</strong>?<br><span style="font-size:12px; color:#64748b;">Data akan dipindahkan ke Recycle Data.</span>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Pindahkan ke Recycle!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      simpusRecords = simpusRecords.filter(r => (r.id || r.nik || '') !== id);
+      targetSimpus.deleted_at = new Date().toISOString().substring(0, 10) + ' ' + new Date().toLocaleTimeString('id-ID');
+      targetSimpus.deleted_by = sessionStorage.getItem('ckg_user_name') || 'Admin';
+      targetSimpus.original_source = 'Data SIMPUS CKG';
+      recycleBin.unshift(targetSimpus);
+      saveSimpusRecordsToStorage();
+      saveRecycleBinToStorage();
+      renderApp();
+      Swal.fire('Dipindahkan!', 'Data SIMPUS berhasil dipindahkan ke Recycle Data.', 'success');
+    }
+  });
+}
+
+function renderRecycleTable() {
+  const tbody = document.getElementById('recycleTableBody');
+  if (!tbody) return;
+
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (role !== 'admin' && role !== 'koordinator') {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 30px; color: var(--rose); font-weight:700;">
+          <i class="bi bi-shield-lock-fill" style="font-size: 28px; display: block; margin-bottom: 6px;"></i>
+          Akses Ditolak: Halaman Recycle Data hanya dapat diakses oleh Role Admin dan Koordinator.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  // Filter recycle bin items by user visibility rules
+  const visibleRecycle = getVisibleRecords(recycleBin);
+
+  if (visibleRecycle.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 35px; color: var(--text-muted);">
+          <i class="bi bi-trash3" style="font-size: 32px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
+          Tempat sampah kosong. Tidak ada data yang dihapus.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = visibleRecycle.map((r, i) => {
+    const safeId = r.id || r.nik || i;
+    const sourceBadge = (r.original_source || 'BNBA').includes('SIMPUS')
+      ? `<span class="badge badge-amber"><i class="bi bi-hdd-network"></i> SIMPUS</span>`
+      : `<span class="badge badge-cyan"><i class="bi bi-folder-symlink-fill"></i> BNBA CKG</span>`;
+
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${sourceBadge}</td>
+        <td><strong>${r.nik || '-'}</strong></td>
+        <td><strong>${r.nama || r.nama_pasien || 'Pasien'}</strong></td>
+        <td>${r.jenis_kegiatan || '-'}</td>
+        <td><span style="font-size: 12px; color: #64748b;">${r.deleted_at || '-'}</span></td>
+        <td><span class="badge badge-emerald">${r.deleted_by || 'System'}</span></td>
+        <td>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn btn-emerald btn-sm" onclick="restoreFromRecycle('${safeId}')" title="Pulihkan Data">
+              <i class="bi bi-arrow-counterclockwise"></i> Restore
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="permanentDeleteFromRecycle('${safeId}')" title="Hapus Permanen">
+              <i class="bi bi-trash-fill"></i> Hapus Permanen
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function restoreFromRecycle(id) {
+  const itemIndex = recycleBin.findIndex(r => (r.id || r.nik || '') === id);
+  if (itemIndex === -1) {
+    showToast('Data tidak ditemukan di Recycle Data', 'error');
+    return;
+  }
+
+  const item = recycleBin[itemIndex];
+  recycleBin.splice(itemIndex, 1);
+  saveRecycleBinToStorage();
+
+  if (item.original_source && item.original_source.includes('SIMPUS')) {
+    simpusRecords.unshift(item);
+    saveSimpusRecordsToStorage();
+  } else {
+    records.unshift(item);
+    saveRecordsToStorage();
+  }
+
+  renderApp();
+  Swal.fire('Dipulihkan!', `Data [${item.nama || item.nik}] berhasil dikembalikan ke database.`, 'success');
+}
+
+function permanentDeleteFromRecycle(id) {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (role !== 'admin' && role !== 'koordinator') {
+    Swal.fire('Akses Ditolak', 'Hanya Admin & Koordinator yang dapat menghapus data secara permanen.', 'warning');
+    return;
+  }
+
+  Swal.fire({
+    title: 'Hapus Permanen?',
+    text: 'Data yang dihapus permanen tidak dapat dikembalikan lagi!',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Hapus Permanen!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      recycleBin = recycleBin.filter(r => (r.id || r.nik || '') !== id);
+      saveRecycleBinToStorage();
+      renderRecycleTable();
+      Swal.fire('Terhapus!', 'Data telah dihapus permanen dari sistem.', 'success');
+    }
+  });
+}
+
+function emptyRecycleBin() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (role !== 'admin' && role !== 'koordinator') {
+    Swal.fire('Akses Ditolak', 'Hanya Admin & Koordinator yang dapat mengosongkan Recycle Data.', 'warning');
+    return;
+  }
+
+  if (recycleBin.length === 0) {
+    showToast('Recycle Data sudah kosong!', 'info');
+    return;
+  }
+
+  Swal.fire({
+    title: 'Kosongkan Tempat Sampah?',
+    text: `Semua (${recycleBin.length}) data di tempat sampah akan dihapus secara permanen!`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Kosongkan!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      recycleBin = [];
+      saveRecycleBinToStorage();
+      renderRecycleTable();
+      Swal.fire('Dikosongkan!', 'Semua data di tempat sampah telah dihapus permanen.', 'success');
+    }
+  });
 }
 
 function viewDetailModal(id) {
