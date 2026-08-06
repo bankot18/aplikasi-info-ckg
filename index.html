@@ -534,6 +534,9 @@
               <button class="btn btn-purple admin-only" onclick="openBagiPetugasModal()">
                 <i class="bi bi-person-fill-gear"></i> Bagi Data ke Petugas
               </button>
+              <button class="btn btn-purple admin-only" id="btnSimpusAdminMultiImport" onclick="openSimpusAdminMultiImportModal()" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; padding: 8px 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.25); display: none; align-items: center; gap: 6px;">
+                <i class="bi bi-person-lines-fill"></i> Import Multi-Petugas (Khusus Admin)
+              </button>
               <button class="btn btn-emerald" onclick="openEksporPerPetugasModal()">
                 <i class="bi bi-file-earmark-spreadsheet-fill"></i> Ekspor ke Tiap Petugas
               </button>
@@ -1490,6 +1493,58 @@
       <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
         <button class="btn btn-secondary" onclick="closeAdminImportModal()" style="border-radius: 10px; padding: 9px 20px; font-weight: 700;">Batal</button>
         <button class="btn btn-purple" id="btnExecuteAdminImport" onclick="executeAdminXLSXImport()" disabled style="border-radius: 10px; padding: 9px 24px; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none; box-shadow: 0 4px 14px rgba(109, 40, 217, 0.3);">
+          <i class="bi bi-cloud-upload-fill"></i> Simpan & Direct Sync ke Cloud D1
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Import Data SIMPUS Multi-Petugas (Khusus Admin) -->
+  <div id="simpusAdminImportModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 820px; border-radius: 20px; overflow: hidden; background: #ffffff; box-shadow: 0 25px 50px -12px rgba(109, 40, 217, 0.35); border: 1px solid rgba(221, 214, 254, 0.8);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #ffffff; padding: 18px 24px;">
+        <h3 class="modal-title" style="color: #ffffff; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+          <i class="bi bi-person-lines-fill" style="font-size: 22px;"></i> Import Data SIMPUS Multi-Petugas (Sudah Di-Bagi)
+        </h3>
+        <button class="modal-close" onclick="closeSimpusAdminMultiImportModal()" style="color: #ffffff; opacity: 0.9; font-size: 24px;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px; max-height: 78vh; overflow-y: auto;">
+        
+        <!-- Instruction Card -->
+        <div style="background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1.5px dashed #a78bfa; border-radius: 14px; padding: 18px; margin-bottom: 20px; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.08);">
+          <div style="font-weight: 800; color: #5b21b6; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-shield-check" style="color: #7c3aed; font-size: 20px;"></i> Fitur Khusus Admin - Direct Import ke Data Sudah Di-Bagi
+          </div>
+          <ul style="font-size: 12.5px; color: #4c1d95; margin: 0; padding-left: 20px; line-height: 1.6; font-weight: 600;">
+            <li>File Excel harus memiliki kolom <strong>"Petugas Entry" / "Petugas" / "Assigned To"</strong>.</li>
+            <li>Seluruh data akan langsung masuk ke tab <strong>"Data Sudah Di-Bagi"</strong> dan ter-assign sesuai petugas di Excel.</li>
+            <li>Data tersimpan & tersinkronisasi otomatis ke <strong>Cloudflare D1 Database (`simpus_records`)</strong>.</li>
+          </ul>
+          
+          <button class="btn btn-purple btn-sm" onclick="downloadSimpusAdminXLSXTemplate()" style="margin-top: 14px; font-weight: 700; width: 100%; justify-content: center; padding: 10px 18px; border-radius: 10px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none; box-shadow: 0 4px 14px rgba(109, 40, 217, 0.25); cursor: pointer;">
+            <i class="bi bi-file-earmark-arrow-down-fill" style="font-size: 16px;"></i> Download Template Excel SIMPUS Multi-Petugas (.xlsx)
+          </button>
+        </div>
+
+        <!-- Dropzone Area -->
+        <div class="import-dropzone" id="simpusAdminImportDropzone" onclick="document.getElementById('simpusAdminImportFileInput').click()" style="border: 2px dashed #a78bfa; border-radius: 16px; background: #faf5ff; padding: 26px 20px; text-align: center; cursor: pointer; transition: all 0.25s ease;">
+          <i class="bi bi-cloud-arrow-up-fill import-dropzone-icon" style="font-size: 42px; color: #7c3aed; margin-bottom: 10px; display: inline-block;"></i>
+          <div class="import-dropzone-text" id="simpusAdminImportDropzoneText" style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
+            Pilih atau Tarik File Excel SIMPUS (.xlsx / .csv) Multi-Petugas
+          </div>
+          <div class="import-dropzone-hint" style="font-size: 12px; color: #64748b; font-weight: 500;">Format yang didukung: .xlsx, .xls, .csv</div>
+          <input type="file" id="simpusAdminImportFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleSimpusAdminImportFileSelect(event)">
+        </div>
+
+        <!-- Preview Area -->
+        <div id="simpusAdminImportPreviewArea" style="display: none; margin-top: 20px;">
+          <!-- Dynamically populated via handleSimpusAdminImportFileSelect -->
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+        <button class="btn btn-secondary" onclick="closeSimpusAdminMultiImportModal()" style="border-radius: 10px; padding: 9px 20px; font-weight: 700;">Batal</button>
+        <button class="btn btn-purple" id="btnExecuteSimpusAdminImport" onclick="executeSimpusAdminXLSXImport()" disabled style="border-radius: 10px; padding: 9px 24px; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none; box-shadow: 0 4px 14px rgba(109, 40, 217, 0.3);">
           <i class="bi bi-cloud-upload-fill"></i> Simpan & Direct Sync ke Cloud D1
         </button>
       </div>

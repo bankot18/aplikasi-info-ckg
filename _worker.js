@@ -74,13 +74,52 @@ export default {
         });
       }
 
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS simpus_records (
+            id TEXT PRIMARY KEY,
+            no INTEGER,
+            tanggal TEXT,
+            nama TEXT,
+            nik TEXT,
+            alamat TEXT,
+            dob TEXT,
+            usia INTEGER,
+            bb REAL,
+            tb REAL,
+            imt REAL,
+            sistol INTEGER,
+            diastol INTEGER,
+            gula TEXT,
+            kolesterol TEXT,
+            keterangan TEXT,
+            is_divided INTEGER DEFAULT 0,
+            assigned_to TEXT,
+            entry_status TEXT DEFAULT 'belum',
+            raw_json TEXT
+          )
+        `).run();
+      } catch (_) {}
+
       if (request.method === 'GET') {
         try {
           const { results } = await env.DB.prepare('SELECT * FROM simpus_records ORDER BY no ASC').all();
-          const formatted = (results || []).map(r => ({
-            ...r,
-            is_divided: Boolean(r.is_divided)
-          }));
+          const formatted = (results || []).map(r => {
+            let item = {};
+            if (r.raw_json) {
+              try { item = JSON.parse(r.raw_json); } catch (_) {}
+            }
+            return {
+              ...item,
+              ...r,
+              id: String(r.id || item.id || Date.now()),
+              nama: r.nama || item.nama || '',
+              nik: r.nik || item.nik || '',
+              is_divided: Boolean(r.is_divided === 1 || r.is_divided === '1' || r.is_divided === true),
+              assigned_to: r.assigned_to || item.assigned_to || item.petugas_entry || '',
+              entry_status: r.entry_status || item.entry_status || 'belum'
+            };
+          });
           return new Response(JSON.stringify({ success: true, count: formatted.length, data: formatted }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
@@ -94,8 +133,8 @@ export default {
           const stmt = env.DB.prepare(`
             INSERT INTO simpus_records (
               id, no, tanggal, nama, nik, alamat, dob, usia, bb, tb, imt,
-              sistol, diastol, gula, kolesterol, keterangan, is_divided, assigned_to, entry_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              sistol, diastol, gula, kolesterol, keterangan, is_divided, assigned_to, entry_status, raw_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               no = excluded.no,
               tanggal = excluded.tanggal,
@@ -114,13 +153,15 @@ export default {
               keterangan = excluded.keterangan,
               is_divided = excluded.is_divided,
               assigned_to = excluded.assigned_to,
-              entry_status = excluded.entry_status
+              entry_status = excluded.entry_status,
+              raw_json = excluded.raw_json
           `);
           const statements = records.map(r => stmt.bind(
             String(r.id || r.nik || Date.now()), r.no || 0, r.tanggal || '', r.nama || '', r.nik || '',
             r.alamat || '', r.dob || '', r.usia || 0, r.bb || 0, r.tb || 0, r.imt || 0,
             r.sistol || 0, r.diastol || 0, r.gula || '-', r.kolesterol || '-',
-            r.keterangan || 'Dewasa', r.is_divided ? 1 : 0, r.assigned_to || '', r.entry_status || 'belum'
+            r.keterangan || 'Dewasa', r.is_divided ? 1 : 0, r.assigned_to || '', r.entry_status || 'belum',
+            JSON.stringify(r)
           ));
           const chunkSize = 20;
           for (let i = 0; i < statements.length; i += chunkSize) {

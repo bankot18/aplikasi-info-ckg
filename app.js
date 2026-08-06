@@ -1305,8 +1305,20 @@ function calculateIMT() {
 // SIMPUS VIEW LOGIC (EXACT REPLICA OF USER REFERENCE SCREENSHOTS)
 // ----------------------------------------------------
 function renderSimpusView() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const loggedUser = (sessionStorage.getItem('ckg_user_name') || '').trim().toLowerCase();
+  const isPrivileged = (role === 'admin' || role === 'koordinator');
+
   const belumBagiCount = simpusRecords.filter(r => !r.is_divided).length;
-  const sudahBagiCount = simpusRecords.filter(r => r.is_divided).length;
+  
+  let sudahBagiRecords = simpusRecords.filter(r => Boolean(r.is_divided));
+  if (!isPrivileged && loggedUser) {
+    sudahBagiRecords = sudahBagiRecords.filter(r => {
+      const assigned = (r.assigned_to || '').toLowerCase().trim();
+      return assigned === loggedUser || assigned.includes(loggedUser);
+    });
+  }
+  const sudahBagiCount = sudahBagiRecords.length;
 
   const countBelumEl = document.getElementById('countBelumBagi');
   const countSudahEl = document.getElementById('countSudahBagi');
@@ -1314,7 +1326,7 @@ function renderSimpusView() {
 
   if (countBelumEl) countBelumEl.textContent = belumBagiCount;
   if (countSudahEl) countSudahEl.textContent = sudahBagiCount;
-  if (totalEntryEl) totalEntryEl.textContent = simpusRecords.length;
+  if (totalEntryEl) totalEntryEl.textContent = isPrivileged ? simpusRecords.length : (belumBagiCount + sudahBagiCount);
 
   renderSimpusTableRecords();
 }
@@ -1326,17 +1338,22 @@ function switchSimpusTab(tab) {
   const btnSudah = document.getElementById('btnSimpusSudahBagi');
   const petugasFilterGroup = document.getElementById('simpusPetugasFilterGroup');
   const belumBagiActions = document.getElementById('simpusBelumBagiActions');
+  const btnMultiImport = document.getElementById('btnSimpusAdminMultiImport');
+
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
 
   if (tab === 'belum_bagi') {
     if (btnBelum) { btnBelum.className = 'simpus-pill-btn active-purple'; }
     if (btnSudah) { btnSudah.className = 'simpus-pill-btn'; }
     if (petugasFilterGroup) petugasFilterGroup.style.display = 'none';
     if (belumBagiActions) belumBagiActions.style.display = 'flex';
+    if (btnMultiImport) btnMultiImport.style.display = 'none';
   } else {
     if (btnBelum) { btnBelum.className = 'simpus-pill-btn'; }
     if (btnSudah) { btnSudah.className = 'simpus-pill-btn active-emerald'; }
     if (petugasFilterGroup) petugasFilterGroup.style.display = 'flex';
-    if (belumBagiActions) belumBagiActions.style.display = 'none';
+    if (belumBagiActions) belumBagiActions.style.display = 'flex';
+    if (btnMultiImport) btnMultiImport.style.display = role === 'admin' ? 'inline-flex' : 'none';
   }
 
   renderSimpusTableRecords();
@@ -1346,13 +1363,31 @@ function renderSimpusTableRecords() {
   const container = document.getElementById('simpusCardsContainer');
   if (!container) return;
 
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const loggedUser = (sessionStorage.getItem('ckg_user_name') || '').trim().toLowerCase();
+  const isPrivileged = (role === 'admin' || role === 'koordinator');
+
+  applyPetugasFilterLock();
+
   const petugasVal = document.getElementById('filterSimpusPetugas')?.value || '';
   const umurVal = document.getElementById('filterSimpusUmur')?.value || '';
 
-  let dataset = simpusRecords.filter(r => activeSimpusTab === 'sudah_bagi' ? r.is_divided : !r.is_divided);
+  // Tab 1: Data Belum Di-Bagi (is_divided === false)
+  // Tab 2: Data Sudah Di-Bagi (is_divided === true)
+  let dataset = simpusRecords.filter(r => activeSimpusTab === 'sudah_bagi' ? Boolean(r.is_divided) : !r.is_divided);
 
-  if (petugasVal) {
-    dataset = dataset.filter(r => r.assigned_to === petugasVal);
+  // If on "Data Sudah Di-Bagi" tab:
+  if (activeSimpusTab === 'sudah_bagi') {
+    if (!isPrivileged && loggedUser) {
+      // Petugas role can ONLY see records assigned to them
+      dataset = dataset.filter(r => {
+        const assigned = (r.assigned_to || '').toLowerCase().trim();
+        return assigned === loggedUser || assigned.includes(loggedUser);
+      });
+    } else if (petugasVal) {
+      // Admin / Koordinator can filter by petugasVal dropdown
+      dataset = dataset.filter(r => r.assigned_to === petugasVal);
+    }
   }
 
   if (umurVal) {
@@ -1761,7 +1796,7 @@ function closeBagiPetugasModal() {
   document.getElementById('bagiPetugasModalOverlay').classList.remove('open');
 }
 
-function handleBagiPetugasSubmit(e) {
+async function handleBagiPetugasSubmit(e) {
   e.preventDefault();
   const targetPetugas = document.getElementById('targetPetugasSelect').value;
   const count = parseInt(document.getElementById('jumlahDataBagi').value) || 0;
@@ -1771,45 +1806,96 @@ function handleBagiPetugasSubmit(e) {
     return;
   }
 
+  const updatedChunk = [];
   let assigned = 0;
   simpusRecords.forEach(r => {
     if (!r.is_divided && assigned < count) {
       r.is_divided = true;
       r.assigned_to = targetPetugas;
+      updatedChunk.push(r);
       assigned++;
     }
   });
 
-  saveSimpusRecordsToStorage();
+  if (assigned === 0) {
+    showToast('Tidak ada data yang tersedia untuk di-bagi.', 'warning');
+    closeBagiPetugasModal();
+    return;
+  }
+
   closeBagiPetugasModal();
+  showLoadingOverlay('Membagikan Data SIMPUS...', `Mengalokasikan ${assigned} data ke ${targetPetugas} & menyinkronkan ke Cloud D1`);
+
+  saveSimpusRecordsToStorage();
+
+  try {
+    await fetch('/api/simpus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedChunk)
+    });
+  } catch (err) {
+    console.error('Failed to sync allocated SIMPUS records to cloud:', err);
+  }
+
+  hideLoadingOverlay();
   renderSimpusView();
-  showToast(`Berhasil membagikan ${assigned} data SIMPUS kepada ${targetPetugas}!`, 'success');
+
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      icon: 'success',
+      title: 'Pembagian Data Berhasil!',
+      html: `Berhasil membagikan <strong>${assigned} Data Pasien SIMPUS</strong> kepada petugas <strong>${targetPetugas}</strong>.<br><br><span style="color:#059669; font-weight:700;">Data otomatis berpindah ke tab "Data Sudah Di-Bagi" & tersimpan di Cloud D1.</span>`,
+      confirmButtonColor: '#7c3aed'
+    });
+  } else {
+    showToast(`Berhasil membagikan ${assigned} data SIMPUS kepada ${targetPetugas}!`, 'success');
+  }
 }
 
-function deleteAllSimpusData() {
+async function deleteAllSimpusData() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  if (role !== 'admin') {
+    showToast('Akses khusus Admin!', 'error');
+    return;
+  }
+
+  const proceed = async () => {
+    showLoadingOverlay('Menghapus Data SIMPUS...', 'Menghapus seluruh record SIMPUS di Cloudflare D1 Database');
+    try {
+      await fetch('/api/simpus', { method: 'DELETE' });
+    } catch (err) {
+      console.error('Cloud delete SIMPUS error:', err);
+    }
+    simpusRecords = [];
+    localStorage.removeItem('ckg_simpus_records');
+    hideLoadingOverlay();
+    renderSimpusView();
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire('Terhapus!', 'Seluruh Data SIMPUS Berhasil Dihapus dari Cloud D1 & Database Lokal.', 'success');
+    } else {
+      showToast('Seluruh Data SIMPUS Berhasil Dihapus!', 'success');
+    }
+  };
+
   if (typeof Swal !== 'undefined') {
     Swal.fire({
       title: 'Hapus Seluruh Data SIMPUS?',
-      text: 'Apakah Anda yakin ingin menghapus SELURUH Data Entry CKG dari SIMPUS? Tindakan ini tidak dapat dibatalkan.',
+      text: 'Apakah Anda yakin ingin menghapus SELURUH Data Entry CKG dari SIMPUS di Cloud D1? Tindakan ini tidak dapat dibatalkan.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#dc2626',
       cancelButtonColor: '#64748b',
-      confirmButtonText: 'Ya, Hapus Semua Data!',
+      confirmButtonText: 'Ya, Hapus Semua Data Cloud!',
       cancelButtonText: 'Batal'
     }).then((result) => {
       if (result.isConfirmed) {
-        simpusRecords = [];
-        saveSimpusRecordsToStorage();
-        renderSimpusView();
-        Swal.fire('Terhapus!', 'Seluruh Data SIMPUS Berhasil Dihapus.', 'success');
+        proceed();
       }
     });
-  } else if (confirm('Apakah Anda yakin ingin menghapus SELURUH Data Entry CKG dari SIMPUS? Action ini tidak dapat dibatalkan.')) {
-    simpusRecords = [];
-    saveSimpusRecordsToStorage();
-    renderSimpusView();
-    showToast('Seluruh Data SIMPUS Berhasil Dihapus!', 'success');
+  } else if (confirm('Apakah Anda yakin ingin menghapus SELURUH Data Entry CKG dari SIMPUS di Cloud D1? Action ini tidak dapat dibatalkan.')) {
+    proceed();
   }
 }
 
@@ -4311,6 +4397,336 @@ async function executeAdminXLSXImport() {
             Total <strong>${uploaded} Data Pasien</strong> telah <strong>ter-upload & tersinkronisasi ke Cloudflare D1 Database</strong>!<br><br>
             <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:12px;">
               <strong style="color:#5b21b6; font-size:13px;"><i class="bi bi-people-fill"></i> Rekapitulasi Alokasi Per-Petugas:</strong>
+              <ul style="margin:6px 0 0 18px; padding:0; font-size:12.5px;">
+                ${breakdownList}
+              </ul>
+            </div>
+          </div>`,
+    confirmButtonColor: '#7c3aed'
+  });
+}
+
+/* ==========================================================================
+   👑 FITUR IMPORT DATA SIMPUS MULTI-PETUGAS KHUSUS ADMIN (SUDAH DI-BAGI)
+   ========================================================================== */
+
+let selectedSimpusAdminImportFile = null;
+let parsedSimpusAdminRecords = [];
+
+function openSimpusAdminMultiImportModal() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  if (role !== 'admin') {
+    if (typeof Swal !== 'undefined') {
+      Swal.fire('Akses Ditolak', 'Fitur Import SIMPUS Multi-Petugas ini khusus untuk Role Admin.', 'warning');
+    } else {
+      showToast('Akses khusus Admin!', 'error');
+    }
+    return;
+  }
+
+  const modal = document.getElementById('simpusAdminImportModal');
+  if (modal) modal.classList.add('open', 'active');
+
+  selectedSimpusAdminImportFile = null;
+  parsedSimpusAdminRecords = [];
+
+  const previewArea = document.getElementById('simpusAdminImportPreviewArea');
+  const btnExec = document.getElementById('btnExecuteSimpusAdminImport');
+  const fileInput = document.getElementById('simpusAdminImportFileInput');
+
+  if (previewArea) {
+    previewArea.style.display = 'none';
+    previewArea.innerHTML = '';
+  }
+  if (btnExec) btnExec.disabled = true;
+  if (fileInput) fileInput.value = '';
+}
+
+function closeSimpusAdminMultiImportModal() {
+  const modal = document.getElementById('simpusAdminImportModal');
+  if (modal) modal.classList.remove('open', 'active');
+}
+
+function downloadSimpusAdminXLSXTemplate() {
+  try {
+    const headers = [
+      "Petugas Entry", "NAMA PASIEN", "NIK", "ALAMAT", "TANGGAL", "TANGGAL LAHIR", "USIA",
+      "BB (kg)", "TB (cm)", "TD SISTOLIK", "TD DIASTOLIK", "GULA DARAH", "KOLESTEROL"
+    ];
+
+    const sampleRow1 = [
+      "Teti Nuryati, S.Keb, Bdn", "EUIS SARIBANON", "3204123456780001", "Kp. Cileutik RT 01/08", "2026-08-01", "1962-12-01", 63,
+      54, 153, 135, 99, "91", "180"
+    ];
+
+    const sampleRow2 = [
+      "Mochamad Fauzie, S.Gz", "SENY SEPTIANY", "3204134109910006", "Bojongpulus", "2026-08-01", "1991-09-01", 34,
+      56, 159, 120, 92, "90", "180"
+    ];
+
+    const sampleRow3 = [
+      "Anisa Rohmatunisa, AM.Keb", "NUR FAJARWATI ARIFAH", "3273076009850004", "Cipaku RT 02/02", "2026-08-02", "1985-09-20", 40,
+      69, 155, 125, 96, "94", "180"
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow1, sampleRow2, sampleRow3]);
+    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 16) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template SIMPUS Multi Petugas");
+    XLSX.writeFile(wb, `Template_Import_SIMPUS_MultiPetugas_${new Date().toISOString().substring(0, 10)}.xlsx`);
+    
+    showToast('Template Excel SIMPUS Multi-Petugas Berhasil Diunduh!', 'success');
+  } catch (err) {
+    console.error('Download SIMPUS admin template error:', err);
+    if (typeof Swal !== 'undefined') Swal.fire('Gagal Download Template', err.message, 'error');
+  }
+}
+
+function handleSimpusAdminImportFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  selectedSimpusAdminImportFile = file;
+  parsedSimpusAdminRecords = [];
+
+  const previewArea = document.getElementById('simpusAdminImportPreviewArea');
+  const btnExec = document.getElementById('btnExecuteSimpusAdminImport');
+  const loggedAdmin = sessionStorage.getItem('ckg_user_name') || 'Admin';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+        showToast('File Excel tidak valid!', 'error');
+        return;
+      }
+
+      const ws = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      if (jsonRows.length === 0) {
+        showToast('File Excel kosong!', 'warning');
+        return;
+      }
+
+      const groupedSummary = {};
+      const maxNo = simpusRecords.reduce((max, r) => Math.max(max, parseInt(r.no) || 0), 3900);
+
+      jsonRows.forEach((row, idx) => {
+        const getVal = (...keys) => {
+          for (let k of keys) {
+            const target = k.toLowerCase().trim();
+            for (let rowKey in row) {
+              if (rowKey.toLowerCase().trim() === target) return String(row[rowKey]).trim();
+            }
+          }
+          for (let k of keys) {
+            const target = k.toLowerCase().trim();
+            for (let rowKey in row) {
+              const keyClean = rowKey.toLowerCase().trim();
+              if (keyClean.includes(target)) return String(row[rowKey]).trim();
+            }
+          }
+          return '';
+        };
+
+        const nama = getVal('NAMA PASIEN', 'NAMA', 'Nama Pasien', 'Nama').toUpperCase();
+        const nik = getVal('NIK', 'nik', 'No KTP');
+        if (!nama || nama.length < 2) return;
+
+        let petugasName = getVal('Petugas Entry', 'Petugas', 'Assigned To', 'Petugas Skrining', 'Created By', 'Nama Petugas');
+        if (!petugasName) petugasName = loggedAdmin;
+
+        const usia = parseInt(getVal('USIA', 'Usia', 'Umur')) || 30;
+        const bb = parseFloat(getVal('BB (kg)', 'BB', 'BERAT BADAN')) || 0;
+        const tb = parseFloat(getVal('TB (cm)', 'TB', 'TINGGI BADAN')) || 0;
+        const imtVal = (bb > 0 && tb > 0) ? parseFloat((bb / ((tb / 100) ** 2)).toFixed(1)) : 0;
+
+        let keterangan = 'Dewasa';
+        if (usia < 18) keterangan = 'Anak';
+        else if (usia >= 60) keterangan = 'Lansia';
+
+        const recId = `S-${maxNo + idx + 1}-${Date.now()}`;
+        const record = {
+          id: recId,
+          no: maxNo + idx + 1,
+          tanggal: getVal('TANGGAL', 'Tanggal', 'Tanggal Entry') || new Date().toISOString().substring(0, 10),
+          nama: nama,
+          nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
+          alamat: getVal('ALAMAT', 'Alamat') || '-',
+          dob: getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB') || '1990-01-01',
+          usia: usia,
+          bb: bb,
+          tb: tb,
+          imt: imtVal,
+          sistol: parseInt(getVal('TD SISTOLIK', 'SISTOL', 'Sistol')) || 120,
+          diastol: parseInt(getVal('TD DIASTOLIK', 'DIASTOL', 'Diastol')) || 80,
+          gula: getVal('GULA DARAH', 'Gula Darah', 'Gula') || '100',
+          kolesterol: getVal('KOLESTEROL', 'Kolesterol') || '180',
+          keterangan: keterangan,
+          is_divided: true,
+          assigned_to: petugasName,
+          petugas_entry: petugasName,
+          entry_status: 'belum'
+        };
+
+        parsedSimpusAdminRecords.push(record);
+        groupedSummary[petugasName] = (groupedSummary[petugasName] || 0) + 1;
+      });
+
+      if (parsedSimpusAdminRecords.length === 0) {
+        showToast('Tidak ada data SIMPUS valid terdeteksi!', 'warning');
+        if (btnExec) btnExec.disabled = true;
+        return;
+      }
+
+      const officerCount = Object.keys(groupedSummary).length;
+      
+      let badgesHtml = Object.entries(groupedSummary).map(([pName, count]) => {
+        return `<div style="background:#f3e8ff; border:1px solid #c084fc; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:700; color:#6b21a8; display:flex; align-items:center; gap:8px;">
+                  <i class="bi bi-person-badge-fill" style="color:#7c3aed;"></i>
+                  <span>${pName}: <strong style="color:#5b21b6; font-size:13.5px;">${count} Data Pasien</strong></span>
+                </div>`;
+      }).join('');
+
+      let previewRowsHtml = parsedSimpusAdminRecords.slice(0, 8).map((r, i) => {
+        return `<tr>
+                  <td style="text-align:center;">${i + 1}</td>
+                  <td><strong>${r.nama}</strong><br><span style="font-size:11px; color:#64748b;">NIK: ${r.nik}</span></td>
+                  <td><span class="badge badge-amber">${r.keterangan}</span></td>
+                  <td><span class="badge badge-purple" style="font-weight:700;"><i class="bi bi-person-fill"></i> ${r.assigned_to}</span></td>
+                  <td><span style="font-size:12px; color:#16a34a; font-weight:700;">Sudah Di-Bagi</span></td>
+                </tr>`;
+      }).join('');
+
+      previewArea.innerHTML = `
+        <div style="background: #ffffff; border: 1.5px solid #d8b4fe; border-radius: 14px; padding: 16px; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.08);">
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #e9d5ff;">
+            <div>
+              <div style="font-weight:800; font-size:14px; color:#5b21b6;">
+                <i class="bi bi-eye-fill"></i> PREVIEW SIMPUS MULTI-PETUGAS (SUDAH DI-BAGI)
+              </div>
+              <div style="font-size:12px; color:#6b21a8; margin-top:2px;">
+                File: <strong>${file.name}</strong> — Total <strong>${parsedSimpusAdminRecords.length} Data Pasien</strong> untuk <strong>${officerCount} Petugas</strong>
+              </div>
+            </div>
+            <span class="badge badge-emerald" style="font-size:12px; padding:6px 12px;"><i class="bi bi-check-circle-fill"></i> Ready Sync D1</span>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <div style="font-size:12px; font-weight:700; color:#4c1d95; margin-bottom:8px;">
+              <i class="bi bi-people-fill"></i> Pembagian Data SIMPUS Per-Petugas Terdeteksi:
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              ${badgesHtml}
+            </div>
+          </div>
+
+          <div style="font-size:12px; font-weight:700; color:#4c1d95; margin-bottom:6px;">
+            <i class="bi bi-table"></i> Sample Preview Data Pasien (Top ${Math.min(8, parsedSimpusAdminRecords.length)} dari ${parsedSimpusAdminRecords.length}):
+          </div>
+
+          <div class="table-responsive" style="max-height:220px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:10px;">
+            <table class="custom-table" style="font-size:12px;">
+              <thead>
+                <tr>
+                  <th style="width:40px; text-align:center;">No</th>
+                  <th>Nama Pasien & NIK</th>
+                  <th>Kategori</th>
+                  <th>Petugas Entry (Target)</th>
+                  <th>Status Bagi</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${previewRowsHtml}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      `;
+
+      previewArea.style.display = 'block';
+      if (btnExec) btnExec.disabled = false;
+
+    } catch (err) {
+      console.error('SIMPUS Admin import preview error:', err);
+      showToast('Gagal membaca file Excel: ' + err.message, 'error');
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+async function executeSimpusAdminXLSXImport() {
+  if (parsedSimpusAdminRecords.length === 0) {
+    showToast('Tidak ada data SIMPUS yang siap di-import!', 'warning');
+    return;
+  }
+
+  closeSimpusAdminMultiImportModal();
+
+  const officerStats = {};
+  parsedSimpusAdminRecords.forEach(r => {
+    officerStats[r.assigned_to] = (officerStats[r.assigned_to] || 0) + 1;
+  });
+
+  Swal.fire({
+    title: `<i class="bi bi-cloud-upload-fill" style="color:#7c3aed;"></i> Upload Batch SIMPUS Multi-Petugas ke Cloud D1...`,
+    html: `<div style="margin:10px 0;">
+            <div id="simpusAdminProgressBar" style="width:100%;height:20px;background:#e2e8f0;border-radius:10px;overflow:hidden;">
+              <div id="simpusAdminProgressFill" style="width:0%;height:100%;background:linear-gradient(90deg,#7c3aed,#9333ea);border-radius:10px;transition:width 0.3s;"></div>
+            </div>
+            <div id="simpusAdminProgressText" style="margin-top:8px;font-size:13px;color:#475569;font-weight:600;">0 / ${parsedSimpusAdminRecords.length} data pasien</div>
+          </div>`,
+    allowOutsideClick: false,
+    showConfirmButton: false
+  });
+
+  const chunkSize = 20;
+  let uploaded = 0;
+  let failed = 0;
+
+  for (let i = 0; i < parsedSimpusAdminRecords.length; i += chunkSize) {
+    const chunk = parsedSimpusAdminRecords.slice(i, i + chunkSize);
+    try {
+      const res = await fetch('/api/simpus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chunk)
+      });
+      if (res.ok) { uploaded += chunk.length; } else { failed += chunk.length; }
+    } catch (err) {
+      failed += chunk.length;
+    }
+
+    const pct = Math.round(((uploaded + failed) / parsedSimpusAdminRecords.length) * 100);
+    const fillEl = document.getElementById('simpusAdminProgressFill');
+    const txtEl = document.getElementById('simpusAdminProgressText');
+    if (fillEl) fillEl.style.width = pct + '%';
+    if (txtEl) txtEl.textContent = `${uploaded + failed} / ${parsedSimpusAdminRecords.length} data pasien (${pct}%)`;
+  }
+
+  simpusRecords = [...parsedSimpusAdminRecords, ...simpusRecords];
+  localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+
+  renderSimpusView();
+  updateCloudSyncPill(true, `D1 Online (${simpusRecords.length} SIMPUS)`);
+
+  let breakdownList = Object.entries(officerStats).map(([pName, cnt]) => {
+    return `<li style="margin-bottom:4px;"><strong>${pName}</strong>: <span style="color:#059669; font-weight:700;">${cnt} Data Pasien</span></li>`;
+  }).join('');
+
+  Swal.fire({
+    icon: failed === 0 ? 'success' : 'warning',
+    title: failed === 0 ? 'Import SIMPUS Multi-Petugas Berhasil!' : 'Import Sebagian Berhasil',
+    html: `<div style="font-size:13.5px; text-align:left; line-height:1.6;">
+            Total <strong>${uploaded} Data Pasien SIMPUS</strong> telah <strong>ter-upload & tersinkronisasi ke Cloudflare D1 Database (simpus_records)</strong>!<br><br>
+            <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:12px;">
+              <strong style="color:#5b21b6; font-size:13px;"><i class="bi bi-people-fill"></i> Rekapitulasi Alokasi Per-Petugas (Data Sudah Di-Bagi):</strong>
               <ul style="margin:6px 0 0 18px; padding:0; font-size:12.5px;">
                 ${breakdownList}
               </ul>
