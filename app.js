@@ -4044,7 +4044,7 @@ function downloadAdminXLSXTemplate() {
     const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow1, sampleRow2, sampleRow3]);
     ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 16) }));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template CKG Admin Multi-Petugas");
+    XLSX.utils.book_append_sheet(wb, ws, "Template CKG Multi Petugas");
     XLSX.writeFile(wb, `Template_Import_Admin_MultiPetugas_CKG_${new Date().toISOString().substring(0, 10)}.xlsx`);
     
     showToast('Template Excel Khusus Admin Berhasil Diunduh!', 'success');
