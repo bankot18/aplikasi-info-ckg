@@ -122,7 +122,11 @@ export default {
             r.sistol || 0, r.diastol || 0, r.gula || '-', r.kolesterol || '-',
             r.keterangan || 'Dewasa', r.is_divided ? 1 : 0, r.assigned_to || '', r.entry_status || 'belum'
           ));
-          await env.DB.batch(statements);
+          const chunkSize = 20;
+          for (let i = 0; i < statements.length; i += chunkSize) {
+            const chunk = statements.slice(i, i + chunkSize);
+            await env.DB.batch(chunk);
+          }
           return new Response(JSON.stringify({ success: true, count: records.length }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
@@ -170,7 +174,16 @@ export default {
 
       if (request.method === 'GET') {
         try {
-          const { results } = await env.DB.prepare('SELECT * FROM ckg_full_records ORDER BY rowid DESC').all();
+          let { results } = await env.DB.prepare('SELECT * FROM ckg_full_records ORDER BY rowid DESC').all();
+          if (!results || results.length === 0) {
+            try {
+              const legacy = await env.DB.prepare('SELECT * FROM ckg_records ORDER BY id DESC').all();
+              if (legacy && legacy.results && legacy.results.length > 0) {
+                results = legacy.results;
+              }
+            } catch (_) {}
+          }
+
           const parsed = (results || []).map(r => {
             let item = {};
             if (r.raw_json) {
@@ -178,7 +191,7 @@ export default {
             }
             return {
               ...item,
-              id: item.id || r.id,
+              id: item.id || (r.id ? (String(r.id).startsWith('CKG-') ? String(r.id) : `CKG-${r.id}`) : 'CKG-' + Date.now()),
               nik: item.nik || r.nik || '',
               nama: item.nama || item.nama_pasien || r.nama_pasien || '',
               petugas_entry: item.petugas_entry || r.petugas_entry || 'Admin',
@@ -212,7 +225,7 @@ export default {
               raw_json = excluded.raw_json
           `);
           const statements = records.map(r => {
-            const recId = String(r.id || (r.nik ? `CKG-${r.nik}` : `CKG-${Date.now()}-${Math.floor(Math.random()*1000)}`));
+            const recId = String(r.id || (r.nik ? `CKG-${r.nik}` : `CKG-${Date.now()}-${Math.floor(Math.random()*10000)}`));
             return stmt.bind(
               recId,
               r.nik || '',
@@ -224,7 +237,14 @@ export default {
               JSON.stringify(r)
             );
           });
-          await env.DB.batch(statements);
+          
+          // Chunk statements into max 20 per batch call for D1 reliability
+          const chunkSize = 20;
+          for (let i = 0; i < statements.length; i += chunkSize) {
+            const chunk = statements.slice(i, i + chunkSize);
+            await env.DB.batch(chunk);
+          }
+
           return new Response(JSON.stringify({ success: true, count: records.length }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });

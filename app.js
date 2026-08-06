@@ -339,7 +339,11 @@ async function fetchCloudRecords() {
             tanggal_entry: r.tanggal_entry || r.created_at || new Date().toISOString().substring(0, 10)
           }));
           localStorage.setItem('ckg_records', JSON.stringify(records));
+          updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
           if (typeof renderApp === 'function') renderApp();
+        } else if (records.length > 0) {
+          // Push local records to D1 if D1 is currently empty
+          syncRecordsToCloud(records);
         }
       }
     }
@@ -349,14 +353,22 @@ async function fetchCloudRecords() {
 }
 
 async function syncRecordsToCloud(dataToSync) {
+  if (!dataToSync || dataToSync.length === 0) return;
   try {
-    await fetch('/api/ckg', {
+    updateCloudSyncPill('syncing', 'Menyingkronkan Data...');
+    const res = await fetch('/api/ckg', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dataToSync)
     });
+    if (res.ok) {
+      updateCloudSyncPill(true, `D1 Online (${dataToSync.length} Rec)`);
+    } else {
+      updateCloudSyncPill(false, 'Mode Local Storage');
+    }
   } catch (e) {
     console.log('Failed to sync CKG records to cloud D1:', e);
+    updateCloudSyncPill(false, 'Mode Local Storage');
   }
 }
 
