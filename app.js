@@ -2882,6 +2882,50 @@ function renderTableRecords() {
   tbody.innerHTML = buildTableRowsHtml(filtered);
 }
 
+function formatDisplayDate(val) {
+  if (!val && val !== 0) return '-';
+  val = String(val).trim();
+  if (!val || val === 'undefined' || val === 'null') return '-';
+
+  // Handle Excel serial date numbers (e.g. 24959 -> 15-05-1968)
+  if (/^\d{4,5}$/.test(val)) {
+    const serial = parseInt(val, 10);
+    const utc_days = Math.floor(serial - 25569);
+    const utc_value = utc_days * 86400;
+    const date_info = new Date(utc_value * 1000);
+    if (!isNaN(date_info.getTime())) {
+      const d = String(date_info.getDate()).padStart(2, '0');
+      const m = String(date_info.getMonth() + 1).padStart(2, '0');
+      const y = date_info.getFullYear();
+      return `${d}-${m}-${y}`;
+    }
+  }
+
+  // Handle YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(val)) {
+    const parts = val.substring(0, 10).split('-');
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+
+  // Handle DD/MM/YYYY or DD-MM-YYYY
+  if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(val)) {
+    const parts = val.split(/[\/-]/);
+    const d = String(parts[0]).padStart(2, '0');
+    const m = String(parts[1]).padStart(2, '0');
+    return `${d}-${m}-${parts[2]}`;
+  }
+
+  const parsed = new Date(val);
+  if (!isNaN(parsed.getTime())) {
+    const d = String(parsed.getDate()).padStart(2, '0');
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const y = parsed.getFullYear();
+    return `${d}-${m}-${y}`;
+  }
+
+  return val;
+}
+
 function buildTableRowsHtml(data) {
   if (data.length === 0) {
     return `
@@ -2915,24 +2959,8 @@ function buildTableRowsHtml(data) {
 
     return `
       <tr class="${trClass}">
-        <td>${i + 1}</td>
-        <td>${kegiatanBadge}</td>
-        <td>
-          <strong>${r.nama}</strong><br>
-          <span style="font-size: 11px; color: var(--text-muted);">${r.nik}</span>
-        </td>
-        <td>${r.tanggal_lahir}<br><span style="font-size: 11px; color: var(--text-muted);">${r.usia} th (${r.jenis_kelamin})</span></td>
-        <td>${r.alamat}<br><span style="font-size: 11px; color: var(--text-muted);">${r.kelurahan}, ${r.kecamatan}</span></td>
-        <td>${r.bb} kg / ${r.tb} cm / ${r.lp || '-'} cm</td>
-        <td>${imtBadge}</td>
-        <td><span class="${tdClass}">${r.td_sistolik}/${r.td_diastolik}</span></td>
-        <td><span class="${gulaClass}">${r.gula_darah ? r.gula_darah + ' mg/dL' : '-'}</span></td>
-        <td>${r.kolesterol ? r.kolesterol + ' mg/dL' : '-'}</td>
-        <td><span class="${hbClass}">${r.hb ? r.hb + ' g/dL' : '-'}</span></td>
-        <td>${r.katarak === 'Ya' ? '<span class="badge badge-rose">Katarak</span>' : '<span class="badge badge-emerald">Normal</span>'}</td>
-        <td><span class="badge badge-emerald">${r.status_validasi}</span></td>
-        <td>
-          <div style="display: flex; gap: 4px;">
+        <td style="text-align: center;">
+          <div style="display: flex; gap: 4px; justify-content: center;">
             <button class="btn btn-secondary btn-sm" onclick="viewDetailModal('${r.id}')" title="Detail">
               <i class="bi bi-eye"></i>
             </button>
@@ -2944,9 +2972,113 @@ function buildTableRowsHtml(data) {
             </button>
           </div>
         </td>
+        <td style="text-align: center; font-weight: bold;">${i + 1}</td>
+        <td>${kegiatanBadge}</td>
+        <td>
+          <strong>${r.nama}</strong><br>
+          <span style="font-size: 11px; color: var(--text-muted);">${r.nik}</span>
+        </td>
+        <td>${formatDisplayDate(r.tanggal_lahir)}<br><span style="font-size: 11px; color: var(--text-muted);">${r.usia} th (${r.jenis_kelamin})</span></td>
+        <td>${r.alamat}<br><span style="font-size: 11px; color: var(--text-muted);">${r.kelurahan}, ${r.kecamatan}</span></td>
+        <td>${r.bb} kg / ${r.tb} cm / ${r.lp || '-'} cm</td>
+        <td>${imtBadge}</td>
+        <td><span class="${tdClass}">${r.td_sistolik}/${r.td_diastolik}</span></td>
+        <td><span class="${gulaClass}">${r.gula_darah ? r.gula_darah + ' mg/dL' : '-'}</span></td>
+        <td>${r.kolesterol ? r.kolesterol + ' mg/dL' : '-'}</td>
+        <td><span class="${hbClass}">${r.hb ? r.hb + ' g/dL' : '-'}</span></td>
+        <td>${r.katarak === 'Ya' ? '<span class="badge badge-rose">Katarak</span>' : '<span class="badge badge-emerald">Normal</span>'}</td>
+        <td><span class="badge badge-emerald">${r.status_validasi}</span></td>
       </tr>
     `;
   }).join('');
+}
+
+function confirmDeleteAllCkgRecords() {
+  if (currentRole !== 'Admin' && currentRole !== 'admin') {
+    showToast('Hanya Admin yang dapat menghapus semua data.', 'error');
+    return;
+  }
+
+  if (records.length === 0) {
+    showToast('Tidak ada data CKG untuk dihapus.', 'info');
+    return;
+  }
+
+  if (typeof Swal === 'undefined') {
+    if (confirm('Apakah Anda yakin ingin menghapus SEMUA data CKG?')) {
+      records = [];
+      localStorage.removeItem('ckg_records');
+      fetch('/api/ckg', { method: 'DELETE' });
+      renderApp();
+      updateCloudSyncPill(true, 'D1 Online (0 Rec)');
+      showToast('Seluruh Data CKG Berhasil Dihapus!', 'success');
+    }
+    return;
+  }
+
+  Swal.fire({
+    title: '<span style="color:#dc2626; font-size: 20px;"><i class="bi bi-exclamation-triangle-fill"></i> HAPUS SEMUA DATA CKG?</span>',
+    html: `
+      <div style="text-align:left; font-size:13px; color:#475569; margin-bottom:12px; line-height:1.5;">
+        Apakah Anda yakin ingin menghapus <strong>SEMUA (${records.length}) DATA CKG</strong>?<br>
+        <span style="color:#dc2626; font-weight:600;">Peringatan: Seluruh data CKG akan dihapus secara permanen dari Cloudflare D1 Database & Penyimpanan Aplikasi!</span>
+      </div>
+      <div style="margin-top:14px; text-align:left; background:#fef2f2; padding:12px; border-radius:8px; border:1px solid #fecaca;">
+        <label style="font-size:12px; font-weight:700; color:#991b1b; display:block; margin-bottom:6px;">
+          Ketik "HAPUS SEMUA DATA" di bawah untuk mengaktifkan tombol konfirmasi:
+        </label>
+        <input type="text" id="confirmDeleteInputText" class="swal2-input" placeholder="HAPUS SEMUA DATA" style="width:100%; margin:0; font-weight:700; text-transform:uppercase; border:2px solid #f87171; border-radius:6px; padding:8px 12px; box-sizing:border-box; color:#991b1b;">
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Hapus Semua Data!',
+    cancelButtonText: 'Batal',
+    didOpen: () => {
+      const confirmBtn = Swal.getConfirmButton();
+      const inputEl = document.getElementById('confirmDeleteInputText');
+      if (confirmBtn && inputEl) {
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.4';
+        confirmBtn.style.cursor = 'not-allowed';
+
+        inputEl.addEventListener('input', () => {
+          if (inputEl.value.trim() === 'HAPUS SEMUA DATA') {
+            confirmBtn.disabled = false;
+            confirmBtn.style.opacity = '1';
+            confirmBtn.style.cursor = 'pointer';
+          } else {
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.4';
+            confirmBtn.style.cursor = 'not-allowed';
+          }
+        });
+      }
+    },
+    preConfirm: () => {
+      const inputEl = document.getElementById('confirmDeleteInputText');
+      if (!inputEl || inputEl.value.trim() !== 'HAPUS SEMUA DATA') {
+        Swal.showValidationMessage('Harap ketik "HAPUS SEMUA DATA" dengan benar!');
+        return false;
+      }
+      return true;
+    }
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      records = [];
+      localStorage.removeItem('ckg_records');
+      try {
+        await fetch('/api/ckg', { method: 'DELETE' });
+      } catch (err) {
+        console.error('Failed to delete all records from cloud D1:', err);
+      }
+      renderApp();
+      updateCloudSyncPill(true, 'D1 Online (0 Rec)');
+      Swal.fire('Terhapus!', 'Seluruh Data CKG berhasil dihapus dari Cloudflare D1 Database.', 'success');
+    }
+  });
 }
 
 function deleteRecord(id) {

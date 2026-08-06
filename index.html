@@ -399,6 +399,9 @@
               <button class="btn btn-primary" onclick="openInputModal('Luar Gedung')">
                 <i class="bi bi-plus-lg"></i> Input Data CKG
               </button>
+              <button class="btn btn-danger" id="btnHapusSemuaDataCkg" onclick="confirmDeleteAllCkgRecords()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; padding: 8px 14px; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25); display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-trash3-fill"></i> Hapus Semua Data
+              </button>
               <button class="btn btn-amber" onclick="openImportModal()">
                 <i class="bi bi-file-earmark-arrow-up"></i> Import Data
               </button>
@@ -418,15 +421,14 @@
               <i class="bi bi-buildings"></i> Jenis Kegiatan:
               <select id="filterKegiatan" class="filter-control" style="font-weight: 700; color: var(--primary);">
                 <option value="">-- Semua Kegiatan --</option>
-                <option value="Luar Gedung">📍 Luar Gedung</option>
-                <option value="Dalam Gedung">🏢 Dalam Gedung</option>
+                <option value="Luar Gedung">Luar Gedung</option>
+                <option value="Dalam Gedung">Dalam Gedung</option>
               </select>
             </div>
 
             <div class="filter-item">
-              <i class="bi bi-calendar-month"></i> Bulan:
+              <i class="bi bi-calendar3"></i> Bulan:
               <select id="filterBulan" class="filter-control">
-                <option value="">-- Pilih Bulan --</option>
                 <option value="01">Januari</option>
                 <option value="02">Februari</option>
                 <option value="03">Maret</option>
@@ -435,6 +437,10 @@
                 <option value="06">Juni</option>
                 <option value="07">Juli</option>
                 <option value="08" selected>Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
               </select>
             </div>
 
@@ -478,20 +484,20 @@
             <table class="custom-table">
               <thead>
                 <tr>
-                  <th>No</th>
-                  <th>Kegiatan</th>
-                  <th>Nama Pasien & NIK</th>
-                  <th>Tanggal Lahir / Usia / JK</th>
-                  <th>Alamat & Wilayah</th>
+                  <th style="width: 100px; text-align: center;">AKSI</th>
+                  <th style="width: 50px; text-align: center;">NO</th>
+                  <th>KEGIATAN</th>
+                  <th>NAMA PASIEN & NIK</th>
+                  <th>TANGGAL LAHIR / USIA / JK</th>
+                  <th>ALAMAT & WILAYAH</th>
                   <th>BB / TB / LP</th>
                   <th>IMT</th>
-                  <th>Tensi (S/D)</th>
-                  <th>Gula Darah</th>
-                  <th>Kolesterol</th>
+                  <th>TENSI (S/D)</th>
+                  <th>GULA DARAH</th>
+                  <th>KOLESTEROL</th>
                   <th>HB</th>
-                  <th>Fisik / Katarak</th>
-                  <th>Status Validasi</th>
-                  <th>Aksi</th>
+                  <th>FISIK / KATARAK</th>
+                  <th>STATUS VALIDASI</th>
                 </tr>
               </thead>
               <tbody id="tableBodyDataRecords">
