@@ -730,6 +730,95 @@
             </table>
           </div>
         </div>
+
+        <!-- MAINTENANCE MODE PANEL -->
+        <div class="card-panel" style="margin-top: 20px; border: 2px solid #f59e0b;">
+          <div class="card-header-bar">
+            <div>
+              <div class="card-header-title" style="color: #b45309;">
+                <i class="bi bi-tools"></i> Maintenance Mode Control Panel
+              </div>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Kelola mode maintenance website dan pembatasan akses menu untuk semua pengguna (kecuali Admin)
+              </p>
+            </div>
+            <div class="action-buttons-group">
+              <button class="btn btn-secondary btn-sm" onclick="loadMaintenanceSettings()" title="Refresh status maintenance">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Status
+              </button>
+            </div>
+          </div>
+
+          <!-- Maintenance Web Section -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
+            <div style="background: linear-gradient(135deg, #fef3c7, #fffbeb); border: 1px solid #fcd34d; border-radius: var(--radius-md); padding: 20px;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+                <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center;">
+                  <i class="bi bi-globe2" style="color: #fff; font-size: 20px;"></i>
+                </div>
+                <div>
+                  <h4 style="font-size: 15px; font-weight: 800; color: #92400e; margin: 0;">🌐 Maintenance Web</h4>
+                  <p style="font-size: 11.5px; color: #a16207; margin: 0;">Non-Admin tidak bisa login ke aplikasi</p>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding: 12px; background: #fff; border-radius: var(--radius-sm); border: 1px solid #e5e7eb;">
+                <div>
+                  <span style="font-weight: 700; font-size: 13.5px; color: #1f2937;">Status Maintenance Web</span>
+                  <span id="maintenanceWebStatusBadge" class="badge badge-emerald" style="margin-left: 8px; font-size: 11px;">NONAKTIF</span>
+                </div>
+                <label class="maintenance-toggle" title="Aktifkan/Nonaktifkan Maintenance Web">
+                  <input type="checkbox" id="toggleMaintenanceWeb" onchange="toggleMaintenanceWebMode()">
+                  <span class="maintenance-toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 12px; color: #92400e; font-weight: 700;">Pesan Maintenance Web (opsional):</label>
+                <textarea id="maintenanceWebMessage" class="form-control" rows="2" placeholder="Sistem sedang dalam maintenance. Silakan coba beberapa saat lagi." style="font-size: 12.5px; resize: none;"></textarea>
+              </div>
+            </div>
+
+            <!-- Maintenance Menu Section -->
+            <div style="background: linear-gradient(135deg, #ede9fe, #f5f3ff); border: 1px solid #c4b5fd; border-radius: var(--radius-md); padding: 20px;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+                <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); display: flex; align-items: center; justify-content: center;">
+                  <i class="bi bi-menu-button-wide-fill" style="color: #fff; font-size: 20px;"></i>
+                </div>
+                <div>
+                  <h4 style="font-size: 15px; font-weight: 800; color: #5b21b6; margin: 0;">📋 Maintenance Menu</h4>
+                  <p style="font-size: 11.5px; color: #7c3aed; margin: 0;">Kunci menu tertentu agar tidak bisa diakses non-Admin</p>
+                </div>
+              </div>
+
+              <div id="menuLockCheckboxes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+                <label class="menu-lock-item">
+                  <input type="checkbox" value="dashboard" class="menu-lock-checkbox"> <i class="bi bi-speedometer2"></i> Dashboard
+                </label>
+                <label class="menu-lock-item">
+                  <input type="checkbox" value="laporan" class="menu-lock-checkbox"> <i class="bi bi-file-earmark-bar-graph"></i> Laporan Data
+                </label>
+                <label class="menu-lock-item">
+                  <input type="checkbox" value="data-records" class="menu-lock-checkbox"> <i class="bi bi-folder-symlink-fill"></i> Data Records CKG
+                </label>
+                <label class="menu-lock-item">
+                  <input type="checkbox" value="simpus" class="menu-lock-checkbox"> <i class="bi bi-hdd-network"></i> Data Entry SIMPUS
+                </label>
+                <label class="menu-lock-item">
+                  <input type="checkbox" value="sekolah" class="menu-lock-checkbox"> <i class="bi bi-mortarboard-fill"></i> CKG Sekolah
+                </label>
+                <label class="menu-lock-item">
+                  <input type="checkbox" value="recycle-data" class="menu-lock-checkbox"> <i class="bi bi-trash3-fill"></i> Recycle Data
+                </label>
+              </div>
+
+              <button class="btn btn-sm" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #fff; font-weight: 700; width: 100%;" onclick="saveMenuMaintenanceSettings()">
+                <i class="bi bi-shield-lock-fill"></i> Simpan Pengaturan Kunci Menu
+              </button>
+            </div>
+          </div>
+        </div>
+
       </section>
 
     </main>

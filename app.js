@@ -132,6 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   setupAuthFormEvents();
   checkAuthSession();
+
+  // Load maintenance settings from Cloud D1
+  loadMaintenanceSettings();
 });
 
 function loadStoredUserDatabase() {
@@ -868,7 +871,18 @@ function performLoginSuccess(user) {
   // Show loading animation
   showLoadingOverlay('Memverifikasi Akses...', `Login sebagai ${user.nama_user}`);
 
-  setTimeout(() => {
+  setTimeout(async () => {
+    // Fetch latest maintenance settings from Cloud before allowing login
+    await loadMaintenanceSettings();
+
+    // Check maintenance web mode
+    const userRole = (user.role || 'Petugas').toLowerCase();
+    if (userRole !== 'admin' && maintenanceState.maintenance_web) {
+      hideLoadingOverlay();
+      showMaintenanceScreen(maintenanceState.maintenance_web_message);
+      return; // Block login
+    }
+
     // Set session
     sessionStorage.setItem('ckg_logged_in', 'true');
     sessionStorage.setItem('ckg_user_name', user.nama_user);
@@ -879,6 +893,9 @@ function performLoginSuccess(user) {
 
     checkAuthSession();
     hideLoadingOverlay();
+
+    // Apply menu locks after login
+    applyMaintenanceLocks();
 
     // Directly open Announcement popup (no "Login Berhasil" SweetAlert overlay)
     setTimeout(checkAndShowAnnouncement, 300);
@@ -1037,6 +1054,20 @@ function switchView(viewId) {
       });
       return;
     }
+  }
+
+  // Check maintenance menu lock (non-admin only)
+  if (role !== 'admin' && maintenanceState.locked_menus && maintenanceState.locked_menus.includes(viewId)) {
+    Swal.fire({
+      icon: 'warning',
+      title: '<i class="bi bi-shield-lock-fill" style="color:#f59e0b;"></i> Menu Dalam Maintenance',
+      html: `<div style="font-size:13.5px; line-height:1.7;">
+              Menu <strong>${viewId}</strong> sedang <strong style="color:#dc2626;">dikunci oleh Admin</strong> untuk sementara waktu.<br><br>
+              <span style="color:#64748b; font-size:12.5px;">${maintenanceState.maintenance_menu_message || 'Silakan hubungi Admin untuk informasi lebih lanjut.'}</span>
+            </div>`,
+      confirmButtonColor: '#f59e0b'
+    });
+    return;
   }
 
   document.querySelectorAll('.nav-tab-btn').forEach(b => {
@@ -2106,20 +2137,42 @@ function processImportFromModal() {
         });
       }
 
-      const chunkSize = 20;
+      const chunkSize = 5;
       let uploaded = 0;
       let failed = 0;
+      let lastError = '';
 
       for (let i = 0; i < parsedRecords.length; i += chunkSize) {
         const chunk = parsedRecords.slice(i, i + chunkSize);
-        try {
-          const res = await fetch('/api/simpus', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(chunk)
-          });
-          if (res.ok) { uploaded += chunk.length; } else { failed += chunk.length; }
-        } catch (err) {
+        let success = false;
+
+        // Try up to 2 times per chunk
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const res = await fetch('/api/simpus', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(chunk)
+            });
+            if (res.ok) {
+              uploaded += chunk.length;
+              success = true;
+              break;
+            } else {
+              const errBody = await res.text();
+              lastError = `HTTP ${res.status}: ${errBody.substring(0, 200)}`;
+              console.error(`[Import SIMPUS] Chunk ${i}-${i+chunk.length} failed (attempt ${attempt+1}):`, lastError);
+              // Wait before retry
+              await new Promise(r => setTimeout(r, 1000));
+            }
+          } catch (err) {
+            lastError = err.message;
+            console.error(`[Import SIMPUS] Network error chunk ${i} (attempt ${attempt+1}):`, err.message);
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
+
+        if (!success) {
           failed += chunk.length;
         }
 
@@ -2128,7 +2181,14 @@ function processImportFromModal() {
         const txtEl = document.getElementById('simpusImportProgressText');
         if (fillEl) fillEl.style.width = pct + '%';
         if (txtEl) txtEl.textContent = `${uploaded + failed} / ${parsedRecords.length} data pasien (${pct}%)`;
+
+        // Small delay between chunks to avoid D1 rate limits
+        if (i + chunkSize < parsedRecords.length) {
+          await new Promise(r => setTimeout(r, 150));
+        }
       }
+
+      console.log(`[Import SIMPUS] Upload complete: ${uploaded} ok, ${failed} failed. Last error: ${lastError}`);
 
       simpusRecords = [...parsedRecords, ...simpusRecords];
       saveSimpusRecordsToStorage();
@@ -2151,7 +2211,10 @@ function processImportFromModal() {
             title: 'Gagal Upload ke Cloud Database D1',
             html: `<div style="font-size:13.5px; text-align:left; line-height:1.6;">
                     Sistem gagal menyimpan <strong>${parsedRecords.length} Data Pasien</strong> ke Cloud D1.<br><br>
-                    <span style="color:#dc2626; font-size:12.5px;">Data telah diamankan di browser lokal. Silakan klik tombol Refresh untuk sinkronisasi ulang ke Cloud.</span>
+                    <div style="background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; padding:10px; margin:8px 0; font-size:11.5px; color:#991b1b; word-break:break-all;">
+                      <strong>Detail Error:</strong><br>${lastError || 'Unknown error - cek browser Console (F12)'}
+                    </div>
+                    <span style="color:#dc2626; font-size:12.5px;">Data telah diamankan di browser lokal. Silakan deploy ulang _worker.js lalu coba kembali.</span>
                   </div>`,
             confirmButtonColor: '#ef4444'
           });
@@ -5543,5 +5606,228 @@ function openCustomLogoModal() {
       location.reload();
     }
   });
+}
+
+/* ==========================================================================
+   🔧 MAINTENANCE MODE SYSTEM (Web & Menu Lock)
+   ========================================================================== */
+
+let maintenanceState = {
+  maintenance_web: false,
+  maintenance_web_message: 'Sistem sedang dalam maintenance. Silakan coba beberapa saat lagi.',
+  locked_menus: [],
+  maintenance_menu_message: 'Menu ini sedang dalam maintenance oleh Admin.'
+};
+
+async function loadMaintenanceSettings() {
+  try {
+    const res = await fetch('/api/maintenance');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        maintenanceState.maintenance_web = data.maintenance_web || false;
+        maintenanceState.maintenance_web_message = data.maintenance_web_message || maintenanceState.maintenance_web_message;
+        maintenanceState.locked_menus = data.locked_menus || [];
+        maintenanceState.maintenance_menu_message = data.maintenance_menu_message || maintenanceState.maintenance_menu_message;
+      }
+    }
+  } catch (err) {
+    console.warn('[Maintenance] Could not fetch settings:', err.message);
+  }
+
+  // Update Admin Panel UI
+  updateMaintenanceAdminUI();
+  // Apply locks for current user
+  applyMaintenanceLocks();
+}
+
+function updateMaintenanceAdminUI() {
+  const toggle = document.getElementById('toggleMaintenanceWeb');
+  const badge = document.getElementById('maintenanceWebStatusBadge');
+  const msgEl = document.getElementById('maintenanceWebMessage');
+
+  if (toggle) toggle.checked = maintenanceState.maintenance_web;
+  if (badge) {
+    if (maintenanceState.maintenance_web) {
+      badge.textContent = 'AKTIF';
+      badge.className = 'badge badge-rose';
+      badge.style.fontSize = '11px';
+    } else {
+      badge.textContent = 'NONAKTIF';
+      badge.className = 'badge badge-emerald';
+      badge.style.fontSize = '11px';
+    }
+  }
+  if (msgEl && maintenanceState.maintenance_web_message) {
+    msgEl.value = maintenanceState.maintenance_web_message;
+  }
+
+  // Update menu lock checkboxes
+  document.querySelectorAll('.menu-lock-checkbox').forEach(cb => {
+    cb.checked = maintenanceState.locked_menus.includes(cb.value);
+  });
+}
+
+async function toggleMaintenanceWebMode() {
+  const toggle = document.getElementById('toggleMaintenanceWeb');
+  const newState = toggle ? toggle.checked : false;
+  const msgEl = document.getElementById('maintenanceWebMessage');
+  const customMsg = msgEl ? msgEl.value.trim() : '';
+
+  const actionText = newState ? 'MENGAKTIFKAN' : 'MENONAKTIFKAN';
+  const result = await Swal.fire({
+    title: `${actionText} Maintenance Web?`,
+    html: newState
+      ? `<div style="font-size:13.5px; text-align:left; line-height:1.7;">
+          Semua pengguna <strong style="color:#dc2626;">SELAIN Admin</strong> akan <strong>TIDAK BISA LOGIN</strong> ke aplikasi.<br><br>
+          Mereka akan melihat halaman Maintenance Mode sampai Anda menonaktifkannya.
+        </div>`
+      : `<div style="font-size:13.5px;">Semua pengguna akan dapat login kembali secara normal.</div>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: newState ? '#dc2626' : '#059669',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: newState ? 'Ya, Aktifkan Maintenance' : 'Ya, Nonaktifkan',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!result.isConfirmed) {
+    if (toggle) toggle.checked = !newState;
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/maintenance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        maintenance_web: newState,
+        maintenance_web_message: customMsg || maintenanceState.maintenance_web_message
+      })
+    });
+
+    if (res.ok) {
+      maintenanceState.maintenance_web = newState;
+      if (customMsg) maintenanceState.maintenance_web_message = customMsg;
+      updateMaintenanceAdminUI();
+      showToast(`Maintenance Web berhasil ${newState ? 'DIAKTIFKAN' : 'DINONAKTIFKAN'}!`, newState ? 'warning' : 'success');
+    } else {
+      showToast('Gagal menyimpan pengaturan maintenance.', 'error');
+      if (toggle) toggle.checked = !newState;
+    }
+  } catch (err) {
+    showToast('Gagal koneksi ke Cloud: ' + err.message, 'error');
+    if (toggle) toggle.checked = !newState;
+  }
+}
+
+async function saveMenuMaintenanceSettings() {
+  const checkedMenus = [];
+  document.querySelectorAll('.menu-lock-checkbox:checked').forEach(cb => {
+    checkedMenus.push(cb.value);
+  });
+
+  try {
+    const res = await fetch('/api/maintenance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locked_menus: checkedMenus })
+    });
+
+    if (res.ok) {
+      maintenanceState.locked_menus = checkedMenus;
+      applyMaintenanceLocks();
+
+      if (typeof Swal !== 'undefined') {
+        const lockedNames = checkedMenus.length > 0
+          ? checkedMenus.map(m => `<li style="margin:2px 0;"><i class="bi bi-lock-fill" style="color:#dc2626;"></i> <strong>${m}</strong></li>`).join('')
+          : '<li style="color:#059669;"><i class="bi bi-unlock-fill"></i> Tidak ada menu yang dikunci</li>';
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Pengaturan Kunci Menu Tersimpan!',
+          html: `<div style="font-size:13px; text-align:left; line-height:1.6;">
+                  Menu berikut <strong>dikunci</strong> untuk semua pengguna selain Admin:
+                  <ul style="margin:8px 0 0 16px; padding:0;">${lockedNames}</ul>
+                </div>`,
+          confirmButtonColor: '#7c3aed'
+        });
+      } else {
+        showToast(`${checkedMenus.length} menu berhasil dikunci!`, 'success');
+      }
+    } else {
+      showToast('Gagal menyimpan pengaturan menu maintenance.', 'error');
+    }
+  } catch (err) {
+    showToast('Gagal koneksi Cloud: ' + err.message, 'error');
+  }
+}
+
+function applyMaintenanceLocks() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+
+  // Admin bypasses all locks
+  if (role === 'admin') {
+    document.querySelectorAll('.nav-tab-btn.maintenance-locked').forEach(btn => {
+      btn.classList.remove('maintenance-locked');
+    });
+    // Remove maintenance overlay if admin
+    const overlay = document.getElementById('maintenanceFullscreenOverlay');
+    if (overlay) overlay.remove();
+    return;
+  }
+
+  // Apply menu locks for non-admin
+  document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+    const viewId = btn.getAttribute('data-view');
+    if (maintenanceState.locked_menus.includes(viewId)) {
+      btn.classList.add('maintenance-locked');
+    } else {
+      btn.classList.remove('maintenance-locked');
+    }
+  });
+}
+
+function checkMaintenanceOnLogin(userRole) {
+  const role = (userRole || 'Petugas').toLowerCase();
+
+  if (role === 'admin') return true; // Admin always passes
+
+  if (maintenanceState.maintenance_web) {
+    // Show fullscreen maintenance overlay
+    showMaintenanceScreen(maintenanceState.maintenance_web_message);
+    return false; // Block login
+  }
+
+  return true; // Allow login
+}
+
+function showMaintenanceScreen(message) {
+  // Remove existing overlay if any
+  const existing = document.getElementById('maintenanceFullscreenOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'maintenanceFullscreenOverlay';
+  overlay.className = 'maintenance-fullscreen-overlay';
+  overlay.innerHTML = `
+    <div class="maintenance-fullscreen-content">
+      <div class="maintenance-icon-box">
+        <i class="bi bi-tools"></i>
+      </div>
+      <h1>🔧 Sistem Dalam Maintenance</h1>
+      <p>${message || 'Sistem sedang dalam pemeliharaan oleh Administrator. Silakan coba beberapa saat lagi.'}</p>
+      <div class="maint-badge">
+        <i class="bi bi-clock-history"></i>
+        Pencatatan CKG Puskesmas Banjaran Kota
+      </div>
+      <div style="margin-top: 24px;">
+        <button onclick="location.reload()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+          <i class="bi bi-arrow-clockwise"></i> Coba Lagi
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 }
 

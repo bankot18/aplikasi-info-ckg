@@ -155,7 +155,9 @@ export default {
         try {
           const body = await request.json();
           const records = Array.isArray(body) ? body : [body];
-          const stmt = env.DB.prepare(`
+          let inserted = 0;
+
+          const sqlText = `
             INSERT INTO simpus_records (
               id, no, petugas_entry, nama, nik, tanggal, dob, usia, status_pernikahan,
               provinsi, kab_kota, kecamatan, kelurahan, alamat, bb, tb, imt,
@@ -187,23 +189,49 @@ export default {
               assigned_to = excluded.assigned_to,
               entry_status = excluded.entry_status,
               raw_json = excluded.raw_json
-          `);
-          const statements = records.map(r => stmt.bind(
-            String(r.id || r.nik || Date.now()), r.no || 0, r.petugas_entry || r.assigned_to || '', r.nama || '', r.nik || '',
-            r.tanggal || '', r.dob || '', r.usia || 0, r.status_pernikahan || 'MENIKAH',
-            r.provinsi || 'Jawa Barat', r.kab_kota || 'Kab. Bandung', r.kecamatan || 'Banjaran', r.kelurahan || 'Tarajusari', r.alamat || '',
-            r.bb || 0, r.tb || 0, r.imt || 0, r.sistol || 0, r.diastol || 0, r.gula || '-', r.kolesterol || '-',
-            r.keterangan || 'Dewasa', r.is_divided ? 1 : 0, r.assigned_to || r.petugas_entry || '', r.entry_status || 'belum',
-            JSON.stringify(r)
-          ));
-          const chunkSize = 20;
-          for (let i = 0; i < statements.length; i += chunkSize) {
-            const chunk = statements.slice(i, i + chunkSize);
-            await env.DB.batch(chunk);
+          `;
+
+          // Process in small batches - each bind() needs its own prepare()
+          const batchSize = 10;
+          for (let i = 0; i < records.length; i += batchSize) {
+            const chunk = records.slice(i, i + batchSize);
+            const statements = chunk.map(r => {
+              return env.DB.prepare(sqlText).bind(
+                String(r.id || r.nik || `auto-${Date.now()}-${Math.random()}`),
+                r.no || 0,
+                String(r.petugas_entry || r.assigned_to || ''),
+                String(r.nama || ''),
+                String(r.nik || ''),
+                String(r.tanggal || ''),
+                String(r.dob || ''),
+                Number(r.usia) || 0,
+                String(r.status_pernikahan || 'MENIKAH'),
+                String(r.provinsi || 'Jawa Barat'),
+                String(r.kab_kota || 'Kab. Bandung'),
+                String(r.kecamatan || 'Banjaran'),
+                String(r.kelurahan || 'Tarajusari'),
+                String(r.alamat || ''),
+                Number(r.bb) || 0,
+                Number(r.tb) || 0,
+                Number(r.imt) || 0,
+                Number(r.sistol) || 0,
+                Number(r.diastol) || 0,
+                String(r.gula || '-'),
+                String(r.kolesterol || '-'),
+                String(r.keterangan || 'Dewasa'),
+                r.is_divided ? 1 : 0,
+                String(r.assigned_to || r.petugas_entry || ''),
+                String(r.entry_status || 'belum'),
+                JSON.stringify(r)
+              );
+            });
+            await env.DB.batch(statements);
+            inserted += chunk.length;
           }
-          return new Response(JSON.stringify({ success: true, count: records.length }), { headers: corsHeaders });
+
+          return new Response(JSON.stringify({ success: true, count: inserted }), { headers: corsHeaders });
         } catch (err) {
-          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+          return new Response(JSON.stringify({ success: false, error: String(err.message || err), stack: String(err.stack || '') }), { status: 500, headers: corsHeaders });
         }
       }
 
@@ -598,6 +626,81 @@ export default {
           `).bind(nama_user, now, status).run();
 
           return new Response(JSON.stringify({ success: true, timestamp: now }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
+    // 7. ROUTE: /api/maintenance (Maintenance Mode Settings)
+    if (url.pathname === '/api/maintenance' || url.pathname.startsWith('/api/maintenance/')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
+      }
+
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS maintenance_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT
+          )
+        `).run();
+      } catch (_) {}
+
+      if (request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare('SELECT key, value FROM maintenance_settings').all();
+          const settings = {};
+          (results || []).forEach(r => { settings[r.key] = r.value; });
+          return new Response(JSON.stringify({
+            success: true,
+            maintenance_web: settings['maintenance_web'] === 'true',
+            maintenance_web_message: settings['maintenance_web_message'] || 'Sistem sedang dalam maintenance. Silakan coba beberapa saat lagi.',
+            locked_menus: settings['locked_menus'] ? JSON.parse(settings['locked_menus']) : [],
+            maintenance_menu_message: settings['maintenance_menu_message'] || 'Menu ini sedang dalam maintenance oleh Admin.'
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const now = new Date().toISOString();
+          const upsert = env.DB.prepare(`
+            INSERT INTO maintenance_settings (key, value, updated_at) VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+          `);
+          const statements = [];
+
+          if (body.maintenance_web !== undefined) {
+            statements.push(upsert.bind('maintenance_web', String(body.maintenance_web), now));
+          }
+          if (body.maintenance_web_message !== undefined) {
+            statements.push(env.DB.prepare(`
+              INSERT INTO maintenance_settings (key, value, updated_at) VALUES (?, ?, ?)
+              ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+            `).bind('maintenance_web_message', String(body.maintenance_web_message), now));
+          }
+          if (body.locked_menus !== undefined) {
+            statements.push(env.DB.prepare(`
+              INSERT INTO maintenance_settings (key, value, updated_at) VALUES (?, ?, ?)
+              ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+            `).bind('locked_menus', JSON.stringify(body.locked_menus), now));
+          }
+          if (body.maintenance_menu_message !== undefined) {
+            statements.push(env.DB.prepare(`
+              INSERT INTO maintenance_settings (key, value, updated_at) VALUES (?, ?, ?)
+              ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+            `).bind('maintenance_menu_message', String(body.maintenance_menu_message), now));
+          }
+
+          if (statements.length > 0) {
+            await env.DB.batch(statements);
+          }
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
