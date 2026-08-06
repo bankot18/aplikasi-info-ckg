@@ -151,6 +151,95 @@ function populateUserDropdowns() {
   }
 }
 
+function loadStoredRecords() {
+  const saved = localStorage.getItem('ckg_records');
+  if (saved) {
+    try {
+      records = JSON.parse(saved);
+    } catch (e) {
+      records = [];
+    }
+  } else {
+    records = [];
+  }
+  fetchCloudRecords();
+}
+
+function saveRecordsToStorage() {
+  localStorage.setItem('ckg_records', JSON.stringify(records));
+  syncRecordsToCloud(records);
+}
+
+async function fetchCloudRecords() {
+  try {
+    const res = await fetch('/api/ckg');
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        const cloudRecords = result.data.map(r => ({
+          id: r.id ? (String(r.id).startsWith('CKG-') ? String(r.id) : `CKG-${r.id}`) : 'CKG-' + Date.now(),
+          jenis_kegiatan: r.lokasi_pelayanan || 'Luar Gedung',
+          nik: r.nik || '',
+          nama: r.nama_pasien || r.nama || 'Pasien',
+          tanggal_lahir: r.tanggal_lahir || '1990-01-01',
+          usia: r.usia || 30,
+          jenis_kelamin: r.jenis_kelamin || 'L',
+          no_whatsapp: r.no_whatsapp || '',
+          status_pernikahan: r.status_pernikahan || 'Menikah',
+          provinsi: r.provinsi || 'Jawa Barat',
+          kab_kota: r.kab_kota || 'Kab. Bandung',
+          kecamatan: r.kecamatan || 'Banjaran',
+          kelurahan: r.kelurahan || 'Banjaran Kota',
+          alamat: r.alamat || 'Banjaran',
+          pekerjaan: r.pekerjaan || '',
+          merokok: r.merokok || 'Tidak',
+          bb: r.bb || 60,
+          tb: r.tb || 165,
+          lp: r.lp || 80,
+          imt: r.imt || '22.0',
+          td_sistolik: r.td_sistolik || 120,
+          td_diastolik: r.td_diastolik || 80,
+          gula_darah: r.gula_darah || '110',
+          kolesterol: r.kolesterol || '180',
+          hb: r.hb || '14.0',
+          telinga: r.telinga || 'Normal',
+          mata: r.mata || 'Normal',
+          gigi: r.gigi || 'Baik',
+          katarak: r.katarak || 'Tidak',
+          status_validasi: 'Terverifikasi',
+          petugas_entry: r.petugas_entry || 'Admin',
+          created_by: r.petugas_entry || 'Admin',
+          created_at: r.tanggal_entry || new Date().toISOString().substring(0, 10)
+        }));
+
+        const merged = [...records];
+        cloudRecords.forEach(cr => {
+          if (!merged.some(m => m.id === cr.id || (m.nik && cr.nik && m.nik === cr.nik))) {
+            merged.push(cr);
+          }
+        });
+        records = merged;
+        localStorage.setItem('ckg_records', JSON.stringify(records));
+        renderApp();
+      }
+    }
+  } catch (e) {
+    console.log('Using local cached records:', e);
+  }
+}
+
+async function syncRecordsToCloud(dataToSync) {
+  try {
+    await fetch('/api/ckg', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dataToSync)
+    });
+  } catch (e) {
+    console.log('Failed to sync CKG records to cloud D1:', e);
+  }
+}
+
 function loadStoredSimpusRecords() {
   const saved = localStorage.getItem('ckg_simpus_records');
   if (saved) {
@@ -3139,6 +3228,12 @@ function executeXLSXImport() {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
 
+      if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+        hideLoadingOverlay();
+        Swal.fire('File Error', 'File Excel tidak memiliki lembar kerja (worksheet).', 'error');
+        return;
+      }
+
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
 
@@ -3146,7 +3241,7 @@ function executeXLSXImport() {
 
       if (jsonRows.length === 0) {
         hideLoadingOverlay();
-        showToast('File Excel kosong atau format tidak sesuai!', 'error');
+        Swal.fire('File Kosong', 'File Excel tidak berisi data atau format header tidak sesuai.', 'error');
         return;
       }
 
@@ -3154,11 +3249,23 @@ function executeXLSXImport() {
       const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Admin';
 
       jsonRows.forEach(row => {
-        // Normalize column keys (case insensitive / trimmed)
+        // Robust Column Key Extractor: Pass 1 Exact Match, Pass 2 Includes Match
         const getVal = (...keys) => {
+          // Pass 1: Exact Match (case insensitive)
           for (let k of keys) {
+            const target = k.toLowerCase().trim();
             for (let rowKey in row) {
-              if (rowKey.toLowerCase().trim().includes(k.toLowerCase().trim())) {
+              if (rowKey.toLowerCase().trim() === target) {
+                return String(row[rowKey]).trim();
+              }
+            }
+          }
+          // Pass 2: Fuzzy Includes Match (skipping unrelated keys)
+          for (let k of keys) {
+            const target = k.toLowerCase().trim();
+            for (let rowKey in row) {
+              const keyClean = rowKey.toLowerCase().trim();
+              if (keyClean.includes(target) && !keyClean.includes('petugas') && !keyClean.includes('faskes')) {
                 return String(row[rowKey]).trim();
               }
             }
@@ -3166,23 +3273,25 @@ function executeXLSXImport() {
           return '';
         };
 
-        const nik = getVal('NIK', 'No KTP');
-        const nama = getVal('Nama Pasien', 'Nama', 'Nama Lengkap');
+        const nik = getVal('NIK', 'No KTP', 'Nomor NIK');
+        const nama = getVal('Nama Pasien', 'Nama Lengkap', 'Nama Pasien & NIK', 'Nama');
 
-        if (!nama && !nik) return; // Skip invalid row
+        if (!nama && !nik) return; // Skip non-patient header or empty rows
 
-        const dobStr = getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB') || '1990-01-01';
-        let age = 30;
-        try {
-          const birthDate = new Date(dobStr);
-          if (!isNaN(birthDate.getTime())) {
-            const today = new Date();
-            age = today.getFullYear() - birthDate.getFullYear();
-          }
-        } catch (_) {}
+        const dobStr = getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB', 'Tanggal Lahir (YYYY-MM-DD)') || '1990-01-01';
+        let age = parseInt(getVal('Usia', 'Umur')) || 30;
+        if (isNaN(age) || age <= 0) {
+          try {
+            const birthDate = new Date(dobStr);
+            if (!isNaN(birthDate.getTime())) {
+              const today = new Date();
+              age = today.getFullYear() - birthDate.getFullYear();
+            }
+          } catch (_) {}
+        }
 
-        const bb = parseFloat(getVal('BB', 'Berat')) || 60;
-        const tb = parseFloat(getVal('TB', 'Tinggi')) || 165;
+        const bb = parseFloat(getVal('BB (kg)', 'BB', 'Berat Badan', 'Berat')) || 60;
+        const tb = parseFloat(getVal('TB (cm)', 'TB', 'Tinggi Badan', 'Tinggi')) || 165;
         const imtVal = (tb > 0) ? (bb / ((tb / 100) * (tb / 100))).toFixed(2) : '22.0';
 
         const newRecord = {
@@ -3192,30 +3301,31 @@ function executeXLSXImport() {
           nama: nama || 'Pasien Tanpa Nama',
           tanggal_lahir: dobStr,
           usia: age,
-          jenis_kelamin: getVal('Jenis Kelamin', 'JK') || 'L',
-          no_whatsapp: getVal('No WhatsApp', 'WA', 'HP') || '',
-          status_pernikahan: getVal('Status Nikah', 'Pernikahan') || 'Menikah',
+          jenis_kelamin: getVal('Jenis Kelamin', 'JK', 'Jenis Kelamin (L/P)') || 'L',
+          no_whatsapp: getVal('No WhatsApp', 'WA', 'HP', 'No HP') || '',
+          status_pernikahan: getVal('Status Nikah', 'Pernikahan', 'Status Pernikahan') || 'Menikah',
           provinsi: getVal('Provinsi') || 'Jawa Barat',
-          kab_kota: getVal('Kab/Kota', 'Kota') || 'Kab. Bandung',
+          kab_kota: getVal('Kab/Kota', 'Kota', 'Kabupaten') || 'Kab. Bandung',
           kecamatan: getVal('Kecamatan') || 'Banjaran',
-          kelurahan: getVal('Kelurahan') || 'Banjaran Kota',
-          alamat: getVal('Alamat') || 'Kab. Bandung',
+          kelurahan: getVal('Kelurahan', 'Desa') || 'Banjaran Kota',
+          alamat: getVal('Alamat', 'Alamat & Wilayah') || 'Kab. Bandung',
           pekerjaan: getVal('Pekerjaan') || '',
           merokok: getVal('Merokok') || 'Tidak',
           bb: bb,
           tb: tb,
-          lp: parseFloat(getVal('LP', 'Lingkar')) || 80,
+          lp: parseFloat(getVal('LP (cm)', 'LP', 'Lingkar Perut')) || 80,
           imt: imtVal,
-          td_sistolik: parseInt(getVal('TD Sistolik', 'Sistol')) || 120,
-          td_diastolik: parseInt(getVal('TD Diastolik', 'Diastol')) || 80,
-          gula_darah: getVal('Gula Darah', 'Gula') || '110',
-          kolesterol: getVal('Kolesterol') || '180',
-          hb: getVal('HB') || '14.0',
-          telinga: getVal('Telinga') || 'Normal',
-          mata: getVal('Mata') || 'Normal',
-          gigi: getVal('Gigi') || 'Baik',
-          katarak: getVal('Katarak') || 'Tidak',
+          td_sistolik: parseInt(getVal('TD Sistolik', 'Sistol', 'Tensi Sistolik')) || 120,
+          td_diastolik: parseInt(getVal('TD Diastolik', 'Diastol', 'Tensi Diastolik')) || 80,
+          gula_darah: getVal('Gula Darah (mg/dL)', 'Gula Darah', 'Gula') || '110',
+          kolesterol: getVal('Kolesterol (mg/dL)', 'Kolesterol') || '180',
+          hb: getVal('HB (g/dL)', 'HB', 'Hemoglobin') || '14.0',
+          telinga: getVal('Pemeriksaan Telinga', 'Telinga') || 'Normal',
+          mata: getVal('Pemeriksaan Mata', 'Mata') || 'Normal',
+          gigi: getVal('Pemeriksaan Gigi', 'Gigi') || 'Baik',
+          katarak: getVal('Pemeriksaan Katarak', 'Katarak') || 'Tidak',
           status_validasi: 'Terverifikasi',
+          petugas_entry: loggedUser,
           created_by: loggedUser,
           created_at: new Date().toISOString().substring(0, 10)
         };
