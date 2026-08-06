@@ -2852,11 +2852,60 @@ function unbanUser(namaUser) {
   });
 }
 
+function getRecordEntryDate(r) {
+  const dStr = r.tanggal_entry || r.created_at || r.tanggal || '';
+  if (!dStr && dStr !== 0) return null;
+  const str = String(dStr).trim();
+  if (!str || str === 'undefined' || str === 'null') return null;
+
+  // Handle YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const parts = str.substring(0, 10).split('-');
+    return { year: parts[0], month: parts[1], day: parts[2], yyyymmdd: `${parts[0]}-${parts[1]}-${parts[2]}` };
+  }
+
+  // Handle DD-MM-YYYY or DD/MM/YYYY
+  if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(str)) {
+    const parts = str.split(/[\/-]/);
+    const day = String(parts[0]).padStart(2, '0');
+    const month = String(parts[1]).padStart(2, '0');
+    const year = parts[2];
+    return { year, month, day, yyyymmdd: `${year}-${month}-${day}` };
+  }
+
+  // Handle Excel serial date numbers
+  if (/^\d{4,5}$/.test(str)) {
+    const serial = parseInt(str, 10);
+    const utc_days = Math.floor(serial - 25569);
+    const utc_value = utc_days * 86400;
+    const date_info = new Date(utc_value * 1000);
+    if (!isNaN(date_info.getTime())) {
+      const year = String(date_info.getFullYear());
+      const month = String(date_info.getMonth() + 1).padStart(2, '0');
+      const day = String(date_info.getDate()).padStart(2, '0');
+      return { year, month, day, yyyymmdd: `${year}-${month}-${day}` };
+    }
+  }
+
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    const year = String(parsed.getFullYear());
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return { year, month, day, yyyymmdd: `${year}-${month}-${day}` };
+  }
+
+  return null;
+}
+
 function renderTableRecords() {
   const tbody = document.getElementById('tableBodyDataRecords');
   if (!tbody) return;
 
   const filterKegiatanVal = document.getElementById('filterKegiatan')?.value || '';
+  const filterBulanVal = document.getElementById('filterBulan')?.value || '';
+  const filterTahunVal = document.getElementById('filterTahun')?.value || '';
+  const filterTanggalVal = document.getElementById('filterTanggal')?.value || '';
   const filterPetugasVal = document.getElementById('filterPetugas')?.value || '';
   const filterUmurVal = document.getElementById('filterUmur')?.value || '';
 
@@ -2867,8 +2916,29 @@ function renderTableRecords() {
     filtered = filtered.filter(r => r.jenis_kegiatan === filterKegiatanVal);
   }
 
+  if (filterBulanVal) {
+    filtered = filtered.filter(r => {
+      const recDate = getRecordEntryDate(r);
+      return recDate ? recDate.month === filterBulanVal : false;
+    });
+  }
+
+  if (filterTahunVal) {
+    filtered = filtered.filter(r => {
+      const recDate = getRecordEntryDate(r);
+      return recDate ? recDate.year === filterTahunVal : false;
+    });
+  }
+
+  if (filterTanggalVal) {
+    filtered = filtered.filter(r => {
+      const recDate = getRecordEntryDate(r);
+      return recDate ? recDate.yyyymmdd === filterTanggalVal : false;
+    });
+  }
+
   if (filterPetugasVal) {
-    filtered = filtered.filter(r => r.created_by === filterPetugasVal);
+    filtered = filtered.filter(r => r.created_by === filterPetugasVal || r.petugas_entry === filterPetugasVal);
   }
 
   if (filterUmurVal === 'anak') {
@@ -2880,6 +2950,11 @@ function renderTableRecords() {
   }
 
   tbody.innerHTML = buildTableRowsHtml(filtered);
+
+  const totalBulanBadge = document.getElementById('totalEntryBulanText');
+  if (totalBulanBadge) {
+    totalBulanBadge.textContent = `Total Entry Bulan Ini: ${filtered.length}`;
+  }
 }
 
 function formatDisplayDate(val) {
