@@ -3966,6 +3966,360 @@ function handleImportFileSelect(event) {
   if (btnExec) btnExec.disabled = false;
 }
 
+/* ==========================================================================
+   👑 FITUR IMPORT DATA KHUSUS ADMIN (MULTI-PETUGAS)
+   ========================================================================== */
+
+let selectedAdminImportFile = null;
+let parsedAdminRecords = [];
+
+function openAdminImportModal() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  if (role !== 'admin') {
+    if (typeof Swal !== 'undefined') {
+      Swal.fire('Akses Ditolak', 'Fitur Import Multi-Petugas ini khusus untuk Role Admin.', 'warning');
+    } else {
+      showToast('Akses khusus Admin!', 'error');
+    }
+    return;
+  }
+
+  const modal = document.getElementById('adminImportModal');
+  if (modal) modal.classList.add('open', 'active');
+
+  selectedAdminImportFile = null;
+  parsedAdminRecords = [];
+
+  const previewArea = document.getElementById('adminImportPreviewArea');
+  const btnExec = document.getElementById('btnExecuteAdminImport');
+  const fileInput = document.getElementById('adminImportFileInput');
+  const tglInput = document.getElementById('adminImportTanggalEntry');
+
+  if (previewArea) {
+    previewArea.style.display = 'none';
+    previewArea.innerHTML = '';
+  }
+  if (btnExec) btnExec.disabled = true;
+  if (fileInput) fileInput.value = '';
+  if (tglInput) tglInput.value = new Date().toISOString().substring(0, 10);
+}
+
+function closeAdminImportModal() {
+  const modal = document.getElementById('adminImportModal');
+  if (modal) modal.classList.remove('open', 'active');
+}
+
+function downloadAdminXLSXTemplate() {
+  try {
+    const headers = [
+      "Petugas Entry", "Jenis Kegiatan", "Tanggal Entry", "NIK", "Nama Pasien", "Tanggal Lahir", "Usia",
+      "Jenis Kelamin", "No WhatsApp", "Status Pernikahan", "Provinsi", "Kab/Kota",
+      "Kecamatan", "Kelurahan", "Alamat Lengkap", "Pekerjaan", "Merokok",
+      "BB (kg)", "TB (cm)", "LP (cm)", "IMT", "TD Sistolik", "TD Diastolik",
+      "Gula Darah (mg/dL)", "Kolesterol (mg/dL)", "HB (g/dL)",
+      "Pemeriksaan Telinga", "Pemeriksaan Mata", "Pemeriksaan Gigi", "Pemeriksaan Katarak"
+    ];
+
+    const sampleRow1 = [
+      "Teti Nuryati, S.Keb, Bdn", "Luar Gedung", "2026-08-01", "3204123456780001", "Euis Saribanon", "1962-12-01", 63,
+      "P", "081234567890", "Kawin", "Jawa Barat", "Kab. Bandung",
+      "Banjaran", "Banjaran Kota", "Kp. Cileutik RT 01/08", "Ibu Rumah Tangga", "Tidak",
+      54, 153, 80, 23.07, 135, 99, 91, 180, 13.2, "Normal", "Normal", "Baik", "Tidak"
+    ];
+
+    const sampleRow2 = [
+      "Mochamad Fauzie, S.Gz", "Luar Gedung", "2026-08-01", "3204134109910006", "Seny Septiany", "1991-09-01", 34,
+      "P", "085712345678", "Kawin", "Jawa Barat", "Kab. Bandung",
+      "Banjaran", "Banjaran Kota", "Bojongpulus", "Wiraswasta", "Tidak",
+      56, 59, 80, 160.87, 120, 92, 90, 180, 12.5, "Normal", "Normal", "Baik", "Tidak"
+    ];
+
+    const sampleRow3 = [
+      "Anisa Rohmatunisa, AM.Keb", "Dalam Gedung", "2026-08-02", "3273076009850004", "Nur Fajarwati Arifah", "1985-09-20", 40,
+      "P", "082198765432", "Kawin", "Jawa Barat", "Kab. Bandung",
+      "Banjaran", "Banjaran Kota", "Cipaku RT 02/02", "PNS", "Tidak",
+      69, 155, 80, 28.72, 125, 96, 94, 180, 13.0, "Normal", "Normal", "Baik", "Tidak"
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow1, sampleRow2, sampleRow3]);
+    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 16) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template CKG Admin Multi-Petugas");
+    XLSX.writeFile(wb, `Template_Import_Admin_MultiPetugas_CKG_${new Date().toISOString().substring(0, 10)}.xlsx`);
+    
+    showToast('Template Excel Khusus Admin Berhasil Diunduh!', 'success');
+  } catch (err) {
+    console.error('Download admin template error:', err);
+    if (typeof Swal !== 'undefined') Swal.fire('Gagal Download Template', err.message, 'error');
+  }
+}
+
+function handleAdminImportFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  selectedAdminImportFile = file;
+  parsedAdminRecords = [];
+
+  const previewArea = document.getElementById('adminImportPreviewArea');
+  const btnExec = document.getElementById('btnExecuteAdminImport');
+  const fallbackTanggal = document.getElementById('adminImportTanggalEntry')?.value || new Date().toISOString().substring(0, 10);
+  const loggedAdmin = sessionStorage.getItem('ckg_user_name') || 'Admin';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+        showToast('File Excel tidak valid!', 'error');
+        return;
+      }
+
+      const ws = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      if (jsonRows.length === 0) {
+        showToast('File Excel kosong!', 'warning');
+        return;
+      }
+
+      const groupedSummary = {};
+
+      jsonRows.forEach(row => {
+        const getVal = (...keys) => {
+          for (let k of keys) {
+            const target = k.toLowerCase().trim();
+            for (let rowKey in row) {
+              if (rowKey.toLowerCase().trim() === target) return String(row[rowKey]).trim();
+            }
+          }
+          for (let k of keys) {
+            const target = k.toLowerCase().trim();
+            for (let rowKey in row) {
+              const keyClean = rowKey.toLowerCase().trim();
+              if (keyClean.includes(target) && !keyClean.includes('faskes')) return String(row[rowKey]).trim();
+            }
+          }
+          return '';
+        };
+
+        const nik = getVal('NIK', 'No KTP', 'Nomor NIK');
+        const nama = getVal('Nama Pasien', 'Nama Lengkap', 'Nama Pasien & NIK', 'Nama');
+        if (!nama && !nik) return;
+
+        let petugasName = getVal('Petugas Entry', 'Petugas', 'Petugas Skrining', 'Created By', 'Nama Petugas');
+        if (!petugasName) petugasName = loggedAdmin;
+
+        const dobStr = getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB') || '1990-01-01';
+        let age = parseInt(getVal('Usia', 'Umur')) || 30;
+        if (isNaN(age) || age <= 0) {
+          try { const bd = new Date(dobStr); if (!isNaN(bd.getTime())) age = new Date().getFullYear() - bd.getFullYear(); } catch(_){}
+        }
+
+        const jkRaw = getVal('Jenis Kelamin', 'JK') || 'L';
+        const jk = jkRaw.toUpperCase().startsWith('P') ? 'P' : 'L';
+        const bb = parseFloat(getVal('BB (kg)', 'BB', 'Berat Badan')) || 60;
+        const tb = parseFloat(getVal('TB (cm)', 'TB', 'Tinggi Badan')) || 165;
+        const lp = parseFloat(getVal('LP (cm)', 'LP', 'Lingkar Perut')) || 80;
+        const imtVal = (tb > 0) ? (bb / ((tb/100)*(tb/100))).toFixed(2) : '22.0';
+        const rowDate = getVal('Tanggal Entry', 'Tanggal Skrining', 'Tanggal') || fallbackTanggal;
+
+        const record = {
+          id: 'CKG-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
+          jenis_kegiatan: getVal('Jenis Kegiatan', 'Kegiatan') || 'Luar Gedung',
+          nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
+          nama: nama || 'Pasien Tanpa Nama',
+          tanggal_lahir: dobStr, usia: age, jenis_kelamin: jk,
+          no_whatsapp: getVal('No WhatsApp', 'WA', 'HP') || '',
+          status_pernikahan: getVal('Status Pernikahan', 'Status Nikah') || 'Kawin',
+          provinsi: getVal('Provinsi') || 'Jawa Barat',
+          kab_kota: getVal('Kab/Kota', 'Kota') || 'Kab. Bandung',
+          kecamatan: getVal('Kecamatan') || 'Banjaran',
+          kelurahan: getVal('Kelurahan', 'Desa') || 'Banjaran Kota',
+          alamat: getVal('Alamat Lengkap', 'Alamat') || 'Banjaran',
+          pekerjaan: getVal('Pekerjaan') || '',
+          merokok: getVal('Merokok') || 'Tidak',
+          bb, tb, lp, imt: imtVal,
+          td_sistolik: parseInt(getVal('TD Sistolik', 'Sistol')) || 120,
+          td_diastolik: parseInt(getVal('TD Diastolik', 'Diastol')) || 80,
+          gula_darah: getVal('Gula Darah (mg/dL)', 'Gula Darah') || '110',
+          kolesterol: getVal('Kolesterol (mg/dL)', 'Kolesterol') || '180',
+          hb: getVal('HB (g/dL)', 'HB') || '14.0',
+          telinga: getVal('Pemeriksaan Telinga', 'Telinga') || 'Normal',
+          mata: getVal('Pemeriksaan Mata', 'Mata') || 'Normal',
+          gigi: getVal('Pemeriksaan Gigi', 'Gigi') || 'Normal',
+          katarak: getVal('Pemeriksaan Katarak', 'Katarak') || 'Tidak',
+          status_validasi: 'Terverifikasi',
+          petugas_entry: petugasName,
+          created_by: petugasName,
+          created_at: rowDate, tanggal_entry: rowDate, tanggal: rowDate
+        };
+
+        parsedAdminRecords.push(record);
+        groupedSummary[petugasName] = (groupedSummary[petugasName] || 0) + 1;
+      });
+
+      if (parsedAdminRecords.length === 0) {
+        showToast('Tidak ada data pasien valid terdeteksi!', 'warning');
+        if (btnExec) btnExec.disabled = true;
+        return;
+      }
+
+      const officerCount = Object.keys(groupedSummary).length;
+      
+      let badgesHtml = Object.entries(groupedSummary).map(([pName, count]) => {
+        return `<div style="background:#f3e8ff; border:1px solid #c084fc; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:700; color:#6b21a8; display:flex; align-items:center; gap:8px;">
+                  <i class="bi bi-person-badge-fill" style="color:#7c3aed;"></i>
+                  <span>${pName}: <strong style="color:#5b21b6; font-size:13.5px;">${count} Data</strong></span>
+                </div>`;
+      }).join('');
+
+      let previewRowsHtml = parsedAdminRecords.slice(0, 8).map((r, i) => {
+        return `<tr>
+                  <td style="text-align:center;">${i + 1}</td>
+                  <td><strong>${r.nama}</strong><br><span style="font-size:11px; color:#64748b;">NIK: ${r.nik}</span></td>
+                  <td><span class="badge badge-cyan">${r.jenis_kegiatan}</span></td>
+                  <td><span class="badge badge-purple" style="font-weight:700;"><i class="bi bi-person-fill"></i> ${r.petugas_entry}</span></td>
+                  <td><span style="font-size:12px; color:#475569;">${r.created_at}</span></td>
+                </tr>`;
+      }).join('');
+
+      previewArea.innerHTML = `
+        <div style="background: #ffffff; border: 1.5px solid #d8b4fe; border-radius: 14px; padding: 16px; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.08);">
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #e9d5ff;">
+            <div>
+              <div style="font-weight:800; font-size:14px; color:#5b21b6;">
+                <i class="bi bi-eye-fill"></i> PREVIEW REKAPITULASI MULTI-PETUGAS
+              </div>
+              <div style="font-size:12px; color:#6b21a8; margin-top:2px;">
+                File: <strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) — Total <strong>${parsedAdminRecords.length} Data Pasien</strong> untuk <strong>${officerCount} Petugas Entry</strong>
+              </div>
+            </div>
+            <span class="badge badge-emerald" style="font-size:12px; padding:6px 12px;"><i class="bi bi-check-circle-fill"></i> Ready Import</span>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <div style="font-size:12px; font-weight:700; color:#4c1d95; margin-bottom:8px;">
+              <i class="bi bi-people-fill"></i> Pembagian Data Per-Petugas Terdeteksi:
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              ${badgesHtml}
+            </div>
+          </div>
+
+          <div style="font-size:12px; font-weight:700; color:#4c1d95; margin-bottom:6px;">
+            <i class="bi bi-table"></i> Sample Preview Data Pasien (Top ${Math.min(8, parsedAdminRecords.length)} dari ${parsedAdminRecords.length}):
+          </div>
+
+          <div class="table-responsive" style="max-height:220px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:10px;">
+            <table class="custom-table" style="font-size:12px;">
+              <thead>
+                <tr>
+                  <th style="width:40px; text-align:center;">No</th>
+                  <th>Nama Pasien & NIK</th>
+                  <th>Kegiatan</th>
+                  <th>Petugas Entry (Hasil Alokasi)</th>
+                  <th>Tanggal Entry</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${previewRowsHtml}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      `;
+
+      previewArea.style.display = 'block';
+      if (btnExec) btnExec.disabled = false;
+
+    } catch (err) {
+      console.error('Admin import preview error:', err);
+      showToast('Gagal membaca file Excel: ' + err.message, 'error');
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+async function executeAdminXLSXImport() {
+  if (parsedAdminRecords.length === 0) {
+    showToast('Tidak ada data pasien yang siap di-import!', 'warning');
+    return;
+  }
+
+  closeAdminImportModal();
+
+  const officerStats = {};
+  parsedAdminRecords.forEach(r => {
+    officerStats[r.petugas_entry] = (officerStats[r.petugas_entry] || 0) + 1;
+  });
+
+  Swal.fire({
+    title: `<i class="bi bi-cloud-upload-fill" style="color:#7c3aed;"></i> Upload Batch Multi-Petugas ke Cloud D1...`,
+    html: `<div style="margin:10px 0;">
+            <div id="adminImportProgressBar" style="width:100%;height:20px;background:#e2e8f0;border-radius:10px;overflow:hidden;">
+              <div id="adminImportProgressFill" style="width:0%;height:100%;background:linear-gradient(90deg,#7c3aed,#9333ea);border-radius:10px;transition:width 0.3s;"></div>
+            </div>
+            <div id="adminImportProgressText" style="margin-top:8px;font-size:13px;color:#475569;font-weight:600;">0 / ${parsedAdminRecords.length} data pasien</div>
+          </div>`,
+    allowOutsideClick: false,
+    showConfirmButton: false
+  });
+
+  const chunkSize = 20;
+  let uploaded = 0;
+  let failed = 0;
+
+  for (let i = 0; i < parsedAdminRecords.length; i += chunkSize) {
+    const chunk = parsedAdminRecords.slice(i, i + chunkSize);
+    try {
+      const res = await fetch('/api/ckg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chunk)
+      });
+      if (res.ok) { uploaded += chunk.length; } else { failed += chunk.length; }
+    } catch (err) {
+      failed += chunk.length;
+    }
+
+    const pct = Math.round(((uploaded + failed) / parsedAdminRecords.length) * 100);
+    const fillEl = document.getElementById('adminImportProgressFill');
+    const txtEl = document.getElementById('adminImportProgressText');
+    if (fillEl) fillEl.style.width = pct + '%';
+    if (txtEl) txtEl.textContent = `${uploaded + failed} / ${parsedAdminRecords.length} data pasien (${pct}%)`;
+  }
+
+  records = [...parsedAdminRecords, ...records];
+  localStorage.setItem('ckg_records', JSON.stringify(records));
+
+  renderApp();
+  updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
+
+  let breakdownList = Object.entries(officerStats).map(([pName, cnt]) => {
+    return `<li style="margin-bottom:4px;"><strong>${pName}</strong>: <span style="color:#059669; font-weight:700;">${cnt} Data Pasien</span></li>`;
+  }).join('');
+
+  Swal.fire({
+    icon: failed === 0 ? 'success' : 'warning',
+    title: failed === 0 ? 'Import Multi-Petugas Berhasil!' : 'Import Sebagian Berhasil',
+    html: `<div style="font-size:13.5px; text-align:left; line-height:1.6;">
+            Total <strong>${uploaded} Data Pasien</strong> telah <strong>ter-upload & tersinkronisasi ke Cloudflare D1 Database</strong>!<br><br>
+            <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:12px;">
+              <strong style="color:#5b21b6; font-size:13px;"><i class="bi bi-people-fill"></i> Rekapitulasi Alokasi Per-Petugas:</strong>
+              <ul style="margin:6px 0 0 18px; padding:0; font-size:12.5px;">
+                ${breakdownList}
+              </ul>
+            </div>
+          </div>`,
+    confirmButtonColor: '#7c3aed'
+  });
+}
+
 function downloadXLSXTemplate() {
   try {
     const headers = [
