@@ -1112,7 +1112,8 @@ body {
   transition: opacity 0.3s ease;
 }
 
-.modal-overlay.open {
+.modal-overlay.open,
+.modal-overlay.active {
   opacity: 1;
   pointer-events: auto;
 }
@@ -1131,7 +1132,10 @@ body {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.modal-overlay.open .modal-container {
+.modal-overlay.open .modal-container,
+.modal-overlay.active .modal-container,
+.modal-overlay.open .modal-content,
+.modal-overlay.active .modal-content {
   transform: scale(1) translateY(0);
 }
 

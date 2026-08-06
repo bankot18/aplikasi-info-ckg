@@ -367,13 +367,13 @@ async function checkAndShowAnnouncement() {
   
   const modal = document.getElementById('announcementModal');
   if (modal) {
-    modal.classList.add('active');
+    modal.classList.add('open', 'active');
   }
 }
 
 function closeAnnouncementModal() {
   const modal = document.getElementById('announcementModal');
-  if (modal) modal.classList.remove('active');
+  if (modal) modal.classList.remove('open', 'active');
 }
 
 function openEditAnnouncementModal() {
@@ -3155,7 +3155,7 @@ let selectedImportFile = null;
 
 function openImportModal() {
   const modal = document.getElementById('importModal');
-  if (modal) modal.classList.add('active');
+  if (modal) modal.classList.add('open', 'active');
   selectedImportFile = null;
   const fileDetails = document.getElementById('importFileDetails');
   const btnExec = document.getElementById('btnExecuteImport');
@@ -3167,7 +3167,7 @@ function openImportModal() {
 
 function closeImportModal() {
   const modal = document.getElementById('importModal');
-  if (modal) modal.classList.remove('active');
+  if (modal) modal.classList.remove('open', 'active');
 }
 
 function handleImportFileSelect(event) {
