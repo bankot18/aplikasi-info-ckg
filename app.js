@@ -2136,14 +2136,26 @@ function processImportFromModal() {
       updateCloudSyncPill(true, `D1 Online (${simpusRecords.length} SIMPUS)`);
 
       if (typeof Swal !== 'undefined') {
-        Swal.fire({
-          icon: uploaded > 0 ? 'success' : 'error',
-          title: uploaded > 0 ? 'Import & Sinkronisasi Cloud Berhasil!' : 'Gagal Upload ke Cloud',
-          html: `<div style="font-size:13.5px; text-align:left; line-height:1.6;">
-                  Total <strong>${uploaded} Data Pasien</strong> dari file <strong>${file.name}</strong> telah <strong>ter-upload & tersimpan permanen di Cloudflare D1 Database (tab Data Belum Di-Bagi)</strong>.
-                </div>`,
-          confirmButtonColor: '#d97706'
-        });
+        if (uploaded > 0) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Import & Sinkronisasi Cloud Berhasil!',
+            html: `<div style="font-size:13.5px; text-align:left; line-height:1.6;">
+                    Total <strong>${uploaded} Data Pasien</strong> dari file <strong>${file.name}</strong> telah <strong>ter-upload & tersimpan permanen di Cloudflare D1 Database (tab Data Belum Di-Bagi)</strong>.
+                  </div>`,
+            confirmButtonColor: '#d97706'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal Upload ke Cloud Database D1',
+            html: `<div style="font-size:13.5px; text-align:left; line-height:1.6;">
+                    Sistem gagal menyimpan <strong>${parsedRecords.length} Data Pasien</strong> ke Cloud D1.<br><br>
+                    <span style="color:#dc2626; font-size:12.5px;">Data telah diamankan di browser lokal. Silakan klik tombol Refresh untuk sinkronisasi ulang ke Cloud.</span>
+                  </div>`,
+            confirmButtonColor: '#ef4444'
+          });
+        }
       } else {
         showToast(`${uploaded} data SIMPUS berhasil di-upload ke Cloud D1!`, 'success');
       }

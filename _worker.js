@@ -105,6 +105,18 @@ export default {
             raw_json TEXT
           )
         `).run();
+
+        const alterQueries = [
+          'ALTER TABLE simpus_records ADD COLUMN petugas_entry TEXT',
+          'ALTER TABLE simpus_records ADD COLUMN status_pernikahan TEXT',
+          'ALTER TABLE simpus_records ADD COLUMN provinsi TEXT',
+          'ALTER TABLE simpus_records ADD COLUMN kab_kota TEXT',
+          'ALTER TABLE simpus_records ADD COLUMN kecamatan TEXT',
+          'ALTER TABLE simpus_records ADD COLUMN kelurahan TEXT'
+        ];
+        for (const q of alterQueries) {
+          try { await env.DB.prepare(q).run(); } catch (_) {}
+        }
       } catch (_) {}
 
       if (request.method === 'GET') {
