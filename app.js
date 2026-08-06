@@ -2443,7 +2443,7 @@ function deleteUser(namaUser) {
   }
 }
 
-function handleFormSubmit(e) {
+async function handleFormSubmit(e) {
   e.preventDefault();
 
   const nik = document.getElementById('nik').value.trim();
@@ -2484,32 +2484,82 @@ function handleFormSubmit(e) {
     gigi: document.getElementById('gigi').value,
     katarak: document.querySelector('input[name="katarak"]:checked')?.value || 'Tidak',
     status_validasi: "Terverifikasi",
-    created_by: `petugas_${currentRole.toLowerCase()}`,
-    created_at: new Date().toISOString().replace('T', ' ').substring(0, 16)
+    created_by: sessionStorage.getItem('ckg_user_name') || currentRole || 'Admin',
+    petugas_entry: sessionStorage.getItem('ckg_user_name') || currentRole || 'Admin',
+    created_at: new Date().toISOString().substring(0, 10),
+    tanggal_entry: new Date().toISOString().substring(0, 10)
   };
 
   const isEdit = !!currentEditingId;
 
-  if (currentEditingId) {
-    const idx = records.findIndex(r => r.id === currentEditingId);
-    if (idx !== -1) records[idx] = formData;
-  } else {
-    records.unshift(formData);
-  }
-
-  saveRecordsToStorage();
-  closeInputModal();
-  renderApp();
-
+  // Show loading
   if (typeof Swal !== 'undefined') {
     Swal.fire({
-      icon: 'success',
-      title: isEdit ? 'Data CKG Berhasil Diperbarui!' : 'Data CKG Berhasil Disimpan!',
-      text: `Rekam medis pasien ${formData.nama} (NIK: ${formData.nik}) telah tersimpan ke dalam database BNBA.`,
-      confirmButtonColor: '#2563eb'
+      title: 'Menyimpan ke Cloud Database...',
+      html: '<div style="font-size:13px;color:#475569;">Mengirim data pasien ke Cloudflare D1 Database</div>',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
     });
-  } else {
-    showToast(isEdit ? 'Data CKG Berhasil Diperbarui!' : 'Data CKG Berhasil Disimpan!', 'success');
+  }
+
+  try {
+    // 1. Send directly to Cloud D1 Database FIRST
+    const res = await fetch('/api/ckg', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([formData])
+    });
+
+    if (!res.ok) {
+      throw new Error('Server responded with status ' + res.status);
+    }
+
+    // 2. Update local cache AFTER cloud success
+    if (currentEditingId) {
+      const idx = records.findIndex(r => r.id === currentEditingId);
+      if (idx !== -1) records[idx] = formData;
+    } else {
+      records.unshift(formData);
+    }
+    localStorage.setItem('ckg_records', JSON.stringify(records));
+
+    closeInputModal();
+    renderApp();
+    updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'success',
+        title: isEdit ? 'Data CKG Berhasil Diperbarui!' : 'Data CKG Tersimpan ke Cloud!',
+        html: `Rekam medis pasien <strong>${formData.nama}</strong> (NIK: ${formData.nik}) telah tersimpan langsung ke <strong>Cloudflare D1 Database</strong>.`,
+        confirmButtonColor: '#059669'
+      });
+    } else {
+      showToast(isEdit ? 'Data CKG Berhasil Diperbarui!' : 'Data CKG Tersimpan ke Cloud D1!', 'success');
+    }
+  } catch (err) {
+    console.error('Failed to save to cloud D1:', err);
+    // Fallback: save to local only
+    if (currentEditingId) {
+      const idx = records.findIndex(r => r.id === currentEditingId);
+      if (idx !== -1) records[idx] = formData;
+    } else {
+      records.unshift(formData);
+    }
+    localStorage.setItem('ckg_records', JSON.stringify(records));
+    closeInputModal();
+    renderApp();
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Tersimpan Lokal (Offline)',
+        html: `Gagal mengirim ke Cloud D1: <strong>${err.message}</strong>.<br>Data disimpan secara lokal dan akan di-sync otomatis nanti.`,
+        confirmButtonColor: '#f59e0b'
+      });
+    } else {
+      showToast('Data disimpan lokal. Akan di-sync otomatis ke cloud.', 'warning');
+    }
   }
 }
 
@@ -3735,7 +3785,27 @@ function handleImportFileSelect(event) {
   const fileNameEl = document.getElementById('importFileName');
   const btnExec = document.getElementById('btnExecuteImport');
 
-  if (fileNameEl) fileNameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  // Read file to count rows
+  const countReader = new FileReader();
+  countReader.onload = function(ev) {
+    try {
+      const d = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(d, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const validRows = rows.filter(r => {
+        const keys = Object.keys(r);
+        const hasNama = keys.some(k => /nama/i.test(k) && String(r[k]).trim());
+        const hasNik = keys.some(k => /nik/i.test(k) && String(r[k]).trim());
+        return hasNama || hasNik;
+      });
+      if (fileNameEl) fileNameEl.innerHTML = `<strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) — <span style="color:#059669;font-weight:700;">${validRows.length} Data Pasien Terdeteksi</span>`;
+    } catch(_) {
+      if (fileNameEl) fileNameEl.textContent = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+    }
+  };
+  countReader.readAsArrayBuffer(file);
+
   if (fileDetails) fileDetails.style.display = 'block';
   if (btnExec) btnExec.disabled = false;
 }
@@ -3750,45 +3820,27 @@ function downloadXLSXTemplate() {
       "Gula Darah (mg/dL)", "Kolesterol (mg/dL)", "HB (g/dL)",
       "Pemeriksaan Telinga", "Pemeriksaan Mata", "Pemeriksaan Gigi", "Pemeriksaan Katarak"
     ];
-
     const sampleRow1 = [
       "Luar Gedung", "2026-07-15", "3204123456780001", "Ahmad Fauzi", "1992-05-14", 34,
       "L", "081234567890", "Kawin", "Jawa Barat", "Kab. Bandung",
       "Banjaran", "Banjaran Kota", "Jl. Raya Banjaran No. 45 RT 02/05", "Wiraswasta", "Tidak",
-      65, 168, 82, 23.03, 120, 80,
-      110, 175, 14.2,
-      "Normal", "Normal", "Normal", "Tidak"
+      65, 168, 82, 23.03, 120, 80, 110, 175, 14.2, "Normal", "Normal", "Normal", "Tidak"
     ];
-
     const sampleRow2 = [
       "Dalam Gedung", "2026-08-05", "3204987654320002", "Siti Aminah", "1988-11-20", 37,
       "P", "085712345678", "Kawin", "Jawa Barat", "Kab. Bandung",
       "Banjaran", "Sindangpanon", "Kp. Sindangpanon RT 01/03", "Ibu Rumah Tangga", "Tidak",
-      58, 155, 78, 24.14, 130, 85,
-      125, 190, 12.8,
-      "Normal", "Normal", "Normal", "Tidak"
+      58, 155, 78, 24.14, 130, 85, 125, 190, 12.8, "Normal", "Normal", "Normal", "Tidak"
     ];
-
-    const wsData = [headers, sampleRow1, sampleRow2];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    const colWidths = headers.map(h => ({ wch: Math.max(h.length + 3, 15) }));
-    ws['!cols'] = colWidths;
-
+    const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow1, sampleRow2]);
+    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 15) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template Form CKG");
-
-    const filename = `Template_Import_Form_CKG_Pasien_${new Date().toISOString().substring(0, 10)}.xlsx`;
-    XLSX.writeFile(wb, filename);
-
-    if (typeof showToast === 'function') {
-      showToast('Template Excel Resmi Form CKG Berhasil Diunduh!', 'success');
-    }
+    XLSX.writeFile(wb, `Template_Import_Form_CKG_Pasien_${new Date().toISOString().substring(0, 10)}.xlsx`);
+    showToast('Template Excel Resmi Form CKG Berhasil Diunduh!', 'success');
   } catch (err) {
     console.error('Download template error:', err);
-    if (typeof Swal !== 'undefined') {
-      Swal.fire('Gagal Download Template', err.message, 'error');
-    }
+    if (typeof Swal !== 'undefined') Swal.fire('Gagal Download Template', err.message, 'error');
   }
 }
 
@@ -3798,56 +3850,46 @@ function executeXLSXImport() {
     return;
   }
 
-  showLoadingOverlay('Membaca File Excel...', 'Memproses import data ke database');
-
   const reader = new FileReader();
 
-  reader.onload = function (e) {
+  reader.onload = async function (e) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
 
       if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
-        hideLoadingOverlay();
-        Swal.fire('File Error', 'File Excel tidak memiliki lembar kerja (worksheet).', 'error');
+        Swal.fire('File Error', 'File Excel tidak memiliki worksheet.', 'error');
         return;
       }
 
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
       if (jsonRows.length === 0) {
-        hideLoadingOverlay();
-        Swal.fire('File Kosong', 'File Excel tidak berisi data atau format header tidak sesuai.', 'error');
+        Swal.fire('File Kosong', 'File Excel tidak berisi data.', 'error');
         return;
       }
 
-      let importedCount = 0;
       const targetSelect = document.getElementById('importTargetPetugas');
       const targetPetugas = (targetSelect && targetSelect.value) ? targetSelect.value : (sessionStorage.getItem('ckg_user_name') || 'Admin');
       const tanggalInput = document.getElementById('importTanggalEntry');
       const selectedTanggal = (tanggalInput && tanggalInput.value) ? tanggalInput.value : new Date().toISOString().substring(0, 10);
 
+      // Build records array
+      const newRecords = [];
       jsonRows.forEach(row => {
-        // Robust Column Key Extractor: Pass 1 Exact Match, Pass 2 Includes Match
         const getVal = (...keys) => {
           for (let k of keys) {
             const target = k.toLowerCase().trim();
             for (let rowKey in row) {
-              if (rowKey.toLowerCase().trim() === target) {
-                return String(row[rowKey]).trim();
-              }
+              if (rowKey.toLowerCase().trim() === target) return String(row[rowKey]).trim();
             }
           }
           for (let k of keys) {
             const target = k.toLowerCase().trim();
             for (let rowKey in row) {
               const keyClean = rowKey.toLowerCase().trim();
-              if (keyClean.includes(target) && !keyClean.includes('petugas') && !keyClean.includes('faskes')) {
-                return String(row[rowKey]).trim();
-              }
+              if (keyClean.includes(target) && !keyClean.includes('petugas') && !keyClean.includes('faskes')) return String(row[rowKey]).trim();
             }
           }
           return '';
@@ -3855,95 +3897,113 @@ function executeXLSXImport() {
 
         const nik = getVal('NIK', 'No KTP', 'Nomor NIK');
         const nama = getVal('Nama Pasien', 'Nama Lengkap', 'Nama Pasien & NIK', 'Nama');
+        if (!nama && !nik) return;
 
-        if (!nama && !nik) return; // Skip non-patient header or empty rows
-
-        const dobStr = getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB', 'Tanggal Lahir (YYYY-MM-DD)') || '1990-01-01';
+        const dobStr = getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB') || '1990-01-01';
         let age = parseInt(getVal('Usia', 'Umur')) || 30;
         if (isNaN(age) || age <= 0) {
-          try {
-            const birthDate = new Date(dobStr);
-            if (!isNaN(birthDate.getTime())) {
-              const today = new Date();
-              age = today.getFullYear() - birthDate.getFullYear();
-            }
-          } catch (_) {}
+          try { const bd = new Date(dobStr); if (!isNaN(bd.getTime())) age = new Date().getFullYear() - bd.getFullYear(); } catch(_){}
         }
 
-        const jkRaw = getVal('Jenis Kelamin', 'JK', 'Jenis Kelamin (L/P)') || 'L';
+        const jkRaw = getVal('Jenis Kelamin', 'JK') || 'L';
         const jk = jkRaw.toUpperCase().startsWith('P') ? 'P' : 'L';
-
-        const bb = parseFloat(getVal('BB (kg)', 'BB', 'Berat Badan', 'Berat')) || 60;
-        const tb = parseFloat(getVal('TB (cm)', 'TB', 'Tinggi Badan', 'Tinggi')) || 165;
+        const bb = parseFloat(getVal('BB (kg)', 'BB', 'Berat Badan')) || 60;
+        const tb = parseFloat(getVal('TB (cm)', 'TB', 'Tinggi Badan')) || 165;
         const lp = parseFloat(getVal('LP (cm)', 'LP', 'Lingkar Perut')) || 80;
-        const imtVal = (tb > 0) ? (bb / ((tb / 100) * (tb / 100))).toFixed(2) : '22.0';
-        
-        // Row date if specified in file, otherwise use selected batch date
+        const imtVal = (tb > 0) ? (bb / ((tb/100)*(tb/100))).toFixed(2) : '22.0';
         const rowDate = getVal('Tanggal Entry', 'Tanggal Skrining', 'Tanggal') || selectedTanggal;
 
-        const newRecord = {
-          id: 'CKG-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        newRecords.push({
+          id: 'CKG-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
           jenis_kegiatan: getVal('Jenis Kegiatan', 'Kegiatan') || 'Luar Gedung',
           nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
           nama: nama || 'Pasien Tanpa Nama',
-          tanggal_lahir: dobStr,
-          usia: age,
-          jenis_kelamin: jk,
-          no_whatsapp: getVal('No WhatsApp', 'WA', 'HP', 'No HP') || '',
-          status_pernikahan: getVal('Status Pernikahan', 'Status Nikah', 'Pernikahan') || 'Kawin',
+          tanggal_lahir: dobStr, usia: age, jenis_kelamin: jk,
+          no_whatsapp: getVal('No WhatsApp', 'WA', 'HP') || '',
+          status_pernikahan: getVal('Status Pernikahan', 'Status Nikah') || 'Kawin',
           provinsi: getVal('Provinsi') || 'Jawa Barat',
-          kab_kota: getVal('Kab/Kota', 'Kota', 'Kabupaten') || 'Kab. Bandung',
+          kab_kota: getVal('Kab/Kota', 'Kota') || 'Kab. Bandung',
           kecamatan: getVal('Kecamatan') || 'Banjaran',
           kelurahan: getVal('Kelurahan', 'Desa') || 'Banjaran Kota',
-          alamat: getVal('Alamat Lengkap', 'Alamat', 'Alamat & Wilayah') || 'Banjaran',
+          alamat: getVal('Alamat Lengkap', 'Alamat') || 'Banjaran',
           pekerjaan: getVal('Pekerjaan') || '',
-          merokok: getVal('Merokok', 'Riwayat Merokok') || 'Tidak',
-          bb: bb,
-          tb: tb,
-          lp: lp,
-          imt: imtVal,
-          td_sistolik: parseInt(getVal('TD Sistolik', 'Sistol', 'Tensi Sistolik')) || 120,
-          td_diastolik: parseInt(getVal('TD Diastolik', 'Diastol', 'Tensi Diastolik')) || 80,
-          gula_darah: getVal('Gula Darah (mg/dL)', 'Gula Darah', 'Gula') || '110',
+          merokok: getVal('Merokok') || 'Tidak',
+          bb, tb, lp, imt: imtVal,
+          td_sistolik: parseInt(getVal('TD Sistolik', 'Sistol')) || 120,
+          td_diastolik: parseInt(getVal('TD Diastolik', 'Diastol')) || 80,
+          gula_darah: getVal('Gula Darah (mg/dL)', 'Gula Darah') || '110',
           kolesterol: getVal('Kolesterol (mg/dL)', 'Kolesterol') || '180',
-          hb: getVal('HB (g/dL)', 'HB', 'Hemoglobin') || '14.0',
+          hb: getVal('HB (g/dL)', 'HB') || '14.0',
           telinga: getVal('Pemeriksaan Telinga', 'Telinga') || 'Normal',
           mata: getVal('Pemeriksaan Mata', 'Mata') || 'Normal',
           gigi: getVal('Pemeriksaan Gigi', 'Gigi') || 'Normal',
           katarak: getVal('Pemeriksaan Katarak', 'Katarak') || 'Tidak',
           status_validasi: 'Terverifikasi',
-          petugas_entry: targetPetugas,
-          created_by: targetPetugas,
-          created_at: rowDate,
-          tanggal_entry: rowDate,
-          tanggal: rowDate
-        };
-
-        records.unshift(newRecord);
-        importedCount++;
+          petugas_entry: targetPetugas, created_by: targetPetugas,
+          created_at: rowDate, tanggal_entry: rowDate, tanggal: rowDate
+        });
       });
 
-      saveRecordsToStorage();
-      renderApp();
-      closeImportModal();
-      hideLoadingOverlay();
+      if (newRecords.length === 0) {
+        Swal.fire('Tidak Ada Data', 'Tidak ditemukan data pasien yang valid.', 'warning');
+        return;
+      }
 
+      closeImportModal();
+
+      // Show progress popup
       Swal.fire({
-        icon: 'success',
-        title: 'Import Data Berhasil!',
-        html: `Sebanyak <strong>${importedCount} Data Pasien</strong> berhasil di-import ke Database BNBA CKG.`,
+        title: `<i class="bi bi-cloud-upload"></i> Mengupload ke Cloud D1...`,
+        html: `<div style="margin:10px 0;"><div id="importProgressBar" style="width:100%;height:20px;background:#e2e8f0;border-radius:10px;overflow:hidden;"><div id="importProgressFill" style="width:0%;height:100%;background:linear-gradient(90deg,#059669,#10b981);border-radius:10px;transition:width 0.3s;"></div></div><div id="importProgressText" style="margin-top:8px;font-size:13px;color:#475569;font-weight:600;">0 / ${newRecords.length} data pasien</div></div>`,
+        allowOutsideClick: false, showConfirmButton: false
+      });
+
+      // Send in chunks of 20 with progress
+      const chunkSize = 20;
+      let uploaded = 0;
+      let failed = 0;
+
+      for (let i = 0; i < newRecords.length; i += chunkSize) {
+        const chunk = newRecords.slice(i, i + chunkSize);
+        try {
+          const res = await fetch('/api/ckg', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(chunk)
+          });
+          if (res.ok) { uploaded += chunk.length; } else { failed += chunk.length; }
+        } catch (err) { failed += chunk.length; }
+
+        const pct = Math.round(((uploaded + failed) / newRecords.length) * 100);
+        const fillEl = document.getElementById('importProgressFill');
+        const txtEl = document.getElementById('importProgressText');
+        if (fillEl) fillEl.style.width = pct + '%';
+        if (txtEl) txtEl.textContent = `${uploaded + failed} / ${newRecords.length} data pasien (${pct}%)`;
+      }
+
+      // Update local cache
+      records = [...newRecords, ...records];
+      localStorage.setItem('ckg_records', JSON.stringify(records));
+      renderApp();
+      updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
+
+      // Show result
+      Swal.fire({
+        icon: failed === 0 ? 'success' : 'warning',
+        title: failed === 0 ? 'Import Data Berhasil!' : 'Import Sebagian Berhasil',
+        html: `<div style="font-size:14px;line-height:1.6;">
+          <div style="background:#f0fdf4;padding:12px;border-radius:8px;border:1px solid #86efac;margin-bottom:8px;">
+            <i class="bi bi-cloud-check" style="color:#059669;font-size:18px;"></i>
+            <strong style="color:#059669;">${uploaded}</strong> data pasien berhasil disimpan ke <strong>Cloudflare D1 Database</strong>
+          </div>
+          ${failed > 0 ? `<div style="background:#fef2f2;padding:12px;border-radius:8px;border:1px solid #fecaca;"><i class="bi bi-exclamation-triangle" style="color:#dc2626;"></i> <strong style="color:#dc2626;">${failed}</strong> data gagal (disimpan lokal)</div>` : ''}
+        </div>`,
         confirmButtonColor: '#059669'
       });
 
     } catch (err) {
-      hideLoadingOverlay();
       console.error('Import parse error:', err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Gagal Import File',
-        text: 'Format file Excel tidak dapat diproses: ' + err.message,
-        confirmButtonColor: '#dc2626'
-      });
+      Swal.fire({ icon: 'error', title: 'Gagal Import File', text: 'Format file tidak dapat diproses: ' + err.message, confirmButtonColor: '#dc2626' });
     }
   };
 
