@@ -79,12 +79,18 @@ export default {
           CREATE TABLE IF NOT EXISTS simpus_records (
             id TEXT PRIMARY KEY,
             no INTEGER,
-            tanggal TEXT,
+            petugas_entry TEXT,
             nama TEXT,
             nik TEXT,
-            alamat TEXT,
+            tanggal TEXT,
             dob TEXT,
             usia INTEGER,
+            status_pernikahan TEXT,
+            provinsi TEXT,
+            kab_kota TEXT,
+            kecamatan TEXT,
+            kelurahan TEXT,
+            alamat TEXT,
             bb REAL,
             tb REAL,
             imt REAL,
@@ -113,10 +119,17 @@ export default {
               ...item,
               ...r,
               id: String(r.id || item.id || Date.now()),
+              petugas_entry: r.petugas_entry || item.petugas_entry || r.assigned_to || item.assigned_to || '',
               nama: r.nama || item.nama || '',
               nik: r.nik || item.nik || '',
+              status_pernikahan: r.status_pernikahan || item.status_pernikahan || 'MENIKAH',
+              provinsi: r.provinsi || item.provinsi || 'Jawa Barat',
+              kab_kota: r.kab_kota || item.kab_kota || 'Kab. Bandung',
+              kecamatan: r.kecamatan || item.kecamatan || 'Banjaran',
+              kelurahan: r.kelurahan || item.kelurahan || 'Tarajusari',
+              alamat: r.alamat || item.alamat || '-',
               is_divided: Boolean(r.is_divided === 1 || r.is_divided === '1' || r.is_divided === true),
-              assigned_to: r.assigned_to || item.assigned_to || item.petugas_entry || '',
+              assigned_to: r.assigned_to || item.assigned_to || r.petugas_entry || item.petugas_entry || '',
               entry_status: r.entry_status || item.entry_status || 'belum'
             };
           });
@@ -132,17 +145,24 @@ export default {
           const records = Array.isArray(body) ? body : [body];
           const stmt = env.DB.prepare(`
             INSERT INTO simpus_records (
-              id, no, tanggal, nama, nik, alamat, dob, usia, bb, tb, imt,
+              id, no, petugas_entry, nama, nik, tanggal, dob, usia, status_pernikahan,
+              provinsi, kab_kota, kecamatan, kelurahan, alamat, bb, tb, imt,
               sistol, diastol, gula, kolesterol, keterangan, is_divided, assigned_to, entry_status, raw_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               no = excluded.no,
-              tanggal = excluded.tanggal,
+              petugas_entry = excluded.petugas_entry,
               nama = excluded.nama,
               nik = excluded.nik,
-              alamat = excluded.alamat,
+              tanggal = excluded.tanggal,
               dob = excluded.dob,
               usia = excluded.usia,
+              status_pernikahan = excluded.status_pernikahan,
+              provinsi = excluded.provinsi,
+              kab_kota = excluded.kab_kota,
+              kecamatan = excluded.kecamatan,
+              kelurahan = excluded.kelurahan,
+              alamat = excluded.alamat,
               bb = excluded.bb,
               tb = excluded.tb,
               imt = excluded.imt,
@@ -157,10 +177,11 @@ export default {
               raw_json = excluded.raw_json
           `);
           const statements = records.map(r => stmt.bind(
-            String(r.id || r.nik || Date.now()), r.no || 0, r.tanggal || '', r.nama || '', r.nik || '',
-            r.alamat || '', r.dob || '', r.usia || 0, r.bb || 0, r.tb || 0, r.imt || 0,
-            r.sistol || 0, r.diastol || 0, r.gula || '-', r.kolesterol || '-',
-            r.keterangan || 'Dewasa', r.is_divided ? 1 : 0, r.assigned_to || '', r.entry_status || 'belum',
+            String(r.id || r.nik || Date.now()), r.no || 0, r.petugas_entry || r.assigned_to || '', r.nama || '', r.nik || '',
+            r.tanggal || '', r.dob || '', r.usia || 0, r.status_pernikahan || 'MENIKAH',
+            r.provinsi || 'Jawa Barat', r.kab_kota || 'Kab. Bandung', r.kecamatan || 'Banjaran', r.kelurahan || 'Tarajusari', r.alamat || '',
+            r.bb || 0, r.tb || 0, r.imt || 0, r.sistol || 0, r.diastol || 0, r.gula || '-', r.kolesterol || '-',
+            r.keterangan || 'Dewasa', r.is_divided ? 1 : 0, r.assigned_to || r.petugas_entry || '', r.entry_status || 'belum',
             JSON.stringify(r)
           ));
           const chunkSize = 20;

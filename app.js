@@ -1396,96 +1396,57 @@ function renderSimpusTableRecords() {
 
   if (dataset.length === 0) {
     container.innerHTML = `
-      <div style="text-align: center; padding: 40px; background: #ffffff; border-radius: var(--radius-md); border: 1px solid var(--border-color); color: var(--text-muted);">
-        <i class="bi bi-inbox" style="font-size: 36px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
-        <strong style="font-size: 15px;">Tidak Ada Data Pasien SIMPUS</strong>
-        <p style="font-size: 12.5px; margin-top: 4px;">Tidak ada data yang sesuai dengan filter atau kategori status saat ini.</p>
-      </div>
+      <tr>
+        <td colspan="20" style="text-align: center; padding: 40px; color: var(--text-muted);">
+          <i class="bi bi-inbox" style="font-size: 36px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
+          <strong style="font-size: 15px;">Tidak Ada Data Pasien SIMPUS</strong>
+          <p style="font-size: 12.5px; margin-top: 4px;">Tidak ada data yang sesuai dengan filter atau kategori status saat ini.</p>
+        </td>
+      </tr>
     `;
     return;
   }
 
-  container.innerHTML = dataset.map((r) => {
-    let imtBadge = `<span class="badge badge-emerald">${r.imt}</span>`;
-    if (r.imt < 18.5) imtBadge = `<span class="badge badge-amber">${r.imt} (Kurus)</span>`;
-    else if (r.imt >= 25.0 && r.imt <= 29.9) imtBadge = `<span class="badge badge-amber">${r.imt} (Gemuk)</span>`;
-    else if (r.imt >= 30.0) imtBadge = `<span class="badge badge-rose">${r.imt} (Obesitas)</span>`;
-
-    let statusBadge = `<span class="badge badge-cyan"><i class="bi bi-clock-history"></i> Belum di Entry</span>`;
-    if (r.entry_status === 'berhasil') statusBadge = `<span class="badge badge-emerald"><i class="bi bi-check-circle-fill"></i> Berhasil di Entry</span>`;
-    if (r.entry_status === 'sudah') statusBadge = `<span class="badge badge-cyan"><i class="bi bi-check2-all"></i> Sudah di Entry</span>`;
-    if (r.entry_status === 'error') statusBadge = `<span class="badge badge-rose"><i class="bi bi-exclamation-triangle-fill"></i> Error</span>`;
-
-    const initials = r.nama ? r.nama.substring(0, 2).toUpperCase() : 'PS';
-    const isHipertensi = (r.sistol > 140 || r.diastol > 90);
-    const isGulaTinggi = (r.gula > 200);
-
-    const tensiText = `${r.sistol}/${r.diastol} mmHg ${isHipertensi ? '<span style="color:var(--rose); font-weight:bold;">(Tinggi)</span>' : ''}`;
-    const gulaText = `${r.gula && r.gula !== '-' ? r.gula + ' mg/dL' : '-'} ${isGulaTinggi ? '<span style="color:var(--rose); font-weight:bold;">(Tinggi)</span>' : ''}`;
+  container.innerHTML = dataset.map((r, i) => {
+    const petugasName = r.petugas_entry || r.assigned_to || '-';
+    const statusPernikahan = r.status_pernikahan || 'MENIKAH';
+    const prov = r.provinsi || 'Jawa Barat';
+    const kabKota = r.kab_kota || 'Kab. Bandung';
+    const kec = r.kecamatan || 'Banjaran';
+    const kel = r.kelurahan || 'Tarajusari';
+    const recId = r.id || r.nik;
 
     return `
-      <div class="simpus-patient-card">
-        <!-- Card Header: Nama Pasien & Tags -->
-        <div class="simpus-card-header">
-          <div class="simpus-patient-name-box">
-            <div class="simpus-avatar-icon">${initials}</div>
-            <div>
-              <div class="simpus-patient-name">${r.nama}</div>
-              <div class="simpus-patient-subtext">
-                <i class="bi bi-card-text"></i> NIK: <strong>${r.nik}</strong> | <i class="bi bi-calendar-event"></i> Tgl: ${r.tanggal}
-              </div>
-            </div>
-          </div>
-          
-          <div class="simpus-card-tags">
-            <span class="badge badge-purple"><i class="bi bi-person-tag"></i> ${r.keterangan} (${r.usia} th)</span>
-            ${statusBadge}
-            ${r.assigned_to ? `<span class="badge badge-amber"><i class="bi bi-person-badge"></i> ${r.assigned_to}</span>` : ''}
-          </div>
-        </div>
-
-        <!-- Card Body Summary -->
-        <div class="simpus-card-body-summary">
-          <div class="simpus-info-item">
-            <span class="simpus-info-label">Alamat / Domisili</span>
-            <span class="simpus-info-val">${r.alamat}</span>
-          </div>
-
-          <div class="simpus-info-item">
-            <span class="simpus-info-label">Pengukuran Fisik</span>
-            <span class="simpus-info-val">${r.bb} kg / ${r.tb} cm (${imtBadge})</span>
-          </div>
-
-          <div class="simpus-info-item">
-            <span class="simpus-info-label">Tekanan Darah</span>
-            <span class="simpus-info-val">${tensiText}</span>
-          </div>
-
-          <div class="simpus-info-item">
-            <span class="simpus-info-label">Gula Darah</span>
-            <span class="simpus-info-val">${gulaText}</span>
-          </div>
-        </div>
-
-        <!-- Card Actions: Detail Info Modal & Status Actions -->
-        <div class="simpus-card-actions">
-          <button class="btn-detail-info" onclick="openSimpusDetailModal('${r.id}')">
-            <i class="bi bi-info-circle-fill"></i> Detail Info Pasien
+      <tr>
+        <td style="text-align: center; font-weight: 700; color: #475569;">${i + 1}</td>
+        <td>
+          <span class="badge badge-purple" style="font-weight:700;">
+            <i class="bi bi-person-fill"></i> ${petugasName}
+          </span>
+        </td>
+        <td><strong>${r.nama}</strong></td>
+        <td><span style="font-family: monospace; font-size: 12px;">${r.nik}</span></td>
+        <td>${r.tanggal}</td>
+        <td>${r.dob}</td>
+        <td style="text-align: center;"><span class="badge badge-amber">${r.usia} th</span></td>
+        <td>${statusPernikahan}</td>
+        <td>${prov}</td>
+        <td>${kabKota}</td>
+        <td>${kec}</td>
+        <td>${kel}</td>
+        <td style="max-width: 180px; white-space: normal;">${r.alamat}</td>
+        <td style="text-align: center;">${r.bb}</td>
+        <td style="text-align: center;">${r.tb}</td>
+        <td style="text-align: center;">${r.sistol}</td>
+        <td style="text-align: center;">${r.diastol}</td>
+        <td style="text-align: center;">${r.gula}</td>
+        <td style="text-align: center;">${r.kolesterol}</td>
+        <td style="text-align: center; white-space: nowrap;">
+          <button class="btn btn-outline-danger btn-sm" style="padding: 4px 8px; font-size: 11px;" onclick="deleteSimpusRecord('${recId}')" title="Hapus Data Pasien Cloud">
+            <i class="bi bi-trash-fill"></i> Hapus
           </button>
-
-          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-            <button class="btn-simpus-action btn-action-success" onclick="setSimpusActionStatus('${r.id}', 'berhasil')">
-              <i class="bi bi-check-circle-fill"></i> Berhasil di Entry
-            </button>
-            <button class="btn-simpus-action btn-action-done" onclick="setSimpusActionStatus('${r.id}', 'sudah')">
-              <i class="bi bi-check2-all"></i> Sudah di Entry
-            </button>
-            <button class="btn-simpus-action btn-action-error" onclick="setSimpusActionStatus('${r.id}', 'error')">
-              <i class="bi bi-exclamation-triangle-fill"></i> Error
-            </button>
-          </div>
-        </div>
-      </div>
+        </td>
+      </tr>
     `;
   }).join('');
 }
@@ -2078,22 +2039,28 @@ function processImportFromModal() {
         const record = {
           id: newId,
           no: maxId + idx + 1,
-          tanggal: String(row['TANGGAL'] || row['Tanggal'] || row['tanggal'] || new Date().toLocaleDateString('id-ID')),
+          petugas_entry: String(row['Petugas Entry'] || row['Petugas'] || row['PETUGAS'] || ''),
           nama: nama,
           nik: nik,
-          alamat: String(row['ALAMAT'] || row['Alamat'] || row['alamat'] || '-'),
+          tanggal: String(row['TANGGAL'] || row['Tanggal'] || row['tanggal'] || new Date().toLocaleDateString('id-ID')),
           dob: String(row['TANGGAL LAHIR'] || row['TGL LAHIR'] || row['Tanggal Lahir'] || row['tanggal_lahir'] || '-'),
           usia: usia,
+          status_pernikahan: String(row['Status Pernikahan'] || row['STATUS PERNIKAHAN'] || 'MENIKAH'),
+          provinsi: String(row['Provinsi'] || row['PROVINSI'] || 'Jawa Barat'),
+          kab_kota: String(row['Kab/Kota'] || row['KAB/KOTA'] || 'Kab. Bandung'),
+          kecamatan: String(row['Kecamatan'] || row['KECAMATAN'] || 'Banjaran'),
+          kelurahan: String(row['Kelurahan'] || row['KELURAHAN'] || 'Tarajusari'),
+          alamat: String(row['Alamat Lengkap'] || row['ALAMAT LENGKAP'] || row['ALAMAT'] || row['Alamat'] || '-'),
           bb: bb,
           tb: tb,
           imt: imt,
-          sistol: parseInt(row['SISTOL'] || row['TD SISTOLIK'] || row['Sistol'] || row['sistol'] || 0) || 0,
-          diastol: parseInt(row['DIASTOL'] || row['TD DIASTOLIK'] || row['Diastol'] || row['diastol'] || 0) || 0,
+          sistol: parseInt(row['TD SISTOL'] || row['SISTOL'] || row['TD SISTOLIK'] || row['Sistol'] || 0) || 0,
+          diastol: parseInt(row['TD DIASTOL'] || row['DIASTOL'] || row['TD DIASTOLIK'] || row['Diastol'] || 0) || 0,
           gula: String(row['GULA DARAH'] || row['Gula Darah'] || row['gula'] || row['GULA'] || '-'),
           kolesterol: String(row['KOLESTEROL'] || row['Kolesterol'] || row['kolesterol'] || '-'),
           keterangan: keterangan,
           is_divided: false,
-          assigned_to: '',
+          assigned_to: String(row['Petugas Entry'] || row['Petugas'] || ''),
           entry_status: 'belum'
         };
 
@@ -4450,27 +4417,31 @@ function closeSimpusAdminMultiImportModal() {
 function downloadSimpusAdminXLSXTemplate() {
   try {
     const headers = [
-      "Petugas Entry", "NAMA PASIEN", "NIK", "ALAMAT", "TANGGAL", "TANGGAL LAHIR", "USIA",
-      "BB (kg)", "TB (cm)", "TD SISTOLIK", "TD DIASTOLIK", "GULA DARAH", "KOLESTEROL"
+      "Petugas Entry", "NAMA PASIEN", "NIK", "TANGGAL", "TANGGAL LAHIR", "USIA",
+      "Status Pernikahan", "Provinsi", "Kab/Kota", "Kecamatan", "Kelurahan", "Alamat Lengkap",
+      "BB (kg)", "TB (cm)", "TD SISTOL", "TD DIASTOL", "GULA DARAH", "KOLESTEROL"
     ];
 
     const sampleRow1 = [
-      "Teti Nuryati, S.Keb, Bdn", "EUIS SARIBANON", "3204123456780001", "Kp. Cileutik RT 01/08", "2026-08-01", "1962-12-01", 63,
+      "Teti Nuryati, S.Keb, Bdn", "EUIS SARIBANON", "3204123456780001", "2026-08-01", "1962-12-01", 63,
+      "MENIKAH", "Jawa Barat", "Kab. Bandung", "Banjaran", "Tarajusari", "Kp Cipeundeuy",
       54, 153, 135, 99, "91", "180"
     ];
 
     const sampleRow2 = [
-      "Mochamad Fauzie, S.Gz", "SENY SEPTIANY", "3204134109910006", "Bojongpulus", "2026-08-01", "1991-09-01", 34,
+      "Mochamad Fauzie, S.Gz", "SENY SEPTIANY", "3204134109910006", "2026-08-01", "1991-09-01", 34,
+      "BELUM MENIKAH", "Jawa Barat", "Kab. Bandung", "Banjaran", "Tarajusari", "Kp Cipeundeuy",
       56, 159, 120, 92, "90", "180"
     ];
 
     const sampleRow3 = [
-      "Anisa Rohmatunisa, AM.Keb", "NUR FAJARWATI ARIFAH", "3273076009850004", "Cipaku RT 02/02", "2026-08-02", "1985-09-20", 40,
+      "Anisa Rohmatunisa, AM.Keb", "NUR FAJARWATI ARIFAH", "3273076009850004", "2026-08-02", "1985-09-20", 40,
+      "MENIKAH", "Jawa Barat", "Kab. Bandung", "Banjaran", "Tarajusari", "Kp Cipeundeuy",
       69, 155, 125, 96, "94", "180"
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow1, sampleRow2, sampleRow3]);
-    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 16) }));
+    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 15) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template SIMPUS Multi Petugas");
     XLSX.writeFile(wb, `Template_Import_SIMPUS_MultiPetugas_${new Date().toISOString().substring(0, 10)}.xlsx`);
@@ -4552,23 +4523,28 @@ function handleSimpusAdminImportFileSelect(event) {
         const record = {
           id: recId,
           no: maxNo + idx + 1,
-          tanggal: getVal('TANGGAL', 'Tanggal', 'Tanggal Entry') || new Date().toISOString().substring(0, 10),
+          petugas_entry: petugasName,
           nama: nama,
           nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
-          alamat: getVal('ALAMAT', 'Alamat') || '-',
+          tanggal: getVal('TANGGAL', 'Tanggal', 'Tanggal Entry') || new Date().toISOString().substring(0, 10),
           dob: getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB') || '1990-01-01',
           usia: usia,
+          status_pernikahan: getVal('Status Pernikahan', 'Status') || 'MENIKAH',
+          provinsi: getVal('Provinsi', 'Prov') || 'Jawa Barat',
+          kab_kota: getVal('Kab/Kota', 'Kab', 'Kota') || 'Kab. Bandung',
+          kecamatan: getVal('Kecamatan', 'Kec') || 'Banjaran',
+          kelurahan: getVal('Kelurahan', 'Kel', 'Desa') || 'Tarajusari',
+          alamat: getVal('Alamat Lengkap', 'ALAMAT', 'Alamat') || '-',
           bb: bb,
           tb: tb,
           imt: imtVal,
-          sistol: parseInt(getVal('TD SISTOLIK', 'SISTOL', 'Sistol')) || 120,
-          diastol: parseInt(getVal('TD DIASTOLIK', 'DIASTOL', 'Diastol')) || 80,
+          sistol: parseInt(getVal('TD SISTOL', 'TD SISTOLIK', 'SISTOL', 'Sistol')) || 120,
+          diastol: parseInt(getVal('TD DIASTOL', 'TD DIASTOLIK', 'DIASTOL', 'Diastol')) || 80,
           gula: getVal('GULA DARAH', 'Gula Darah', 'Gula') || '100',
           kolesterol: getVal('KOLESTEROL', 'Kolesterol') || '180',
           keterangan: keterangan,
           is_divided: true,
           assigned_to: petugasName,
-          petugas_entry: petugasName,
           entry_status: 'belum'
         };
 

@@ -594,9 +594,37 @@
             </button>
           </div>
 
-          <!-- SIMPUS Data Patient Cards (Non-Table Card View) -->
-          <div id="simpusCardsContainer" class="simpus-cards-list">
-            <!-- Rendered dynamically via JS -->
+          <!-- SIMPUS Data Table View (Matching Excel Template Columns + NO) -->
+          <div class="table-responsive" style="margin-top: 12px; max-height: 650px; overflow-y: auto;">
+            <table class="custom-table" id="simpusDataTable">
+              <thead>
+                <tr style="position: sticky; top: 0; background: var(--bg-subtle); z-index: 2;">
+                  <th style="width: 45px; text-align: center;">NO</th>
+                  <th>PETUGAS ENTRY</th>
+                  <th>NAMA PASIEN</th>
+                  <th>NIK</th>
+                  <th>TANGGAL</th>
+                  <th>TANGGAL LAHIR</th>
+                  <th>USIA</th>
+                  <th>STATUS PERNIKAHAN</th>
+                  <th>PROVINSI</th>
+                  <th>KAB/KOTA</th>
+                  <th>KECAMATAN</th>
+                  <th>KELURAHAN</th>
+                  <th>ALAMAT LENGKAP</th>
+                  <th>BB (KG)</th>
+                  <th>TB (CM)</th>
+                  <th>TD SISTOL</th>
+                  <th>TD DIASTOL</th>
+                  <th>GULA DARAH</th>
+                  <th>KOLESTEROL</th>
+                  <th style="text-align: center; width: 80px;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="simpusCardsContainer">
+                <!-- Rendered dynamically via JS -->
+              </tbody>
+            </table>
           </div>
 
         </div>
