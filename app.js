@@ -3163,11 +3163,159 @@ function openImportModal() {
   if (btnExec) btnExec.disabled = true;
   const fileInput = document.getElementById('importFileInput');
   if (fileInput) fileInput.value = '';
+
+  // Populate & handle Target Petugas select dropdown based on Role
+  const targetSelect = document.getElementById('importTargetPetugas');
+  const targetHint = document.getElementById('importTargetPetugasHint');
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Admin';
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+
+  if (targetSelect) {
+    targetSelect.innerHTML = '';
+    
+    // Get list of users from system users DB
+    let userList = [];
+    try {
+      const storedUsers = JSON.parse(localStorage.getItem('ckg_users_db') || '[]');
+      if (Array.isArray(storedUsers) && storedUsers.length > 0) {
+        userList = storedUsers.map(u => typeof u === 'string' ? u : (u.nama || u.nama_user));
+      }
+    } catch (_) {}
+
+    if (userList.length === 0) {
+      userList = ["Mochamad Fauzie, S.Gz", "Admin Puskesmas", "Petugas CKG 1", "Petugas CKG 2", "Koordinator CKG"];
+    }
+    
+    // Ensure loggedUser is in the list
+    if (!userList.includes(loggedUser)) {
+      userList.unshift(loggedUser);
+    }
+
+    userList.forEach(uName => {
+      if (!uName) return;
+      const opt = document.createElement('option');
+      opt.value = uName;
+      opt.textContent = uName;
+      if (uName === loggedUser) opt.selected = true;
+      targetSelect.appendChild(opt);
+    });
+
+    if (role === 'admin') {
+      targetSelect.disabled = false;
+      targetSelect.style.backgroundColor = '#ffffff';
+      targetSelect.style.cursor = 'pointer';
+      if (targetHint) {
+        targetHint.innerHTML = `<i class="bi bi-unlock-fill" style="color: #059669; font-size: 13px;"></i> <strong style="color: #059669;">Akses Admin Unlocked:</strong> Anda dapat mengarahkan/mengalokasikan data import ini ke petugas mana saja.`;
+      }
+    } else {
+      // Role Koordinator & Petugas -> LOCKED
+      targetSelect.value = loggedUser;
+      targetSelect.disabled = true;
+      targetSelect.style.backgroundColor = '#f1f5f9';
+      targetSelect.style.cursor = 'not-allowed';
+      if (targetHint) {
+        targetHint.innerHTML = `<i class="bi bi-lock-fill" style="color: #dc2626; font-size: 13px;"></i> <strong style="color: #dc2626;">Role ${sessionStorage.getItem('ckg_user_role') || 'Petugas'}:</strong> Terkunci otomatis ke nama akun Anda (${loggedUser}).`;
+      }
+    }
+  }
 }
 
 function closeImportModal() {
   const modal = document.getElementById('importModal');
   if (modal) modal.classList.remove('open', 'active');
+}
+
+function openAccountSettingsModal() {
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Admin';
+  const role = sessionStorage.getItem('ckg_user_role') || 'Petugas';
+  
+  const namaInput = document.getElementById('accountSettingNamaUser');
+  const roleBadge = document.getElementById('accountSettingRole');
+  const passInput = document.getElementById('accountSettingNewPassword');
+  const confirmInput = document.getElementById('accountSettingConfirmPassword');
+
+  if (namaInput) namaInput.value = loggedUser;
+  if (roleBadge) roleBadge.textContent = role.toUpperCase();
+  if (passInput) passInput.value = '';
+  if (confirmInput) confirmInput.value = '';
+
+  const modal = document.getElementById('accountSettingsModalOverlay');
+  if (modal) modal.classList.add('open', 'active');
+}
+
+function closeAccountSettingsModal() {
+  const modal = document.getElementById('accountSettingsModalOverlay');
+  if (modal) modal.classList.remove('open', 'active');
+}
+
+async function handleSaveAccountSettings(e) {
+  if (e) e.preventDefault();
+  
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Admin';
+  const newPass = (document.getElementById('accountSettingNewPassword')?.value || '').trim();
+  const confirmPass = (document.getElementById('accountSettingConfirmPassword')?.value || '').trim();
+
+  if (!newPass) {
+    showToast('Masukkan password baru terlebih dahulu!', 'warning');
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    showToast('Konfirmasi password baru tidak cocok!', 'error');
+    return;
+  }
+
+  showLoadingOverlay('Menyimpan Password...', 'Memperbarui kredensial akun user');
+
+  try {
+    // 1. Update local storage ckg_users_db
+    let usersDb = [];
+    try {
+      usersDb = JSON.parse(localStorage.getItem('ckg_users_db') || '[]');
+    } catch (_) {}
+
+    let foundUser = usersDb.find(u => (u.nama || u.nama_user) === loggedUser);
+    if (foundUser) {
+      foundUser.password = newPass;
+    } else {
+      usersDb.push({
+        nama: loggedUser,
+        password: newPass,
+        role: sessionStorage.getItem('ckg_user_role') || 'Petugas'
+      });
+    }
+    localStorage.setItem('ckg_users_db', JSON.stringify(usersDb));
+
+    // 2. Sync password to Cloud D1 Database via /api/users
+    try {
+      await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_password',
+          nama_user: loggedUser,
+          password: newPass
+        })
+      });
+    } catch (err) {
+      console.warn('Sync password cloud warning:', err);
+    }
+
+    hideLoadingOverlay();
+    closeAccountSettingsModal();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Setting Akun Berhasil!',
+      html: `Password untuk akun <strong>[${loggedUser}]</strong> berhasil diperbarui/ditambahkan.`,
+      confirmButtonColor: '#2563eb'
+    });
+
+  } catch (err) {
+    hideLoadingOverlay();
+    console.error('Save account setting error:', err);
+    Swal.fire('Gagal Menyimpan', err.message, 'error');
+  }
 }
 
 function handleImportFileSelect(event) {
@@ -3269,7 +3417,8 @@ function executeXLSXImport() {
       }
 
       let importedCount = 0;
-      const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Admin';
+      const targetSelect = document.getElementById('importTargetPetugas');
+      const targetPetugas = (targetSelect && targetSelect.value) ? targetSelect.value : (sessionStorage.getItem('ckg_user_name') || 'Admin');
 
       jsonRows.forEach(row => {
         // Robust Column Key Extractor: Pass 1 Exact Match, Pass 2 Includes Match
@@ -3350,8 +3499,8 @@ function executeXLSXImport() {
           gigi: getVal('Pemeriksaan Gigi', 'Gigi') || 'Normal',
           katarak: getVal('Pemeriksaan Katarak', 'Katarak') || 'Tidak',
           status_validasi: 'Terverifikasi',
-          petugas_entry: loggedUser,
-          created_by: loggedUser,
+          petugas_entry: targetPetugas,
+          created_by: targetPetugas,
           created_at: new Date().toISOString().substring(0, 10)
         };
 
