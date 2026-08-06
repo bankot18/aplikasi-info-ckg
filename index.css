@@ -94,6 +94,11 @@ body {
   pointer-events: none;
 }
 
+/* SweetAlert2 must stack above login overlay */
+.swal2-container {
+  z-index: 100000 !important;
+}
+
 /* Split Screen Outer Wrapper Card */
 .split-auth-card {
   width: 100vw;
