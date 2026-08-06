@@ -87,6 +87,8 @@ function saveUserDatabaseToStorage() {
 function populateUserDropdowns() {
   const loginSelect = document.getElementById('loginPegawaiSelect');
   const targetSelect = document.getElementById('targetPetugasSelect');
+  const filterPetugasSelect = document.getElementById('filterPetugas');
+  const filterSimpusSelect = document.getElementById('filterSimpusPetugas');
 
   if (loginSelect) {
     const prevVal = loginSelect.value;
@@ -95,7 +97,7 @@ function populateUserDropdowns() {
       const opt = document.createElement('option');
       opt.value = u.nama_user;
       opt.dataset.role = u.role || 'Petugas';
-      opt.dataset.needPass = (u.password && u.password.trim() !== '') ? 'true' : 'false';
+      opt.dataset.needPass = 'true';
       opt.textContent = `${u.nama_user}${u.role !== 'Petugas' ? ' (' + u.role + ')' : ''}`;
       if (prevVal && u.nama_user === prevVal) opt.selected = true;
       loginSelect.appendChild(opt);
@@ -111,6 +113,30 @@ function populateUserDropdowns() {
       opt.textContent = u.nama_user;
       if (prevTarget && u.nama_user === prevTarget) opt.selected = true;
       targetSelect.appendChild(opt);
+    });
+  }
+
+  if (filterPetugasSelect) {
+    const prevFilter = filterPetugasSelect.value;
+    filterPetugasSelect.innerHTML = '<option value="">-- Semua Petugas --</option>';
+    usersDb.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.nama_user;
+      opt.textContent = u.nama_user;
+      if (prevFilter && u.nama_user === prevFilter) opt.selected = true;
+      filterPetugasSelect.appendChild(opt);
+    });
+  }
+
+  if (filterSimpusSelect) {
+    const prevSimpusFilter = filterSimpusSelect.value;
+    filterSimpusSelect.innerHTML = '<option value="">-- Semua Petugas --</option>';
+    usersDb.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.nama_user;
+      opt.textContent = u.nama_user;
+      if (prevSimpusFilter && u.nama_user === prevSimpusFilter) opt.selected = true;
+      filterSimpusSelect.appendChild(opt);
     });
   }
 
@@ -177,37 +203,19 @@ function setupAuthFormEvents() {
 }
 
 function updatePasswordVisibility() {
-  const selectEl = document.getElementById('loginPegawaiSelect');
   const passContainer = document.getElementById('passwordContainer');
   const passInput = document.getElementById('loginPassword');
   const noticeBadge = document.getElementById('authNoticeBadge');
   const noticeText = document.getElementById('authNoticeText');
 
-  if (!selectEl) return;
-
-  const selectedOpt = selectEl.options[selectEl.selectedIndex];
-  const needPass = selectedOpt ? selectedOpt.getAttribute('data-need-pass') === 'true' : true;
-  const role = selectedOpt ? selectedOpt.getAttribute('data-role') : 'Petugas';
-
-  if (!needPass || role === 'Petugas') {
-    if (passContainer) passContainer.style.display = 'none';
-    if (passInput) passInput.required = false;
-    if (noticeBadge) {
-      noticeBadge.style.background = 'var(--emerald-light)';
-      noticeBadge.style.borderColor = 'rgba(5, 150, 105, 0.2)';
-      noticeBadge.style.color = 'var(--emerald)';
-    }
-    if (noticeText) noticeText.textContent = 'ℹ Akses Petugas dapat langsung masuk tanpa kata sandi verifikasi.';
-  } else {
-    if (passContainer) passContainer.style.display = 'block';
-    if (passInput) passInput.required = true;
-    if (noticeBadge) {
-      noticeBadge.style.background = 'var(--cyan-light)';
-      noticeBadge.style.borderColor = 'rgba(2, 132, 199, 0.2)';
-      noticeBadge.style.color = 'var(--cyan)';
-    }
-    if (noticeText) noticeText.textContent = `ℹ Akses ${role} memerlukan kata sandi verifikasi.`;
+  if (passContainer) passContainer.style.display = 'block';
+  if (passInput) passInput.required = true;
+  if (noticeBadge) {
+    noticeBadge.style.background = 'var(--cyan-light)';
+    noticeBadge.style.borderColor = 'rgba(2, 132, 199, 0.2)';
+    noticeBadge.style.color = 'var(--cyan)';
   }
+  if (noticeText) noticeText.textContent = 'Autentikasi terintegrasi dengan Database User. Masukkan Password yang sesuai.';
 }
 
 function selectPegawaiQuick(namaPegawai) {
@@ -229,50 +237,109 @@ function handleLogin(e) {
   const passInput = document.getElementById('loginPassword');
 
   if (!selectEl || !selectEl.value) {
-    showToast('Silakan pilih Nama Pegawai terlebih dahulu!', 'error');
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Nama Pegawai Belum Dipilih',
+        text: 'Silakan pilih Nama Pegawai terlebih dahulu dari daftar.',
+        confirmButtonColor: '#2563eb'
+      });
+    } else {
+      showToast('Silakan pilih Nama Pegawai terlebih dahulu!', 'error');
+    }
     return;
   }
 
-  const selectedPegawai = selectEl.value;
-  const selectedOpt = selectEl.options[selectEl.selectedIndex];
-  const role = selectedOpt ? selectedOpt.getAttribute('data-role') : 'Petugas';
-  const needPass = selectedOpt ? selectedOpt.getAttribute('data-need-pass') === 'true' : false;
-
-  if (!needPass || role === 'Petugas') {
-    sessionStorage.setItem('ckg_logged_in', 'true');
-    sessionStorage.setItem('ckg_user_name', selectedPegawai);
-    sessionStorage.setItem('ckg_user_role', 'Petugas');
-
-    checkAuthSession();
-    showToast(`Login Berhasil! Selamat Datang Petugas, ${selectedPegawai}`, 'success');
-    return;
-  }
-
+  const selectedPegawai = selectEl.value.trim();
   const inputPass = passInput ? passInput.value.trim() : '';
-  if (!inputPass) {
-    showToast(`Akses ${role} memerlukan kata sandi!`, 'error');
+
+  // Match against usersDb database
+  const user = usersDb.find(u => u.nama_user.toLowerCase() === selectedPegawai.toLowerCase());
+
+  if (!user) {
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Login Gagal',
+        text: `User [${selectedPegawai}] tidak terdaftar di database!`,
+        confirmButtonColor: '#dc2626'
+      });
+    } else {
+      showToast('Username tidak terdaftar di database user!', 'error');
+    }
     return;
   }
 
-  if (inputPass === '213' || inputPass === 'admin123') {
-    sessionStorage.setItem('ckg_logged_in', 'true');
-    sessionStorage.setItem('ckg_user_name', selectedPegawai);
-    sessionStorage.setItem('ckg_user_role', role);
+  const dbPassword = (user.password || '').trim();
 
-    checkAuthSession();
-    showToast(`Login Berhasil! Selamat Datang ${role}, ${selectedPegawai}`, 'success');
+  if (inputPass !== dbPassword) {
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Login Gagal!',
+        text: 'Username atau Kata Sandi yang Anda masukkan tidak sesuai dengan Database User.',
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Coba Lagi'
+      });
+    } else {
+      showToast('Kata Sandi tidak sesuai dengan Database User!', 'error');
+    }
+    return;
+  }
+
+  // Authentication Successful
+  sessionStorage.setItem('ckg_logged_in', 'true');
+  sessionStorage.setItem('ckg_user_name', user.nama_user);
+  sessionStorage.setItem('ckg_user_role', user.role || 'Petugas');
+
+  checkAuthSession();
+
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      icon: 'success',
+      title: 'Login Berhasil!',
+      text: `Selamat Datang, ${user.nama_user} (${user.role})`,
+      timer: 2000,
+      showConfirmButton: false
+    });
   } else {
-    showToast(`Kata Sandi ${role} Salah! (Password Admin Default: 213)`, 'error');
+    showToast(`Login Berhasil! Selamat Datang, ${user.nama_user}`, 'success');
   }
 }
 
 function handleLogout() {
-  sessionStorage.removeItem('ckg_logged_in');
-  sessionStorage.removeItem('ckg_user_name');
-  sessionStorage.removeItem('ckg_user_role');
-
-  checkAuthSession();
-  showToast('Anda telah keluar dari sistem CKG.', 'info');
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      title: 'Keluar dari Sistem?',
+      text: 'Apakah Anda yakin ingin keluar dari aplikasi CKG?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Keluar',
+      cancelButtonText: 'Batal'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        sessionStorage.removeItem('ckg_logged_in');
+        sessionStorage.removeItem('ckg_user_name');
+        sessionStorage.removeItem('ckg_user_role');
+        checkAuthSession();
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil Keluar',
+          text: 'Anda telah keluar dari sistem CKG.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      }
+    });
+  } else {
+    sessionStorage.removeItem('ckg_logged_in');
+    sessionStorage.removeItem('ckg_user_name');
+    sessionStorage.removeItem('ckg_user_role');
+    checkAuthSession();
+    showToast('Anda telah keluar dari sistem CKG.', 'info');
+  }
 }
 
 function startLiveClock() {
@@ -1098,7 +1165,25 @@ function handleBagiPetugasSubmit(e) {
 }
 
 function deleteAllSimpusData() {
-  if (confirm('Apakah Anda yakin ingin menghapus SELURUH Data Entry CKG dari SIMPUS? Action ini tidak dapat dibatalkan.')) {
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      title: 'Hapus Seluruh Data SIMPUS?',
+      text: 'Apakah Anda yakin ingin menghapus SELURUH Data Entry CKG dari SIMPUS? Tindakan ini tidak dapat dibatalkan.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Hapus Semua Data!',
+      cancelButtonText: 'Batal'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        simpusRecords = [];
+        saveSimpusRecordsToStorage();
+        renderSimpusView();
+        Swal.fire('Terhapus!', 'Seluruh Data SIMPUS Berhasil Dihapus.', 'success');
+      }
+    });
+  } else if (confirm('Apakah Anda yakin ingin menghapus SELURUH Data Entry CKG dari SIMPUS? Action ini tidak dapat dibatalkan.')) {
     simpusRecords = [];
     saveSimpusRecordsToStorage();
     renderSimpusView();
@@ -1739,15 +1824,45 @@ function handleAddUserSubmit(e) {
 
 function deleteUser(namaUser) {
   if (namaUser === "Mochamad Fauzie, S.Gz") {
-    showToast('Admin Utama tidak dapat dihapus!', 'error');
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'error',
+        title: 'Aksi Ditolak',
+        text: 'Admin Utama tidak dapat dihapus dari database!',
+        confirmButtonColor: '#2563eb'
+      });
+    } else {
+      showToast('Admin Utama tidak dapat dihapus!', 'error');
+    }
     return;
   }
 
-  if (confirm(`Apakah Anda yakin ingin menghapus User [${namaUser}] dari Database?`)) {
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      title: 'Hapus User Database?',
+      html: `Apakah Anda yakin ingin menghapus User <strong>[${namaUser}]</strong> dari Database?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Hapus User!',
+      cancelButtonText: 'Batal'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        usersDb = usersDb.filter(u => u.nama_user !== namaUser);
+        saveUserDatabaseToStorage();
+        deleteUserFromCloud(namaUser);
+        renderUserDatabaseTable();
+        populateUserDropdowns();
+        Swal.fire('Terhapus!', `User ${namaUser} Berhasil Dihapus dari Database.`, 'success');
+      }
+    });
+  } else if (confirm(`Apakah Anda yakin ingin menghapus User [${namaUser}] dari Database?`)) {
     usersDb = usersDb.filter(u => u.nama_user !== namaUser);
     saveUserDatabaseToStorage();
     deleteUserFromCloud(namaUser);
     renderUserDatabaseTable();
+    populateUserDropdowns();
     showToast(`User ${namaUser} Berhasil Dihapus!`, 'success');
   }
 }
@@ -1831,29 +1946,48 @@ function resetFilters() {
   showToast('Filter telah di-reset.', 'info');
 }
 
+function getOfficerPerformanceData() {
+  return usersDb.map(u => {
+    const name = u.nama_user;
+    const ckgLuar = records.filter(r => (r.petugas_entry === name || r.created_by === name || r.created_by === `petugas_${name}`) && r.jenis_kegiatan === 'Luar Gedung').length;
+    const ckgDalam = records.filter(r => (r.petugas_entry === name || r.created_by === name || r.created_by === `petugas_${name}`) && r.jenis_kegiatan === 'Dalam Gedung').length;
+
+    const simpusLuar = simpusRecords.filter(r => r.assigned_to === name && (!r.jenis_kegiatan || r.jenis_kegiatan === 'Luar Gedung')).length;
+    const simpusDalam = simpusRecords.filter(r => r.assigned_to === name && r.jenis_kegiatan === 'Dalam Gedung').length;
+
+    return {
+      nama: name,
+      role: u.role || 'Petugas',
+      luarCount: ckgLuar + simpusLuar,
+      dalamCount: ckgDalam + simpusDalam
+    };
+  });
+}
+
 function renderApp() {
   updateRoleUI();
-  renderDashboardMetrics();
-  renderOfficerPerformanceTable();
+  const officersData = getOfficerPerformanceData();
+  renderDashboardMetrics(officersData);
+  renderOfficerPerformanceTable(officersData);
   renderTableRecords();
   renderSimpusView();
   renderUserDatabaseTable();
   if (typeof initDashboardCharts === 'function') {
-    initDashboardCharts(OFFICERS_DATA);
+    initDashboardCharts(officersData);
   }
 }
 
-function renderDashboardMetrics() {
+function renderDashboardMetrics(officersData = getOfficerPerformanceData()) {
   let totalLuar = 0;
   let totalDalam = 0;
 
-  OFFICERS_DATA.forEach(o => {
+  officersData.forEach(o => {
     totalLuar += o.luarCount;
     totalDalam += o.dalamCount;
   });
 
   const totalAll = totalLuar + totalDalam;
-  const targetAchievedCount = OFFICERS_DATA.filter(o => (o.luarCount + o.dalamCount) >= 60).length;
+  const targetAchievedCount = officersData.filter(o => (o.luarCount + o.dalamCount) >= 60).length;
 
   const totalEl = document.getElementById('dashTotalEntri');
   const luarEl = document.getElementById('dashLuarGedung');
@@ -1863,19 +1997,19 @@ function renderDashboardMetrics() {
   if (totalEl) totalEl.textContent = totalAll;
   if (luarEl) luarEl.textContent = totalLuar;
   if (dalamEl) dalamEl.textContent = totalDalam;
-  if (targetEl) targetEl.textContent = `${targetAchievedCount} / ${OFFICERS_DATA.length}`;
+  if (targetEl) targetEl.textContent = `${targetAchievedCount} / ${officersData.length}`;
 
   const totalMonthHeader = document.getElementById('totalEntryMonth');
   if (totalMonthHeader) totalMonthHeader.textContent = totalAll;
 }
 
-function renderOfficerPerformanceTable() {
+function renderOfficerPerformanceTable(officersData = getOfficerPerformanceData()) {
   const tbody = document.getElementById('officerPerformanceTableBody');
   if (!tbody) return;
 
   const targetMin = 200;
 
-  tbody.innerHTML = OFFICERS_DATA.map((o, index) => {
+  tbody.innerHTML = officersData.map((o, index) => {
     const total = o.luarCount + o.dalamCount;
     const pctLuar = Math.round((o.luarCount / targetMin) * 100);
     const pctDalam = Math.round((o.dalamCount / targetMin) * 100);

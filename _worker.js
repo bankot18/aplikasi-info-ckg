@@ -115,6 +115,48 @@ export default {
       }
     }
 
+    // 3. ROUTE: /api/ckg
+    if (url.pathname === '/api/ckg' || url.pathname.startsWith('/api/ckg/')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+
+      if (request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare('SELECT * FROM ckg_records ORDER BY id DESC').all();
+          return new Response(JSON.stringify({ success: true, count: results ? results.length : 0, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const records = Array.isArray(body) ? body : [body];
+          const stmt = env.DB.prepare(`
+            INSERT INTO ckg_records (tanggal_entry, nik, nama_pasien, petugas_entry, lokasi_pelayanan, status_entry)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `);
+          const statements = records.map(r => stmt.bind(
+            r.tanggal_entry || new Date().toLocaleDateString('id-ID'),
+            r.nik || '',
+            r.nama_pasien || r.nama || '',
+            r.petugas_entry || r.assigned_to || '',
+            r.lokasi_pelayanan || 'Luar Gedung',
+            r.status_entry || 'Berhasil di Entry'
+          ));
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: records.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
     // Serve static assets via Cloudflare Assets
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);

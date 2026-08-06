@@ -16,7 +16,8 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
 
-  <!-- Application Stylesheet -->
+  <!-- Application Stylesheet & SweetAlert2 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
   <link rel="stylesheet" href="index.css">
 
   <!-- Chart.js, SweetAlert2 & SheetJS Libraries -->
@@ -33,8 +34,8 @@
       <!-- LEFT COLUMN: Visual Branding & Feature Showcase Panel -->
       <div class="split-visual-panel">
         <div class="visual-brand-header">
-          <div class="visual-brand-logo" style="background: #ffffff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); padding: 4px; border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;">
-            <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
+          <div class="visual-brand-logo" style="background: #ffffff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); padding: 4px; border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+            <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;" onerror="this.src='favicon.png'">
           </div>
           <div class="visual-brand-title">
             <h3>Puskesmas Banjaran Kota</h3>
@@ -76,8 +77,8 @@
                 <i class="bi bi-shield-check"></i>
               </div>
               <div class="feature-pill-text">
-                <h4>Kemudahan Akses Petugas</h4>
-                <p>Akses cepat entri petugas tanpa ribet kata sandi verifikasi.</p>
+                <h4>Autentikasi Terintegrasi Database</h4>
+                <p>Login pengguna terverifikasi 100% dengan database user sistem CKG.</p>
               </div>
             </div>
           </div>
@@ -95,7 +96,7 @@
           
           <div class="auth-header-text">
             <h2>Selamat Datang Kembali 👋</h2>
-            <p>Silakan pilih Nama Pegawai Anda untuk masuk ke sistem CKG.</p>
+            <p>Silakan pilih Nama Pegawai dan masukkan Kata Sandi terdaftar Anda.</p>
           </div>
 
           <form id="loginForm" class="login-form">
@@ -110,43 +111,26 @@
               </div>
             </div>
 
-            <!-- Password Container (Dynamic: Required for Admin, Hidden for Petugas) -->
+            <!-- Password Container (Required for ALL Users) -->
             <div id="passwordContainer" class="form-group">
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <label class="form-label" for="loginPassword">Kata Sandi Verifikasi <span class="required">*</span></label>
-                <a href="#" onclick="showToast('Password Admin Default: 213', 'info'); return false;" style="font-size: 11.5px; color: var(--primary); font-weight: 600; text-decoration: none;">Lupa Password?</a>
+                <label class="form-label" for="loginPassword">Kata Sandi / Password <span class="required">*</span></label>
               </div>
               <div class="input-with-icon">
                 <i class="bi bi-lock-fill"></i>
-                <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan Kata Sandi" value="213">
+                <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan Kata Sandi Database" required>
               </div>
             </div>
 
             <!-- Helper Notice Badge -->
             <div id="authNoticeBadge" style="background: var(--cyan-light); border: 1px solid rgba(2, 132, 199, 0.2); border-radius: var(--radius-md); padding: 10px 12px; font-size: 12px; color: var(--cyan); font-weight: 600; display: flex; align-items: center; gap: 8px;">
-              <i class="bi bi-info-circle-fill"></i> <span id="authNoticeText">Akses Admin memerlukan kata sandi verifikasi.</span>
+              <i class="bi bi-shield-lock-fill"></i> <span id="authNoticeText">Autentikasi terintegrasi dengan Database User. Masukkan Password yang sesuai.</span>
             </div>
 
             <!-- Primary CTA Button -->
             <button type="submit" class="btn btn-primary" style="height: 48px; font-size: 14.5px; border-radius: var(--radius-md); font-weight: 800; background: linear-gradient(135deg, #0284c7, #2563eb); margin-top: 6px;">
               Masuk Aplikasi <i class="bi bi-box-arrow-in-right" style="font-size: 16px;"></i>
             </button>
-
-            <!-- Quick Demo Accounts -->
-            <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-color);">
-              <span style="font-size: 11.5px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 8px;">Pilih Peran Cepat:</span>
-              <div class="quick-login-pills">
-                <button type="button" class="btn-quick-login" onclick="selectPegawaiQuick('Mochamad Fauzie, S.Gz')">
-                  <i class="bi bi-shield-lock-fill" style="color: var(--rose);"></i> Admin
-                </button>
-                <button type="button" class="btn-quick-login" onclick="selectPegawaiQuick('Nurul Hidayah, Amd.Kes')">
-                  <i class="bi bi-person-gear" style="color: var(--amber);"></i> Koordinator
-                </button>
-                <button type="button" class="btn-quick-login" onclick="selectPegawaiQuick('Anisa Rohmatunisa, AM.Keb')">
-                  <i class="bi bi-person-check-fill" style="color: var(--emerald);"></i> Petugas (Tanpa Password)
-                </button>
-              </div>
-            </div>
 
           </form>
 
@@ -162,8 +146,8 @@
     <!-- Top App Header Bar -->
     <header class="app-header">
       <div class="brand-section">
-        <div class="brand-logo" style="background: #ffffff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); padding: 3px; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
-          <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
+        <div class="brand-logo" style="background: #ffffff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); padding: 3px; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+          <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;" onerror="this.src='favicon.png'">
         </div>
         <div class="brand-title">
           <h1>Pencatatan CKG Puskesmas Banjaran Kota</h1>
@@ -296,7 +280,7 @@
           <div class="metric-card-solid bg-blue">
             <div class="metric-card-info">
               <span class="metric-card-title">TOTAL ENTRI CKG</span>
-              <span class="metric-card-value" id="dashTotalEntri">699</span>
+              <span class="metric-card-value" id="dashTotalEntri">0</span>
             </div>
             <div class="metric-card-icon"><i class="bi bi-folder-fill"></i></div>
           </div>
@@ -304,7 +288,7 @@
           <div class="metric-card-solid bg-cyan">
             <div class="metric-card-info">
               <span class="metric-card-title">CKG LUAR GEDUNG</span>
-              <span class="metric-card-value" id="dashLuarGedung">319</span>
+              <span class="metric-card-value" id="dashLuarGedung">0</span>
             </div>
             <div class="metric-card-icon"><i class="bi bi-geo-alt-fill"></i></div>
           </div>
@@ -312,7 +296,7 @@
           <div class="metric-card-solid bg-emerald">
             <div class="metric-card-info">
               <span class="metric-card-title">CKG DALAM GEDUNG</span>
-              <span class="metric-card-value" id="dashDalamGedung">380</span>
+              <span class="metric-card-value" id="dashDalamGedung">0</span>
             </div>
             <div class="metric-card-icon"><i class="bi bi-building-fill"></i></div>
           </div>
@@ -320,7 +304,7 @@
           <div class="metric-card-solid bg-purple">
             <div class="metric-card-info">
               <span class="metric-card-title">CAPAI TARGET (>=60)</span>
-              <span class="metric-card-value" id="dashCapaiTarget">0 / 39</span>
+              <span class="metric-card-value" id="dashCapaiTarget">0 / 0</span>
             </div>
             <div class="metric-card-icon"><i class="bi bi-person-badge-fill"></i></div>
           </div>
@@ -469,8 +453,6 @@
               <i class="bi bi-person-badge"></i> Petugas Entry:
               <select id="filterPetugas" class="filter-control">
                 <option value="">-- Semua Petugas --</option>
-                <option value="petugas_ahmad">Ahmad Fauzi, Amd.Gz</option>
-                <option value="petugas_siti">Siti Nurhaliza, Amd.Keb</option>
               </select>
             </div>
 
@@ -576,10 +558,6 @@
               <i class="bi bi-person-badge-fill"></i> Petugas Entry:
               <select id="filterSimpusPetugas" class="filter-control" style="font-weight: 700;">
                 <option value="">-- Semua Petugas --</option>
-                <option value="Anisa Rohmatunisa, AM.Keb">Anisa Rohmatunisa, AM.Keb</option>
-                <option value="Neng Yulia Trisnawati, AM.Keb">Neng Yulia Trisnawati, AM.Keb</option>
-                <option value="Teti Nuryati, S.Keb, Bdn">Teti Nuryati, S.Keb, Bdn</option>
-                <option value="Mochamad Fauzie, S.Gz">Mochamad Fauzie, S.Gz</option>
               </select>
             </div>
 
