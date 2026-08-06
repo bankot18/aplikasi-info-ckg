@@ -222,8 +222,9 @@ async function loadStoredAnnouncement() {
     const res = await fetch('/api/announcement');
     if (res.ok) {
       const result = await res.json();
-      if (result.success && result.data) {
+      if (result.success && result.data && result.data.content) {
         announcementData = result.data;
+        announcementData.active = Boolean(result.data.active === 1 || result.data.active === '1' || result.data.active === true || result.data.active === 'true');
         localStorage.setItem('ckg_announcement', JSON.stringify(announcementData));
       }
     }
@@ -231,7 +232,7 @@ async function loadStoredAnnouncement() {
     console.log('Using local cached announcement:', e);
   }
 
-  if (!announcementData) {
+  if (!announcementData || !announcementData.content) {
     announcementData = {
       title: 'HIMBAUAN PENTING SISTEM',
       content: 'Selamat datang di Sistem Informasi Pencatatan CKG Puskesmas Banjaran Kota. Mohon lakukan verifikasi dan pencatatan data pasien By Name By Address (BNBA) dengan teliti.',
@@ -257,7 +258,10 @@ async function saveAnnouncementToCloud(data) {
 
 async function checkAndShowAnnouncement() {
   await loadStoredAnnouncement();
-  if (!announcementData || !announcementData.active || !announcementData.content) return;
+  if (!announcementData || !announcementData.content) return;
+  
+  const isActive = Boolean(announcementData.active === true || announcementData.active === 1 || announcementData.active === '1' || announcementData.active === 'true');
+  if (!isActive) return;
   
   const titleEl = document.getElementById('announcementPopupTitle');
   const authorEl = document.getElementById('announcementPopupAuthor');
@@ -273,7 +277,9 @@ async function checkAndShowAnnouncement() {
   if (contentEl) contentEl.textContent = announcementData.content;
   
   const modal = document.getElementById('announcementModal');
-  if (modal) modal.classList.add('active');
+  if (modal) {
+    modal.classList.add('active');
+  }
 }
 
 function closeAnnouncementModal() {
@@ -591,11 +597,14 @@ function performLoginSuccess(user) {
       title: 'Login Berhasil!',
       html: `<div style="font-size:14px;">Selamat Datang, <strong>${user.nama_user}</strong></div>
              <div style="font-size:12px; color:#64748b; margin-top:4px;">Role: ${user.role || 'Petugas'}</div>`,
-      timer: 2200,
+      timer: 1800,
       timerProgressBar: true,
       showConfirmButton: false,
       background: '#ffffff',
       customClass: { popup: 'animate__animated animate__fadeInDown' }
+    }).then(() => {
+      // Trigger announcement modal right after login success alert closes!
+      setTimeout(checkAndShowAnnouncement, 200);
     });
   }, 800);
 }
