@@ -1994,12 +1994,17 @@ function processImportFromModal() {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
+      if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+        showToast('File Excel tidak valid atau rusak!', 'error');
+        return;
+      }
+
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
       if (jsonData.length === 0) {
-        showToast('File XLSX kosong atau format tidak dikenali.', 'error');
+        showToast('File XLSX kosong atau tidak memiliki data.', 'error');
         return;
       }
 
@@ -2010,46 +2015,65 @@ function processImportFromModal() {
       }, 3900);
 
       jsonData.forEach((row, idx) => {
-        const nama = String(row['NAMA PASIEN'] || row['NAMA'] || row['Nama Pasien'] || row['nama'] || '').trim().toUpperCase();
-        const nik = String(row['NIK'] || row['nik'] || '').trim();
+        const getVal = (...keys) => {
+          for (let k of keys) {
+            const target = k.toLowerCase().trim();
+            for (let rowKey in row) {
+              if (rowKey.toLowerCase().trim() === target) return String(row[rowKey]).trim();
+            }
+          }
+          for (let k of keys) {
+            const target = k.toLowerCase().trim();
+            for (let rowKey in row) {
+              const keyClean = rowKey.toLowerCase().trim();
+              if (keyClean.includes(target)) return String(row[rowKey]).trim();
+            }
+          }
+          return '';
+        };
+
+        const nama = getVal('NAMA PASIEN', 'NAMA', 'Nama Pasien', 'Nama').toUpperCase();
+        const nik = getVal('NIK', 'nik', 'No KTP');
 
         if (!nama || nama.length < 2) return;
 
         const newId = `S-${maxId + idx + 1}-${Date.now()}`;
-        const bb = parseFloat(row['BB (kg)'] || row['BB'] || row['BERAT BADAN'] || row['Berat Badan'] || row['bb'] || 0) || 0;
-        const tb = parseFloat(row['TB (cm)'] || row['TB'] || row['TINGGI BADAN'] || row['Tinggi Badan'] || row['tb'] || 0) || 0;
+        const bb = parseFloat(getVal('BB (kg)', 'BB', 'BERAT BADAN', 'Berat Badan')) || 0;
+        const tb = parseFloat(getVal('TB (cm)', 'TB', 'TINGGI BADAN', 'Tinggi Badan')) || 0;
         const imt = (bb > 0 && tb > 0) ? parseFloat((bb / ((tb / 100) ** 2)).toFixed(1)) : 0;
-        const usia = parseInt(row['USIA'] || row['Usia'] || row['usia'] || row['UMUR'] || 0) || 0;
+        const usia = parseInt(getVal('USIA', 'Usia', 'Umur')) || 30;
 
         let keterangan = 'Dewasa';
         if (usia < 18) keterangan = 'Anak';
         else if (usia >= 60) keterangan = 'Lansia';
 
+        const petugasName = getVal('Petugas Entry', 'Petugas', 'Assigned To', 'Nama Petugas');
+
         const record = {
           id: newId,
           no: maxId + idx + 1,
-          petugas_entry: String(row['Petugas Entry'] || row['Petugas'] || row['PETUGAS'] || ''),
+          petugas_entry: petugasName,
           nama: nama,
           nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
           tanggal: new Date().toISOString().substring(0, 10),
-          dob: String(row['TANGGAL LAHIR'] || row['TGL LAHIR'] || row['Tanggal Lahir'] || row['tanggal_lahir'] || '-'),
+          dob: getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB', 'Tanggal_Lahir') || '1990-01-01',
           usia: usia,
-          status_pernikahan: String(row['Status Pernikahan'] || row['STATUS PERNIKAHAN'] || 'MENIKAH'),
-          provinsi: String(row['Provinsi'] || row['PROVINSI'] || 'Jawa Barat'),
-          kab_kota: String(row['Kab/Kota'] || row['KAB/KOTA'] || 'Kab. Bandung'),
-          kecamatan: String(row['Kecamatan'] || row['KECAMATAN'] || 'Banjaran'),
-          kelurahan: String(row['Kelurahan'] || row['KELURAHAN'] || 'Tarajusari'),
-          alamat: String(row['Alamat Lengkap'] || row['ALAMAT LENGKAP'] || row['ALAMAT'] || row['Alamat'] || '-'),
+          status_pernikahan: getVal('Status Pernikahan', 'Status', 'Pernikahan') || 'MENIKAH',
+          provinsi: getVal('Provinsi', 'Prov') || 'Jawa Barat',
+          kab_kota: getVal('Kab/Kota', 'Kab', 'Kota') || 'Kab. Bandung',
+          kecamatan: getVal('Kecamatan', 'Kec') || 'Banjaran',
+          kelurahan: getVal('Kelurahan', 'Kel', 'Desa') || 'Tarajusari',
+          alamat: getVal('Alamat Lengkap', 'ALAMAT', 'Alamat', 'Alamat_Lengkap') || '-',
           bb: bb,
           tb: tb,
           imt: imt,
-          sistol: parseInt(row['TD SISTOL'] || row['SISTOL'] || row['TD SISTOLIK'] || row['Sistol'] || 0) || 0,
-          diastol: parseInt(row['TD DIASTOL'] || row['DIASTOL'] || row['TD DIASTOLIK'] || row['Diastol'] || 0) || 0,
-          gula: String(row['GULA DARAH'] || row['Gula Darah'] || row['gula'] || row['GULA'] || '-'),
-          kolesterol: String(row['KOLESTEROL'] || row['Kolesterol'] || row['kolesterol'] || '-'),
+          sistol: parseInt(getVal('TD SISTOL', 'TD SISTOLIK', 'SISTOL', 'Sistol')) || 120,
+          diastol: parseInt(getVal('TD DIASTOL', 'TD DIASTOLIK', 'DIASTOL', 'Diastol')) || 80,
+          gula: getVal('GULA DARAH', 'Gula Darah', 'Gula') || '100',
+          kolesterol: getVal('KOLESTEROL', 'Kolesterol') || '180',
           keterangan: keterangan,
           is_divided: false,
-          assigned_to: String(row['Petugas Entry'] || row['Petugas'] || ''),
+          assigned_to: petugasName,
           entry_status: 'belum'
         };
 
@@ -2057,7 +2081,11 @@ function processImportFromModal() {
       });
 
       if (parsedRecords.length === 0) {
-        showToast('Tidak ada data valid yang bisa di-import.', 'warning');
+        if (typeof Swal !== 'undefined') {
+          Swal.fire('Gagal Read Excel', 'Sistem tidak menemukan baris data pasien yang valid pada file Excel tersebut. Mohon gunakan template resmi XLSX SIMPUS.', 'warning');
+        } else {
+          showToast('Tidak ada data valid yang bisa di-import.', 'warning');
+        }
         return;
       }
 
@@ -2066,7 +2094,7 @@ function processImportFromModal() {
       // Show Progress Modal for Cloud Sync
       if (typeof Swal !== 'undefined') {
         Swal.fire({
-          title: `<i class="bi bi-cloud-upload-fill" style="color:#d97706;"></i> Meng-upload Data Belum Di-Bagi ke Cloud Database D1...`,
+          title: `<i class="bi bi-cloud-upload-fill" style="color:#d97706;"></i> Meng-upload ${parsedRecords.length} Data Pasien ke Cloud Database D1...`,
           html: `<div style="margin:10px 0;">
                   <div id="simpusImportProgressBar" style="width:100%;height:20px;background:#e2e8f0;border-radius:10px;overflow:hidden;">
                     <div id="simpusImportProgressFill" style="width:0%;height:100%;background:linear-gradient(90deg,#d97706,#f59e0b);border-radius:10px;transition:width 0.3s;"></div>
@@ -2109,15 +2137,15 @@ function processImportFromModal() {
 
       if (typeof Swal !== 'undefined') {
         Swal.fire({
-          icon: failed === 0 ? 'success' : 'warning',
-          title: failed === 0 ? 'Import & Sinkronisasi Cloud Berhasil!' : 'Import Sebagian Berhasil',
+          icon: uploaded > 0 ? 'success' : 'error',
+          title: uploaded > 0 ? 'Import & Sinkronisasi Cloud Berhasil!' : 'Gagal Upload ke Cloud',
           html: `<div style="font-size:13.5px; text-align:left; line-height:1.6;">
                   Total <strong>${uploaded} Data Pasien</strong> dari file <strong>${file.name}</strong> telah <strong>ter-upload & tersimpan permanen di Cloudflare D1 Database (tab Data Belum Di-Bagi)</strong>.
                 </div>`,
           confirmButtonColor: '#d97706'
         });
       } else {
-        showToast(`${uploaded} data SIMPUS berhasil di-upload ke Cloud D1 dari ${file.name}!`, 'success');
+        showToast(`${uploaded} data SIMPUS berhasil di-upload ke Cloud D1!`, 'success');
       }
     } catch (err) {
       console.error('Import XLSX Error:', err);
