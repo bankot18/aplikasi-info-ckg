@@ -1559,6 +1559,36 @@ body {
   color: var(--text-muted);
 }
 
+/* User Role Badge Pill in Header */
+.badge-role-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.badge-role-pill.role-admin {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.badge-role-pill.role-koordinator {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fef08a;
+}
+
+.badge-role-pill.role-petugas {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
 /* ==========================================================================
    🎬 SMOOTH TRANSITION ANIMATIONS SYSTEM
    ========================================================================== */

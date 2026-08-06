@@ -177,11 +177,15 @@ function checkAuthSession() {
     currentRole = savedRole;
 
     const nameEl = document.getElementById('headerUserName');
-    const roleSelect = document.getElementById('roleSelect');
+    const roleBadgeEl = document.getElementById('headerUserRoleBadge');
     const avatarEl = document.getElementById('headerUserAvatar');
 
     if (nameEl) nameEl.textContent = savedName;
-    if (roleSelect) roleSelect.value = savedRole;
+    if (roleBadgeEl) {
+      const roleUpper = (savedRole || 'Petugas').toUpperCase();
+      roleBadgeEl.textContent = roleUpper;
+      roleBadgeEl.className = 'badge-role-pill role-' + (savedRole || 'Petugas').toLowerCase();
+    }
     if (avatarEl) {
       const initials = savedName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
       avatarEl.textContent = initials;
@@ -265,6 +269,31 @@ function handleLogin(e) {
     return;
   }
 
+  // Check if user is BANNED
+  if (user.is_banned) {
+    if (user.banned_until && user.banned_until !== 'PERMANENT' && new Date() > new Date(user.banned_until)) {
+      // Ban has expired! Automatically unban user
+      user.is_banned = false;
+      user.banned_until = null;
+      saveUserDatabaseToStorage();
+      syncUsersToCloud(usersDb);
+    } else {
+      const untilText = user.banned_until === 'PERMANENT' ? 'Permanen' : (new Date(user.banned_until).toLocaleString('id-ID'));
+      Swal.fire({
+        icon: 'error',
+        title: 'Akun Dinonaktifkan / Banned',
+        html: `<div style="font-size: 14px; margin-bottom: 6px;">Akun <strong>${user.nama_user}</strong> sedang dalam status nonaktif/banned.</div>
+               <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 8px 12px; border-radius: 6px; color: #dc2626; font-size: 12px; font-weight: 700; margin-top: 8px;">
+                 Status: ${user.banned_duration_label || 'Banned'} (Hingga: ${untilText})
+               </div>
+               <div style="font-size: 11.5px; color: #64748b; margin-top: 10px;">Silakan hubungi Admin Utama Puskesmas untuk verifikasi kembali.</div>`,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Tutup'
+      });
+      return;
+    }
+  }
+
   const dbPassword = (user.password || '').trim();
 
   // If user has NO password → login directly
@@ -303,7 +332,7 @@ function handleLogin(e) {
         return false;
       }
       if (inputPass.trim() !== dbPassword) {
-        Swal.showValidationMessage('Kata sandi salah! Tidak sesuai dengan database.');
+        Swal.showValidationMessage('Kata Sandi Yang Anda Masukan Salah');
         return false;
       }
       return inputPass;
@@ -2101,18 +2130,35 @@ function renderUserDatabaseTable() {
 
     const safeNama = u.nama_user.replace(/'/g, "\\'");
 
+    let sessionStatusHtml = isCurrentActive ? '<span class="badge badge-emerald"><i class="bi bi-circle-fill" style="font-size:8px;"></i> Session Aktif</span>' : '<span class="badge badge-cyan">Offline</span>';
+
+    if (u.is_banned) {
+      sessionStatusHtml = `<span class="badge badge-rose" style="background:#fef2f2; color:#dc2626; border:1px solid #fecaca;"><i class="bi bi-slash-circle-fill"></i> Banned (${u.banned_duration_label || 'Nonaktif'})</span>`;
+    }
+
     return `
       <tr>
         <td>${i + 1}</td>
         <td><strong>${u.nama_user}</strong></td>
         <td>${u.password ? `<code style="background: var(--bg-subtle); padding: 2px 6px; border-radius: 4px; color: var(--rose); font-weight: bold;">${u.password}</code>` : '<span style="font-size: 11px; color: var(--text-muted); font-style: italic;">Tanpa Password</span>'}</td>
         <td>${roleBadge}</td>
-        <td>${isCurrentActive ? '<span class="badge badge-emerald"><i class="bi bi-circle-fill" style="font-size:8px;"></i> Session Aktif</span>' : '<span class="badge badge-cyan">Offline</span>'}</td>
+        <td>${sessionStatusHtml}</td>
         <td>
-          <div style="display: flex; gap: 6px; align-items: center;">
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
             <button class="btn btn-amber btn-sm" onclick="openEditUserModal('${safeNama}')" title="Edit User">
               <i class="bi bi-pencil-square"></i> Edit
             </button>
+            ${u.nama_user !== "Mochamad Fauzie, S.Gz" ? (
+              u.is_banned ? `
+                <button class="btn btn-emerald btn-sm" onclick="unbanUser('${safeNama}')" title="Buka Blokir">
+                  <i class="bi bi-unlock-fill"></i> Unban
+                </button>
+              ` : `
+                <button class="btn btn-rose btn-sm" onclick="openBanUserModal('${safeNama}')" style="background: #dc2626; color: #fff;" title="Blokir User">
+                  <i class="bi bi-slash-circle-fill"></i> Blokir
+                </button>
+              `
+            ) : ''}
             ${u.nama_user !== "Mochamad Fauzie, S.Gz" ? `
               <button class="btn btn-danger btn-sm" onclick="deleteUser('${safeNama}')" title="Hapus User">
                 <i class="bi bi-trash"></i> Hapus
@@ -2123,6 +2169,124 @@ function renderUserDatabaseTable() {
       </tr>
     `;
   }).join('');
+}
+
+function openBanUserModal(namaUser) {
+  if (namaUser === "Mochamad Fauzie, S.Gz") {
+    Swal.fire({
+      icon: 'error',
+      title: 'Aksi Ditolak',
+      text: 'Admin Utama tidak dapat dibanned/dinonaktifkan!',
+      confirmButtonColor: '#2563eb'
+    });
+    return;
+  }
+
+  Swal.fire({
+    title: 'Blokir / Nonaktifkan User',
+    html: `
+      <div style="text-align: left; font-size: 13px;">
+        <p style="margin-bottom: 12px; font-weight:600;">Pilih durasi penonaktifan akun untuk <strong>${namaUser}</strong>:</p>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <input type="radio" name="banDuration" value="1d" checked> <strong>1 Hari</strong> (24 Jam)
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <input type="radio" name="banDuration" value="3d"> <strong>3 Hari</strong>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <input type="radio" name="banDuration" value="7d"> <strong>7 Hari</strong>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <input type="radio" name="banDuration" value="30d"> <strong>30 Hari</strong>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: #fef2f2; padding: 8px 12px; border-radius: 6px; border: 1px solid #fecaca; color: #dc2626;">
+            <input type="radio" name="banDuration" value="permanent"> <strong>Permanen</strong> (Selamanya)
+          </label>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Proses Blokir',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    preConfirm: () => {
+      const selected = document.querySelector('input[name="banDuration"]:checked');
+      if (!selected) {
+        Swal.showValidationMessage('Pilih salah satu durasi blokir!');
+        return false;
+      }
+      return selected.value;
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const dur = result.value;
+      const userObj = usersDb.find(u => u.nama_user === namaUser);
+      if (!userObj) return;
+
+      userObj.is_banned = true;
+      const now = new Date();
+
+      if (dur === '1d') {
+        now.setDate(now.getDate() + 1);
+        userObj.banned_until = now.toISOString();
+        userObj.banned_duration_label = '1 Hari';
+      } else if (dur === '3d') {
+        now.setDate(now.getDate() + 3);
+        userObj.banned_until = now.toISOString();
+        userObj.banned_duration_label = '3 Hari';
+      } else if (dur === '7d') {
+        now.setDate(now.getDate() + 7);
+        userObj.banned_until = now.toISOString();
+        userObj.banned_duration_label = '7 Hari';
+      } else if (dur === '30d') {
+        now.setDate(now.getDate() + 30);
+        userObj.banned_until = now.toISOString();
+        userObj.banned_duration_label = '30 Hari';
+      } else {
+        userObj.banned_until = 'PERMANENT';
+        userObj.banned_duration_label = 'Permanen';
+      }
+
+      saveUserDatabaseToStorage();
+      syncUsersToCloud(usersDb);
+      renderUserDatabaseTable();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'User Berhasil Di-Blokir!',
+        text: `User ${namaUser} telah dinonaktifkan dengan durasi: ${userObj.banned_duration_label}.`,
+        confirmButtonColor: '#2563eb'
+      });
+    }
+  });
+}
+
+function unbanUser(namaUser) {
+  Swal.fire({
+    title: 'Buka Blokir User?',
+    html: `Apakah Anda yakin ingin mengaktifkan kembali akun User <strong>[${namaUser}]</strong>?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#059669',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Aktifkan!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const userObj = usersDb.find(u => u.nama_user === namaUser);
+      if (userObj) {
+        userObj.is_banned = false;
+        userObj.banned_until = null;
+        userObj.banned_duration_label = null;
+        saveUserDatabaseToStorage();
+        syncUsersToCloud(usersDb);
+        renderUserDatabaseTable();
+        Swal.fire('Berhasil!', `Akun ${namaUser} telah aktif kembali.`, 'success');
+      }
+    }
+  });
 }
 
 function renderTableRecords() {
@@ -2319,39 +2483,279 @@ function deleteRecord(id) {
   }
 }
 
-function exportToCSV() {
+/* ==========================================================================
+   📊 EXPORT & IMPORT XLSX ENGINE (SheetJS)
+   ========================================================================== */
+
+function exportToXLSX() {
   if (records.length === 0) {
     showToast('Tidak ada data untuk diekspor!', 'error');
     return;
   }
 
-  const headers = [
-    "ID", "Jenis Kegiatan", "NIK", "Nama", "Tanggal Lahir", "Usia",
-    "Jenis Kelamin", "No WA", "Status Nikah", "Provinsi", "Kab/Kota", "Kecamatan",
-    "Kelurahan", "Alamat", "Pekerjaan", "Merokok", "BB", "TB", "LP", "IMT",
-    "TD Sistolik", "TD Diastolik", "Gula Darah", "Kolesterol", "HB", "Telinga",
-    "Mata", "Gigi", "Katarak", "Status Validasi", "Created At"
-  ];
+  showLoadingOverlay('Mengekspor Data...', 'Menyusun File Excel (.XLSX)');
 
-  const rows = records.map(r => [
-    r.id, r.jenis_kegiatan, `"${r.nik}"`, `"${r.nama}"`,
-    r.tanggal_lahir, r.usia, r.jenis_kelamin, `"${r.no_whatsapp || ''}"`, r.status_pernikahan,
-    `"${r.provinsi}"`, `"${r.kab_kota}"`, `"${r.kecamatan}"`, `"${r.kelurahan}"`,
-    `"${r.alamat}"`, `"${r.pekerjaan || ''}"`, r.merokok, r.bb, r.tb, r.lp, r.imt,
-    r.td_sistolik, r.td_diastolik, r.gula_darah, r.kolesterol, r.hb, r.telinga,
-    r.mata, r.gigi, r.katarak, r.status_validasi, r.created_at
-  ]);
+  setTimeout(() => {
+    try {
+      const headers = [
+        "ID", "Jenis Kegiatan", "NIK", "Nama Pasien", "Tanggal Lahir", "Usia",
+        "Jenis Kelamin", "No WhatsApp", "Status Nikah", "Provinsi", "Kab/Kota", "Kecamatan",
+        "Kelurahan", "Alamat", "Pekerjaan", "Merokok", "BB (kg)", "TB (cm)", "LP (cm)", "IMT",
+        "TD Sistolik", "TD Diastolik", "Gula Darah (mg/dL)", "Kolesterol (mg/dL)", "HB (g/dL)",
+        "Pemeriksaan Telinga", "Pemeriksaan Mata", "Pemeriksaan Gigi", "Pemeriksaan Katarak",
+        "Status Validasi", "Petugas Entry", "Tanggal Entry"
+      ];
 
-  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `Laporan_BNBA_CKG_${new Date().toISOString().substring(0,10)}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+      const rows = records.map(r => [
+        r.id || '',
+        r.jenis_kegiatan || 'Luar Gedung',
+        r.nik || '',
+        r.nama || r.nama_pasien || '',
+        r.tanggal_lahir || '',
+        r.usia || 0,
+        r.jenis_kelamin || 'L',
+        r.no_whatsapp || '',
+        r.status_pernikahan || 'Belum Menikah',
+        r.provinsi || 'Jawa Barat',
+        r.kab_kota || 'Kab. Bandung',
+        r.kecamatan || 'Banjaran',
+        r.kelurahan || 'Banjaran Kota',
+        r.alamat || '',
+        r.pekerjaan || '',
+        r.merokok || 'Tidak',
+        r.bb || '',
+        r.tb || '',
+        r.lp || '',
+        r.imt || '',
+        r.td_sistolik || '',
+        r.td_diastolik || '',
+        r.gula_darah || '',
+        r.kolesterol || '',
+        r.hb || '',
+        r.telinga || 'Normal',
+        r.mata || 'Normal',
+        r.gigi || 'Baik',
+        r.katarak || 'Tidak',
+        r.status_validasi || 'Terverifikasi',
+        r.created_by || r.petugas_entry || sessionStorage.getItem('ckg_user_name') || 'Admin',
+        r.created_at || r.tanggal_entry || new Date().toISOString().substring(0, 10)
+      ]);
 
-  showToast('Laporan BNBA CSV Berhasil Diunduh!', 'success');
+      const wsData = [headers, ...rows];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      // Auto width for columns
+      const colWidths = headers.map(h => ({ wch: Math.max(h.length + 3, 14) }));
+      ws['!cols'] = colWidths;
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Data BNBA CKG");
+
+      const filename = `Laporan_BNBA_CKG_${new Date().toISOString().substring(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, filename);
+
+      hideLoadingOverlay();
+      showToast('Laporan BNBA Excel (.XLSX) Berhasil Diunduh!', 'success');
+    } catch (err) {
+      hideLoadingOverlay();
+      console.error('Export XLSX error:', err);
+      showToast('Gagal mengekspor data ke Excel: ' + err.message, 'error');
+    }
+  }, 400);
+}
+
+// Keep exportToCSV as alias for backward compatibility
+function exportToCSV() {
+  exportToXLSX();
+}
+
+let selectedImportFile = null;
+
+function openImportModal() {
+  const modal = document.getElementById('importModal');
+  if (modal) modal.classList.add('active');
+  selectedImportFile = null;
+  const fileDetails = document.getElementById('importFileDetails');
+  const btnExec = document.getElementById('btnExecuteImport');
+  if (fileDetails) fileDetails.style.display = 'none';
+  if (btnExec) btnExec.disabled = true;
+  const fileInput = document.getElementById('importFileInput');
+  if (fileInput) fileInput.value = '';
+}
+
+function closeImportModal() {
+  const modal = document.getElementById('importModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function handleImportFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  selectedImportFile = file;
+  const fileDetails = document.getElementById('importFileDetails');
+  const fileNameEl = document.getElementById('importFileName');
+  const btnExec = document.getElementById('btnExecuteImport');
+
+  if (fileNameEl) fileNameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  if (fileDetails) fileDetails.style.display = 'block';
+  if (btnExec) btnExec.disabled = false;
+}
+
+function downloadXLSXTemplate() {
+  try {
+    const headers = [
+      "Jenis Kegiatan", "NIK", "Nama Pasien", "Tanggal Lahir (YYYY-MM-DD)",
+      "Jenis Kelamin (L/P)", "No WhatsApp", "Status Nikah", "Alamat",
+      "BB (kg)", "TB (cm)", "LP (cm)", "TD Sistolik", "TD Diastolik",
+      "Gula Darah (mg/dL)", "Kolesterol (mg/dL)", "HB (g/dL)"
+    ];
+
+    const sampleRow = [
+      "Luar Gedung", "3204131508850001", "Budi Santoso", "1985-08-15",
+      "L", "081234567890", "Menikah", "Jl. Pakubuwono VI No. 12, Banjaran Kota",
+      "65", "170", "80", "120", "80", "110", "180", "14.5"
+    ];
+
+    const wsData = [headers, sampleRow];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 16) }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template Import CKG");
+
+    XLSX.writeFile(wb, "Template_Import_Data_CKG_Puskesmas.xlsx");
+    showToast('Template XLSX Berhasil Diunduh!', 'success');
+  } catch (err) {
+    showToast('Gagal mengunduh template: ' + err.message, 'error');
+  }
+}
+
+function executeXLSXImport() {
+  if (!selectedImportFile) {
+    showToast('Pilih file Excel terlebih dahulu!', 'warning');
+    return;
+  }
+
+  showLoadingOverlay('Membaca File Excel...', 'Memproses import data ke database');
+
+  const reader = new FileReader();
+
+  reader.onload = function (e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+
+      const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+      if (jsonRows.length === 0) {
+        hideLoadingOverlay();
+        showToast('File Excel kosong atau format tidak sesuai!', 'error');
+        return;
+      }
+
+      let importedCount = 0;
+      const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Admin';
+
+      jsonRows.forEach(row => {
+        // Normalize column keys (case insensitive / trimmed)
+        const getVal = (...keys) => {
+          for (let k of keys) {
+            for (let rowKey in row) {
+              if (rowKey.toLowerCase().trim().includes(k.toLowerCase().trim())) {
+                return String(row[rowKey]).trim();
+              }
+            }
+          }
+          return '';
+        };
+
+        const nik = getVal('NIK', 'No KTP');
+        const nama = getVal('Nama Pasien', 'Nama', 'Nama Lengkap');
+
+        if (!nama && !nik) return; // Skip invalid row
+
+        const dobStr = getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB') || '1990-01-01';
+        let age = 30;
+        try {
+          const birthDate = new Date(dobStr);
+          if (!isNaN(birthDate.getTime())) {
+            const today = new Date();
+            age = today.getFullYear() - birthDate.getFullYear();
+          }
+        } catch (_) {}
+
+        const bb = parseFloat(getVal('BB', 'Berat')) || 60;
+        const tb = parseFloat(getVal('TB', 'Tinggi')) || 165;
+        const imtVal = (tb > 0) ? (bb / ((tb / 100) * (tb / 100))).toFixed(2) : '22.0';
+
+        const newRecord = {
+          id: 'CKG-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          jenis_kegiatan: getVal('Jenis Kegiatan', 'Kegiatan') || 'Luar Gedung',
+          nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
+          nama: nama || 'Pasien Tanpa Nama',
+          tanggal_lahir: dobStr,
+          usia: age,
+          jenis_kelamin: getVal('Jenis Kelamin', 'JK') || 'L',
+          no_whatsapp: getVal('No WhatsApp', 'WA', 'HP') || '',
+          status_pernikahan: getVal('Status Nikah', 'Pernikahan') || 'Menikah',
+          provinsi: getVal('Provinsi') || 'Jawa Barat',
+          kab_kota: getVal('Kab/Kota', 'Kota') || 'Kab. Bandung',
+          kecamatan: getVal('Kecamatan') || 'Banjaran',
+          kelurahan: getVal('Kelurahan') || 'Banjaran Kota',
+          alamat: getVal('Alamat') || 'Kab. Bandung',
+          pekerjaan: getVal('Pekerjaan') || '',
+          merokok: getVal('Merokok') || 'Tidak',
+          bb: bb,
+          tb: tb,
+          lp: parseFloat(getVal('LP', 'Lingkar')) || 80,
+          imt: imtVal,
+          td_sistolik: parseInt(getVal('TD Sistolik', 'Sistol')) || 120,
+          td_diastolik: parseInt(getVal('TD Diastolik', 'Diastol')) || 80,
+          gula_darah: getVal('Gula Darah', 'Gula') || '110',
+          kolesterol: getVal('Kolesterol') || '180',
+          hb: getVal('HB') || '14.0',
+          telinga: getVal('Telinga') || 'Normal',
+          mata: getVal('Mata') || 'Normal',
+          gigi: getVal('Gigi') || 'Baik',
+          katarak: getVal('Katarak') || 'Tidak',
+          status_validasi: 'Terverifikasi',
+          created_by: loggedUser,
+          created_at: new Date().toISOString().substring(0, 10)
+        };
+
+        records.unshift(newRecord);
+        importedCount++;
+      });
+
+      saveRecordsToStorage();
+      renderApp();
+      closeImportModal();
+      hideLoadingOverlay();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Import Data Berhasil!',
+        html: `Sebanyak <strong>${importedCount} Data Pasien</strong> berhasil di-import ke Database BNBA CKG.`,
+        confirmButtonColor: '#2563eb'
+      });
+
+    } catch (err) {
+      hideLoadingOverlay();
+      console.error('Import parse error:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Import File',
+        text: 'Format file Excel tidak dapat diproses: ' + err.message,
+        confirmButtonColor: '#dc2626'
+      });
+    }
+  };
+
+  reader.readAsArrayBuffer(selectedImportFile);
 }
 
 function showToast(message, type = 'info') {

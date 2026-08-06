@@ -34,8 +34,11 @@
       <!-- LEFT COLUMN: Visual Branding & Feature Showcase Panel -->
       <div class="split-visual-panel">
         <div class="visual-brand-header">
-          <div class="visual-brand-logo" style="background: #ffffff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); padding: 4px; border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-            <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;" onerror="this.src='favicon.png'">
+          <div class="visual-brand-logo" style="background: #ffffff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); padding: 4px; border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+            <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background: linear-gradient(135deg, #059669, #0284c7); border-radius: 50%; color: #ffffff; font-weight: 800; font-size: 22px;" title="Puskesmas Banjaran Kota">
+              <i class="bi bi-hospital-fill"></i>
+            </div>
           </div>
           <div class="visual-brand-title">
             <h3>Puskesmas Banjaran Kota</h3>
@@ -130,8 +133,11 @@
     <!-- Top App Header Bar -->
     <header class="app-header">
       <div class="brand-section">
-        <div class="brand-logo" style="background: #ffffff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); padding: 3px; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-          <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;" onerror="this.src='favicon.png'">
+        <div class="brand-logo" style="background: #ffffff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); padding: 3px; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+          <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background: linear-gradient(135deg, #059669, #0284c7); border-radius: 50%; color: #ffffff; font-weight: 800; font-size: 18px;" title="Puskesmas Banjaran Kota">
+            <i class="bi bi-hospital-fill"></i>
+          </div>
         </div>
         <div class="brand-title">
           <h1>Pencatatan CKG Puskesmas Banjaran Kota</h1>
@@ -165,11 +171,7 @@
           <div style="line-height: 1.1;">
             <span class="user-name-text" id="headerUserName">Mochamad Fauzie, S.Gz</span>
             <div>
-              <select id="roleSelect" class="filter-control" style="padding: 2px 4px; font-size: 10px;">
-                <option value="Admin" selected>ADMIN</option>
-                <option value="Koordinator">KOORDINATOR</option>
-                <option value="Petugas">PETUGAS</option>
-              </select>
+              <span id="headerUserRoleBadge" class="badge-role-pill role-admin">ADMIN</span>
             </div>
           </div>
         </div>
@@ -381,11 +383,11 @@
               <button class="btn btn-primary" onclick="openInputModal('Luar Gedung')">
                 <i class="bi bi-plus-lg"></i> Input Data CKG
               </button>
-              <button class="btn btn-amber">
-                <i class="bi bi-file-earmark-arrow-up"></i> Import XLSX
+              <button class="btn btn-amber" onclick="openImportModal()">
+                <i class="bi bi-file-earmark-arrow-up"></i> Import Data
               </button>
-              <button class="btn btn-emerald" onclick="exportToCSV()">
-                <i class="bi bi-file-earmark-arrow-down"></i> Download XLSX
+              <button class="btn btn-emerald" onclick="exportToXLSX()">
+                <i class="bi bi-file-earmark-arrow-down"></i> Download Data
               </button>
               <button class="btn btn-secondary" onclick="renderTableRecords()">
                 <i class="bi bi-arrow-clockwise"></i> Refresh
@@ -1193,6 +1195,53 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeDukcapilModal()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Import Data XLSX / CSV -->
+  <div id="importModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="bi bi-file-earmark-excel-fill" style="color: #059669;"></i> Import Data BNBA Skrining CKG</h3>
+        <button class="modal-close" onclick="closeImportModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 20px;">
+          <div style="font-weight: 700; color: #1e40af; font-size: 13.5px; margin-bottom: 4px;">
+            <i class="bi bi-info-circle-fill"></i> Petunjuk Import File Excel (.XLSX / .CSV):
+          </div>
+          <ul style="font-size: 12.5px; color: #334155; margin: 0; padding-left: 18px; line-height: 1.5;">
+            <li>Gunakan <strong>Template Excel Resmi</strong> agar format kolom presisi & tidak error.</li>
+            <li>Kolom wajib: <strong>NIK (16 Digit), Nama Pasien, Jenis Kegiatan, Tanggal Lahir</strong>.</li>
+            <li>Sistem akan otomatis menghitung IMT, Kategori Usia, dan Status Validasi.</li>
+          </ul>
+          
+          <button class="btn btn-emerald btn-sm" onclick="downloadXLSXTemplate()" style="margin-top: 12px; font-weight: 700; width: 100%; justify-content: center;">
+            <i class="bi bi-file-earmark-arrow-down-fill"></i> Download Template XLSX Presisi (.xlsx)
+          </button>
+        </div>
+
+        <div class="import-dropzone" id="importDropzone" onclick="document.getElementById('importFileInput').click()">
+          <i class="bi bi-cloud-arrow-up-fill import-dropzone-icon"></i>
+          <div class="import-dropzone-text" id="importDropzoneText">
+            <strong>Klik untuk pilih file</strong> atau drag & drop file Excel di sini
+          </div>
+          <div class="import-dropzone-hint">Format file yang didukung: .xlsx, .xls, .csv</div>
+          <input type="file" id="importFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleImportFileSelect(event)">
+        </div>
+
+        <div id="importFileDetails" style="display: none; margin-top: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--text-main);">
+          <i class="bi bi-file-earmark-spreadsheet-fill" style="color: #059669; font-size: 16px;"></i> <span id="importFileName">file.xlsx</span>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button class="btn btn-secondary" onclick="closeImportModal()">Batal</button>
+        <button class="btn btn-primary" id="btnExecuteImport" onclick="executeXLSXImport()" disabled style="font-weight: 700;">
+          <i class="bi bi-upload"></i> Proses Import Data
+        </button>
       </div>
     </div>
   </div>
