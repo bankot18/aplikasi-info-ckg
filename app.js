@@ -3187,29 +3187,52 @@ function handleImportFileSelect(event) {
 function downloadXLSXTemplate() {
   try {
     const headers = [
-      "Jenis Kegiatan", "NIK", "Nama Pasien", "Tanggal Lahir (YYYY-MM-DD)",
-      "Jenis Kelamin (L/P)", "No WhatsApp", "Status Nikah", "Alamat",
-      "BB (kg)", "TB (cm)", "LP (cm)", "TD Sistolik", "TD Diastolik",
-      "Gula Darah (mg/dL)", "Kolesterol (mg/dL)", "HB (g/dL)"
+      "Jenis Kegiatan", "NIK", "Nama Pasien", "Tanggal Lahir", "Usia",
+      "Jenis Kelamin", "No WhatsApp", "Status Pernikahan", "Provinsi", "Kab/Kota",
+      "Kecamatan", "Kelurahan", "Alamat Lengkap", "Pekerjaan", "Merokok",
+      "BB (kg)", "TB (cm)", "LP (cm)", "IMT", "TD Sistolik", "TD Diastolik",
+      "Gula Darah (mg/dL)", "Kolesterol (mg/dL)", "HB (g/dL)",
+      "Pemeriksaan Telinga", "Pemeriksaan Mata", "Pemeriksaan Gigi", "Pemeriksaan Katarak"
     ];
 
-    const sampleRow = [
-      "Luar Gedung", "3204131508850001", "Budi Santoso", "1985-08-15",
-      "L", "081234567890", "Menikah", "Jl. Pakubuwono VI No. 12, Banjaran Kota",
-      "65", "170", "80", "120", "80", "110", "180", "14.5"
+    const sampleRow1 = [
+      "Luar Gedung", "3204123456780001", "Ahmad Fauzi", "1992-05-14", 34,
+      "L", "081234567890", "Kawin", "Jawa Barat", "Kab. Bandung",
+      "Banjaran", "Banjaran Kota", "Jl. Raya Banjaran No. 45 RT 02/05", "Wiraswasta", "Tidak",
+      65, 168, 82, 23.03, 120, 80,
+      110, 175, 14.2,
+      "Normal", "Normal", "Normal", "Tidak"
     ];
 
-    const wsData = [headers, sampleRow];
+    const sampleRow2 = [
+      "Dalam Gedung", "3204987654320002", "Siti Aminah", "1988-11-20", 37,
+      "P", "085712345678", "Kawin", "Jawa Barat", "Kab. Bandung",
+      "Banjaran", "Sindangpanon", "Kp. Sindangpanon RT 01/03", "Ibu Rumah Tangga", "Tidak",
+      58, 155, 78, 24.14, 130, 85,
+      125, 190, 12.8,
+      "Normal", "Normal", "Normal", "Tidak"
+    ];
+
+    const wsData = [headers, sampleRow1, sampleRow2];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 16) }));
+
+    const colWidths = headers.map(h => ({ wch: Math.max(h.length + 3, 15) }));
+    ws['!cols'] = colWidths;
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template Import CKG");
+    XLSX.utils.book_append_sheet(wb, ws, "Template Form CKG");
 
-    XLSX.writeFile(wb, "Template_Import_Data_CKG_Puskesmas.xlsx");
-    showToast('Template XLSX Berhasil Diunduh!', 'success');
+    const filename = `Template_Import_Form_CKG_Pasien_${new Date().toISOString().substring(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+
+    if (typeof showToast === 'function') {
+      showToast('Template Excel Resmi Form CKG Berhasil Diunduh!', 'success');
+    }
   } catch (err) {
-    showToast('Gagal mengunduh template: ' + err.message, 'error');
+    console.error('Download template error:', err);
+    if (typeof Swal !== 'undefined') {
+      Swal.fire('Gagal Download Template', err.message, 'error');
+    }
   }
 }
 
@@ -3251,7 +3274,6 @@ function executeXLSXImport() {
       jsonRows.forEach(row => {
         // Robust Column Key Extractor: Pass 1 Exact Match, Pass 2 Includes Match
         const getVal = (...keys) => {
-          // Pass 1: Exact Match (case insensitive)
           for (let k of keys) {
             const target = k.toLowerCase().trim();
             for (let rowKey in row) {
@@ -3260,7 +3282,6 @@ function executeXLSXImport() {
               }
             }
           }
-          // Pass 2: Fuzzy Includes Match (skipping unrelated keys)
           for (let k of keys) {
             const target = k.toLowerCase().trim();
             for (let rowKey in row) {
@@ -3290,8 +3311,12 @@ function executeXLSXImport() {
           } catch (_) {}
         }
 
+        const jkRaw = getVal('Jenis Kelamin', 'JK', 'Jenis Kelamin (L/P)') || 'L';
+        const jk = jkRaw.toUpperCase().startsWith('P') ? 'P' : 'L';
+
         const bb = parseFloat(getVal('BB (kg)', 'BB', 'Berat Badan', 'Berat')) || 60;
         const tb = parseFloat(getVal('TB (cm)', 'TB', 'Tinggi Badan', 'Tinggi')) || 165;
+        const lp = parseFloat(getVal('LP (cm)', 'LP', 'Lingkar Perut')) || 80;
         const imtVal = (tb > 0) ? (bb / ((tb / 100) * (tb / 100))).toFixed(2) : '22.0';
 
         const newRecord = {
@@ -3301,19 +3326,19 @@ function executeXLSXImport() {
           nama: nama || 'Pasien Tanpa Nama',
           tanggal_lahir: dobStr,
           usia: age,
-          jenis_kelamin: getVal('Jenis Kelamin', 'JK', 'Jenis Kelamin (L/P)') || 'L',
+          jenis_kelamin: jk,
           no_whatsapp: getVal('No WhatsApp', 'WA', 'HP', 'No HP') || '',
-          status_pernikahan: getVal('Status Nikah', 'Pernikahan', 'Status Pernikahan') || 'Menikah',
+          status_pernikahan: getVal('Status Pernikahan', 'Status Nikah', 'Pernikahan') || 'Kawin',
           provinsi: getVal('Provinsi') || 'Jawa Barat',
           kab_kota: getVal('Kab/Kota', 'Kota', 'Kabupaten') || 'Kab. Bandung',
           kecamatan: getVal('Kecamatan') || 'Banjaran',
           kelurahan: getVal('Kelurahan', 'Desa') || 'Banjaran Kota',
-          alamat: getVal('Alamat', 'Alamat & Wilayah') || 'Kab. Bandung',
+          alamat: getVal('Alamat Lengkap', 'Alamat', 'Alamat & Wilayah') || 'Banjaran',
           pekerjaan: getVal('Pekerjaan') || '',
-          merokok: getVal('Merokok') || 'Tidak',
+          merokok: getVal('Merokok', 'Riwayat Merokok') || 'Tidak',
           bb: bb,
           tb: tb,
-          lp: parseFloat(getVal('LP (cm)', 'LP', 'Lingkar Perut')) || 80,
+          lp: lp,
           imt: imtVal,
           td_sistolik: parseInt(getVal('TD Sistolik', 'Sistol', 'Tensi Sistolik')) || 120,
           td_diastolik: parseInt(getVal('TD Diastolik', 'Diastol', 'Tensi Diastolik')) || 80,
@@ -3322,7 +3347,7 @@ function executeXLSXImport() {
           hb: getVal('HB (g/dL)', 'HB', 'Hemoglobin') || '14.0',
           telinga: getVal('Pemeriksaan Telinga', 'Telinga') || 'Normal',
           mata: getVal('Pemeriksaan Mata', 'Mata') || 'Normal',
-          gigi: getVal('Pemeriksaan Gigi', 'Gigi') || 'Baik',
+          gigi: getVal('Pemeriksaan Gigi', 'Gigi') || 'Normal',
           katarak: getVal('Pemeriksaan Katarak', 'Katarak') || 'Tidak',
           status_validasi: 'Terverifikasi',
           petugas_entry: loggedUser,
@@ -3343,7 +3368,7 @@ function executeXLSXImport() {
         icon: 'success',
         title: 'Import Data Berhasil!',
         html: `Sebanyak <strong>${importedCount} Data Pasien</strong> berhasil di-import ke Database BNBA CKG.`,
-        confirmButtonColor: '#2563eb'
+        confirmButtonColor: '#059669'
       });
 
     } catch (err) {
