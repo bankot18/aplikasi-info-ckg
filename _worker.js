@@ -157,6 +157,124 @@ export default {
       }
     }
 
+    // 4. ROUTE: /api/recycle
+    if (url.pathname === '/api/recycle' || url.pathname.startsWith('/api/recycle/')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
+      }
+
+      if (request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare('SELECT * FROM recycle_bin ORDER BY created_at DESC').all();
+          const parsed = (results || []).map(r => {
+            let json = {};
+            try { json = JSON.parse(r.raw_json || '{}'); } catch (_) {}
+            return {
+              ...json,
+              id: r.id,
+              nik: r.nik,
+              nama: r.nama,
+              jenis_kegiatan: r.jenis_kegiatan,
+              deleted_at: r.deleted_at,
+              deleted_by: r.deleted_by,
+              original_source: r.original_source
+            };
+          });
+          return new Response(JSON.stringify({ success: true, count: parsed.length, data: parsed }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const items = Array.isArray(body) ? body : [body];
+          const stmt = env.DB.prepare(`
+            INSERT INTO recycle_bin (id, nik, nama, jenis_kegiatan, deleted_at, deleted_by, original_source, raw_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              deleted_at = excluded.deleted_at,
+              deleted_by = excluded.deleted_by,
+              raw_json = excluded.raw_json
+          `);
+          const statements = items.map(item => stmt.bind(
+            String(item.id || item.nik || Date.now()),
+            item.nik || '',
+            item.nama || item.nama_pasien || '',
+            item.jenis_kegiatan || '',
+            item.deleted_at || new Date().toISOString(),
+            item.deleted_by || 'Admin',
+            item.original_source || 'BNBA CKG',
+            JSON.stringify(item)
+          ));
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: items.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'DELETE') {
+        try {
+          const id = url.searchParams.get('id');
+          if (id) {
+            await env.DB.prepare('DELETE FROM recycle_bin WHERE id = ?').bind(id).run();
+          } else {
+            await env.DB.prepare('DELETE FROM recycle_bin').run();
+          }
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
+    // 5. ROUTE: /api/announcement
+    if (url.pathname === '/api/announcement' || url.pathname.startsWith('/api/announcement/')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
+      }
+
+      if (request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare('SELECT * FROM announcement WHERE id = 1 LIMIT 1').all();
+          const ann = results && results.length > 0 ? results[0] : null;
+          if (ann) {
+            ann.active = Boolean(ann.active);
+          }
+          return new Response(JSON.stringify({ success: true, data: ann }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json();
+          await env.DB.prepare(`
+            INSERT INTO announcement (id, title, content, author, date, active)
+            VALUES (1, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              title = excluded.title,
+              content = excluded.content,
+              author = excluded.author,
+              date = excluded.date,
+              active = excluded.active
+          `).bind(
+            body.title || 'PENGUMUMAN SISTEM CKG',
+            body.content || '',
+            body.author || 'Admin',
+            body.date || new Date().toISOString().substring(0, 10),
+            body.active ? 1 : 0
+          ).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
     // Serve static assets via Cloudflare Assets
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);

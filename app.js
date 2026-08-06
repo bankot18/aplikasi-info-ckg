@@ -169,36 +169,72 @@ function saveSimpusRecordsToStorage() {
   syncSimpusToCloud(simpusRecords);
 }
 
-function loadStoredRecycleBin() {
+async function loadStoredRecycleBin() {
   const saved = localStorage.getItem('ckg_recycle_bin');
   if (saved) {
-    try {
-      recycleBin = JSON.parse(saved);
-    } catch (_) {
-      recycleBin = [];
+    try { recycleBin = JSON.parse(saved); } catch (_) { recycleBin = []; }
+  }
+
+  try {
+    const res = await fetch('/api/recycle');
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success && Array.isArray(result.data)) {
+        recycleBin = result.data;
+        localStorage.setItem('ckg_recycle_bin', JSON.stringify(recycleBin));
+      }
     }
-  } else {
-    recycleBin = [];
+  } catch (e) {
+    console.log('Using local cached recycle bin:', e);
   }
 }
 
-function saveRecycleBinToStorage() {
+async function saveRecycleBinToStorage(deletedItem = null, deleteId = null) {
   localStorage.setItem('ckg_recycle_bin', JSON.stringify(recycleBin));
+  try {
+    if (deleteId) {
+      await fetch(`/api/recycle?id=${encodeURIComponent(deleteId)}`, { method: 'DELETE' });
+    } else if (deletedItem) {
+      await fetch('/api/recycle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(deletedItem)
+      });
+    } else {
+      await fetch('/api/recycle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recycleBin)
+      });
+    }
+  } catch (e) {
+    console.log('Failed to sync recycle bin to D1 cloud:', e);
+  }
 }
 
-function loadStoredAnnouncement() {
+async function loadStoredAnnouncement() {
   const saved = localStorage.getItem('ckg_announcement');
   if (saved) {
-    try {
-      announcementData = JSON.parse(saved);
-    } catch (_) {
-      announcementData = null;
-    }
+    try { announcementData = JSON.parse(saved); } catch (_) { announcementData = null; }
   }
+
+  try {
+    const res = await fetch('/api/announcement');
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success && result.data) {
+        announcementData = result.data;
+        localStorage.setItem('ckg_announcement', JSON.stringify(announcementData));
+      }
+    }
+  } catch (e) {
+    console.log('Using local cached announcement:', e);
+  }
+
   if (!announcementData) {
     announcementData = {
-      title: 'Pengumuman Sistem CKG',
-      content: 'Selamat datang di Aplikasi Pencatatan CKG Puskesmas Banjaran Kota. Mohon lakukan verifikasi dan pencatatan data pasien dengan teliti.',
+      title: 'HIMBAUAN PENTING SISTEM',
+      content: 'Selamat datang di Sistem Informasi Pencatatan CKG Puskesmas Banjaran Kota. Mohon lakukan verifikasi dan pencatatan data pasien By Name By Address (BNBA) dengan teliti.',
       author: 'Admin Utama',
       date: new Date().toISOString().substring(0, 10),
       active: true
@@ -206,7 +242,21 @@ function loadStoredAnnouncement() {
   }
 }
 
-function checkAndShowAnnouncement() {
+async function saveAnnouncementToCloud(data) {
+  localStorage.setItem('ckg_announcement', JSON.stringify(data));
+  try {
+    await fetch('/api/announcement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch (e) {
+    console.log('Failed to sync announcement to D1 cloud:', e);
+  }
+}
+
+async function checkAndShowAnnouncement() {
+  await loadStoredAnnouncement();
   if (!announcementData || !announcementData.active || !announcementData.content) return;
   
   const titleEl = document.getElementById('announcementPopupTitle');
@@ -214,9 +264,12 @@ function checkAndShowAnnouncement() {
   const dateEl = document.getElementById('announcementPopupDate');
   const contentEl = document.getElementById('announcementPopupContent');
   
-  if (titleEl) titleEl.textContent = announcementData.title || 'Pengumuman Sistem CKG';
-  if (authorEl) authorEl.innerHTML = `<i class="bi bi-person-fill"></i> Oleh: ${announcementData.author || 'Admin'}`;
-  if (dateEl) dateEl.innerHTML = `<i class="bi bi-clock-history"></i> Tanggal: ${announcementData.date || '-'}`;
+  if (titleEl) {
+    const titleText = (announcementData.title || 'HIMBAUAN PENTING SISTEM').toUpperCase();
+    titleEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill" style="color: #dc2626; font-size: 20px;"></i> <span>${titleText}</span>`;
+  }
+  if (authorEl) authorEl.innerHTML = `<i class="bi bi-person-circle"></i> Oleh: ${announcementData.author || 'Admin'}`;
+  if (dateEl) dateEl.innerHTML = `<i class="bi bi-calendar3"></i> Tanggal: ${announcementData.date || '-'}`;
   if (contentEl) contentEl.textContent = announcementData.content;
   
   const modal = document.getElementById('announcementModal');
@@ -263,9 +316,9 @@ function openEditAnnouncementModal() {
         Swal.showValidationMessage('Isi pengumuman tidak boleh kosong!');
         return false;
       }
-      return { title: title || 'Pengumuman Sistem CKG', content, active };
+      return { title: title || 'HIMBAUAN PENTING SISTEM', content, active };
     }
-  }).then((result) => {
+  }).then(async (result) => {
     if (result.isConfirmed) {
       announcementData = {
         title: result.value.title,
@@ -274,8 +327,8 @@ function openEditAnnouncementModal() {
         date: new Date().toISOString().substring(0, 10),
         active: result.value.active
       };
-      localStorage.setItem('ckg_announcement', JSON.stringify(announcementData));
-      Swal.fire('Berhasil!', 'Pengumuman sistem berhasil disimpan.', 'success');
+      await saveAnnouncementToCloud(announcementData);
+      Swal.fire('Berhasil!', 'Pengumuman sistem telah disimpan ke database cloud dan akan muncul untuk semua user.', 'success');
     }
   });
 }
@@ -2651,7 +2704,7 @@ function deleteRecord(id) {
       targetRecord.original_source = 'BNBA Skrining CKG';
       recycleBin.unshift(targetRecord);
       saveRecordsToStorage();
-      saveRecycleBinToStorage();
+      saveRecycleBinToStorage(targetRecord);
       renderApp();
       Swal.fire('Dipindahkan!', 'Data CKG berhasil dipindahkan ke Recycle Data.', 'success');
     }
@@ -2682,7 +2735,7 @@ function deleteSimpusRecord(id) {
       targetSimpus.original_source = 'Data SIMPUS CKG';
       recycleBin.unshift(targetSimpus);
       saveSimpusRecordsToStorage();
-      saveRecycleBinToStorage();
+      saveRecycleBinToStorage(targetSimpus);
       renderApp();
       Swal.fire('Dipindahkan!', 'Data SIMPUS berhasil dipindahkan ke Recycle Data.', 'success');
     }
@@ -2760,7 +2813,7 @@ function restoreFromRecycle(id) {
 
   const item = recycleBin[itemIndex];
   recycleBin.splice(itemIndex, 1);
-  saveRecycleBinToStorage();
+  saveRecycleBinToStorage(null, id);
 
   if (item.original_source && item.original_source.includes('SIMPUS')) {
     simpusRecords.unshift(item);
@@ -2793,7 +2846,7 @@ function permanentDeleteFromRecycle(id) {
   }).then((result) => {
     if (result.isConfirmed) {
       recycleBin = recycleBin.filter(r => (r.id || r.nik || '') !== id);
-      saveRecycleBinToStorage();
+      saveRecycleBinToStorage(null, id);
       renderRecycleTable();
       Swal.fire('Terhapus!', 'Data telah dihapus permanen dari sistem.', 'success');
     }

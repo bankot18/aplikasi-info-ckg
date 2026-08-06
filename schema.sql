@@ -58,3 +58,31 @@ CREATE TABLE IF NOT EXISTS ckg_records (
 CREATE INDEX IF NOT EXISTS idx_simpus_nik ON simpus_records(nik);
 CREATE INDEX IF NOT EXISTS idx_simpus_assigned ON simpus_records(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_ckg_nik ON ckg_records(nik);
+
+-- 4. Tabel Recycle Data (Tempat Sampah Data Terhapus)
+CREATE TABLE IF NOT EXISTS recycle_bin (
+    id VARCHAR(100) PRIMARY KEY,
+    nik VARCHAR(50),
+    nama VARCHAR(150),
+    jenis_kegiatan VARCHAR(50),
+    deleted_at VARCHAR(50),
+    deleted_by VARCHAR(100),
+    original_source VARCHAR(100),
+    raw_json TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. Tabel Announcement (Pengumuman Sistem)
+CREATE TABLE IF NOT EXISTS announcement (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    author TEXT DEFAULT 'Admin',
+    date TEXT,
+    active INTEGER DEFAULT 1
+);
+
+-- Insert Default Announcement if not exists
+INSERT OR IGNORE INTO announcement (id, title, content, author, date, active) VALUES
+(1, 'PENGUMUMAN SISTEM CKG', 'Selamat datang di Sistem Informasi Pencatatan CKG Puskesmas Banjaran Kota. Harap lakukan verifikasi data pasien By Name By Address (BNBA) dengan cermat dan akurat.', 'Admin Utama', '2026-08-06', 1);
+
