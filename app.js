@@ -79,6 +79,46 @@ async function fetchLiveSessions() {
   } catch (_) {}
 }
 
+async function manualRefreshLiveSessions() {
+  showToast('Memperbarui Status Live Session...', 'info');
+  await fetchCloudUsers();
+  await fetchLiveSessions();
+  if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
+  showToast('Status Live Session Berhasil Diperbarui!', 'success');
+}
+
+function toggleTablePasswordVisibility(index, realPass) {
+  const codeEl = document.getElementById(`passCode_${index}`);
+  const iconEl = document.getElementById(`eyeIcon_${index}`);
+  if (!codeEl || !iconEl) return;
+  if (codeEl.textContent === '••••••••') {
+    codeEl.textContent = realPass;
+    iconEl.className = 'bi bi-eye-fill';
+    iconEl.style.color = '#2563eb';
+  } else {
+    codeEl.textContent = '••••••••';
+    iconEl.className = 'bi bi-eye-slash-fill';
+    iconEl.style.color = '#64748b';
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && sessionStorage.getItem('ckg_logged_in') === 'true') {
+    sendUserHeartbeat('active');
+    fetchLiveSessions();
+  }
+});
+
+window.addEventListener('pagehide', () => {
+  const loggedUser = sessionStorage.getItem('ckg_user_name');
+  if (loggedUser) {
+    const payload = JSON.stringify({ nama_user: loggedUser, status: 'offline' });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/sessions', new Blob([payload], { type: 'application/json' }));
+    }
+  }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   applyCustomLogo();
   loadStoredUserDatabase();
@@ -2613,7 +2653,7 @@ function renderUserDatabaseTable() {
     // Live session calculation
     const sessInfo = activeSessionsMap[u.nama_user] || {};
     const now = Date.now();
-    const isLiveActive = (sessInfo.status !== 'offline') && (sessInfo.last_seen && (now - Number(sessInfo.last_seen)) < 120000);
+    const isLiveActive = (sessInfo.status === 'active') && (sessInfo.last_seen && (now - Number(sessInfo.last_seen)) < 90000);
     const isOnline = isCurrentActive || isLiveActive;
 
     let sessionStatusHtml = isOnline ? `
@@ -2631,11 +2671,23 @@ function renderUserDatabaseTable() {
       sessionStatusHtml = `<span class="badge badge-rose" style="background:#fef2f2; color:#dc2626; border:1px solid #fecaca;"><i class="bi bi-slash-circle-fill"></i> Banned (${u.banned_duration_label || 'Nonaktif'})</span>`;
     }
 
+    const safePassword = String(u.password || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const hasPassword = Boolean(u.password && String(u.password).trim().length > 0);
+
+    const passwordDisplayHtml = hasPassword ? `
+      <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
+        <code id="passCode_${i}" style="color: #dc2626; font-weight: 800; font-family: monospace; font-size: 13px; letter-spacing: 2px;">••••••••</code>
+        <button type="button" onclick="toggleTablePasswordVisibility('${i}', '${safePassword}')" style="border: none; background: transparent; cursor: pointer; color: #64748b; padding: 0 2px; font-size: 13px; display: inline-flex; align-items: center;" title="Lihat/Sembunyikan Password">
+          <i id="eyeIcon_${i}" class="bi bi-eye-slash-fill"></i>
+        </button>
+      </div>
+    ` : '<span style="font-size: 11px; color: var(--text-muted); font-style: italic;">Tanpa Password</span>';
+
     return `
       <tr>
         <td>${i + 1}</td>
         <td><strong>${u.nama_user}</strong></td>
-        <td>${u.password ? `<code style="background: var(--bg-subtle); padding: 2px 6px; border-radius: 4px; color: var(--rose); font-weight: bold;">${u.password}</code>` : '<span style="font-size: 11px; color: var(--text-muted); font-style: italic;">Tanpa Password</span>'}</td>
+        <td>${passwordDisplayHtml}</td>
         <td>${roleBadge}</td>
         <td>${sessionStatusHtml}</td>
         <td>
