@@ -341,9 +341,11 @@ async function fetchCloudRecords() {
           localStorage.setItem('ckg_records', JSON.stringify(records));
           updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
           if (typeof renderApp === 'function') renderApp();
-        } else if (records.length > 0) {
-          // Push local records to D1 if D1 is currently empty
+        } else if (records.length > 0 && !window._intentionalDeleteAll) {
+          // Push local records to D1 if D1 is currently empty (but NOT after intentional delete)
           syncRecordsToCloud(records);
+        } else {
+          updateCloudSyncPill(true, 'D1 Online (0 Rec)');
         }
       }
     }
@@ -3005,7 +3007,7 @@ function buildTableRowsHtml(data) {
   if (data.length === 0) {
     return `
       <tr>
-        <td colspan="14" style="text-align: center; padding: 30px; color: var(--text-muted);">
+        <td colspan="15" style="text-align: center; padding: 30px; color: var(--text-muted);">
           <i class="bi bi-inbox" style="font-size: 28px; display: block; margin-bottom: 6px;"></i>
           Tidak ada data CKG yang sesuai dengan filter yang dipilih.
         </td>
@@ -3048,6 +3050,7 @@ function buildTableRowsHtml(data) {
           </div>
         </td>
         <td style="text-align: center; font-weight: bold;">${i + 1}</td>
+        <td><span style="font-size: 12px; font-weight: 600; color: var(--primary);">${formatDisplayDate(r.tanggal_entry || r.created_at)}</span></td>
         <td>${kegiatanBadge}</td>
         <td>
           <strong>${r.nama}</strong><br>
@@ -3081,12 +3084,14 @@ function confirmDeleteAllCkgRecords() {
 
   if (typeof Swal === 'undefined') {
     if (confirm('Apakah Anda yakin ingin menghapus SEMUA data CKG?')) {
+      window._intentionalDeleteAll = true;
       records = [];
       localStorage.removeItem('ckg_records');
       fetch('/api/ckg', { method: 'DELETE' });
       renderApp();
       updateCloudSyncPill(true, 'D1 Online (0 Rec)');
       showToast('Seluruh Data CKG Berhasil Dihapus!', 'success');
+      setTimeout(() => { window._intentionalDeleteAll = false; }, 120000);
     }
     return;
   }
@@ -3142,16 +3147,22 @@ function confirmDeleteAllCkgRecords() {
     }
   }).then(async (result) => {
     if (result.isConfirmed) {
+      // Set flag to prevent auto-sync from re-pushing local data
+      window._intentionalDeleteAll = true;
       records = [];
       localStorage.removeItem('ckg_records');
       try {
-        await fetch('/api/ckg', { method: 'DELETE' });
+        // Delete from ckg_full_records
+        const res1 = await fetch('/api/ckg', { method: 'DELETE' });
+        console.log('DELETE /api/ckg response:', res1.status, await res1.text());
       } catch (err) {
-        console.error('Failed to delete all records from cloud D1:', err);
+        console.error('Failed to delete ckg_full_records:', err);
       }
       renderApp();
       updateCloudSyncPill(true, 'D1 Online (0 Rec)');
       Swal.fire('Terhapus!', 'Seluruh Data CKG berhasil dihapus dari Cloudflare D1 Database.', 'success');
+      // Keep the flag active for 2 minutes to prevent auto-sync re-push
+      setTimeout(() => { window._intentionalDeleteAll = false; }, 120000);
     }
   });
 }

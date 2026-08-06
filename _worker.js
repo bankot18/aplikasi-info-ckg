@@ -256,10 +256,13 @@ export default {
           const id = url.searchParams.get('id');
           if (id) {
             await env.DB.prepare('DELETE FROM ckg_full_records WHERE id = ?').bind(id).run();
+            try { await env.DB.prepare('DELETE FROM ckg_records WHERE id = ?').bind(id).run(); } catch (_) {}
           } else {
             await env.DB.prepare('DELETE FROM ckg_full_records').run();
+            // Also clear legacy ckg_records table to prevent data resurrection
+            try { await env.DB.prepare('DELETE FROM ckg_records').run(); } catch (_) {}
           }
-          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          return new Response(JSON.stringify({ success: true, deleted: id ? 'single' : 'all' }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
