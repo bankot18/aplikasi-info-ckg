@@ -3256,86 +3256,213 @@ function confirmDeleteAllCkgRecords() {
     }
   }).then(async (result) => {
     if (result.isConfirmed) {
-      // Set flag to prevent auto-sync from re-pushing local data
       window._intentionalDeleteAll = true;
-      records = [];
-      localStorage.removeItem('ckg_records');
+
+      // Show progress loading indicator while deleting from Cloud D1
+      Swal.fire({
+        title: 'Menghapus Seluruh Data dari Cloud...',
+        html: '<div style="font-size:13px; color:#475569; margin-top:6px;"><i class="bi bi-cloud-arrow-up-fill" style="color:#dc2626;"></i> Mengirim perintah HAPUS SEMUA DATA ke Cloudflare D1 Database...</div>',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
       try {
-        // Delete from ckg_full_records
-        const res1 = await fetch('/api/ckg', { method: 'DELETE' });
-        console.log('DELETE /api/ckg response:', res1.status, await res1.text());
+        const res = await fetch('/api/ckg', { method: 'DELETE' });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: Gagal mengosongkan database server`);
+        }
+
+        records = [];
+        localStorage.removeItem('ckg_records');
+        renderApp();
+        updateCloudSyncPill(true, 'D1 Online (0 Rec)');
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil Dihapus!',
+          html: 'Seluruh Data CKG telah <strong>berhasil dihapus secara permanen dari Cloudflare D1 Database</strong>.',
+          confirmButtonColor: '#059669'
+        });
       } catch (err) {
-        console.error('Failed to delete ckg_full_records:', err);
+        console.error('Failed to delete all ckg_full_records:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Menghapus Data!',
+          html: `Terjadi kesalahan saat menghapus data dari Cloud: <strong>${err.message}</strong>`,
+          confirmButtonColor: '#dc2626'
+        });
       }
-      renderApp();
-      updateCloudSyncPill(true, 'D1 Online (0 Rec)');
-      Swal.fire('Terhapus!', 'Seluruh Data CKG berhasil dihapus dari Cloudflare D1 Database.', 'success');
-      // Keep the flag active for 2 minutes to prevent auto-sync re-push
+
       setTimeout(() => { window._intentionalDeleteAll = false; }, 120000);
     }
   });
 }
 
-function deleteRecord(id) {
+async function deleteRecord(id) {
   const targetRecord = records.find(r => r.id === id);
   if (!targetRecord) {
     showToast('Data CKG tidak ditemukan!', 'error');
     return;
   }
 
-  Swal.fire({
+  const result = await Swal.fire({
     title: 'Hapus Data CKG?',
-    html: `Apakah Anda yakin ingin menghapus data <strong>[${targetRecord.nama}]</strong>?<br><span style="font-size:12px; color:#64748b;">Data akan dipindahkan ke Recycle Data.</span>`,
+    html: `<div style="font-size: 13.5px; text-align: left; line-height: 1.5;">
+            Apakah Anda yakin ingin menghapus data pasien:
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 8px; margin: 10px 0; font-size: 13px;">
+              <strong>Nama:</strong> ${targetRecord.nama}<br>
+              <strong>NIK:</strong> ${targetRecord.nik || '-'}<br>
+              <strong>ID:</strong> ${targetRecord.id}
+            </div>
+            <span style="color: #dc2626; font-weight: 600; font-size: 12px;">
+              <i class="bi bi-cloud-arrow-down-fill"></i> Data akan dihapus dari Cloud D1 Database dan dipindahkan ke Recycle Data.
+            </span>
+          </div>`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#64748b',
-    confirmButtonText: 'Ya, Pindahkan ke Recycle!',
+    confirmButtonText: '<i class="bi bi-trash-fill"></i> Ya, Hapus Data Cloud',
     cancelButtonText: 'Batal'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      records = records.filter(r => r.id !== id);
-      targetRecord.deleted_at = new Date().toISOString().substring(0, 10) + ' ' + new Date().toLocaleTimeString('id-ID');
-      targetRecord.deleted_by = sessionStorage.getItem('ckg_user_name') || 'Admin';
-      targetRecord.original_source = 'BNBA Skrining CKG';
-      recycleBin.unshift(targetRecord);
-      saveRecordsToStorage();
-      saveRecycleBinToStorage(targetRecord);
-      renderApp();
-      Swal.fire('Dipindahkan!', 'Data CKG berhasil dipindahkan ke Recycle Data.', 'success');
+  });
+
+  if (!result.isConfirmed) return;
+
+  // Show progress loading overlay
+  Swal.fire({
+    title: 'Menghapus Data dari Cloud Database...',
+    html: `<div style="font-size: 13px; color: #475569; margin-top: 6px;">
+            <i class="bi bi-cloud-arrow-up-fill" style="color: #2563eb;"></i> Mengirim perintah HAPUS untuk data <strong>${targetRecord.nama}</strong> ke Cloudflare D1 Database...
+          </div>`,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => {
+      Swal.showLoading();
     }
   });
+
+  try {
+    // 1. Send DELETE HTTP request directly to Cloud D1 API
+    const res = await fetch(`/api/ckg?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP Error ${res.status}: Gagal menghapus dari server cloud`);
+    }
+
+    // 2. Add to Recycle Bin & save recycle bin to cloud
+    targetRecord.deleted_at = new Date().toISOString().substring(0, 10) + ' ' + new Date().toLocaleTimeString('id-ID');
+    targetRecord.deleted_by = sessionStorage.getItem('ckg_user_name') || currentRole || 'User';
+    targetRecord.original_source = 'BNBA Skrining CKG';
+    recycleBin.unshift(targetRecord);
+    await saveRecycleBinToStorage(targetRecord);
+
+    // 3. Remove from local state AFTER cloud confirmation
+    records = records.filter(r => r.id !== id);
+    localStorage.setItem('ckg_records', JSON.stringify(records));
+
+    renderApp();
+    updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
+
+    // 4. Show success notification ONLY AFTER Cloud confirmation
+    Swal.fire({
+      icon: 'success',
+      title: 'Berhasil Dihapus dari Cloud!',
+      html: `Data pasien <strong>${targetRecord.nama}</strong> (NIK: ${targetRecord.nik || '-'}) telah <strong>terhapus dari Cloudflare D1 Database</strong> dan dipindahkan ke Recycle Data.`,
+      confirmButtonColor: '#059669'
+    });
+  } catch (err) {
+    console.error('Failed to delete CKG record from cloud D1:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Menghapus Data!',
+      html: `Gagal menghapus data dari Cloud Database: <strong>${err.message}</strong>.<br>Data tidak terhapus. Silakan periksa koneksi internet Anda.`,
+      confirmButtonColor: '#dc2626'
+    });
+  }
 }
 
-function deleteSimpusRecord(id) {
+async function deleteSimpusRecord(id) {
   const targetSimpus = simpusRecords.find(r => (r.id || r.nik || '') === id);
   if (!targetSimpus) {
     showToast('Data SIMPUS tidak ditemukan!', 'error');
     return;
   }
 
-  Swal.fire({
+  const result = await Swal.fire({
     title: 'Hapus Data SIMPUS?',
-    html: `Apakah Anda yakin ingin menghapus data SIMPUS <strong>[${targetSimpus.nama || targetSimpus.nik}]</strong>?<br><span style="font-size:12px; color:#64748b;">Data akan dipindahkan ke Recycle Data.</span>`,
+    html: `<div style="font-size: 13.5px; text-align: left; line-height: 1.5;">
+            Apakah Anda yakin ingin menghapus data SIMPUS:
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 8px; margin: 10px 0; font-size: 13px;">
+              <strong>Nama:</strong> ${targetSimpus.nama || targetSimpus.nik}<br>
+              <strong>NIK:</strong> ${targetSimpus.nik || '-'}
+            </div>
+            <span style="color: #dc2626; font-weight: 600; font-size: 12px;">
+              <i class="bi bi-cloud-arrow-down-fill"></i> Data akan dihapus dari Cloud D1 Database dan dipindahkan ke Recycle Data.
+            </span>
+          </div>`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#64748b',
-    confirmButtonText: 'Ya, Pindahkan ke Recycle!',
+    confirmButtonText: '<i class="bi bi-trash-fill"></i> Ya, Hapus Data Cloud',
     cancelButtonText: 'Batal'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      simpusRecords = simpusRecords.filter(r => (r.id || r.nik || '') !== id);
-      targetSimpus.deleted_at = new Date().toISOString().substring(0, 10) + ' ' + new Date().toLocaleTimeString('id-ID');
-      targetSimpus.deleted_by = sessionStorage.getItem('ckg_user_name') || 'Admin';
-      targetSimpus.original_source = 'Data SIMPUS CKG';
-      recycleBin.unshift(targetSimpus);
-      saveSimpusRecordsToStorage();
-      saveRecycleBinToStorage(targetSimpus);
-      renderApp();
-      Swal.fire('Dipindahkan!', 'Data SIMPUS berhasil dipindahkan ke Recycle Data.', 'success');
+  });
+
+  if (!result.isConfirmed) return;
+
+  Swal.fire({
+    title: 'Menghapus Data SIMPUS dari Cloud...',
+    html: `<div style="font-size: 13px; color: #475569; margin-top: 6px;">
+            <i class="bi bi-cloud-arrow-up-fill" style="color: #2563eb;"></i> Mengirim perintah HAPUS untuk data SIMPUS <strong>${targetSimpus.nama || targetSimpus.nik}</strong> ke Cloud D1...
+          </div>`,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => {
+      Swal.showLoading();
     }
   });
+
+  try {
+    const targetId = targetSimpus.id || targetSimpus.nik || id;
+    const res = await fetch(`/api/simpus?id=${encodeURIComponent(targetId)}`, {
+      method: 'DELETE'
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP Error ${res.status}: Gagal menghapus data SIMPUS dari server`);
+    }
+
+    targetSimpus.deleted_at = new Date().toISOString().substring(0, 10) + ' ' + new Date().toLocaleTimeString('id-ID');
+    targetSimpus.deleted_by = sessionStorage.getItem('ckg_user_name') || currentRole || 'User';
+    targetSimpus.original_source = 'Data SIMPUS CKG';
+    recycleBin.unshift(targetSimpus);
+    await saveRecycleBinToStorage(targetSimpus);
+
+    simpusRecords = simpusRecords.filter(r => (r.id || r.nik || '') !== id);
+    localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+
+    renderApp();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Berhasil Dihapus dari Cloud!',
+      html: `Data SIMPUS <strong>${targetSimpus.nama || targetSimpus.nik}</strong> telah <strong>terhapus dari Cloud D1 Database</strong> dan dipindahkan ke Recycle Data.`,
+      confirmButtonColor: '#059669'
+    });
+  } catch (err) {
+    console.error('Failed to delete SIMPUS record from cloud D1:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Menghapus Data SIMPUS!',
+      html: `Gagal menghapus data dari Cloud Database: <strong>${err.message}</strong>`,
+      confirmButtonColor: '#dc2626'
+    });
+  }
 }
 
 function renderRecycleTable() {
@@ -3544,37 +3671,7 @@ function editRecord(id) {
   calculateIMT();
 }
 
-function deleteRecord(id) {
-  if (currentRole !== 'Admin' && currentRole !== 'admin') {
-    showToast('Hanya Admin yang dapat menghapus data.', 'error');
-    return;
-  }
 
-  if (typeof Swal !== 'undefined') {
-    Swal.fire({
-      title: 'Hapus Data CKG?',
-      text: `Apakah Anda yakin ingin menghapus record [${id}]?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#dc2626',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Ya, Hapus Data!',
-      cancelButtonText: 'Batal'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        records = records.filter(r => r.id !== id);
-        saveRecordsToStorage();
-        renderApp();
-        Swal.fire('Terhapus!', 'Data CKG Berhasil Dihapus.', 'success');
-      }
-    });
-  } else if (confirm(`Apakah Anda yakin ingin menghapus data CKG [${id}]?`)) {
-    records = records.filter(r => r.id !== id);
-    saveRecordsToStorage();
-    renderApp();
-    showToast('Data CKG Berhasil Dihapus!', 'success');
-  }
-}
 
 /* ==========================================================================
    📊 EXPORT & IMPORT XLSX ENGINE (SheetJS)
