@@ -97,18 +97,47 @@ export default {
               sistol, diastol, gula, kolesterol, keterangan, is_divided, assigned_to, entry_status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
+              no = excluded.no,
+              tanggal = excluded.tanggal,
+              nama = excluded.nama,
+              nik = excluded.nik,
+              alamat = excluded.alamat,
+              dob = excluded.dob,
+              usia = excluded.usia,
+              bb = excluded.bb,
+              tb = excluded.tb,
+              imt = excluded.imt,
+              sistol = excluded.sistol,
+              diastol = excluded.diastol,
+              gula = excluded.gula,
+              kolesterol = excluded.kolesterol,
+              keterangan = excluded.keterangan,
               is_divided = excluded.is_divided,
               assigned_to = excluded.assigned_to,
               entry_status = excluded.entry_status
           `);
           const statements = records.map(r => stmt.bind(
-            r.id, r.no || 0, r.tanggal || '', r.nama || '', r.nik || '',
+            String(r.id || r.nik || Date.now()), r.no || 0, r.tanggal || '', r.nama || '', r.nik || '',
             r.alamat || '', r.dob || '', r.usia || 0, r.bb || 0, r.tb || 0, r.imt || 0,
             r.sistol || 0, r.diastol || 0, r.gula || '-', r.kolesterol || '-',
             r.keterangan || 'Dewasa', r.is_divided ? 1 : 0, r.assigned_to || '', r.entry_status || 'belum'
           ));
           await env.DB.batch(statements);
           return new Response(JSON.stringify({ success: true, count: records.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'DELETE') {
+        try {
+          const id = url.searchParams.get('id');
+          if (id) {
+            await env.DB.prepare('DELETE FROM simpus_records WHERE id = ?').bind(id).run();
+          } else {
+            await env.DB.prepare('DELETE FROM simpus_records').run();
+          }
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
@@ -124,10 +153,43 @@ export default {
         });
       }
 
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS ckg_full_records (
+            id TEXT PRIMARY KEY,
+            nik TEXT,
+            nama_pasien TEXT,
+            petugas_entry TEXT,
+            tanggal_entry TEXT,
+            lokasi_pelayanan TEXT,
+            status_entry TEXT,
+            raw_json TEXT
+          )
+        `).run();
+      } catch (_) {}
+
       if (request.method === 'GET') {
         try {
-          const { results } = await env.DB.prepare('SELECT * FROM ckg_records ORDER BY id DESC').all();
-          return new Response(JSON.stringify({ success: true, count: results ? results.length : 0, data: results || [] }), { headers: corsHeaders });
+          const { results } = await env.DB.prepare('SELECT * FROM ckg_full_records ORDER BY rowid DESC').all();
+          const parsed = (results || []).map(r => {
+            let item = {};
+            if (r.raw_json) {
+              try { item = JSON.parse(r.raw_json); } catch (_) {}
+            }
+            return {
+              ...item,
+              id: item.id || r.id,
+              nik: item.nik || r.nik || '',
+              nama: item.nama || item.nama_pasien || r.nama_pasien || '',
+              petugas_entry: item.petugas_entry || r.petugas_entry || 'Admin',
+              created_by: item.created_by || r.petugas_entry || 'Admin',
+              tanggal_entry: item.tanggal_entry || r.tanggal_entry || '',
+              created_at: item.created_at || r.tanggal_entry || '',
+              jenis_kegiatan: item.jenis_kegiatan || r.lokasi_pelayanan || 'Luar Gedung',
+              status_validasi: item.status_validasi || r.status_entry || 'Terverifikasi'
+            };
+          });
+          return new Response(JSON.stringify({ success: true, count: parsed.length, data: parsed }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
@@ -138,19 +200,138 @@ export default {
           const body = await request.json();
           const records = Array.isArray(body) ? body : [body];
           const stmt = env.DB.prepare(`
-            INSERT INTO ckg_records (tanggal_entry, nik, nama_pasien, petugas_entry, lokasi_pelayanan, status_entry)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO ckg_full_records (id, nik, nama_pasien, petugas_entry, tanggal_entry, lokasi_pelayanan, status_entry, raw_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              nik = excluded.nik,
+              nama_pasien = excluded.nama_pasien,
+              petugas_entry = excluded.petugas_entry,
+              tanggal_entry = excluded.tanggal_entry,
+              lokasi_pelayanan = excluded.lokasi_pelayanan,
+              status_entry = excluded.status_entry,
+              raw_json = excluded.raw_json
           `);
-          const statements = records.map(r => stmt.bind(
-            r.tanggal_entry || new Date().toLocaleDateString('id-ID'),
-            r.nik || '',
-            r.nama_pasien || r.nama || '',
-            r.petugas_entry || r.assigned_to || '',
-            r.lokasi_pelayanan || 'Luar Gedung',
-            r.status_entry || 'Berhasil di Entry'
-          ));
+          const statements = records.map(r => {
+            const recId = String(r.id || (r.nik ? `CKG-${r.nik}` : `CKG-${Date.now()}-${Math.floor(Math.random()*1000)}`));
+            return stmt.bind(
+              recId,
+              r.nik || '',
+              r.nama || r.nama_pasien || '',
+              r.petugas_entry || r.created_by || 'Admin',
+              r.created_at || r.tanggal_entry || new Date().toISOString().substring(0, 10),
+              r.jenis_kegiatan || r.lokasi_pelayanan || 'Luar Gedung',
+              r.status_validasi || r.status_entry || 'Terverifikasi',
+              JSON.stringify(r)
+            );
+          });
           await env.DB.batch(statements);
           return new Response(JSON.stringify({ success: true, count: records.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'DELETE') {
+        try {
+          const id = url.searchParams.get('id');
+          if (id) {
+            await env.DB.prepare('DELETE FROM ckg_full_records WHERE id = ?').bind(id).run();
+          } else {
+            await env.DB.prepare('DELETE FROM ckg_full_records').run();
+          }
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
+    // 4. ROUTE: /api/sekolah (CKG Sekolah Database)
+    if (url.pathname === '/api/sekolah' || url.pathname.startsWith('/api/sekolah/')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
+      }
+
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS ckg_sekolah_records (
+            id TEXT PRIMARY KEY,
+            nama_sekolah TEXT,
+            nama_siswa TEXT,
+            nisn_nik TEXT,
+            kelas TEXT,
+            jenis_kelamin TEXT DEFAULT 'L',
+            hb TEXT DEFAULT '-',
+            status_gizi TEXT DEFAULT 'Normal',
+            petugas_entry TEXT,
+            tanggal_entry TEXT,
+            raw_json TEXT
+          )
+        `).run();
+      } catch (_) {}
+
+      if (request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare('SELECT * FROM ckg_sekolah_records ORDER BY rowid DESC').all();
+          const parsed = (results || []).map(r => {
+            let json = {};
+            try { json = JSON.parse(r.raw_json || '{}'); } catch (_) {}
+            return { ...json, ...r };
+          });
+          return new Response(JSON.stringify({ success: true, count: parsed.length, data: parsed }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const items = Array.isArray(body) ? body : [body];
+          const stmt = env.DB.prepare(`
+            INSERT INTO ckg_sekolah_records (id, nama_sekolah, nama_siswa, nisn_nik, kelas, jenis_kelamin, hb, status_gizi, petugas_entry, tanggal_entry, raw_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              nama_sekolah = excluded.nama_sekolah,
+              nama_siswa = excluded.nama_siswa,
+              nisn_nik = excluded.nisn_nik,
+              kelas = excluded.kelas,
+              jenis_kelamin = excluded.jenis_kelamin,
+              hb = excluded.hb,
+              status_gizi = excluded.status_gizi,
+              petugas_entry = excluded.petugas_entry,
+              tanggal_entry = excluded.tanggal_entry,
+              raw_json = excluded.raw_json
+          `);
+          const statements = items.map(item => stmt.bind(
+            String(item.id || item.nisn_nik || Date.now()),
+            item.nama_sekolah || '',
+            item.nama_siswa || item.nama || '',
+            item.nisn_nik || item.nik || '',
+            item.kelas || '',
+            item.jenis_kelamin || 'L',
+            item.hb || '-',
+            item.status_gizi || 'Normal',
+            item.petugas_entry || 'Admin',
+            item.tanggal_entry || new Date().toISOString().substring(0, 10),
+            JSON.stringify(item)
+          ));
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: items.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'DELETE') {
+        try {
+          const id = url.searchParams.get('id');
+          if (id) {
+            await env.DB.prepare('DELETE FROM ckg_sekolah_records WHERE id = ?').bind(id).run();
+          } else {
+            await env.DB.prepare('DELETE FROM ckg_sekolah_records').run();
+          }
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }

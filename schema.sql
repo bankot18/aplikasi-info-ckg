@@ -1,7 +1,12 @@
--- Schema Database CKG Puskesmas Banjaran Kota
--- Digunakan untuk Cloudflare D1 Serverless Database / PostgreSQL / SQLite
+-- ====================================================================
+-- SCHEMA DATABASE CKG PUSKESMAS BANJARAN KOTA (CLOUDFLARE D1 DATABASE)
+-- Struktur Tabel Lengkap Berdasarkan Setiap Menu Aplikasi CKG
+-- ====================================================================
 
--- 1. Tabel Users & Akses Roles
+-- --------------------------------------------------------------------
+-- 1. MENU: ADMIN PANEL & DATABASE USER
+-- Tabel: users (Pengelolaan User, Password, & Hierarchy Role)
+-- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nama_user VARCHAR(100) NOT NULL UNIQUE,
@@ -10,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert Default Users
+-- Default User Accounts
 INSERT OR IGNORE INTO users (nama_user, password, role) VALUES 
 ('Mochamad Fauzie, S.Gz', '213', 'Admin'),
 ('Nurul Hidayah, Amd.Kes', '213', 'Koordinator'),
@@ -18,7 +23,22 @@ INSERT OR IGNORE INTO users (nama_user, password, role) VALUES
 ('Neng Yulia Trisnawati, AM.Keb', '', 'Petugas'),
 ('Teti Nuryati, S.Keb, Bdn', '', 'Petugas');
 
--- 2. Tabel Data SIMPUS Pasien
+
+-- --------------------------------------------------------------------
+-- 2. LIVE SESSION TRACKER (STATUS ONLINE / OFFLINE USER REALTIME)
+-- Tabel: user_sessions
+-- --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_sessions (
+    nama_user TEXT PRIMARY KEY,
+    last_seen INTEGER NOT NULL,
+    status TEXT DEFAULT 'active'
+);
+
+
+-- --------------------------------------------------------------------
+-- 3. MENU: DATA ENTRY CKG DARI SIMPUS
+-- Tabel: simpus_records (Antrean Pasien SIMPUS, Bagi Petugas & Status Entry)
+-- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS simpus_records (
     id VARCHAR(50) PRIMARY KEY,
     no INTEGER NOT NULL,
@@ -42,24 +62,55 @@ CREATE TABLE IF NOT EXISTS simpus_records (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Tabel Data Entry CKG (Skrining Kesehatan)
-CREATE TABLE IF NOT EXISTS ckg_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tanggal_entry VARCHAR(20) NOT NULL,
-    nik VARCHAR(20) NOT NULL,
-    nama_pasien VARCHAR(150) NOT NULL,
-    petugas_entry VARCHAR(100) NOT NULL,
-    lokasi_pelayanan VARCHAR(50) DEFAULT 'Luar Gedung',
-    status_entry VARCHAR(50) DEFAULT 'Berhasil di Entry',
+CREATE INDEX IF NOT EXISTS idx_simpus_nik ON simpus_records(nik);
+CREATE INDEX IF NOT EXISTS idx_simpus_assigned ON simpus_records(assigned_to);
+
+
+-- --------------------------------------------------------------------
+-- 4. MENU: DATA RECORDS CKG (Luar Gedung & Dalam Gedung)
+-- Tabel: ckg_full_records (Penyimpanan Utama 28 Parameter Skrining & Medis CKG)
+-- --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ckg_full_records (
+    id TEXT PRIMARY KEY,
+    nik TEXT NOT NULL,
+    nama_pasien TEXT NOT NULL,
+    petugas_entry TEXT NOT NULL,
+    tanggal_entry TEXT NOT NULL,
+    lokasi_pelayanan TEXT DEFAULT 'Luar Gedung',
+    status_entry TEXT DEFAULT 'Terverifikasi',
+    raw_json TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexing untuk Query Cepat di Cloudflare D1
-CREATE INDEX IF NOT EXISTS idx_simpus_nik ON simpus_records(nik);
-CREATE INDEX IF NOT EXISTS idx_simpus_assigned ON simpus_records(assigned_to);
-CREATE INDEX IF NOT EXISTS idx_ckg_nik ON ckg_records(nik);
+CREATE INDEX IF NOT EXISTS idx_ckg_nik ON ckg_full_records(nik);
+CREATE INDEX IF NOT EXISTS idx_ckg_petugas ON ckg_full_records(petugas_entry);
+CREATE INDEX IF NOT EXISTS idx_ckg_tanggal ON ckg_full_records(tanggal_entry);
 
--- 4. Tabel Recycle Data (Tempat Sampah Data Terhapus)
+
+-- --------------------------------------------------------------------
+-- 5. MENU: CKG SEKOLAH
+-- Tabel: ckg_sekolah_records (Skrining Kesehatan Siswa Sekolah)
+-- --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ckg_sekolah_records (
+    id TEXT PRIMARY KEY,
+    nama_sekolah TEXT NOT NULL,
+    nama_siswa TEXT NOT NULL,
+    nisn_nik TEXT,
+    kelas TEXT,
+    jenis_kelamin TEXT DEFAULT 'L',
+    hb TEXT DEFAULT '-',
+    status_gizi TEXT DEFAULT 'Normal',
+    petugas_entry TEXT,
+    tanggal_entry TEXT,
+    raw_json TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- --------------------------------------------------------------------
+-- 6. MENU: RECYCLE DATA (Tempat Sampah Data Terhapus)
+-- Tabel: recycle_bin
+-- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS recycle_bin (
     id VARCHAR(100) PRIMARY KEY,
     nik VARCHAR(50),
@@ -72,7 +123,11 @@ CREATE TABLE IF NOT EXISTS recycle_bin (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Tabel Announcement (Pengumuman Sistem)
+
+-- --------------------------------------------------------------------
+-- 7. PENGUMUMAN SISTEM CKG (Banner Announcement Top Header)
+-- Tabel: announcement
+-- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS announcement (
     id INTEGER PRIMARY KEY DEFAULT 1,
     title TEXT NOT NULL,
@@ -82,7 +137,5 @@ CREATE TABLE IF NOT EXISTS announcement (
     active INTEGER DEFAULT 1
 );
 
--- Insert Default Announcement if not exists
 INSERT OR IGNORE INTO announcement (id, title, content, author, date, active) VALUES
 (1, 'PENGUMUMAN SISTEM CKG', 'Selamat datang di Sistem Informasi Pencatatan CKG Puskesmas Banjaran Kota. Harap lakukan verifikasi data pasien By Name By Address (BNBA) dengan cermat dan akurat.', 'Admin Utama', '2026-08-06', 1);
-

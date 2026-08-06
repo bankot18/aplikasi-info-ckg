@@ -300,52 +300,47 @@ async function fetchCloudRecords() {
     const res = await fetch('/api/ckg');
     if (res.ok) {
       const result = await res.json();
-      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-        const cloudRecords = result.data.map(r => ({
-          id: r.id ? (String(r.id).startsWith('CKG-') ? String(r.id) : `CKG-${r.id}`) : 'CKG-' + Date.now(),
-          jenis_kegiatan: r.lokasi_pelayanan || 'Luar Gedung',
-          nik: r.nik || '',
-          nama: r.nama_pasien || r.nama || 'Pasien',
-          tanggal_lahir: r.tanggal_lahir || '1990-01-01',
-          usia: r.usia || 30,
-          jenis_kelamin: r.jenis_kelamin || 'L',
-          no_whatsapp: r.no_whatsapp || '',
-          status_pernikahan: r.status_pernikahan || 'Menikah',
-          provinsi: r.provinsi || 'Jawa Barat',
-          kab_kota: r.kab_kota || 'Kab. Bandung',
-          kecamatan: r.kecamatan || 'Banjaran',
-          kelurahan: r.kelurahan || 'Banjaran Kota',
-          alamat: r.alamat || 'Banjaran',
-          pekerjaan: r.pekerjaan || '',
-          merokok: r.merokok || 'Tidak',
-          bb: r.bb || 60,
-          tb: r.tb || 165,
-          lp: r.lp || 80,
-          imt: r.imt || '22.0',
-          td_sistolik: r.td_sistolik || 120,
-          td_diastolik: r.td_diastolik || 80,
-          gula_darah: r.gula_darah || '110',
-          kolesterol: r.kolesterol || '180',
-          hb: r.hb || '14.0',
-          telinga: r.telinga || 'Normal',
-          mata: r.mata || 'Normal',
-          gigi: r.gigi || 'Baik',
-          katarak: r.katarak || 'Tidak',
-          status_validasi: 'Terverifikasi',
-          petugas_entry: r.petugas_entry || 'Admin',
-          created_by: r.petugas_entry || 'Admin',
-          created_at: r.tanggal_entry || new Date().toISOString().substring(0, 10)
-        }));
-
-        const merged = [...records];
-        cloudRecords.forEach(cr => {
-          if (!merged.some(m => m.id === cr.id || (m.nik && cr.nik && m.nik === cr.nik))) {
-            merged.push(cr);
-          }
-        });
-        records = merged;
-        localStorage.setItem('ckg_records', JSON.stringify(records));
-        renderApp();
+      if (result.success && Array.isArray(result.data)) {
+        if (result.data.length > 0) {
+          records = result.data.map(r => ({
+            id: r.id ? (String(r.id).startsWith('CKG-') ? String(r.id) : `CKG-${r.id}`) : 'CKG-' + Date.now(),
+            jenis_kegiatan: r.jenis_kegiatan || r.lokasi_pelayanan || 'Luar Gedung',
+            nik: r.nik || '',
+            nama: r.nama || r.nama_pasien || 'Pasien',
+            tanggal_lahir: r.tanggal_lahir || '1990-01-01',
+            usia: r.usia || 30,
+            jenis_kelamin: r.jenis_kelamin || 'L',
+            no_whatsapp: r.no_whatsapp || '',
+            status_pernikahan: r.status_pernikahan || 'Kawin',
+            provinsi: r.provinsi || 'Jawa Barat',
+            kab_kota: r.kab_kota || 'Kab. Bandung',
+            kecamatan: r.kecamatan || 'Banjaran',
+            kelurahan: r.kelurahan || 'Banjaran Kota',
+            alamat: r.alamat || 'Banjaran',
+            pekerjaan: r.pekerjaan || '',
+            merokok: r.merokok || 'Tidak',
+            bb: r.bb || 60,
+            tb: r.tb || 165,
+            lp: r.lp || 80,
+            imt: r.imt || '22.0',
+            td_sistolik: r.td_sistolik || 120,
+            td_diastolik: r.td_diastolik || 80,
+            gula_darah: r.gula_darah || '110',
+            kolesterol: r.kolesterol || '180',
+            hb: r.hb || '14.0',
+            telinga: r.telinga || 'Normal',
+            mata: r.mata || 'Normal',
+            gigi: r.gigi || 'Normal',
+            katarak: r.katarak || 'Tidak',
+            status_validasi: r.status_validasi || 'Terverifikasi',
+            petugas_entry: r.petugas_entry || r.created_by || 'Admin',
+            created_by: r.created_by || r.petugas_entry || 'Admin',
+            created_at: r.created_at || r.tanggal_entry || new Date().toISOString().substring(0, 10),
+            tanggal_entry: r.tanggal_entry || r.created_at || new Date().toISOString().substring(0, 10)
+          }));
+          localStorage.setItem('ckg_records', JSON.stringify(records));
+          if (typeof renderApp === 'function') renderApp();
+        }
       }
     }
   } catch (e) {
@@ -376,6 +371,7 @@ function loadStoredSimpusRecords() {
   } else {
     simpusRecords = [];
   }
+  fetchCloudSimpusRecords(true);
 }
 
 function saveSimpusRecordsToStorage() {
@@ -649,6 +645,14 @@ function checkAuthSession() {
     }
     if (!window._fetchSessionsInterval) {
       window._fetchSessionsInterval = setInterval(() => fetchLiveSessions(), 10000);
+    }
+    if (!window._cloudSyncInterval) {
+      window._cloudSyncInterval = setInterval(() => {
+        if (!document.hidden) {
+          fetchCloudRecords();
+          fetchCloudSimpusRecords(true);
+        }
+      }, 15000);
     }
   } else {
     if (loginOverlay) loginOverlay.classList.remove('hidden');
