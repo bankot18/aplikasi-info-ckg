@@ -275,6 +275,57 @@ export default {
       }
     }
 
+    // 6. ROUTE: /api/sessions (Live User Session & Heartbeat Tracker)
+    if (url.pathname === '/api/sessions' || url.pathname.startsWith('/api/sessions/')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
+      }
+
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS user_sessions (
+            nama_user TEXT PRIMARY KEY,
+            last_seen INTEGER NOT NULL,
+            status TEXT DEFAULT 'active'
+          )
+        `).run();
+      } catch (_) {}
+
+      if (request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare('SELECT nama_user, last_seen, status FROM user_sessions').all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nama_user = body.nama_user || body.nama;
+          const status = body.status || 'active';
+          const now = Date.now();
+
+          if (!nama_user) {
+            return new Response(JSON.stringify({ success: false, error: 'nama_user required' }), { status: 400, headers: corsHeaders });
+          }
+
+          await env.DB.prepare(`
+            INSERT INTO user_sessions (nama_user, last_seen, status)
+            VALUES (?, ?, ?)
+            ON CONFLICT(nama_user) DO UPDATE SET
+              last_seen = excluded.last_seen,
+              status = excluded.status
+          `).bind(nama_user, now, status).run();
+
+          return new Response(JSON.stringify({ success: true, timestamp: now }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
     // Serve static assets via Cloudflare Assets
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);

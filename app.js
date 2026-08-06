@@ -26,6 +26,58 @@ let announcementData = null;
 let activeSimpusTab = 'belum_bagi'; // 'belum_bagi' or 'sudah_bagi'
 let currentRole = 'Admin';
 let currentEditingId = null;
+let activeSessionsMap = {};
+
+async function sendUserHeartbeat(status = 'active') {
+  const loggedUser = sessionStorage.getItem('ckg_user_name');
+  if (!loggedUser) return;
+
+  const now = Date.now();
+  activeSessionsMap[loggedUser] = {
+    last_seen: now,
+    status: status
+  };
+
+  try {
+    localStorage.setItem('ckg_active_user_sessions', JSON.stringify(activeSessionsMap));
+  } catch (_) {}
+
+  try {
+    await fetch('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nama_user: loggedUser, status: status })
+    });
+  } catch (_) {}
+}
+
+async function fetchLiveSessions() {
+  try {
+    const res = await fetch('/api/sessions');
+    if (res.ok) {
+      const result = await res.json();
+      if (result && result.success && Array.isArray(result.data)) {
+        result.data.forEach(item => {
+          if (item && item.nama_user) {
+            activeSessionsMap[item.nama_user] = {
+              last_seen: Number(item.last_seen) || 0,
+              status: item.status || 'offline'
+            };
+          }
+        });
+      }
+    }
+  } catch (_) {}
+
+  try {
+    const local = JSON.parse(localStorage.getItem('ckg_active_user_sessions') || '{}');
+    for (let uName in local) {
+      if (!activeSessionsMap[uName] || local[uName].last_seen > (activeSessionsMap[uName].last_seen || 0)) {
+        activeSessionsMap[uName] = local[uName];
+      }
+    }
+  } catch (_) {}
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   applyCustomLogo();
@@ -548,6 +600,16 @@ function checkAuthSession() {
 
     renderApp();
     setTimeout(checkAndShowAnnouncement, 500);
+
+    sendUserHeartbeat('active');
+    fetchLiveSessions();
+
+    if (!window._heartbeatInterval) {
+      window._heartbeatInterval = setInterval(() => sendUserHeartbeat('active'), 15000);
+    }
+    if (!window._fetchSessionsInterval) {
+      window._fetchSessionsInterval = setInterval(() => fetchLiveSessions(), 10000);
+    }
   } else {
     if (loginOverlay) loginOverlay.classList.remove('hidden');
     if (mainApp) mainApp.style.display = 'none';
@@ -710,6 +772,9 @@ function performLoginSuccess(user) {
     sessionStorage.setItem('ckg_user_name', user.nama_user);
     sessionStorage.setItem('ckg_user_role', user.role || 'Petugas');
 
+    sendUserHeartbeat('active');
+    fetchLiveSessions();
+
     checkAuthSession();
     hideLoadingOverlay();
 
@@ -731,6 +796,7 @@ function handleLogout() {
       cancelButtonText: 'Batal'
     }).then((result) => {
       if (result.isConfirmed) {
+        sendUserHeartbeat('offline');
         sessionStorage.removeItem('ckg_logged_in');
         sessionStorage.removeItem('ckg_user_name');
         sessionStorage.removeItem('ckg_user_role');
@@ -2544,7 +2610,22 @@ function renderUserDatabaseTable() {
 
     const safeNama = u.nama_user.replace(/'/g, "\\'");
 
-    let sessionStatusHtml = isCurrentActive ? '<span class="badge badge-emerald"><i class="bi bi-circle-fill" style="font-size:8px;"></i> Session Aktif</span>' : '<span class="badge badge-cyan">Offline</span>';
+    // Live session calculation
+    const sessInfo = activeSessionsMap[u.nama_user] || {};
+    const now = Date.now();
+    const isLiveActive = (sessInfo.status !== 'offline') && (sessInfo.last_seen && (now - Number(sessInfo.last_seen)) < 120000);
+    const isOnline = isCurrentActive || isLiveActive;
+
+    let sessionStatusHtml = isOnline ? `
+      <span class="badge" style="display:inline-flex; align-items:center; gap:6px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-weight:600; padding:4px 10px; border-radius:20px; font-size:11.5px;">
+        <span style="width:8px; height:8px; background:#10b981; border-radius:50%; display:inline-block; animation:pulseDot 1.5s infinite;"></span>
+        Live Session Aktif
+      </span>
+    ` : `
+      <span class="badge" style="display:inline-flex; align-items:center; gap:6px; background:#f8fafc; color:#64748b; border:1px solid #e2e8f0; font-weight:500; padding:4px 10px; border-radius:20px; font-size:11.5px;">
+        <i class="bi bi-circle-fill" style="font-size:6px; color:#94a3b8;"></i> Offline
+      </span>
+    `;
 
     if (u.is_banned) {
       sessionStatusHtml = `<span class="badge badge-rose" style="background:#fef2f2; color:#dc2626; border:1px solid #fecaca;"><i class="bi bi-slash-circle-fill"></i> Banned (${u.banned_duration_label || 'Nonaktif'})</span>`;
