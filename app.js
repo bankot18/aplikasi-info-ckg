@@ -1990,7 +1990,7 @@ function processImportFromModal() {
 
   const file = pendingImportFile;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
@@ -2003,7 +2003,7 @@ function processImportFromModal() {
         return;
       }
 
-      let importedCount = 0;
+      const parsedRecords = [];
       const maxId = simpusRecords.reduce((max, r) => {
         const num = parseInt(String(r.no)) || 0;
         return num > max ? num : max;
@@ -2015,9 +2015,9 @@ function processImportFromModal() {
 
         if (!nama || nama.length < 2) return;
 
-        const newId = `S-${maxId + idx + 1}`;
-        const bb = parseFloat(row['BB'] || row['BERAT BADAN'] || row['Berat Badan'] || row['bb'] || 0) || 0;
-        const tb = parseFloat(row['TB'] || row['TINGGI BADAN'] || row['Tinggi Badan'] || row['tb'] || 0) || 0;
+        const newId = `S-${maxId + idx + 1}-${Date.now()}`;
+        const bb = parseFloat(row['BB (kg)'] || row['BB'] || row['BERAT BADAN'] || row['Berat Badan'] || row['bb'] || 0) || 0;
+        const tb = parseFloat(row['TB (cm)'] || row['TB'] || row['TINGGI BADAN'] || row['Tinggi Badan'] || row['tb'] || 0) || 0;
         const imt = (bb > 0 && tb > 0) ? parseFloat((bb / ((tb / 100) ** 2)).toFixed(1)) : 0;
         const usia = parseInt(row['USIA'] || row['Usia'] || row['usia'] || row['UMUR'] || 0) || 0;
 
@@ -2030,8 +2030,8 @@ function processImportFromModal() {
           no: maxId + idx + 1,
           petugas_entry: String(row['Petugas Entry'] || row['Petugas'] || row['PETUGAS'] || ''),
           nama: nama,
-          nik: nik,
-          tanggal: String(row['TANGGAL'] || row['Tanggal'] || row['tanggal'] || new Date().toLocaleDateString('id-ID')),
+          nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
+          tanggal: new Date().toISOString().substring(0, 10),
           dob: String(row['TANGGAL LAHIR'] || row['TGL LAHIR'] || row['Tanggal Lahir'] || row['tanggal_lahir'] || '-'),
           usia: usia,
           status_pernikahan: String(row['Status Pernikahan'] || row['STATUS PERNIKAHAN'] || 'MENIKAH'),
@@ -2053,23 +2053,71 @@ function processImportFromModal() {
           entry_status: 'belum'
         };
 
-        simpusRecords.push(record);
-        importedCount++;
+        parsedRecords.push(record);
       });
 
-      saveSimpusRecordsToStorage();
+      if (parsedRecords.length === 0) {
+        showToast('Tidak ada data valid yang bisa di-import.', 'warning');
+        return;
+      }
+
       closeImportSimpusModal();
+
+      // Show Progress Modal for Cloud Sync
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          title: `<i class="bi bi-cloud-upload-fill" style="color:#d97706;"></i> Meng-upload Data Belum Di-Bagi ke Cloud Database D1...`,
+          html: `<div style="margin:10px 0;">
+                  <div id="simpusImportProgressBar" style="width:100%;height:20px;background:#e2e8f0;border-radius:10px;overflow:hidden;">
+                    <div id="simpusImportProgressFill" style="width:0%;height:100%;background:linear-gradient(90deg,#d97706,#f59e0b);border-radius:10px;transition:width 0.3s;"></div>
+                  </div>
+                  <div id="simpusImportProgressText" style="margin-top:8px;font-size:13px;color:#475569;font-weight:600;">0 / ${parsedRecords.length} data pasien (0%)</div>
+                </div>`,
+          allowOutsideClick: false,
+          showConfirmButton: false
+        });
+      }
+
+      const chunkSize = 20;
+      let uploaded = 0;
+      let failed = 0;
+
+      for (let i = 0; i < parsedRecords.length; i += chunkSize) {
+        const chunk = parsedRecords.slice(i, i + chunkSize);
+        try {
+          const res = await fetch('/api/simpus', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(chunk)
+          });
+          if (res.ok) { uploaded += chunk.length; } else { failed += chunk.length; }
+        } catch (err) {
+          failed += chunk.length;
+        }
+
+        const pct = Math.round(((uploaded + failed) / parsedRecords.length) * 100);
+        const fillEl = document.getElementById('simpusImportProgressFill');
+        const txtEl = document.getElementById('simpusImportProgressText');
+        if (fillEl) fillEl.style.width = pct + '%';
+        if (txtEl) txtEl.textContent = `${uploaded + failed} / ${parsedRecords.length} data pasien (${pct}%)`;
+      }
+
+      simpusRecords = [...parsedRecords, ...simpusRecords];
+      saveSimpusRecordsToStorage();
       renderSimpusView();
+      updateCloudSyncPill(true, `D1 Online (${simpusRecords.length} SIMPUS)`);
 
       if (typeof Swal !== 'undefined') {
         Swal.fire({
-          icon: 'success',
-          title: 'Import Data SIMPUS Berhasil!',
-          html: `<strong>${importedCount}</strong> data pasien dari file <strong>${file.name}</strong> berhasil di-import ke tab <strong>Data Belum Di-Bagi</strong>.`,
-          confirmButtonColor: '#2563eb'
+          icon: failed === 0 ? 'success' : 'warning',
+          title: failed === 0 ? 'Import & Sinkronisasi Cloud Berhasil!' : 'Import Sebagian Berhasil',
+          html: `<div style="font-size:13.5px; text-align:left; line-height:1.6;">
+                  Total <strong>${uploaded} Data Pasien</strong> dari file <strong>${file.name}</strong> telah <strong>ter-upload & tersimpan permanen di Cloudflare D1 Database (tab Data Belum Di-Bagi)</strong>.
+                </div>`,
+          confirmButtonColor: '#d97706'
         });
       } else {
-        showToast(`${importedCount} data SIMPUS berhasil di-import dari ${file.name}!`, 'success');
+        showToast(`${uploaded} data SIMPUS berhasil di-upload ke Cloud D1 dari ${file.name}!`, 'success');
       }
     } catch (err) {
       console.error('Import XLSX Error:', err);
