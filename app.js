@@ -1950,46 +1950,36 @@ function setImportFile(file) {
 }
 
 function downloadTemplateSimpusXlsx() {
-  const templateData = [
-    {
-      'NAMA PASIEN': 'CONTOH NAMA PASIEN',
-      'NIK': '3204131234567890',
-      'ALAMAT': 'JL. CONTOH RT 01/02',
-      'TANGGAL': new Date().toLocaleDateString('id-ID'),
-      'TANGGAL LAHIR': '01/01/1980',
-      'USIA': 45,
-      'BB': 65,
-      'TB': 160,
-      'SISTOL': 120,
-      'DIASTOL': 80,
-      'GULA DARAH': 100,
-      'KOLESTEROL': 200
-    }
-  ];
+  try {
+    const headers = [
+      "Petugas Entry", "NAMA PASIEN", "NIK", "TANGGAL LAHIR", "USIA",
+      "Status Pernikahan", "Provinsi", "Kab/Kota", "Kecamatan", "Kelurahan", "Alamat Lengkap",
+      "BB (kg)", "TB (cm)", "TD SISTOL", "TD DIASTOL", "GULA DARAH", "KOLESTEROL"
+    ];
 
-  const ws = XLSX.utils.json_to_sheet(templateData);
+    const sampleRow1 = [
+      "", "EUIS SARIBANON", "3204123456780001", "1962-12-01", 63,
+      "MENIKAH", "Jawa Barat", "Kab. Bandung", "Banjaran", "Tarajusari", "Kp Cipeundeuy",
+      54, 153, 135, 99, "91", "180"
+    ];
 
-  // Set column widths
-  ws['!cols'] = [
-    { wch: 25 }, // NAMA PASIEN
-    { wch: 20 }, // NIK
-    { wch: 30 }, // ALAMAT
-    { wch: 14 }, // TANGGAL
-    { wch: 16 }, // TANGGAL LAHIR
-    { wch: 8 },  // USIA
-    { wch: 8 },  // BB
-    { wch: 8 },  // TB
-    { wch: 10 }, // SISTOL
-    { wch: 10 }, // DIASTOL
-    { wch: 14 }, // GULA DARAH
-    { wch: 14 }, // KOLESTEROL
-  ];
+    const sampleRow2 = [
+      "", "SENY SEPTIANY", "3204134109910006", "1991-09-01", 34,
+      "BELUM MENIKAH", "Jawa Barat", "Kab. Bandung", "Banjaran", "Tarajusari", "Kp Cipeundeuy",
+      56, 159, 120, 92, "90", "180"
+    ];
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Template Data SIMPUS');
+    const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow1, sampleRow2]);
+    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 15) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template SIMPUS Belum Di-Bagi");
+    saveXlsxFile(wb, `Template_Import_SIMPUS_BelumDibagi_${new Date().toISOString().substring(0, 10)}.xlsx`);
 
-  saveXlsxFile(wb, 'Template_Import_SIMPUS_CKG.xlsx');
-  showToast('Template XLSX berhasil diunduh! Isi data lalu upload kembali.', 'success');
+    showToast('Template XLSX SIMPUS (Data Belum Di-Bagi) Berhasil Diunduh!', 'success');
+  } catch (err) {
+    console.error('Download SIMPUS template error:', err);
+    showToast('Gagal mengunduh template XLSX.', 'error');
+  }
 }
 
 function processImportFromModal() {
