@@ -3332,6 +3332,11 @@ function openImportModal() {
   const fileInput = document.getElementById('importFileInput');
   if (fileInput) fileInput.value = '';
 
+  const tanggalInput = document.getElementById('importTanggalEntry');
+  if (tanggalInput) {
+    tanggalInput.value = new Date().toISOString().substring(0, 10);
+  }
+
   // Populate & handle Target Petugas select dropdown based on Role
   const targetSelect = document.getElementById('importTargetPetugas');
   const targetHint = document.getElementById('importTargetPetugasHint');
@@ -3588,6 +3593,8 @@ function executeXLSXImport() {
       let importedCount = 0;
       const targetSelect = document.getElementById('importTargetPetugas');
       const targetPetugas = (targetSelect && targetSelect.value) ? targetSelect.value : (sessionStorage.getItem('ckg_user_name') || 'Admin');
+      const tanggalInput = document.getElementById('importTanggalEntry');
+      const selectedTanggal = (tanggalInput && tanggalInput.value) ? tanggalInput.value : new Date().toISOString().substring(0, 10);
 
       jsonRows.forEach(row => {
         // Robust Column Key Extractor: Pass 1 Exact Match, Pass 2 Includes Match
@@ -3636,6 +3643,9 @@ function executeXLSXImport() {
         const tb = parseFloat(getVal('TB (cm)', 'TB', 'Tinggi Badan', 'Tinggi')) || 165;
         const lp = parseFloat(getVal('LP (cm)', 'LP', 'Lingkar Perut')) || 80;
         const imtVal = (tb > 0) ? (bb / ((tb / 100) * (tb / 100))).toFixed(2) : '22.0';
+        
+        // Row date if specified in file, otherwise use selected batch date
+        const rowDate = getVal('Tanggal Entry', 'Tanggal Skrining', 'Tanggal') || selectedTanggal;
 
         const newRecord = {
           id: 'CKG-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
@@ -3670,7 +3680,9 @@ function executeXLSXImport() {
           status_validasi: 'Terverifikasi',
           petugas_entry: targetPetugas,
           created_by: targetPetugas,
-          created_at: new Date().toISOString().substring(0, 10)
+          created_at: rowDate,
+          tanggal_entry: rowDate,
+          tanggal: rowDate
         };
 
         records.unshift(newRecord);
