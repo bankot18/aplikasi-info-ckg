@@ -26,6 +26,7 @@ let currentRole = 'Admin';
 let currentEditingId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  applyCustomLogo();
   loadStoredUserDatabase();
   loadStoredRecords();
   loadStoredSimpusRecords();
@@ -3220,4 +3221,89 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+/* ==========================================================================
+   🖼️ CUSTOM PNG LOGO MANAGER
+   ========================================================================== */
+
+function applyCustomLogo() {
+  const customLogo = localStorage.getItem('ckg_custom_logo');
+  if (customLogo) {
+    document.querySelectorAll('.brand-logo img, .visual-brand-logo img, .form-logo-img').forEach(img => {
+      img.src = customLogo;
+      img.style.display = 'block';
+      if (img.nextElementSibling) img.nextElementSibling.style.display = 'none';
+    });
+  }
+}
+
+function openCustomLogoModal() {
+  const currentLogo = localStorage.getItem('ckg_custom_logo');
+
+  Swal.fire({
+    title: 'Ganti Logo Aplikasi (PNG)',
+    html: `
+      <div style="text-align: left; font-size: 13px;">
+        <p style="margin-bottom: 12px; color: #475569;">Pilih file gambar <strong>PNG/JPG</strong> baru dari perangkat Anda untuk mengganti logo aplikasi di Header & Halaman Login:</p>
+        <input type="file" id="customLogoFileInput" accept="image/png, image/jpeg, image/webp" class="swal2-input" style="margin: 0 0 14px 0; width: 100%; font-size: 13px;">
+        
+        <div id="logoPreviewBox" style="text-align: center; margin-top: 14px; ${currentLogo ? '' : 'display: none;'}">
+          <div style="font-size: 12px; color: #64748b; margin-bottom: 6px; font-weight: 600;">Preview Logo:</div>
+          <img id="logoPreviewImg" src="${currentLogo || ''}" style="max-width: 90px; max-height: 90px; border-radius: 50%; border: 3px solid #2563eb; box-shadow: 0 4px 12px rgba(0,0,0,0.15); object-fit: contain;">
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Simpan Logo Baru',
+    denyButtonText: '<i class="bi bi-arrow-counterclockwise"></i> Reset Logo Default',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#2563eb',
+    denyButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    didOpen: () => {
+      const fileInput = document.getElementById('customLogoFileInput');
+      const previewBox = document.getElementById('logoPreviewBox');
+      const previewImg = document.getElementById('logoPreviewImg');
+      
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            previewImg.src = ev.target.result;
+            previewBox.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    },
+    preConfirm: () => {
+      const fileInput = document.getElementById('customLogoFileInput');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        Swal.showValidationMessage('Pilih file PNG/JPG terlebih dahulu!');
+        return false;
+      }
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(fileInput.files[0]);
+      });
+    }
+  }).then((result) => {
+    if (result.isConfirmed && result.value) {
+      localStorage.setItem('ckg_custom_logo', result.value);
+      applyCustomLogo();
+      Swal.fire({
+        icon: 'success',
+        title: 'Logo Berhasil Diperbarui!',
+        text: 'Logo aplikasi telah langsung diperbarui.',
+        confirmButtonColor: '#2563eb'
+      });
+    } else if (result.isDenied) {
+      localStorage.removeItem('ckg_custom_logo');
+      location.reload();
+    }
+  });
+}
 
