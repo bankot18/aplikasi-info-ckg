@@ -73,7 +73,7 @@ export default {
         });
       }
 
-      // Auto-create both tables
+      // Auto-create both tables & high-performance indexes
       try {
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS simpus_belum_bagi (
           id TEXT PRIMARY KEY, no INTEGER, nama TEXT, nik TEXT, tanggal TEXT, dob TEXT,
@@ -90,6 +90,12 @@ export default {
           bb REAL, tb REAL, imt REAL, sistol INTEGER, diastol INTEGER,
           gula TEXT, kolesterol TEXT, keterangan TEXT, entry_status TEXT DEFAULT 'belum', raw_json TEXT
         )`).run();
+      } catch (_) {}
+      try {
+        await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_simpus_sudah_assigned ON simpus_sudah_bagi(assigned_to)').run();
+        await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_simpus_sudah_nik ON simpus_sudah_bagi(nik)').run();
+        await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_simpus_sudah_tanggal ON simpus_sudah_bagi(tanggal)').run();
+        await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_simpus_belum_nik ON simpus_belum_bagi(nik)').run();
       } catch (_) {}
 
       // One-time migration from old simpus_records table
@@ -156,6 +162,12 @@ export default {
       // GET
       if (request.method === 'GET') {
         try {
+          // Auto cleanup: Ensure records in simpus_sudah_bagi DO NOT exist in simpus_belum_bagi
+          try {
+            await env.DB.prepare('DELETE FROM simpus_belum_bagi WHERE id IN (SELECT id FROM simpus_sudah_bagi)').run();
+            await env.DB.prepare("DELETE FROM simpus_belum_bagi WHERE nik IS NOT NULL AND nik != '' AND nik IN (SELECT nik FROM simpus_sudah_bagi WHERE nik IS NOT NULL AND nik != '')").run();
+          } catch (_) {}
+
           if (tab === 'belum_bagi') {
             const { results } = await env.DB.prepare('SELECT * FROM simpus_belum_bagi ORDER BY no ASC').all();
             const data = (results||[]).map(r => ({ ...r, is_divided: false, petugas_entry: '', assigned_to: '' }));
@@ -216,6 +228,7 @@ export default {
               await env.DB.batch(stmts);
               inserted += chunk.length;
             }
+            try { await env.DB.prepare('DELETE FROM simpus_belum_bagi WHERE id IN (SELECT id FROM simpus_sudah_bagi)').run(); } catch (_) {}
           } else {
             const sql = `INSERT INTO simpus_belum_bagi
               (id,no,nama,nik,tanggal,dob,usia,status_pernikahan,provinsi,kab_kota,kecamatan,kelurahan,alamat,bb,tb,imt,sistol,diastol,gula,kolesterol,keterangan,entry_status,raw_json)
@@ -245,6 +258,7 @@ export default {
               await env.DB.batch(stmts);
               inserted += chunk.length;
             }
+            try { await env.DB.prepare('DELETE FROM simpus_sudah_bagi WHERE id IN (SELECT id FROM simpus_belum_bagi)').run(); } catch (_) {}
           }
           return new Response(JSON.stringify({ success: true, count: inserted }), { headers: corsHeaders });
         } catch (err) {
@@ -301,6 +315,9 @@ export default {
             raw_json TEXT
           )
         `).run();
+        await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_ckg_nik ON ckg_full_records(nik)').run();
+        await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_ckg_petugas ON ckg_full_records(petugas_entry)').run();
+        await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_ckg_tanggal ON ckg_full_records(tanggal_entry)').run();
       } catch (_) {}
 
       if (request.method === 'GET') {

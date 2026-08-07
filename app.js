@@ -349,7 +349,8 @@ async function fetchCloudRecords() {
       const result = await res.json();
       if (result.success && Array.isArray(result.data)) {
         if (result.data.length > 0) {
-          records = result.data.map(r => ({
+          const prevLen = records.length;
+          const newRecords = result.data.map(r => ({
             id: r.id ? (String(r.id).startsWith('CKG-') ? String(r.id) : `CKG-${r.id}`) : 'CKG-' + Date.now(),
             jenis_kegiatan: r.jenis_kegiatan || r.lokasi_pelayanan || 'Luar Gedung',
             nik: r.nik || '',
@@ -385,9 +386,21 @@ async function fetchCloudRecords() {
             created_at: r.created_at || r.tanggal_entry || new Date().toISOString().substring(0, 10),
             tanggal_entry: r.tanggal_entry || r.created_at || new Date().toISOString().substring(0, 10)
           }));
-          localStorage.setItem('ckg_records', JSON.stringify(records));
+          records = newRecords;
+          
+          // Non-blocking background save to local storage cache
+          setTimeout(() => {
+            try { localStorage.setItem('ckg_records', JSON.stringify(records)); } catch (_) {}
+          }, 100);
+
           updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
-          if (typeof renderApp === 'function') renderApp();
+
+          // Only trigger UI re-render if data count changed or on initial load
+          if (prevLen !== records.length || prevLen === 0) {
+            requestAnimationFrame(() => {
+              if (typeof renderApp === 'function') renderApp();
+            });
+          }
         } else if (records.length > 0 && !window._intentionalDeleteAll) {
           // Push local records to D1 if D1 is currently empty (but NOT after intentional delete)
           syncRecordsToCloud(records);
@@ -405,16 +418,16 @@ async function syncRecordsToCloud(dataToSync) {
   if (!dataToSync || dataToSync.length === 0) return;
   try {
     updateCloudSyncPill('syncing', 'Menyingkronkan Data...');
-    const res = await fetch('/api/ckg', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dataToSync)
-    });
-    if (res.ok) {
-      updateCloudSyncPill(true, `D1 Online (${dataToSync.length} Rec)`);
-    } else {
-      updateCloudSyncPill(true, `D1 Active`);
+    const CHUNK_SIZE = 200;
+    for (let i = 0; i < dataToSync.length; i += CHUNK_SIZE) {
+      const chunk = dataToSync.slice(i, i + CHUNK_SIZE);
+      await fetch('/api/ckg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chunk)
+      });
     }
+    updateCloudSyncPill(true, `D1 Online (${dataToSync.length} Rec)`);
   } catch (e) {
     console.log('Failed to sync CKG records to cloud D1:', e);
     updateCloudSyncPill(true, `D1 Active`);
@@ -2412,10 +2425,14 @@ async function handleBagiPetugasSubmit(e) {
       }
     });
     localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+    
+    // Fetch clean state from Cloud D1
+    await fetchCloudSimpusRecords(true);
   } catch (err) {
     console.error('Failed to bagi SIMPUS records:', err);
   }
 
+  const assignedCount = idsToMove.length;
   hideLoadingOverlay();
   renderSimpusView();
 
@@ -2423,11 +2440,11 @@ async function handleBagiPetugasSubmit(e) {
     Swal.fire({
       icon: 'success',
       title: 'Pembagian Data Berhasil!',
-      html: `Berhasil membagikan <strong>${assigned} Data Pasien SIMPUS</strong> kepada petugas <strong>${targetPetugas}</strong>.<br><br><span style="color:#059669; font-weight:700;">Data otomatis berpindah ke tab "Data Sudah Di-Bagi" & tersimpan di Cloud D1.</span>`,
+      html: `Berhasil membagikan <strong>${assignedCount} Data Pasien SIMPUS</strong> kepada petugas <strong>${targetPetugas}</strong>.<br><br><span style="color:#059669; font-weight:700;">Data otomatis berpindah ke tab "Data Sudah Di-Bagi" & tersimpan di Cloud D1.</span>`,
       confirmButtonColor: '#7c3aed'
     });
   } else {
-    showToast(`Berhasil membagikan ${assigned} data SIMPUS kepada ${targetPetugas}!`, 'success');
+    showToast(`Berhasil membagikan ${assignedCount} data SIMPUS kepada ${targetPetugas}!`, 'success');
   }
 }
 
@@ -6415,15 +6432,26 @@ async function fetchCloudSimpusRecords(silent = false) {
 
     const result = await res.json();
     if (result && result.success && Array.isArray(result.data)) {
+      const prevLen = simpusRecords.length;
       simpusRecords = result.data;
-      localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
 
-      if (typeof renderSimpusView === 'function') renderSimpusView();
-      if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
-      if (typeof renderTableRecords === 'function') renderTableRecords();
+      // Non-blocking background save to local storage cache (prevents UI freeze for ~9000 records)
+      setTimeout(() => {
+        try { localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords)); } catch (_) {}
+      }, 100);
 
       const countVal = (typeof result.count === 'number') ? result.count : simpusRecords.length;
       updateCloudSyncPill(true, `D1 Online (${countVal} Rec)`);
+
+      // Only trigger heavy DOM re-rendering if data count actually changed or initial state was empty
+      if (prevLen !== simpusRecords.length || prevLen === 0) {
+        requestAnimationFrame(() => {
+          if (typeof renderSimpusView === 'function') renderSimpusView();
+          if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+          if (typeof renderTableRecords === 'function') renderTableRecords();
+        });
+      }
+
       if (!silent && typeof Swal !== 'undefined' && countVal > 0) {
         Swal.fire({
           icon: 'success',
@@ -6450,17 +6478,29 @@ async function syncSimpusToCloud(records) {
   updateCloudSyncPill('syncing', 'Syncing...');
 
   try {
-    const res = await fetch('/api/simpus', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(records)
-    });
+    const belum = records.filter(r => !r.is_divided);
+    const sudah = records.filter(r => Boolean(r.is_divided));
+    const CHUNK_SIZE = 200;
 
-    if (res.ok) {
-      updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
-    } else {
-      updateCloudSyncPill(true, `D1 Active`);
+    for (let i = 0; i < belum.length; i += CHUNK_SIZE) {
+      const chunk = belum.slice(i, i + CHUNK_SIZE);
+      await fetch('/api/simpus?tab=belum_bagi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chunk)
+      });
     }
+
+    for (let i = 0; i < sudah.length; i += CHUNK_SIZE) {
+      const chunk = sudah.slice(i, i + CHUNK_SIZE);
+      await fetch('/api/simpus?tab=sudah_bagi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chunk)
+      });
+    }
+
+    updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
   } catch (err) {
     updateCloudSyncPill(true, `D1 Active`);
   } finally {
