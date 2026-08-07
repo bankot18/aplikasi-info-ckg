@@ -2478,6 +2478,63 @@ async function deleteAllSimpusData() {
   }
 }
 
+// Helper: Format any date string, ISO date, or Excel date serial integer to YYYY-MM-DD format
+function formatDateToYYYYMMDD(val) {
+  if (val === null || val === undefined || val === '') return '';
+
+  if (val instanceof Date && !isNaN(val.getTime())) {
+    const y = val.getFullYear();
+    const m = String(val.getMonth() + 1).padStart(2, '0');
+    const d = String(val.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  const s = String(val).trim();
+  if (!s) return '';
+
+  // Handle Excel date serial number (e.g. 37067 or "37067")
+  if (!isNaN(s) && Number(s) > 1000 && Number(s) < 100000) {
+    const n = Number(s);
+    const date = new Date(Math.round((n - 25569) * 86400 * 1000));
+    if (!isNaN(date.getTime())) {
+      const y = date.getUTCFullYear();
+      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(date.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+
+  // Handle ISO string e.g. "2026-08-07T14:20:00.000Z"
+  if (s.includes('T')) {
+    const datePart = s.split('T')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart;
+  }
+
+  // Handle standard YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // Handle separators like DD/MM/YYYY or DD-MM-YYYY or YYYY/MM/DD
+  if (s.includes('/') || s.includes('-')) {
+    const sep = s.includes('/') ? '/' : '-';
+    const parts = s.split(sep);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        const y = parts[0];
+        const m = parts[1].padStart(2, '0');
+        const d = parts[2].substring(0, 2).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      } else if (parts[2].substring(0, 4).length === 4) {
+        const d = parts[0].padStart(2, '0');
+        const m = parts[1].padStart(2, '0');
+        const y = parts[2].substring(0, 4);
+        return `${y}-${m}-${d}`;
+      }
+    }
+  }
+
+  return s;
+}
+
 // Helper: Save XLSX workbook as a proper .xlsx download with correct filename
 function saveXlsxFile(wb, filename) {
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -2888,25 +2945,45 @@ function exportSinglePetugasXlsx(petugasName) {
 
   const exportData = records.map((r, i) => ({
     'NO': i + 1,
-    'TANGGAL': r.tanggal,
-    'NAMA PASIEN': r.nama,
-    'NIK': r.nik,
-    'ALAMAT': r.alamat,
-    'TANGGAL LAHIR': r.dob,
-    'USIA': r.usia,
-    'KATEGORI': r.keterangan,
-    'BERAT BADAN (KG)': r.bb,
-    'TINGGI BADAN (CM)': r.tb,
-    'IMT': r.imt,
-    'TD SISTOLIK': r.sistol,
-    'TD DIASTOLIK': r.diastol,
-    'GULA DARAH': r.gula,
-    'KOLESTEROL': r.kolesterol,
-    'STATUS ENTRY': r.entry_status.toUpperCase(),
-    'PETUGAS': r.assigned_to
+    'TANGGAL': formatDateToYYYYMMDD(r.tanggal || r.tanggal_entry || r.created_at),
+    'NAMA PASIEN': r.nama || '',
+    'NIK': r.nik || '',
+    'ALAMAT': r.alamat || '',
+    'TANGGAL LAHIR': formatDateToYYYYMMDD(r.dob || r.tanggal_lahir),
+    'USIA': r.usia || 0,
+    'KATEGORI': r.keterangan || 'Dewasa',
+    'BERAT BADAN (KG)': r.bb || '',
+    'TINGGI BADAN (CM)': r.tb || '',
+    'IMT': r.imt || '',
+    'TD SISTOLIK': r.sistol || '',
+    'TD DIASTOLIK': r.diastol || '',
+    'GULA DARAH': r.gula || '',
+    'KOLESTEROL': r.kolesterol || '',
+    'STATUS ENTRY': (r.entry_status || 'belum').toUpperCase(),
+    'PETUGAS': r.assigned_to || petugasName
   }));
 
   const ws = XLSX.utils.json_to_sheet(exportData);
+  ws['!cols'] = [
+    { wch: 6 },   // NO
+    { wch: 14 },  // TANGGAL (yyyy-mm-dd)
+    { wch: 26 },  // NAMA PASIEN
+    { wch: 18 },  // NIK
+    { wch: 35 },  // ALAMAT
+    { wch: 14 },  // TANGGAL LAHIR (yyyy-mm-dd)
+    { wch: 8 },   // USIA
+    { wch: 12 },  // KATEGORI
+    { wch: 16 },  // BB
+    { wch: 18 },  // TB
+    { wch: 10 },  // IMT
+    { wch: 14 },  // TD SISTOLIK
+    { wch: 14 },  // TD DIASTOLIK
+    { wch: 14 },  // GULA DARAH
+    { wch: 14 },  // KOLESTEROL
+    { wch: 16 },  // STATUS ENTRY
+    { wch: 25 }   // PETUGAS
+  ];
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data Petugas');
 
@@ -2935,25 +3012,45 @@ function exportAllPetugasXlsx() {
     const records = petugasMap[petugas];
     const exportData = records.map((r, i) => ({
       'NO': i + 1,
-      'TANGGAL': r.tanggal,
-      'NAMA PASIEN': r.nama,
-      'NIK': r.nik,
-      'ALAMAT': r.alamat,
-      'TANGGAL LAHIR': r.dob,
-      'USIA': r.usia,
-      'KATEGORI': r.keterangan,
-      'BERAT BADAN (KG)': r.bb,
-      'TINGGI BADAN (CM)': r.tb,
-      'IMT': r.imt,
-      'TD SISTOLIK': r.sistol,
-      'TD DIASTOLIK': r.diastol,
-      'GULA DARAH': r.gula,
-      'KOLESTEROL': r.kolesterol,
-      'STATUS ENTRY': r.entry_status.toUpperCase(),
+      'TANGGAL': formatDateToYYYYMMDD(r.tanggal || r.tanggal_entry || r.created_at),
+      'NAMA PASIEN': r.nama || '',
+      'NIK': r.nik || '',
+      'ALAMAT': r.alamat || '',
+      'TANGGAL LAHIR': formatDateToYYYYMMDD(r.dob || r.tanggal_lahir),
+      'USIA': r.usia || 0,
+      'KATEGORI': r.keterangan || 'Dewasa',
+      'BERAT BADAN (KG)': r.bb || '',
+      'TINGGI BADAN (CM)': r.tb || '',
+      'IMT': r.imt || '',
+      'TD SISTOLIK': r.sistol || '',
+      'TD DIASTOLIK': r.diastol || '',
+      'GULA DARAH': r.gula || '',
+      'KOLESTEROL': r.kolesterol || '',
+      'STATUS ENTRY': (r.entry_status || 'belum').toUpperCase(),
       'PETUGAS': petugas
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
+    ws['!cols'] = [
+      { wch: 6 },   // NO
+      { wch: 14 },  // TANGGAL (yyyy-mm-dd)
+      { wch: 26 },  // NAMA PASIEN
+      { wch: 18 },  // NIK
+      { wch: 35 },  // ALAMAT
+      { wch: 14 },  // TANGGAL LAHIR (yyyy-mm-dd)
+      { wch: 8 },   // USIA
+      { wch: 12 },  // KATEGORI
+      { wch: 16 },  // BB
+      { wch: 18 },  // TB
+      { wch: 10 },  // IMT
+      { wch: 14 },  // TD SISTOLIK
+      { wch: 14 },  // TD DIASTOLIK
+      { wch: 14 },  // GULA DARAH
+      { wch: 14 },  // KOLESTEROL
+      { wch: 16 },  // STATUS ENTRY
+      { wch: 25 }   // PETUGAS
+    ];
+
     const sheetName = petugas.substring(0, 31);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
@@ -2971,26 +3068,47 @@ function exportSimpusXlsx() {
 
   const exportData = simpusRecords.map((r, i) => ({
     'NO': i + 1,
-    'TANGGAL': r.tanggal,
-    'NAMA PASIEN': r.nama,
-    'NIK': r.nik,
-    'ALAMAT': r.alamat,
-    'TANGGAL LAHIR': r.dob,
-    'USIA': r.usia,
-    'KATEGORI': r.keterangan,
-    'BERAT BADAN (KG)': r.bb,
-    'TINGGI BADAN (CM)': r.tb,
-    'IMT': r.imt,
-    'TD SISTOLIK': r.sistol,
-    'TD DIASTOLIK': r.diastol,
-    'GULA DARAH': r.gula,
-    'KOLESTEROL': r.kolesterol,
+    'TANGGAL': formatDateToYYYYMMDD(r.tanggal || r.tanggal_entry || r.created_at),
+    'NAMA PASIEN': r.nama || '',
+    'NIK': r.nik || '',
+    'ALAMAT': r.alamat || '',
+    'TANGGAL LAHIR': formatDateToYYYYMMDD(r.dob || r.tanggal_lahir),
+    'USIA': r.usia || 0,
+    'KATEGORI': r.keterangan || 'Dewasa',
+    'BERAT BADAN (KG)': r.bb || '',
+    'TINGGI BADAN (CM)': r.tb || '',
+    'IMT': r.imt || '',
+    'TD SISTOLIK': r.sistol || '',
+    'TD DIASTOLIK': r.diastol || '',
+    'GULA DARAH': r.gula || '',
+    'KOLESTEROL': r.kolesterol || '',
     'STATUS BAGI': r.is_divided ? 'Sudah Di-Bagi' : 'Belum Di-Bagi',
     'PETUGAS': r.assigned_to || '-',
-    'STATUS ENTRY': r.entry_status.toUpperCase()
+    'STATUS ENTRY': (r.entry_status || 'belum').toUpperCase()
   }));
 
   const ws = XLSX.utils.json_to_sheet(exportData);
+  ws['!cols'] = [
+    { wch: 6 },   // NO
+    { wch: 14 },  // TANGGAL (yyyy-mm-dd)
+    { wch: 26 },  // NAMA PASIEN
+    { wch: 18 },  // NIK
+    { wch: 35 },  // ALAMAT
+    { wch: 14 },  // TANGGAL LAHIR (yyyy-mm-dd)
+    { wch: 8 },   // USIA
+    { wch: 12 },  // KATEGORI
+    { wch: 16 },  // BB
+    { wch: 18 },  // TB
+    { wch: 10 },  // IMT
+    { wch: 14 },  // TD SISTOLIK
+    { wch: 14 },  // TD DIASTOLIK
+    { wch: 14 },  // GULA DARAH
+    { wch: 14 },  // KOLESTEROL
+    { wch: 16 },  // STATUS BAGI
+    { wch: 25 },  // PETUGAS
+    { wch: 16 }   // STATUS ENTRY
+  ];
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data SIMPUS');
 
@@ -4575,7 +4693,7 @@ function exportToXLSX() {
         r.jenis_kegiatan || 'Luar Gedung',
         r.nik || '',
         r.nama || r.nama_pasien || '',
-        r.tanggal_lahir || '',
+        formatDateToYYYYMMDD(r.tanggal_lahir),
         r.usia || 0,
         r.jenis_kelamin || 'L',
         r.no_whatsapp || '',
@@ -4602,7 +4720,7 @@ function exportToXLSX() {
         r.katarak || 'Tidak',
         r.status_validasi || 'Terverifikasi',
         r.created_by || r.petugas_entry || sessionStorage.getItem('ckg_user_name') || 'Admin',
-        r.created_at || r.tanggal_entry || new Date().toISOString().substring(0, 10)
+        formatDateToYYYYMMDD(r.created_at || r.tanggal_entry)
       ]);
 
       const wsData = [headers, ...rows];
