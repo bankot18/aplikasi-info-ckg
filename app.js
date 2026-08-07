@@ -989,6 +989,11 @@ function setupEventListeners() {
     });
   });
 
+  ['dashBulan', 'dashTahun', 'dashKategori', 'dashUmur'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => renderApp());
+  });
+
   const roleSelect = document.getElementById('roleSelect');
   if (roleSelect) {
     roleSelect.addEventListener('change', (e) => {
@@ -1041,7 +1046,7 @@ function setupEventListeners() {
     if (el) el.addEventListener('change', renderTableRecords);
   });
 
-  ['filterSimpusPetugas', 'filterSimpusUmur'].forEach(id => {
+  ['filterSimpusPetugas', 'filterSimpusUmur', 'filterSimpusLimit'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', renderSimpusTableRecords);
   });
@@ -1395,6 +1400,7 @@ function switchSimpusTab(tab) {
   const thPetugas = document.getElementById('thSimpusPetugasEntry');
   const tableViewContainer = document.getElementById('simpusTableViewContainer');
   const cardsViewContainer = document.getElementById('simpusSudahBagiCardsView');
+  const infoBar = document.getElementById('simpusTableInfoBar');
 
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
 
@@ -1407,6 +1413,7 @@ function switchSimpusTab(tab) {
     if (thPetugas) thPetugas.style.display = 'none';
     if (tableViewContainer) tableViewContainer.style.display = 'block';
     if (cardsViewContainer) cardsViewContainer.style.display = 'none';
+    if (infoBar) infoBar.style.display = 'flex';
   } else {
     if (btnBelum) { btnBelum.className = 'simpus-pill-btn'; }
     if (btnSudah) { btnSudah.className = 'simpus-pill-btn active-emerald'; }
@@ -1416,6 +1423,7 @@ function switchSimpusTab(tab) {
     if (thPetugas) thPetugas.style.display = '';
     if (tableViewContainer) tableViewContainer.style.display = 'none';
     if (cardsViewContainer) cardsViewContainer.style.display = 'flex';
+    if (infoBar) infoBar.style.display = 'none';
   }
 
   renderSimpusTableRecords();
@@ -1433,6 +1441,7 @@ function renderSimpusTableRecords() {
 
   const petugasVal = document.getElementById('filterSimpusPetugas')?.value || '';
   const umurVal = document.getElementById('filterSimpusUmur')?.value || '';
+  const limitVal = document.getElementById('filterSimpusLimit')?.value || '10';
 
   // Tab 1: Data Belum Di-Bagi (is_divided === false)
   // Tab 2: Data Sudah Di-Bagi (is_divided === true)
@@ -1460,6 +1469,18 @@ function renderSimpusTableRecords() {
 
   // RENDER 1: TABEL (Khusus Data Belum Di-Bagi)
   if (isBelumBagi) {
+    const totalCount = dataset.length;
+    let displayDataset = dataset;
+    if (limitVal !== 'semua') {
+      const limitNum = parseInt(limitVal) || 10;
+      displayDataset = dataset.slice(0, limitNum);
+    }
+
+    const dispEl = document.getElementById('simpusDisplayedCount');
+    const totEl = document.getElementById('simpusTotalCount');
+    if (dispEl) dispEl.textContent = displayDataset.length.toLocaleString('id-ID');
+    if (totEl) totEl.textContent = totalCount.toLocaleString('id-ID');
+
     if (!containerTable) return;
     if (dataset.length === 0) {
       containerTable.innerHTML = `
@@ -1474,7 +1495,7 @@ function renderSimpusTableRecords() {
       return;
     }
 
-    containerTable.innerHTML = dataset.map((r, i) => {
+    containerTable.innerHTML = displayDataset.map((r, i) => {
       const statusPernikahan = r.status_pernikahan || 'MENIKAH';
       const prov = r.provinsi || 'Jawa Barat';
       const kabKota = r.kab_kota || 'Kab. Bandung';
@@ -2266,8 +2287,10 @@ async function handleSimpusActionGagal(id) {
 function resetSimpusFilters() {
   const p = document.getElementById('filterSimpusPetugas');
   const u = document.getElementById('filterSimpusUmur');
+  const l = document.getElementById('filterSimpusLimit');
   if (p) p.value = '';
   if (u) u.value = '';
+  if (l) l.value = '10';
   renderSimpusTableRecords();
   showToast('Filter SIMPUS telah di-reset.', 'info');
 }
@@ -3346,14 +3369,51 @@ function resetFilters() {
   showToast('Filter telah di-reset.', 'info');
 }
 
-function getOfficerPerformanceData() {
+let currentRekapFilter = 'semua';
+
+function isRecordInMonthYear(r, targetMonth, targetYear) {
+  if (!targetMonth && !targetYear) return true;
+
+  const d = r.created_at || r.tanggal_entry || r.created_date || r.tanggal || r.entry_date || '';
+  if (!d) return true;
+
+  let recMonth = '';
+  let recYear = '';
+
+  if (d.includes('-')) {
+    const parts = d.split('-');
+    if (parts.length >= 2) {
+      recYear = parts[0];
+      recMonth = parts[1].padStart(2, '0');
+    }
+  } else if (d.includes('/')) {
+    const parts = d.split('/');
+    if (parts.length === 3) {
+      recMonth = parts[1].padStart(2, '0');
+      recYear = parts[2].substring(0, 4);
+    }
+  }
+
+  if (targetMonth && recMonth && recMonth !== targetMonth.padStart(2, '0')) return false;
+  if (targetYear && recYear && recYear !== targetYear) return false;
+
+  return true;
+}
+
+function getOfficerPerformanceData(monthFilter = '', yearFilter = '') {
+  const selectedMonth = monthFilter || document.getElementById('dashBulan')?.value || String(new Date().getMonth() + 1).padStart(2, '0');
+  const selectedYear = yearFilter || document.getElementById('dashTahun')?.value || String(new Date().getFullYear());
+
+  const filteredRecords = getVisibleRecords(records).filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
+  const filteredSimpus = simpusRecords.filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
+
   return usersDb.map(u => {
     const name = u.nama_user;
-    const ckgLuar = records.filter(r => (r.petugas_entry === name || r.created_by === name || r.created_by === `petugas_${name}`) && r.jenis_kegiatan === 'Luar Gedung').length;
-    const ckgDalam = records.filter(r => (r.petugas_entry === name || r.created_by === name || r.created_by === `petugas_${name}`) && r.jenis_kegiatan === 'Dalam Gedung').length;
+    const ckgLuar = filteredRecords.filter(r => (r.petugas_entry === name || r.created_by === name || r.created_by === `petugas_${name}`) && r.jenis_kegiatan === 'Luar Gedung').length;
+    const ckgDalam = filteredRecords.filter(r => (r.petugas_entry === name || r.created_by === name || r.created_by === `petugas_${name}`) && r.jenis_kegiatan === 'Dalam Gedung').length;
 
-    const simpusLuar = simpusRecords.filter(r => r.assigned_to === name && (!r.jenis_kegiatan || r.jenis_kegiatan === 'Luar Gedung')).length;
-    const simpusDalam = simpusRecords.filter(r => r.assigned_to === name && r.jenis_kegiatan === 'Dalam Gedung').length;
+    const simpusLuar = filteredSimpus.filter(r => r.assigned_to === name && (!r.jenis_kegiatan || r.jenis_kegiatan === 'Luar Gedung')).length;
+    const simpusDalam = filteredSimpus.filter(r => r.assigned_to === name && r.jenis_kegiatan === 'Dalam Gedung').length;
 
     return {
       nama: name,
@@ -3362,6 +3422,35 @@ function getOfficerPerformanceData() {
       dalamCount: ckgDalam + simpusDalam
     };
   });
+}
+
+function filterRekapitulasi(type) {
+  currentRekapFilter = type;
+
+  const btnSemua = document.getElementById('btnRekapSemua');
+  const btnLuar = document.getElementById('btnRekapLuar');
+  const btnDalam = document.getElementById('btnRekapDalam');
+
+  if (btnSemua) {
+    btnSemua.className = `btn btn-sm ${type === 'semua' ? 'btn-primary' : 'btn-outline-primary'}`;
+    btnSemua.style.background = type === 'semua' ? '' : '#ffffff';
+    btnSemua.style.color = type === 'semua' ? '' : '#3b82f6';
+  }
+  if (btnLuar) {
+    btnLuar.className = `btn btn-sm ${type === 'luar' ? 'btn-primary' : 'btn-outline-primary'}`;
+    btnLuar.style.background = type === 'luar' ? '#0284c7' : '#ffffff';
+    btnLuar.style.color = type === 'luar' ? '#ffffff' : '#0284c7';
+    btnLuar.style.borderColor = '#0284c7';
+  }
+  if (btnDalam) {
+    btnDalam.className = `btn btn-sm ${type === 'dalam' ? 'btn-primary' : 'btn-outline-primary'}`;
+    btnDalam.style.background = type === 'dalam' ? '#059669' : '#ffffff';
+    btnDalam.style.color = type === 'dalam' ? '#ffffff' : '#059669';
+    btnDalam.style.borderColor = '#059669';
+  }
+
+  const officersData = getOfficerPerformanceData();
+  renderOfficerPerformanceTable(officersData);
 }
 
 function renderApp() {
@@ -3389,16 +3478,16 @@ function renderDashboardMetrics(officersData = getOfficerPerformanceData()) {
   });
 
   const totalAll = totalLuar + totalDalam;
-  const targetAchievedCount = officersData.filter(o => (o.luarCount + o.dalamCount) >= 60).length;
+  const targetAchievedCount = officersData.filter(o => (o.luarCount + o.dalamCount) >= 200).length;
 
   const totalEl = document.getElementById('dashTotalEntri');
   const luarEl = document.getElementById('dashLuarGedung');
   const dalamEl = document.getElementById('dashDalamGedung');
   const targetEl = document.getElementById('dashCapaiTarget');
 
-  if (totalEl) totalEl.textContent = totalAll;
-  if (luarEl) luarEl.textContent = totalLuar;
-  if (dalamEl) dalamEl.textContent = totalDalam;
+  if (totalEl) totalEl.textContent = totalAll.toLocaleString('id-ID');
+  if (luarEl) luarEl.textContent = totalLuar.toLocaleString('id-ID');
+  if (dalamEl) dalamEl.textContent = totalDalam.toLocaleString('id-ID');
   if (targetEl) targetEl.textContent = `${targetAchievedCount} / ${officersData.length}`;
 
   updateTotalEntryMonthMetric();
@@ -3434,22 +3523,29 @@ function updateTotalEntryMonthMetric() {
   totalEl.textContent = monthRecords.length;
 }
 
-
-
 function renderOfficerPerformanceTable(officersData = getOfficerPerformanceData()) {
   const tbody = document.getElementById('officerPerformanceTableBody');
   if (!tbody) return;
 
   const targetMin = 200;
+  let displayData = [...officersData];
 
-  tbody.innerHTML = officersData.map((o, index) => {
+  if (currentRekapFilter === 'luar') {
+    displayData.sort((a, b) => b.luarCount - a.luarCount);
+  } else if (currentRekapFilter === 'dalam') {
+    displayData.sort((a, b) => b.dalamCount - a.dalamCount);
+  } else {
+    displayData.sort((a, b) => (b.luarCount + b.dalamCount) - (a.luarCount + a.dalamCount));
+  }
+
+  tbody.innerHTML = displayData.map((o, index) => {
     const total = o.luarCount + o.dalamCount;
     const pctLuar = Math.round((o.luarCount / targetMin) * 100);
     const pctDalam = Math.round((o.dalamCount / targetMin) * 100);
 
     return `
       <tr>
-        <td>${index + 1}</td>
+        <td style="text-align: center; font-weight: 700; color: #475569;">${index + 1}</td>
         <td><strong>${o.nama}</strong></td>
         <td>
           <div class="progress-cell">
@@ -5780,6 +5876,12 @@ const NIK_KAB_JABAR_MAP = {
   '77': 'KOTA CIMAHI', '78': 'KOTA TASIKMALAYA', '79': 'KOTA BANJAR'
 };
 
+const NIK_KEC_BANDUNG_MAP = {
+  '05': 'Banjaran', '13': 'Banjaran', '11': 'Arjasari', '12': 'Pameungpeuk',
+  '14': 'Cangkuang', '15': 'Soreang', '16': 'Katapang', '17': 'Cimaung',
+  '28': 'Baleendah', '29': 'Dayeuhkolot', '30': 'Margahayu', '31': 'Margaasih'
+};
+
 function parseNikIndonesia(nik, namaInput = '') {
   if (!nik || nik.length !== 16 || isNaN(nik)) {
     return { valid: false, message: 'Format NIK tidak valid (harus 16 digit angka)' };
@@ -5832,8 +5934,11 @@ function parseNikIndonesia(nik, namaInput = '') {
     kabName = `KAB/KOTA (KODE ${provCode}.${kabCode})`;
   }
 
-  // Kecamatan
-  const kecName = `KECAMATAN (KODE ${kecCode})`;
+  // Kecamatan lookup
+  let kecName = `KECAMATAN (KODE ${kecCode})`;
+  if (provCode === '32' && kabCode === '04' && NIK_KEC_BANDUNG_MAP[kecCode]) {
+    kecName = NIK_KEC_BANDUNG_MAP[kecCode];
+  }
 
   return {
     valid: true,

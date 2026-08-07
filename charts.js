@@ -12,14 +12,18 @@ function initDashboardCharts(officers = []) {
   Chart.defaults.color = '#64748b';
   Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
 
-  // Officer Names
-  const labels = officers.map(o => o.nama);
-  const luarData = officers.map(o => o.luarCount);
-  const dalamData = officers.map(o => o.dalamCount);
+  // Sort officers by total entries descending and take Top 10 for Bar Chart
+  const sortedOfficers = [...officers].sort((a, b) => (b.luarCount + b.dalamCount) - (a.luarCount + a.dalamCount));
+  const top10Officers = sortedOfficers.slice(0, 10);
 
-  // Total Luar vs Dalam for Doughnut
-  const totalLuar = luarData.reduce((a, b) => a + b, 0);
-  const totalDalam = dalamData.reduce((a, b) => a + b, 0);
+  // Top 10 Officer Labels & Data
+  const labels = top10Officers.map(o => o.nama);
+  const luarData = top10Officers.map(o => o.luarCount);
+  const dalamData = top10Officers.map(o => o.dalamCount);
+
+  // Total Luar vs Dalam for Doughnut (All officers)
+  const totalLuar = officers.reduce((a, b) => a + b.luarCount, 0);
+  const totalDalam = officers.reduce((a, b) => a + b.dalamCount, 0);
 
   // 1. Grouped Bar Chart (Produktivitas Entri Petugas Puskesmas)
   if (productivityChartInstance) productivityChartInstance.destroy();

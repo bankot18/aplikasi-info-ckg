@@ -797,12 +797,15 @@ export default {
 
         const provinsi = PROV_MAP[provCode] || `PROVINSI (KODE ${provCode})`;
         let kabupaten;
-        if (provCode === '32') {
-          kabupaten = KAB_JABAR[kabCode] || `KAB/KOTA JABAR (KODE ${kabCode})`;
-        } else {
-          kabupaten = `KAB/KOTA (KODE ${provCode}.${kabCode})`;
+        const KEC_BANDUNG = {
+          '05': 'Banjaran', '13': 'Banjaran', '11': 'Arjasari', '12': 'Pameungpeuk',
+          '14': 'Cangkuang', '15': 'Soreang', '16': 'Katapang', '17': 'Cimaung',
+          '28': 'Baleendah', '29': 'Dayeuhkolot', '30': 'Margahayu', '31': 'Margaasih'
+        };
+        let kecamatan = `KECAMATAN (KODE ${kecCode})`;
+        if (provCode === '32' && kabCode === '04' && KEC_BANDUNG[kecCode]) {
+          kecamatan = KEC_BANDUNG[kecCode];
         }
-        const kecamatan = `KECAMATAN (KODE ${kecCode})`;
 
         return {
           valid: true,
@@ -812,7 +815,7 @@ export default {
           tanggalLahir,
           usia,
           jenisKelamin,
-          alamat: `${kabupaten}, ${provinsi}`,
+          alamat: `${kecamatan}, ${kabupaten}, ${provinsi}`,
           kecamatan,
           kelurahan: '-',
           provinsi,
