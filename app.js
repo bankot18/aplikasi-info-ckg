@@ -3416,23 +3416,42 @@ let currentRekapFilter = 'semua';
 function isRecordInMonthYear(r, targetMonth, targetYear) {
   if (!targetMonth && !targetYear) return true;
 
-  const d = r.created_at || r.tanggal_entry || r.created_date || r.tanggal || r.entry_date || '';
-  if (!d) return true;
+  const rawDate = r.created_at || r.tanggal_entry || r.created_date || r.tanggal || r.entry_date || '';
+  if (!rawDate) return true;
 
   let recMonth = '';
   let recYear = '';
 
-  if (d.includes('-')) {
-    const parts = d.split('-');
+  const dStr = String(rawDate).trim();
+
+  if (dStr.includes('T')) {
+    const datePart = dStr.split('T')[0];
+    const parts = datePart.split('-');
     if (parts.length >= 2) {
       recYear = parts[0];
       recMonth = parts[1].padStart(2, '0');
     }
-  } else if (d.includes('/')) {
-    const parts = d.split('/');
+  } else if (dStr.includes('-')) {
+    const parts = dStr.split('-');
     if (parts.length === 3) {
-      recMonth = parts[1].padStart(2, '0');
-      recYear = parts[2].substring(0, 4);
+      if (parts[0].length === 4) {
+        recYear = parts[0];
+        recMonth = parts[1].padStart(2, '0');
+      } else {
+        recMonth = parts[1].padStart(2, '0');
+        recYear = parts[2].substring(0, 4);
+      }
+    }
+  } else if (dStr.includes('/')) {
+    const parts = dStr.split('/');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        recYear = parts[0];
+        recMonth = parts[1].padStart(2, '0');
+      } else {
+        recMonth = parts[1].padStart(2, '0');
+        recYear = parts[2].substring(0, 4);
+      }
     }
   }
 
@@ -3442,9 +3461,12 @@ function isRecordInMonthYear(r, targetMonth, targetYear) {
   return true;
 }
 
-function getOfficerPerformanceData(monthFilter = '', yearFilter = '') {
-  const selectedMonth = monthFilter || document.getElementById('dashBulan')?.value || String(new Date().getMonth() + 1).padStart(2, '0');
-  const selectedYear = yearFilter || document.getElementById('dashTahun')?.value || String(new Date().getFullYear());
+function getOfficerPerformanceData(monthFilter = null, yearFilter = null) {
+  const mSelect = document.getElementById('dashBulan');
+  const ySelect = document.getElementById('dashTahun');
+
+  const selectedMonth = monthFilter !== null ? monthFilter : (mSelect ? mSelect.value : String(new Date().getMonth() + 1).padStart(2, '0'));
+  const selectedYear = yearFilter !== null ? yearFilter : (ySelect ? ySelect.value : String(new Date().getFullYear()));
 
   const filteredRecords = getVisibleRecords(records).filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
   const filteredSimpus = simpusRecords.filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
@@ -3472,6 +3494,7 @@ function filterRekapitulasi(type) {
   const btnSemua = document.getElementById('btnRekapSemua');
   const btnLuar = document.getElementById('btnRekapLuar');
   const btnDalam = document.getElementById('btnRekapDalam');
+  const thTotal = document.getElementById('thTotalEntriRekap');
 
   if (btnSemua) {
     btnSemua.className = `btn btn-sm ${type === 'semua' ? 'btn-primary' : 'btn-outline-primary'}`;
@@ -3489,6 +3512,12 @@ function filterRekapitulasi(type) {
     btnDalam.style.background = type === 'dalam' ? '#059669' : '#ffffff';
     btnDalam.style.color = type === 'dalam' ? '#ffffff' : '#059669';
     btnDalam.style.borderColor = '#059669';
+  }
+
+  if (thTotal) {
+    if (type === 'luar') thTotal.textContent = 'Total Luar';
+    else if (type === 'dalam') thTotal.textContent = 'Total Dalam';
+    else thTotal.textContent = 'Total Entri';
   }
 
   const officersData = getOfficerPerformanceData();
@@ -3542,27 +3571,12 @@ function updateTotalEntryMonthMetric() {
   const now = new Date();
   const yearStr = now.getFullYear().toString();
   const monthStr = String(now.getMonth() + 1).padStart(2, '0');
-  const currentYM = `${yearStr}-${monthStr}`;
 
+  // Count ONLY records from Data Record CKG (getVisibleRecords(records)) for the current calendar month
   const visibleRecords = getVisibleRecords(records);
-  
-  // Count records filled for Luar Gedung and Dalam Gedung in current month
-  const monthRecords = visibleRecords.filter(r => {
-    const d = r.created_at || r.tanggal_entry || r.created_date || '';
-    if (!d) return true; // default include if date unset
-    if (d.startsWith(currentYM)) return true;
-    if (d.includes('/')) {
-      const parts = d.split('/');
-      if (parts.length === 3) {
-        const m = parts[1].padStart(2, '0');
-        const y = parts[2];
-        return `${y}-${m}` === currentYM;
-      }
-    }
-    return false;
-  });
+  const currentMonthRecords = visibleRecords.filter(r => isRecordInMonthYear(r, monthStr, yearStr));
 
-  totalEl.textContent = monthRecords.length;
+  totalEl.textContent = currentMonthRecords.length.toLocaleString('id-ID');
 }
 
 function renderOfficerPerformanceTable(officersData = getOfficerPerformanceData()) {
@@ -3581,9 +3595,13 @@ function renderOfficerPerformanceTable(officersData = getOfficerPerformanceData(
   }
 
   tbody.innerHTML = displayData.map((o, index) => {
-    const total = o.luarCount + o.dalamCount;
+    let displayTotal = o.luarCount + o.dalamCount;
+    if (currentRekapFilter === 'luar') displayTotal = o.luarCount;
+    if (currentRekapFilter === 'dalam') displayTotal = o.dalamCount;
+
     const pctLuar = Math.round((o.luarCount / targetMin) * 100);
     const pctDalam = Math.round((o.dalamCount / targetMin) * 100);
+    const valColor = currentRekapFilter === 'luar' ? '#0284c7' : (currentRekapFilter === 'dalam' ? '#059669' : 'var(--primary)');
 
     return `
       <tr>
@@ -3606,7 +3624,7 @@ function renderOfficerPerformanceTable(officersData = getOfficerPerformanceData(
           </div>
         </td>
         <td style="text-align: right;">
-          <strong style="font-size: 14px; color: var(--primary);">${total}</strong>
+          <strong style="font-size: 14px; color: ${valColor};">${displayTotal.toLocaleString('id-ID')}</strong>
         </td>
       </tr>
     `;
