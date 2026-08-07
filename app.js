@@ -995,6 +995,15 @@ function setupEventListeners() {
     });
   });
 
+  const now = new Date();
+  const currentMonthStr = String(now.getMonth() + 1).padStart(2, '0');
+  const currentYearStr = String(now.getFullYear());
+
+  const dashBulanEl = document.getElementById('dashBulan');
+  const dashTahunEl = document.getElementById('dashTahun');
+  if (dashBulanEl && !dashBulanEl.value) dashBulanEl.value = currentMonthStr;
+  if (dashTahunEl && !dashTahunEl.value) dashTahunEl.value = currentYearStr;
+
   ['dashBulan', 'dashTahun', 'dashKategori', 'dashUmur'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', () => renderApp());
@@ -1384,7 +1393,7 @@ function renderSimpusView() {
 
   if (countBelumEl) countBelumEl.textContent = belumBagiCount;
   if (countSudahEl) countSudahEl.textContent = sudahBagiCount;
-  if (totalEntryEl) totalEntryEl.textContent = isPrivileged ? simpusRecords.length : (belumBagiCount + sudahBagiCount);
+  updateTotalEntryMonthMetric();
 
   // Sync petugas column header visibility based on active tab
   const thPetugas = document.getElementById('thSimpusPetugasEntry');
@@ -3242,14 +3251,31 @@ function prevWizardStep() {
   }
 }
 
-function openInputModal(kategori = 'Luar Gedung') {
-  currentEditingId = null;
-  document.getElementById('ckgForm').reset();
+function openInputModal(kategori = 'Luar Gedung', isEdit = false) {
+  if (!isEdit) {
+    currentEditingId = null;
+    document.getElementById('ckgForm').reset();
+  }
   
   if (kategori === 'Dalam Gedung') {
     document.getElementById('kegiatan_dalam').checked = true;
   } else {
     document.getElementById('kegiatan_luar').checked = true;
+  }
+
+  const titleEl = document.getElementById('inputModalTitle');
+  const btnSubmit = document.getElementById('btnWizardSubmit');
+
+  if (titleEl) {
+    titleEl.innerHTML = isEdit
+      ? '<i class="bi bi-pencil-square" style="color: var(--primary);"></i> Edit Data Record CKG Pasien'
+      : '<i class="bi bi-file-earmark-medical-fill" style="color: var(--primary);"></i> Form Input Data CKG Pasien Baru';
+  }
+
+  if (btnSubmit) {
+    btnSubmit.innerHTML = isEdit
+      ? '<i class="bi bi-check-circle-fill"></i> Simpan Perubahan Data'
+      : '<i class="bi bi-check-circle-fill"></i> Simpan Data CKG';
   }
 
   calculateIMT();
@@ -3582,7 +3608,7 @@ function getOfficerPerformanceData(monthFilter = null, yearFilter = null) {
   const selectedMonth = monthFilter !== null ? monthFilter : (mSelect ? mSelect.value : String(new Date().getMonth() + 1).padStart(2, '0'));
   const selectedYear = yearFilter !== null ? yearFilter : (ySelect ? ySelect.value : String(new Date().getFullYear()));
 
-  const filteredRecords = getVisibleRecords(records).filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
+  const filteredRecords = records.filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
 
   return usersDb.map(u => {
     const name = u.nama_user;
@@ -3672,6 +3698,107 @@ function renderDashboardMetrics(officersData = getOfficerPerformanceData()) {
   if (targetEl) targetEl.textContent = `${targetAchievedCount} / ${officersData.length}`;
 
   updateTotalEntryMonthMetric();
+  renderTop3Leaderboard(officersData);
+}
+
+function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
+  const container = document.getElementById('top3RankContainer');
+  if (!container) return;
+
+  const sorted = [...officersData].map(o => ({
+    ...o,
+    total: o.luarCount + o.dalamCount
+  })).sort((a, b) => b.total - a.total);
+
+  const top3 = sorted.slice(0, 3);
+
+  const ranksConfig = [
+    {
+      rank: 1,
+      title: 'JUARA 1',
+      medal: '🥇',
+      bgGradient: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)',
+      borderColor: '#f59e0b',
+      badgeBg: '#f59e0b',
+      badgeColor: '#ffffff',
+      textColor: '#92400e',
+      shadow: '0 8px 20px rgba(245, 158, 11, 0.2)'
+    },
+    {
+      rank: 2,
+      title: 'JUARA 2',
+      medal: '🥈',
+      bgGradient: 'linear-gradient(135deg, #f1f5f9 0%, #f8fafc 100%)',
+      borderColor: '#94a3b8',
+      badgeBg: '#64748b',
+      badgeColor: '#ffffff',
+      textColor: '#334155',
+      shadow: '0 6px 16px rgba(100, 116, 139, 0.15)'
+    },
+    {
+      rank: 3,
+      title: 'JUARA 3',
+      medal: '🥉',
+      bgGradient: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)',
+      borderColor: '#ea580c',
+      badgeBg: '#ea580c',
+      badgeColor: '#ffffff',
+      textColor: '#9a3412',
+      shadow: '0 6px 16px rgba(234, 88, 12, 0.15)'
+    }
+  ];
+
+  if (top3.length === 0 || sorted.every(o => o.total === 0)) {
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 28px; color: #94a3b8; font-size: 13px;">
+        <i class="bi bi-trophy" style="font-size: 32px; display: block; margin-bottom: 6px; color: #cbd5e1;"></i>
+        Belum ada data entri petugas pada periode bulan ini.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = top3.map((o, idx) => {
+    const conf = ranksConfig[idx] || ranksConfig[2];
+    const initials = (o.nama || 'P').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+    return `
+      <div style="background: ${conf.bgGradient}; border: 2px solid ${conf.borderColor}; border-radius: 12px; padding: 16px; box-shadow: ${conf.shadow}; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span style="background: ${conf.badgeBg}; color: ${conf.badgeColor}; font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;">
+            <span>${conf.medal}</span> ${conf.title} (RANK ${conf.rank})
+          </span>
+          <span style="font-size: 26px;">${conf.medal}</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+          <div style="width: 44px; height: 44px; border-radius: 50%; background: #ffffff; color: ${conf.borderColor}; border: 2px solid ${conf.borderColor}; font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+            ${initials}
+          </div>
+          <div style="overflow: hidden;">
+            <div style="font-size: 15px; font-weight: 800; color: ${conf.textColor}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${o.nama}">
+              ${o.nama}
+            </div>
+            <div style="font-size: 11.5px; color: #64748b; font-weight: 600;">
+              ${o.role || 'Petugas Input'}
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #ffffff; border-radius: 8px; padding: 8px 12px; border: 1px solid ${conf.borderColor}40; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block;">Total Entri Bulan Ini</span>
+            <span style="font-size: 11.5px; color: #475569;">
+              📍 Luar: <strong>${o.luarCount}</strong> | 🏢 Dalam: <strong>${o.dalamCount}</strong>
+            </span>
+          </div>
+          <span style="font-size: 19px; font-weight: 900; color: ${conf.borderColor}; font-family: monospace;">
+            ${o.total.toLocaleString('id-ID')}
+          </span>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function updateTotalEntryMonthMetric() {
@@ -3682,9 +3809,21 @@ function updateTotalEntryMonthMetric() {
   const yearStr = now.getFullYear().toString();
   const monthStr = String(now.getMonth() + 1).padStart(2, '0');
 
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const loggedUser = (sessionStorage.getItem('ckg_user_name') || '').trim().toLowerCase();
+  const isPrivileged = (role === 'admin' || role === 'koordinator');
+
   // Count ONLY records from Data Record CKG (getVisibleRecords(records)) for the current calendar month
-  const visibleRecords = getVisibleRecords(records);
-  const currentMonthRecords = visibleRecords.filter(r => isRecordInMonthYear(r, monthStr, yearStr));
+  let currentMonthRecords = getVisibleRecords(records).filter(r => isRecordInMonthYear(r, monthStr, yearStr));
+
+  // If user is 'Petugas', count strictly their own entries (per user) for the active month
+  if (!isPrivileged && loggedUser) {
+    currentMonthRecords = currentMonthRecords.filter(r => {
+      const pEntry = (r.petugas_entry || '').toLowerCase().trim();
+      const cBy = (r.created_by || '').toLowerCase().trim();
+      return pEntry === loggedUser || pEntry.includes(loggedUser) || cBy === loggedUser || cBy === `petugas_${loggedUser}`;
+    });
+  }
 
   totalEl.textContent = currentMonthRecords.length.toLocaleString('id-ID');
 }
@@ -4626,31 +4765,42 @@ function editRecord(id) {
   const r = records.find(item => item.id === id);
   if (!r) return;
 
+  openInputModal(r.jenis_kegiatan, true);
   currentEditingId = id;
-  openInputModal(r.jenis_kegiatan);
 
-  document.getElementById('pos_lokasi').value = r.pos_lokasi || '';
-  document.getElementById('nik').value = r.nik;
-  document.getElementById('nama').value = r.nama;
-  document.getElementById('tanggal_lahir').value = r.tanggal_lahir;
-  document.getElementById('usia').value = r.usia;
-  document.getElementById('jenis_kelamin').value = r.jenis_kelamin;
-  document.getElementById('no_whatsapp').value = r.no_whatsapp || '';
-  document.getElementById('status_pernikahan').value = r.status_pernikahan;
-  document.getElementById('alamat').value = r.alamat;
-  document.getElementById('pekerjaan').value = r.pekerjaan || '';
-  document.getElementById('bb').value = r.bb;
-  document.getElementById('tb').value = r.tb;
-  document.getElementById('lp').value = r.lp || '';
-  document.getElementById('imt').value = r.imt;
-  document.getElementById('td_sistolik').value = r.td_sistolik;
-  document.getElementById('td_diastolik').value = r.td_diastolik;
-  document.getElementById('gula_darah').value = r.gula_darah;
-  document.getElementById('kolesterol').value = r.kolesterol;
-  document.getElementById('hb').value = r.hb;
-  document.getElementById('telinga').value = r.telinga;
-  document.getElementById('mata').value = r.mata;
-  document.getElementById('gigi').value = r.gigi;
+  const setVal = (fieldId, val) => {
+    const el = document.getElementById(fieldId);
+    if (el) el.value = val !== undefined && val !== null ? val : '';
+  };
+
+  setVal('pos_lokasi', r.pos_lokasi);
+  setVal('nik', r.nik);
+  setVal('nama', r.nama);
+  setVal('tanggal_lahir', r.tanggal_lahir);
+  setVal('usia', r.usia);
+  setVal('jenis_kelamin', r.jenis_kelamin || 'L');
+  setVal('no_whatsapp', r.no_whatsapp);
+  setVal('status_pernikahan', r.status_pernikahan || 'MENIKAH');
+  setVal('alamat', r.alamat);
+  setVal('kelurahan', r.kelurahan || 'Banjaran Kota');
+  setVal('kecamatan', r.kecamatan || 'Banjaran');
+  setVal('kab_kota', r.kab_kota || 'Kab. Bandung');
+  setVal('provinsi', r.provinsi || 'Jawa Barat');
+  setVal('pekerjaan', r.pekerjaan);
+  setVal('merokok', r.merokok || 'Tidak');
+  setVal('bb', r.bb);
+  setVal('tb', r.tb);
+  setVal('lp', r.lp);
+  setVal('imt', r.imt);
+  setVal('td_sistolik', r.td_sistolik);
+  setVal('td_diastolik', r.td_diastolik);
+  setVal('gula_darah', r.gula_darah);
+  setVal('kolesterol', r.kolesterol);
+  setVal('hb', r.hb);
+  setVal('telinga', r.telinga || 'Normal');
+  setVal('mata', r.mata || 'Normal');
+  setVal('gigi', r.gigi || 'Baik');
+  setVal('katarak', r.katarak || 'Tidak');
 
   calculateIMT();
 }
