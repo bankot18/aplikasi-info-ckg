@@ -2124,3 +2124,189 @@ html {
   font-weight: 600;
   color: #94a3b8;
 }
+
+/* ==========================================================================
+   ✨ PREMIUM & STYLISH SWEETALERT2 MODAL CUSTOM THEME
+   ========================================================================== */
+
+.swal2-container {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+}
+
+.swal2-popup {
+  border-radius: 24px !important;
+  padding: 32px 28px 28px 28px !important;
+  background: #ffffff !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.9) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+.swal2-title {
+  font-size: 21px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin-bottom: 10px !important;
+  letter-spacing: -0.3px !important;
+}
+
+.swal2-html-container {
+  font-size: 13.5px !important;
+  color: #64748b !important;
+  line-height: 1.6 !important;
+  margin-top: 6px !important;
+}
+
+.swal2-icon {
+  margin: 8px auto 20px auto !important;
+  border-width: 3px !important;
+  scale: 1.1;
+}
+
+.swal2-icon.swal2-question {
+  border-color: #f59e0b !important;
+  color: #d97706 !important;
+  background: #fef3c7 !important;
+}
+
+.swal2-icon.swal2-success {
+  border-color: #10b981 !important;
+  color: #059669 !important;
+  background: #ecfdf5 !important;
+}
+
+.swal2-icon.swal2-error {
+  border-color: #f43f5e !important;
+  color: #e11d48 !important;
+  background: #fff1f2 !important;
+}
+
+.swal2-icon.swal2-info {
+  border-color: #3b82f6 !important;
+  color: #2563eb !important;
+  background: #eff6ff !important;
+}
+
+.swal2-icon.swal2-warning {
+  border-color: #f59e0b !important;
+  color: #b45309 !important;
+  background: #fffbeb !important;
+}
+
+.swal2-actions {
+  margin-top: 24px !important;
+  gap: 12px !important;
+}
+
+.swal2-styled {
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  padding: 10px 24px !important;
+  letter-spacing: 0.2px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+.swal2-styled.swal2-confirm {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.swal2-styled.swal2-confirm:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
+}
+
+.swal2-styled.swal2-cancel {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.swal2-styled.swal2-cancel:hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Custom danger confirm button for delete/logout */
+.custom-swal-confirm-danger {
+  background: linear-gradient(135deg, #e11d48, #be123c) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  padding: 10px 24px !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.25) !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.custom-swal-confirm-danger:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 20px rgba(225, 29, 72, 0.4) !important;
+}
+
+.custom-swal-cancel {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  padding: 10px 24px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.custom-swal-cancel:hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Toast Notifications Custom Styling */
+.swal2-toast {
+  border-radius: 16px !important;
+  padding: 12px 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(226, 232, 240, 0.9) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+.swal2-toast .swal2-title {
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+}
+
+.swal2-toast .swal2-icon {
+  margin: 0 10px 0 0 !important;
+  scale: 0.95;
+}
+
+/* Inputs, Selects & Textareas inside Swal Modals */
+.swal2-input, .swal2-select, .swal2-textarea {
+  border-radius: 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 13.5px !important;
+  padding: 10px 14px !important;
+  transition: all 0.2s ease !important;
+}
+
+.swal2-input:focus, .swal2-select:focus, .swal2-textarea:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}

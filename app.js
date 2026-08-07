@@ -912,13 +912,22 @@ function handleLogout() {
   if (typeof Swal !== 'undefined') {
     Swal.fire({
       title: 'Keluar dari Sistem?',
-      text: 'Apakah Anda yakin ingin keluar dari aplikasi CKG?',
-      icon: 'question',
+      html: `
+        <div style="text-align: center; padding: 4px 0 6px 0;">
+          <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #ffe4e6, #fecdd3); color: #e11d48; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 12px; box-shadow: 0 6px 16px rgba(225, 29, 72, 0.2);">
+            <i class="bi bi-power"></i>
+          </div>
+          <p style="font-size: 13.5px; color: #64748b; margin: 0; line-height: 1.5;">Apakah Anda yakin ingin mengakhiri sesi dan keluar dari aplikasi <strong>CKG Puskesmas Banjaran Kota</strong>?</p>
+        </div>
+      `,
       showCancelButton: true,
-      confirmButtonColor: '#dc2626',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Ya, Keluar',
-      cancelButtonText: 'Batal'
+      confirmButtonText: '<i class="bi bi-box-arrow-right"></i> Ya, Keluar',
+      cancelButtonText: '<i class="bi bi-x-circle"></i> Batal',
+      customClass: {
+        confirmButton: 'custom-swal-confirm-danger',
+        cancelButton: 'custom-swal-cancel'
+      },
+      buttonsStyling: false
     }).then((result) => {
       if (result.isConfirmed) {
         sendUserHeartbeat('offline');
