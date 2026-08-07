@@ -1539,94 +1539,80 @@ function renderSimpusTableRecords() {
     }).join('');
 
   } else {
-    // RENDER 2: CARD LIST VIEW (Khusus Data Sudah Di-Bagi)
+    // RENDER 2: CARD LIST VIEW (Khusus Data Sudah Di-Bagi - Modern Compact View)
     if (!containerCards) return;
+
+    const totalCount = dataset.length;
+    let displayDataset = dataset;
+    if (limitVal !== 'semua') {
+      const limitNum = parseInt(limitVal) || 10;
+      displayDataset = dataset.slice(0, limitNum);
+    }
+
+    const dispEl = document.getElementById('simpusDisplayedCount');
+    const totEl = document.getElementById('simpusTotalCount');
+    if (dispEl) dispEl.textContent = displayDataset.length.toLocaleString('id-ID');
+    if (totEl) totEl.textContent = totalCount.toLocaleString('id-ID');
+
     if (dataset.length === 0) {
       containerCards.innerHTML = `
-        <div style="text-align: center; padding: 50px 20px; color: var(--text-muted); background: #ffffff; border-radius: var(--radius-md); border: 1px solid var(--border-color); width: 100%;">
-          <i class="bi bi-inbox" style="font-size: 42px; color: #94a3b8; display: block; margin-bottom: 10px;"></i>
-          <strong style="font-size: 16px; color: var(--text-main);">Tidak Ada Data Pasien (Sudah Di-Bagi)</strong>
-          <p style="font-size: 13px; margin-top: 4px;">Belum ada data yang dibagikan atau tidak ada data yang cocok dengan filter saat ini.</p>
+        <div style="text-align: center; padding: 40px 20px; color: var(--text-muted); background: #ffffff; border-radius: var(--radius-md); border: 1px solid var(--border-color); width: 100%;">
+          <i class="bi bi-inbox" style="font-size: 36px; color: #94a3b8; display: block; margin-bottom: 8px;"></i>
+          <strong style="font-size: 15px; color: var(--text-main);">Tidak Ada Data Pasien (Sudah Di-Bagi)</strong>
+          <p style="font-size: 12.5px; margin-top: 4px;">Belum ada data yang dibagikan atau tidak ada data yang cocok dengan filter saat ini.</p>
         </div>
       `;
       return;
     }
 
-    containerCards.innerHTML = dataset.map((r, i) => {
+    containerCards.innerHTML = displayDataset.map((r, i) => {
       const petugasName = r.petugas_entry || r.assigned_to || '-';
       const recId = r.id || r.nik;
       const safeRecId = escapeAttr(recId);
       const safeNik = escapeAttr(r.nik);
-      const initials = (r.nama || 'P').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
       const kel = r.kelurahan || 'Tarajusari';
 
       return `
-        <div class="simpus-patient-card" style="border-left: 4px solid var(--primary);">
-          <!-- Card Header -->
-          <div class="simpus-card-header">
-            <div class="simpus-patient-name-box">
-              <div class="simpus-avatar-icon">
-                ${initials}
-              </div>
-              <div>
-                <div class="simpus-patient-name" style="cursor: pointer; color: var(--primary); display: inline-flex; align-items: center; gap: 8px;" onclick="openSimpusDetailModal('${safeRecId}')" title="Klik Nama untuk Buka Detail & Copy Data">
-                  <span>${i + 1}. ${r.nama}</span>
-                  <i class="bi bi-box-arrow-up-right" style="font-size: 13px; color: var(--primary); opacity: 0.85;"></i>
-                </div>
-                <div class="simpus-patient-subtext" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px; align-items: center;">
-                  <span class="copyable-field-sm" onclick="copyToClipboard('${safeNik}', 'NIK Pasien')" style="cursor: pointer; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: 700; color: #1e293b;" title="Klik untuk Salin NIK">
-                    <i class="bi bi-card-text"></i> NIK: <strong style="font-family: monospace;">${r.nik}</strong> <i class="bi bi-copy" style="font-size: 11px; color: var(--primary); margin-left: 4px;"></i>
-                  </span>
-                  <span style="font-size: 12px; color: var(--text-muted);">
-                    <i class="bi bi-calendar"></i> Tgl Lahir: ${r.dob || '-'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="simpus-card-tags">
-              <span class="badge badge-purple" style="font-weight: 700; padding: 6px 12px; font-size: 12px;">
-                <i class="bi bi-person-fill"></i> ${petugasName}
+        <div class="simpus-patient-card-compact" style="border-left: 4px solid var(--primary); background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+          <!-- Top Row: Name, NIK, Age, Petugas & Quick Actions -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-weight: 800; font-size: 13.5px; color: #475569; min-width: 24px;">${i + 1}.</span>
+              <span style="font-size: 15px; font-weight: 800; color: var(--primary); cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" onclick="openSimpusDetailModal('${safeRecId}')" title="Klik untuk Buka Detail & Copy Data">
+                ${r.nama} <i class="bi bi-box-arrow-up-right" style="font-size: 11px; opacity: 0.85;"></i>
               </span>
-              <span class="badge badge-amber" style="padding: 6px 10px; font-size: 12px;">
+              <span class="copyable-field-sm" onclick="copyToClipboard('${safeNik}', 'NIK Pasien')" style="cursor: pointer; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 11.5px; font-weight: 700; color: #1e293b;" title="Klik untuk Salin NIK">
+                <i class="bi bi-card-text"></i> NIK: <strong style="font-family: monospace;">${r.nik}</strong> <i class="bi bi-copy" style="font-size: 10px; color: var(--primary); margin-left: 3px;"></i>
+              </span>
+              <span class="badge badge-amber" style="padding: 3px 8px; font-size: 11px; font-weight: 700;">
                 ${r.usia} th (${r.keterangan || 'Dewasa'})
               </span>
             </div>
-          </div>
 
-          <!-- Summary Grid -->
-          <div class="simpus-card-body-summary">
-            <div class="simpus-info-item">
-              <span class="simpus-info-label">Alamat Lengkap</span>
-              <span class="simpus-info-val" style="white-space: normal;">${r.alamat || '-'}, ${kel}</span>
-            </div>
-            <div class="simpus-info-item">
-              <span class="simpus-info-label">Tekanan Darah (TD)</span>
-              <span class="simpus-info-val"><i class="bi bi-activity" style="color: var(--rose);"></i> ${r.sistol}/${r.diastol} mmHg</span>
-            </div>
-            <div class="simpus-info-item">
-              <span class="simpus-info-label">BB / TB / IMT</span>
-              <span class="simpus-info-val"><i class="bi bi-person-bounding-box" style="color: var(--emerald);"></i> ${r.bb}kg / ${r.tb}cm (${r.imt})</span>
-            </div>
-            <div class="simpus-info-item">
-              <span class="simpus-info-label">Gula / Kolesterol</span>
-              <span class="simpus-info-val"><i class="bi bi-droplet-fill" style="color: var(--cyan);"></i> Gula: ${r.gula || '-'} | Kol: ${r.kolesterol || '-'}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge badge-purple" style="font-weight: 700; padding: 4px 10px; font-size: 11.5px;">
+                <i class="bi bi-person-fill"></i> ${petugasName}
+              </span>
+              <button class="btn-detail-info" style="padding: 4px 12px; font-size: 12px; border-radius: 6px;" onclick="openSimpusDetailModal('${safeRecId}')">
+                <i class="bi bi-eye-fill"></i> Detail & Copy
+              </button>
+              <button class="btn btn-outline-danger btn-sm" style="padding: 4px 8px; font-size: 11.5px;" onclick="deleteSimpusRecord('${safeRecId}')" title="Hapus Data Pasien">
+                <i class="bi bi-trash-fill"></i>
+              </button>
             </div>
           </div>
 
-          <!-- Action Bar -->
-          <div class="simpus-card-actions">
-            <div style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
-              <i class="bi bi-cursor-fill" style="color: var(--primary);"></i> Klik nama pasien atau tombol detail untuk salin data
+          <!-- Bottom Row: Compact Inline Clinical & Address Summary Strip -->
+          <div style="display: flex; gap: 12px; font-size: 12.5px; background: #f8fafc; padding: 7px 12px; border-radius: 6px; border: 1px solid #edf2f7; align-items: center; flex-wrap: wrap; color: #334155;">
+            <div style="display: flex; align-items: center; gap: 5px; max-width: 320px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+              <i class="bi bi-geo-alt-fill" style="color: #64748b;"></i> <strong>Alamat:</strong> ${r.alamat || '-'}, ${kel}
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn-detail-info" onclick="openSimpusDetailModal('${safeRecId}')">
-                <i class="bi bi-eye-fill"></i> Lihat Detail & Copy Data
-              </button>
-              <button class="btn btn-outline-danger btn-sm" style="padding: 6px 10px; font-size: 12px;" onclick="deleteSimpusRecord('${safeRecId}')" title="Hapus Data">
-                <i class="bi bi-trash-fill"></i> Hapus
-              </button>
-            </div>
+            <div style="height: 14px; width: 1px; background: #cbd5e1;"></div>
+            <div><i class="bi bi-activity" style="color: #e11d48;"></i> <strong>TD:</strong> <span style="color: #e11d48; font-weight: 800;">${r.sistol}/${r.diastol}</span> mmHg</div>
+            <div style="height: 14px; width: 1px; background: #cbd5e1;"></div>
+            <div><i class="bi bi-person-bounding-box" style="color: #059669;"></i> <strong>BB/TB:</strong> <span style="color: #059669; font-weight: 800;">${r.bb}kg / ${r.tb}cm (${r.imt})</span></div>
+            <div style="height: 14px; width: 1px; background: #cbd5e1;"></div>
+            <div><i class="bi bi-droplet-fill" style="color: #0284c7;"></i> <strong>Gula/Kol:</strong> <span style="color: #0284c7; font-weight: 800;">${r.gula || '-'} / ${r.kolesterol || '-'}</span></div>
           </div>
         </div>
       `;
