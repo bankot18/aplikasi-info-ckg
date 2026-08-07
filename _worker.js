@@ -15,6 +15,11 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
+    // Ping route for latency checking
+    if (url.pathname === '/api/ping') {
+      return new Response(JSON.stringify({ success: true, timestamp: Date.now() }), { headers: corsHeaders });
+    }
+
     // 1. ROUTE: /api/users
     if (url.pathname === '/api/users' || url.pathname.startsWith('/api/users/')) {
       if (!env.DB) {

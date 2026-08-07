@@ -3597,21 +3597,17 @@ function getOfficerPerformanceData(monthFilter = null, yearFilter = null) {
   const selectedYear = yearFilter !== null ? yearFilter : (ySelect ? ySelect.value : String(new Date().getFullYear()));
 
   const filteredRecords = getVisibleRecords(records).filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
-  const filteredSimpus = simpusRecords.filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
 
   return usersDb.map(u => {
     const name = u.nama_user;
     const ckgLuar = filteredRecords.filter(r => (r.petugas_entry === name || r.created_by === name || r.created_by === `petugas_${name}`) && r.jenis_kegiatan === 'Luar Gedung').length;
     const ckgDalam = filteredRecords.filter(r => (r.petugas_entry === name || r.created_by === name || r.created_by === `petugas_${name}`) && r.jenis_kegiatan === 'Dalam Gedung').length;
 
-    const simpusLuar = filteredSimpus.filter(r => r.assigned_to === name && (!r.jenis_kegiatan || r.jenis_kegiatan === 'Luar Gedung')).length;
-    const simpusDalam = filteredSimpus.filter(r => r.assigned_to === name && r.jenis_kegiatan === 'Dalam Gedung').length;
-
     return {
       nama: name,
       role: u.role || 'Petugas',
-      luarCount: ckgLuar + simpusLuar,
-      dalamCount: ckgDalam + simpusDalam
+      luarCount: ckgLuar,
+      dalamCount: ckgDalam
     };
   });
 }
@@ -6527,6 +6523,40 @@ function updateCloudSyncPill(status, text) {
   }
 }
 
+// Check real-time Ping latency to Cloud Server
+async function checkCloudPing() {
+  const start = performance.now();
+  try {
+    const res = await fetch('/api/ping?t=' + Date.now());
+    if (res.ok) {
+      const pingMs = Math.round(performance.now() - start);
+      const pingEl = document.getElementById('cloudPingMs');
+      const iconEl = document.getElementById('cloudPingIcon');
+      const pillEl = document.getElementById('cloudPingPill');
+
+      if (pingEl) pingEl.textContent = `${pingMs} ms`;
+      if (iconEl && pillEl) {
+        if (pingMs < 100) {
+          iconEl.style.color = '#10b981';
+          pillEl.style.borderColor = '#86efac';
+          pillEl.style.background = '#f0fdf4';
+        } else if (pingMs < 300) {
+          iconEl.style.color = '#f59e0b';
+          pillEl.style.borderColor = '#fde68a';
+          pillEl.style.background = '#fefce8';
+        } else {
+          iconEl.style.color = '#ef4444';
+          pillEl.style.borderColor = '#fca5a5';
+          pillEl.style.background = '#fef2f2';
+        }
+      }
+    }
+  } catch (_) {}
+}
+
+setInterval(checkCloudPing, 10000);
+setTimeout(checkCloudPing, 1000);
+
 // Force manual sync on header pill click
 async function forceSyncWithCloud(showToastMsg = true) {
   showLoadingOverlay('Sinkronisasi Cloud Storage D1...', 'Mengambil & menyinkronkan data terbaru dengan Cloudflare D1 Database');
@@ -6600,11 +6630,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   Promise.all([
     fetchCloudUsers().catch(() => {}),
-    fetchCloudSimpusRecords(true).catch(() => {})
+    fetchCloudRecords().catch(() => {})
   ]).finally(() => {
     if (isLoggedIn) {
-      setTimeout(() => hideLoadingOverlay(), 400);
+      setTimeout(() => hideLoadingOverlay(), 250);
     }
+    // Fetch SIMPUS in background without blocking UI
+    setTimeout(() => {
+      fetchCloudSimpusRecords(true).catch(() => {});
+    }, 500);
   });
 });
 
