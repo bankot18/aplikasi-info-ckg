@@ -3554,49 +3554,52 @@ function resetFilters() {
 let currentRekapFilter = 'semua';
 
 function isRecordInMonthYear(r, targetMonth, targetYear) {
-  if (!targetMonth && !targetYear) return true;
+  const tMonth = targetMonth ? String(targetMonth).padStart(2, '0') : '';
+  const tYear = targetYear ? String(targetYear) : '';
 
-  const rawDate = r.created_at || r.tanggal_entry || r.created_date || r.tanggal || r.entry_date || '';
-  if (!rawDate) return true;
+  if (!tMonth && !tYear) return true;
+
+  const rawDate = r.tanggal_entry || r.created_at || r.created_date || r.tanggal || r.entry_date || '';
+  if (!rawDate) return false;
 
   let recMonth = '';
   let recYear = '';
 
   const dStr = String(rawDate).trim();
 
-  if (dStr.includes('T')) {
-    const datePart = dStr.split('T')[0];
-    const parts = datePart.split('-');
-    if (parts.length >= 2) {
-      recYear = parts[0];
-      recMonth = parts[1].padStart(2, '0');
+  // Case 1: ISO format YYYY-MM-DD or YYYY-MM-DD HH:mm:ss
+  if (/^\d{4}-\d{1,2}-\d{1,2}/.test(dStr)) {
+    const parts = dStr.split(' ')[0].split('T')[0].split('-');
+    recYear = parts[0];
+    recMonth = parts[1].padStart(2, '0');
+  }
+  // Case 2: DD-MM-YYYY or DD/MM/YYYY
+  else if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(dStr)) {
+    const parts = dStr.split(' ')[0].split(/[\/-]/);
+    recMonth = String(parts[1]).padStart(2, '0');
+    recYear = parts[2].substring(0, 4);
+  }
+  // Case 3: Excel serial date number (e.g. 45475)
+  else if (/^\d{4,5}$/.test(dStr)) {
+    const serial = parseInt(dStr, 10);
+    const utc_days = Math.floor(serial - 25569);
+    const date_info = new Date(utc_days * 86400 * 1000);
+    if (!isNaN(date_info.getTime())) {
+      recYear = String(date_info.getFullYear());
+      recMonth = String(date_info.getMonth() + 1).padStart(2, '0');
     }
-  } else if (dStr.includes('-')) {
-    const parts = dStr.split('-');
-    if (parts.length === 3) {
-      if (parts[0].length === 4) {
-        recYear = parts[0];
-        recMonth = parts[1].padStart(2, '0');
-      } else {
-        recMonth = parts[1].padStart(2, '0');
-        recYear = parts[2].substring(0, 4);
-      }
-    }
-  } else if (dStr.includes('/')) {
-    const parts = dStr.split('/');
-    if (parts.length === 3) {
-      if (parts[0].length === 4) {
-        recYear = parts[0];
-        recMonth = parts[1].padStart(2, '0');
-      } else {
-        recMonth = parts[1].padStart(2, '0');
-        recYear = parts[2].substring(0, 4);
-      }
+  }
+  // Case 4: General Native JS Date fallback
+  else {
+    const parsed = new Date(dStr);
+    if (!isNaN(parsed.getTime())) {
+      recYear = String(parsed.getFullYear());
+      recMonth = String(parsed.getMonth() + 1).padStart(2, '0');
     }
   }
 
-  if (targetMonth && recMonth && recMonth !== targetMonth.padStart(2, '0')) return false;
-  if (targetYear && recYear && recYear !== targetYear) return false;
+  if (tMonth && recMonth !== tMonth) return false;
+  if (tYear && recYear !== tYear) return false;
 
   return true;
 }
@@ -3605,8 +3608,30 @@ function getOfficerPerformanceData(monthFilter = null, yearFilter = null) {
   const mSelect = document.getElementById('dashBulan');
   const ySelect = document.getElementById('dashTahun');
 
-  const selectedMonth = monthFilter !== null ? monthFilter : (mSelect ? mSelect.value : String(new Date().getMonth() + 1).padStart(2, '0'));
-  const selectedYear = yearFilter !== null ? yearFilter : (ySelect ? ySelect.value : String(new Date().getFullYear()));
+  const now = new Date();
+  const currentMonthStr = String(now.getMonth() + 1).padStart(2, '0');
+  const currentYearStr = String(now.getFullYear());
+
+  let selectedMonth = monthFilter;
+  let selectedYear = yearFilter;
+
+  if (selectedMonth === null) {
+    if (mSelect && mSelect.value) {
+      selectedMonth = mSelect.value;
+    } else {
+      selectedMonth = currentMonthStr;
+      if (mSelect) mSelect.value = currentMonthStr;
+    }
+  }
+
+  if (selectedYear === null) {
+    if (ySelect && ySelect.value) {
+      selectedYear = ySelect.value;
+    } else {
+      selectedYear = currentYearStr;
+      if (ySelect) ySelect.value = currentYearStr;
+    }
+  }
 
   const filteredRecords = records.filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
 
@@ -3712,93 +3737,202 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
 
   const top3 = sorted.slice(0, 3);
 
-  const ranksConfig = [
-    {
-      rank: 1,
-      title: 'JUARA 1',
-      medal: '🥇',
-      bgGradient: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)',
-      borderColor: '#f59e0b',
-      badgeBg: '#f59e0b',
-      badgeColor: '#ffffff',
-      textColor: '#92400e',
-      shadow: '0 8px 20px rgba(245, 158, 11, 0.2)'
-    },
-    {
-      rank: 2,
-      title: 'JUARA 2',
-      medal: '🥈',
-      bgGradient: 'linear-gradient(135deg, #f1f5f9 0%, #f8fafc 100%)',
-      borderColor: '#94a3b8',
-      badgeBg: '#64748b',
-      badgeColor: '#ffffff',
-      textColor: '#334155',
-      shadow: '0 6px 16px rgba(100, 116, 139, 0.15)'
-    },
-    {
-      rank: 3,
-      title: 'JUARA 3',
-      medal: '🥉',
-      bgGradient: 'linear-gradient(135deg, #ffedd5 0%, #fff7ed 100%)',
-      borderColor: '#ea580c',
-      badgeBg: '#ea580c',
-      badgeColor: '#ffffff',
-      textColor: '#9a3412',
-      shadow: '0 6px 16px rgba(234, 88, 12, 0.15)'
-    }
-  ];
-
   if (top3.length === 0 || sorted.every(o => o.total === 0)) {
     container.innerHTML = `
-      <div style="grid-column: 1 / -1; text-align: center; padding: 28px; color: #94a3b8; font-size: 13px;">
-        <i class="bi bi-trophy" style="font-size: 32px; display: block; margin-bottom: 6px; color: #cbd5e1;"></i>
-        Belum ada data entri petugas pada periode bulan ini.
+      <div style="text-align: center; padding: 32px; color: #94a3b8; font-size: 13px; background: #ffffff; border-radius: 16px; border: 1px dashed #cbd5e1;">
+        <i class="bi bi-trophy" style="font-size: 36px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
+        Belum ada data entri petugas pada periode bulan aktif ini.
       </div>
     `;
     return;
   }
 
-  container.innerHTML = top3.map((o, idx) => {
-    const conf = ranksConfig[idx] || ranksConfig[2];
-    const initials = (o.nama || 'P').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+  // Assign ranks
+  const rank1 = top3[0];
+  const rank2 = top3[1];
+  const rank3 = top3[2];
+
+  // Helper function to build officer podium card HTML
+  const buildCardHtml = (item, rankNum) => {
+    if (!item) return '<div style="flex: 1;"></div>';
+
+    const initials = (item.nama || 'P').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    
+    // Config based on Rank Number (1 = Gold, 2 = Silver, 3 = Bronze)
+    const isRank1 = rankNum === 1;
+    const isRank2 = rankNum === 2;
+
+    const theme = isRank1 ? {
+      pillBg: 'linear-gradient(135deg, #d97706, #b45309)',
+      pillText: '🏆 JUARA 1 (RANK 1)',
+      medalBadge: '1',
+      medalBg: '#fef3c7',
+      medalBorder: '#f59e0b',
+      medalText: '#b45309',
+      avatarBg: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+      avatarBorder: '#f59e0b',
+      avatarText: '#78350f',
+      ribbonText: '1st',
+      cardBg: '#ffffff',
+      cardBorder: '#f59e0b',
+      cardShadow: '0 12px 28px rgba(245, 158, 11, 0.2)',
+      nameColor: '#78350f',
+      numColor: '#b45309',
+      barColor: 'linear-gradient(90deg, #f59e0b, #d97706)',
+      podiumBg: 'linear-gradient(180deg, #fde68a 0%, #f59e0b 100%)',
+      podiumHeight: '42px',
+      podiumBorder: '#d97706',
+      offset: '-16px'
+    } : isRank2 ? {
+      pillBg: 'linear-gradient(135deg, #64748b, #475569)',
+      pillText: '🥈 JUARA 2 (RANK 2)',
+      medalBadge: '2',
+      medalBg: '#f1f5f9',
+      medalBorder: '#94a3b8',
+      medalText: '#334155',
+      avatarBg: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)',
+      avatarBorder: '#94a3b8',
+      avatarText: '#334155',
+      ribbonText: '2nd',
+      cardBg: '#ffffff',
+      cardBorder: '#cbd5e1',
+      cardShadow: '0 8px 20px rgba(100, 116, 139, 0.12)',
+      nameColor: '#334155',
+      numColor: '#475569',
+      barColor: 'linear-gradient(90deg, #94a3b8, #64748b)',
+      podiumBg: 'linear-gradient(180deg, #e2e8f0 0%, #94a3b8 100%)',
+      podiumHeight: '28px',
+      podiumBorder: '#64748b',
+      offset: '0px'
+    } : {
+      pillBg: 'linear-gradient(135deg, #ea580c, #c2410c)',
+      pillText: '🥉 JUARA 3 (RANK 3)',
+      medalBadge: '3',
+      medalBg: '#ffedd5',
+      medalBorder: '#fdba74',
+      medalText: '#9a3412',
+      avatarBg: 'linear-gradient(135deg, #ffedd5, #fed7aa)',
+      avatarBorder: '#ea580c',
+      avatarText: '#9a3412',
+      ribbonText: '3rd',
+      cardBg: '#ffffff',
+      cardBorder: '#fdba74',
+      cardShadow: '0 8px 20px rgba(234, 88, 12, 0.12)',
+      nameColor: '#9a3412',
+      numColor: '#c2410c',
+      barColor: 'linear-gradient(90deg, #fb923c, #ea580c)',
+      podiumBg: 'linear-gradient(180deg, #fed7aa 0%, #ea580c 100%)',
+      podiumHeight: '18px',
+      podiumBorder: '#ea580c',
+      offset: '8px'
+    };
+
+    // Calculate max total for relative bar width
+    const maxTotal = Math.max(rank1 ? rank1.total : 1, 1);
+    const pct = Math.min(100, Math.round((item.total / maxTotal) * 100));
 
     return `
-      <div style="background: ${conf.bgGradient}; border: 2px solid ${conf.borderColor}; border-radius: 12px; padding: 16px; box-shadow: ${conf.shadow}; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s ease;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <span style="background: ${conf.badgeBg}; color: ${conf.badgeColor}; font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;">
-            <span>${conf.medal}</span> ${conf.title} (RANK ${conf.rank})
-          </span>
-          <span style="font-size: 26px;">${conf.medal}</span>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
-          <div style="width: 44px; height: 44px; border-radius: 50%; background: #ffffff; color: ${conf.borderColor}; border: 2px solid ${conf.borderColor}; font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
-            ${initials}
-          </div>
-          <div style="overflow: hidden;">
-            <div style="font-size: 15px; font-weight: 800; color: ${conf.textColor}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${o.nama}">
-              ${o.nama}
-            </div>
-            <div style="font-size: 11.5px; color: #64748b; font-weight: 600;">
-              ${o.role || 'Petugas Input'}
-            </div>
-          </div>
-        </div>
-
-        <div style="background: #ffffff; border-radius: 8px; padding: 8px 12px; border: 1px solid ${conf.borderColor}40; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block;">Total Entri Bulan Ini</span>
-            <span style="font-size: 11.5px; color: #475569;">
-              📍 Luar: <strong>${o.luarCount}</strong> | 🏢 Dalam: <strong>${o.dalamCount}</strong>
+      <div class="podium-card-wrapper" style="display: flex; flex-direction: column; position: relative; margin-top: ${theme.offset}; transition: all 0.3s ease;">
+        
+        <!-- CARD BODY -->
+        <div style="background: ${theme.cardBg}; border: 2px solid ${theme.cardBorder}; border-radius: 16px; padding: 16px; box-shadow: ${theme.cardShadow}; position: relative; display: flex; flex-direction: column; gap: 12px; z-index: 2;">
+          
+          <!-- TOP HEADER BADGES -->
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="background: ${theme.pillBg}; color: #ffffff; font-size: 10.5px; font-weight: 800; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+              ${theme.pillText}
             </span>
+
+            <div style="width: 26px; height: 26px; border-radius: 50%; background: ${theme.medalBg}; border: 1.5px solid ${theme.medalBorder}; color: ${theme.medalText}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; box-shadow: 0 2px 4px rgba(0,0,0,0.06);">
+              ${theme.medalBadge}
+            </div>
           </div>
-          <span style="font-size: 19px; font-weight: 900; color: ${conf.borderColor}; font-family: monospace;">
-            ${o.total.toLocaleString('id-ID')}
-          </span>
+
+          <!-- OFFICER AVATAR & NAME -->
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="position: relative; flex-shrink: 0;">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: ${theme.avatarBg}; border: 3px solid ${theme.avatarBorder}; color: ${theme.avatarText}; font-weight: 900; font-size: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.08);">
+                ${initials}
+              </div>
+              <div style="position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); background: ${theme.avatarBorder}; color: #ffffff; font-size: 8.5px; font-weight: 900; padding: 1px 5px; border-radius: 8px; border: 1px solid #ffffff; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                ${theme.ribbonText}
+              </div>
+            </div>
+
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 14.5px; font-weight: 800; color: ${theme.nameColor}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.nama}">
+                ${item.nama}
+              </div>
+              <div style="font-size: 11px; color: #64748b; font-weight: 600;">
+                ${item.role || 'Petugas'}
+              </div>
+            </div>
+
+            <div style="font-size: 24px; font-weight: 900; color: ${theme.numColor}; font-family: monospace; flex-shrink: 0;">
+              ${item.total.toLocaleString('id-ID')}
+            </div>
+          </div>
+
+          <!-- BOTTOM STATS CARD (TOTAL ENTRI BULAN INI) -->
+          <div style="background: #f8fafc; border-radius: 10px; padding: 8px 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">
+              <span>Total Entri Bulan Ini</span>
+              <span style="color: ${theme.numColor}; font-size: 12px; font-weight: 900;">${item.total}</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+              <div style="width: ${pct}%; height: 100%; background: ${theme.barColor}; border-radius: 4px; transition: width 0.5s ease;"></div>
+            </div>
+
+            <div style="font-size: 11px; color: #475569; display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+              <span>📍 Luar: <strong>${item.luarCount}</strong></span>
+              <span>🏢 Dalam: <strong>${item.dalamCount}</strong></span>
+            </div>
+          </div>
+
         </div>
+
+        <!-- 3D PODIUM BASE STEP -->
+        <div style="background: ${theme.podiumBg}; height: ${theme.podiumHeight}; border-radius: 0 0 12px 12px; border-top: 2px solid ${theme.podiumBorder}; box-shadow: inset 0 2px 4px rgba(255,255,255,0.6); position: relative; margin-top: -6px; z-index: 1;">
+        </div>
+
       </div>
     `;
-  }).join('');
+  };
+
+  container.innerHTML = `
+    <div style="background: linear-gradient(135deg, #fefce8 0%, #fffbeb 50%, #fafaf9 100%); border-radius: 18px; border: 1px solid #fef08a; padding: 22px; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.08); position: relative; overflow: hidden;">
+      
+      <!-- Subtle Background Confetti Watermark Pattern -->
+      <div style="position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; background-image: radial-gradient(#f59e0b 0.8px, transparent 0.8px); background-size: 24px 24px; opacity: 0.12;"></div>
+
+      <!-- HEADER TITLE BAR -->
+      <div style="position: relative; z-index: 2; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">
+            <i class="bi bi-trophy-fill"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #1e293b;">Peringkat Petugas Tergas Terbanyak <span style="font-weight: 600; font-size: 13.5px; color: #64748b;">(Top 3 Batch Bulan Ini)</span></h3>
+            <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Top 3 Petugas Puskesmas dengan jumlah entri data CKG terbanyak pada bulan aktif</p>
+          </div>
+        </div>
+
+        <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px;">
+          <i class="bi bi-stars"></i> Leaderboard CKG
+        </span>
+      </div>
+
+      <!-- 3D PODIUM GRID LAYOUT: Rank 2 (Left) | Rank 1 (Center Elevated) | Rank 3 (Right) -->
+      <div style="position: relative; z-index: 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; align-items: flex-end;">
+        ${buildCardHtml(rank2, 2)}
+        ${buildCardHtml(rank1, 1)}
+        ${buildCardHtml(rank3, 3)}
+      </div>
+
+    </div>
+  `;
 }
 
 function updateTotalEntryMonthMetric() {
