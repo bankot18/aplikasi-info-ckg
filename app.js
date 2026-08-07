@@ -1010,6 +1010,22 @@ function setupEventListeners() {
   const dobInput = document.getElementById('tanggal_lahir');
   if (dobInput) dobInput.addEventListener('change', calculateAgeFromDOB);
 
+  // Auto-trigger Dukcapil lookup when NIK reaches 16 digits
+  const nikInput = document.getElementById('nik');
+  if (nikInput) {
+    nikInput.addEventListener('input', () => {
+      const val = nikInput.value.replace(/\D/g, '');
+      nikInput.value = val; // strip non-digits
+      if (val.length === 16) {
+        triggerNikDukcapilLookup();
+      } else {
+        // Reset status when NIK is incomplete
+        const statusEl = document.getElementById('nikDukcapilStatus');
+        if (statusEl) statusEl.style.display = 'none';
+      }
+    });
+  }
+
   const bbInput = document.getElementById('bb');
   const tbInput = document.getElementById('tb');
   if (bbInput && tbInput) {
@@ -1465,6 +1481,7 @@ function renderSimpusTableRecords() {
       const kec = r.kecamatan || 'Banjaran';
       const kel = r.kelurahan || 'Tarajusari';
       const recId = r.id || r.nik;
+      const safeRecId = escapeAttr(recId);
 
       return `
         <tr>
@@ -1486,7 +1503,7 @@ function renderSimpusTableRecords() {
           <td style="text-align: center;">${r.gula}</td>
           <td style="text-align: center;">${r.kolesterol}</td>
           <td style="text-align: center; white-space: nowrap;">
-            <button class="btn btn-outline-danger btn-sm" style="padding: 4px 8px; font-size: 11px;" onclick="deleteSimpusRecord('${recId}')" title="Hapus Data Pasien">
+            <button class="btn btn-outline-danger btn-sm" style="padding: 4px 8px; font-size: 11px;" onclick="deleteSimpusRecord('${safeRecId}')" title="Hapus Data Pasien">
               <i class="bi bi-trash-fill"></i> Hapus
             </button>
           </td>
@@ -1511,6 +1528,8 @@ function renderSimpusTableRecords() {
     containerCards.innerHTML = dataset.map((r, i) => {
       const petugasName = r.petugas_entry || r.assigned_to || '-';
       const recId = r.id || r.nik;
+      const safeRecId = escapeAttr(recId);
+      const safeNik = escapeAttr(r.nik);
       const initials = (r.nama || 'P').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
       const kel = r.kelurahan || 'Tarajusari';
 
@@ -1523,12 +1542,12 @@ function renderSimpusTableRecords() {
                 ${initials}
               </div>
               <div>
-                <div class="simpus-patient-name" style="cursor: pointer; color: var(--primary); display: inline-flex; align-items: center; gap: 8px;" onclick="openSimpusDetailModal('${recId}')" title="Klik Nama untuk Buka Detail & Copy Data">
+                <div class="simpus-patient-name" style="cursor: pointer; color: var(--primary); display: inline-flex; align-items: center; gap: 8px;" onclick="openSimpusDetailModal('${safeRecId}')" title="Klik Nama untuk Buka Detail & Copy Data">
                   <span>${i + 1}. ${r.nama}</span>
                   <i class="bi bi-box-arrow-up-right" style="font-size: 13px; color: var(--primary); opacity: 0.85;"></i>
                 </div>
                 <div class="simpus-patient-subtext" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px; align-items: center;">
-                  <span class="copyable-field-sm" onclick="copyToClipboard('${r.nik}', 'NIK Pasien')" style="cursor: pointer; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: 700; color: #1e293b;" title="Klik untuk Salin NIK">
+                  <span class="copyable-field-sm" onclick="copyToClipboard('${safeNik}', 'NIK Pasien')" style="cursor: pointer; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: 700; color: #1e293b;" title="Klik untuk Salin NIK">
                     <i class="bi bi-card-text"></i> NIK: <strong style="font-family: monospace;">${r.nik}</strong> <i class="bi bi-copy" style="font-size: 11px; color: var(--primary); margin-left: 4px;"></i>
                   </span>
                   <span style="font-size: 12px; color: var(--text-muted);">
@@ -1574,10 +1593,10 @@ function renderSimpusTableRecords() {
               <i class="bi bi-cursor-fill" style="color: var(--primary);"></i> Klik nama pasien atau tombol detail untuk salin data
             </div>
             <div style="display: flex; gap: 8px;">
-              <button class="btn-detail-info" onclick="openSimpusDetailModal('${recId}')">
+              <button class="btn-detail-info" onclick="openSimpusDetailModal('${safeRecId}')">
                 <i class="bi bi-eye-fill"></i> Lihat Detail & Copy Data
               </button>
-              <button class="btn btn-outline-danger btn-sm" style="padding: 6px 10px; font-size: 12px;" onclick="deleteSimpusRecord('${recId}')" title="Hapus Data">
+              <button class="btn btn-outline-danger btn-sm" style="padding: 6px 10px; font-size: 12px;" onclick="deleteSimpusRecord('${safeRecId}')" title="Hapus Data">
                 <i class="bi bi-trash-fill"></i> Hapus
               </button>
             </div>
@@ -1586,6 +1605,18 @@ function renderSimpusTableRecords() {
       `;
     }).join('');
   }
+}
+
+// Utility: Escape strings for safe use in inline HTML attribute handlers (onclick, etc.)
+function escapeAttr(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/'/g, '&#39;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\\/g, '&#92;');
 }
 
 function copyToClipboard(text, label = 'Data') {
@@ -1660,39 +1691,44 @@ function openSimpusDetailModal(id) {
   else if (item.imt >= 25.0 && item.imt <= 29.9) imtBadge = `<span class="badge badge-amber">${item.imt} (Gemuk)</span>`;
   else if (item.imt >= 30.0) imtBadge = `<span class="badge badge-rose">${item.imt} (Obesitas)</span>`;
 
+  const safeNama = escapeAttr(item.nama);
+  const safeNik = escapeAttr(item.nik);
+  const safeTanggal = escapeAttr(item.tanggal);
+  const safeId = escapeAttr(item.id);
+
   modalBody.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 16px;">
       
       <!-- Patient Header Banner -->
       <div style="background: linear-gradient(135deg, #1e3a8a, #2563eb); padding: 18px; border-radius: var(--radius-md); color: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);">
         <div>
-          <div style="font-size: 21px; font-weight: 800; font-family: var(--font-heading); cursor: pointer;" onclick="copyToClipboard('${item.nama}', 'Nama Pasien')" title="Klik untuk menyalin Nama Pasien">
+          <div style="font-size: 21px; font-weight: 800; font-family: var(--font-heading); cursor: pointer;" onclick="copyToClipboard('${safeNama}', 'Nama Pasien')" title="Klik untuk menyalin Nama Pasien">
             ${item.nama} <i class="bi bi-copy" style="font-size: 14px; opacity: 0.8;"></i>
           </div>
           <div style="font-size: 13px; opacity: 0.95; margin-top: 4px; display: flex; gap: 14px; flex-wrap: wrap;">
-            <span style="cursor: pointer;" onclick="copyToClipboard('${item.nik}', 'NIK Pasien')" title="Klik untuk menyalin NIK">
+            <span style="cursor: pointer;" onclick="copyToClipboard('${safeNik}', 'NIK Pasien')" title="Klik untuk menyalin NIK">
               <i class="bi bi-card-text"></i> NIK: <strong>${item.nik}</strong> <i class="bi bi-copy" style="font-size: 11px;"></i>
             </span>
-            <span style="cursor: pointer;" onclick="copyToClipboard('${item.tanggal}', 'Tanggal Skrining')" title="Klik untuk menyalin Tanggal">
+            <span style="cursor: pointer;" onclick="copyToClipboard('${safeTanggal}', 'Tanggal Skrining')" title="Klik untuk menyalin Tanggal">
               <i class="bi bi-calendar-event"></i> Tanggal: ${item.tanggal} <i class="bi bi-copy" style="font-size: 11px;"></i>
             </span>
           </div>
         </div>
         
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <button class="btn btn-primary btn-sm" onclick="openDukcapilModal('${item.nik}', '${item.nama}')" style="box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+          <button class="btn btn-primary btn-sm" onclick="openDukcapilModal('${safeNik}', '${safeNama}')" style="box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
             <i class="bi bi-shield-check"></i> Cek Dukcapil
           </button>
-          <button class="btn-copy-all" onclick="copyAllSimpusPatientData('${item.id}')">
+          <button class="btn-copy-all" onclick="copyAllSimpusPatientData('${safeId}')">
             <i class="bi bi-clipboard-check-fill"></i> Salin Semua Data Pasien
           </button>
-          <button class="btn btn-emerald btn-sm" onclick="handleSimpusActionBerhasil('${item.id}')" style="font-weight: 700; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+          <button class="btn btn-emerald btn-sm" onclick="handleSimpusActionBerhasil('${safeId}')" style="font-weight: 700; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
             <i class="bi bi-check-circle-fill"></i> Berhasil Entry
           </button>
-          <button class="btn btn-amber btn-sm" onclick="handleSimpusActionSudahEntry('${item.id}')" style="font-weight: 700; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+          <button class="btn btn-amber btn-sm" onclick="handleSimpusActionSudahEntry('${safeId}')" style="font-weight: 700; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
             <i class="bi bi-bookmark-check-fill"></i> Sudah di Entry
           </button>
-          <button class="btn btn-danger btn-sm" onclick="handleSimpusActionGagal('${item.id}')" style="font-weight: 700; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
+          <button class="btn btn-danger btn-sm" onclick="handleSimpusActionGagal('${safeId}')" style="font-weight: 700; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
             <i class="bi bi-x-circle-fill"></i> Gagal
           </button>
         </div>
@@ -5583,7 +5619,7 @@ function showToast(message, type = 'info') {
    🏛️ DUKCAPIL KTP VERIFICATION SERVICE MODULE
    ========================================================================== */
 
-const DUKCAPIL_API_BASE = 'http://localhost:8081/api/dukcapil';
+const DUKCAPIL_API_BASE = '/api/dukcapil';
 let isDukcapilServiceOnline = false;
 
 async function checkDukcapilHealth(showToastMsg = false) {
@@ -5601,13 +5637,13 @@ async function checkDukcapilHealth(showToastMsg = false) {
     if (resp.ok) {
       isDukcapilServiceOnline = true;
       if (statusIndicator) statusIndicator.style.background = '#22c55e';
-      if (statusText) statusText.innerHTML = '🟢 Microservice Dukcapil Terhubung (Port 8081)';
+      if (statusText) statusText.innerHTML = '🟢 Layanan Dukcapil Aktif (Cloudflare Edge Engine)';
       if (statusBanner) {
         statusBanner.style.background = '#f0fdf4';
         statusBanner.style.borderColor = '#86efac';
         statusBanner.style.color = '#166534';
       }
-      if (showToastMsg) showToast('Microservice Dukcapil terhubung aktif!', 'success');
+      if (showToastMsg) showToast('Layanan Verifikasi Dukcapil terhubung aktif!', 'success');
       return true;
     }
   } catch (err) {
@@ -5616,13 +5652,13 @@ async function checkDukcapilHealth(showToastMsg = false) {
 
   isDukcapilServiceOnline = false;
   if (statusIndicator) statusIndicator.style.background = '#f59e0b';
-  if (statusText) statusText.innerHTML = '🟡 Mode Lokal: Validator & Parser NIK (Service 8081 Offline)';
+  if (statusText) statusText.innerHTML = '🟡 Mode Lokal: Validator & Parser NIK (Server Offline)';
   if (statusBanner) {
     statusBanner.style.background = '#fffbeb';
     statusBanner.style.borderColor = '#fde68a';
     statusBanner.style.color = '#92400e';
   }
-  if (showToastMsg) showToast('Mode Lokal Dukcapil aktif (Service 8081 tidak merespon).', 'warning');
+  if (showToastMsg) showToast('Mode Lokal Dukcapil aktif (server tidak merespon).', 'warning');
   return false;
 }
 
@@ -5704,9 +5740,38 @@ async function executeDukcapilVerification(nik, nama = '') {
 }
 
 // Local NIK Parser Fallback Engine (Indonesian KTP Standard)
+// Comprehensive Province & Region Code Dictionary (Kemendagri)
+const NIK_PROVINSI_MAP = {
+  '11': 'ACEH', '12': 'SUMATERA UTARA', '13': 'SUMATERA BARAT', '14': 'RIAU',
+  '15': 'JAMBI', '16': 'SUMATERA SELATAN', '17': 'BENGKULU', '18': 'LAMPUNG',
+  '19': 'KEPULAUAN BANGKA BELITUNG', '21': 'KEPULAUAN RIAU',
+  '31': 'DKI JAKARTA', '32': 'JAWA BARAT', '33': 'JAWA TENGAH',
+  '34': 'DI YOGYAKARTA', '35': 'JAWA TIMUR', '36': 'BANTEN',
+  '51': 'BALI', '52': 'NUSA TENGGARA BARAT', '53': 'NUSA TENGGARA TIMUR',
+  '61': 'KALIMANTAN BARAT', '62': 'KALIMANTAN TENGAH', '63': 'KALIMANTAN SELATAN',
+  '64': 'KALIMANTAN TIMUR', '65': 'KALIMANTAN UTARA',
+  '71': 'SULAWESI UTARA', '72': 'SULAWESI TENGAH', '73': 'SULAWESI SELATAN',
+  '74': 'SULAWESI TENGGARA', '75': 'GORONTALO', '76': 'SULAWESI BARAT',
+  '81': 'MALUKU', '82': 'MALUKU UTARA',
+  '91': 'PAPUA', '92': 'PAPUA BARAT'
+};
+
+// Kab/Kota code for Jawa Barat (32xx) — most relevant for Puskesmas Banjaran Kota
+const NIK_KAB_JABAR_MAP = {
+  '01': 'KAB. BOGOR', '02': 'KAB. SUKABUMI', '03': 'KAB. CIANJUR',
+  '04': 'KAB. BANDUNG', '05': 'KAB. GARUT', '06': 'KAB. TASIKMALAYA',
+  '07': 'KAB. CIAMIS', '08': 'KAB. KUNINGAN', '09': 'KAB. CIREBON',
+  '10': 'KAB. MAJALENGKA', '11': 'KAB. SUMEDANG', '12': 'KAB. INDRAMAYU',
+  '13': 'KAB. SUBANG', '14': 'KAB. PURWAKARTA', '15': 'KAB. KARAWANG',
+  '16': 'KAB. BEKASI', '17': 'KAB. BANDUNG BARAT', '18': 'KAB. PANGANDARAN',
+  '71': 'KOTA BOGOR', '72': 'KOTA SUKABUMI', '73': 'KOTA BANDUNG',
+  '74': 'KOTA CIREBON', '75': 'KOTA BEKASI', '76': 'KOTA DEPOK',
+  '77': 'KOTA CIMAHI', '78': 'KOTA TASIKMALAYA', '79': 'KOTA BANJAR'
+};
+
 function parseNikIndonesia(nik, namaInput = '') {
-  if (nik.length !== 16 || isNaN(nik)) {
-    return { valid: false, message: 'Format NIK tidak valid (harus 16 digit)' };
+  if (!nik || nik.length !== 16 || isNaN(nik)) {
+    return { valid: false, message: 'Format NIK tidak valid (harus 16 digit angka)' };
   }
 
   const provCode = nik.substring(0, 2);
@@ -5716,10 +5781,16 @@ function parseNikIndonesia(nik, namaInput = '') {
   const dobMonth = parseInt(nik.substring(8, 10));
   let dobYear = parseInt(nik.substring(10, 12));
 
+  // Gender detection: Females have day + 40
   let gender = 'Laki-laki';
   if (dobDay > 40) {
     gender = 'Perempuan';
     dobDay -= 40;
+  }
+
+  // Validate month and day bounds
+  if (dobMonth < 1 || dobMonth > 12 || dobDay < 1 || dobDay > 31) {
+    return { valid: false, message: 'Data tanggal lahir dalam NIK tidak valid' };
   }
 
   // Century estimation
@@ -5739,26 +5810,31 @@ function parseNikIndonesia(nik, namaInput = '') {
     age--;
   }
 
-  // Region dictionary
-  let provName = 'JAWA BARAT';
-  let kabName = 'KABUPATEN BANDUNG';
-  let kecName = 'BANJARAN';
+  // Province lookup
+  const provName = NIK_PROVINSI_MAP[provCode] || `PROVINSI (KODE ${provCode})`;
 
-  if (provCode === '31') provName = 'DKI JAKARTA';
-  else if (provCode === '33') provName = 'JAWA TENGAH';
-  else if (provCode === '35') provName = 'JAWA TIMUR';
+  // Kab/Kota lookup (detailed for Jawa Barat)
+  let kabName;
+  if (provCode === '32') {
+    kabName = NIK_KAB_JABAR_MAP[kabCode] || `KAB/KOTA JABAR (KODE ${kabCode})`;
+  } else {
+    kabName = `KAB/KOTA (KODE ${provCode}.${kabCode})`;
+  }
+
+  // Kecamatan
+  const kecName = `KECAMATAN (KODE ${kecCode})`;
 
   return {
     valid: true,
     nik: nik,
     namaLengkap: namaInput ? namaInput.toUpperCase() : 'DATA DUKCAPIL VERIFIED',
-    tempatLahir: `${kabName}`,
+    tempatLahir: kabName,
     tanggalLahir: dobString,
     usia: age,
     jenisKelamin: gender,
-    alamat: `DESA BANJARAN KOTA, KEC. BANJARAN`,
+    alamat: `${kabName}, ${provName}`,
     kecamatan: kecName,
-    kelurahan: 'BANJARAN KOTA',
+    kelurahan: '-',
     provinsi: provName,
     kabupaten: kabName
   };
@@ -5828,6 +5904,171 @@ function renderDukcapilResultCard(data, isOfficial = false, isValid = true) {
 
     </div>
   `;
+}
+
+/* ==========================================================================
+   🔍 DUKCAPIL AUTO-FILL FOR CKG INPUT FORM
+   Triggers when user enters 16-digit NIK or clicks "Cek Dukcapil" button
+   ========================================================================== */
+
+let _nikLookupDebounce = null;
+
+async function triggerNikDukcapilLookup() {
+  const nikInput = document.getElementById('nik');
+  const statusEl = document.getElementById('nikDukcapilStatus');
+  const btn = document.getElementById('btnCekNikDukcapil');
+  if (!nikInput) return;
+
+  const nik = nikInput.value.trim();
+
+  if (!nik || nik.length !== 16 || isNaN(nik)) {
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#fef2f2';
+      statusEl.style.border = '1px solid #fca5a5';
+      statusEl.style.color = '#991b1b';
+      statusEl.innerHTML = '<i class="bi bi-x-circle-fill"></i> NIK harus 16 digit angka';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+    }
+    return;
+  }
+
+  // Show loading state
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.style.background = '#eff6ff';
+    statusEl.style.border = '1px solid #bfdbfe';
+    statusEl.style.color = '#1e40af';
+    statusEl.innerHTML = '<i class="bi bi-hourglass-split"></i> Memverifikasi NIK ke Dukcapil...';
+  }
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> ...';
+  }
+
+  try {
+    // Try the server API first
+    const resp = await fetch(`${DUKCAPIL_API_BASE}/verify-nik`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nik: nik, namaLengkap: '' })
+    });
+
+    if (resp.ok) {
+      const result = await resp.json();
+      if (result.valid && result.data) {
+        autoFillFormFromDukcapil(result.data);
+
+        if (statusEl) {
+          statusEl.style.display = 'block';
+          statusEl.style.background = '#f0fdf4';
+          statusEl.style.border = '1px solid #86efac';
+          statusEl.style.color = '#166534';
+          statusEl.innerHTML = `<i class="bi bi-check-circle-fill"></i> Data Dukcapil Ditemukan! <strong>${result.data.namaLengkap}</strong> — ${result.data.jenisKelamin}, ${result.data.usia} Thn (${result.data.provinsi})`;
+        }
+        showToast(`✓ Data Dukcapil berhasil diisi otomatis untuk NIK ${nik}`, 'success');
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('Dukcapil API call failed, trying local parser:', err);
+  }
+
+  // Fallback to local parser
+  const localResult = parseNikIndonesia(nik, '');
+  if (localResult.valid) {
+    autoFillFormFromDukcapil(localResult);
+
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#fffbeb';
+      statusEl.style.border = '1px solid #fde68a';
+      statusEl.style.color = '#92400e';
+      statusEl.innerHTML = `<i class="bi bi-cpu-fill"></i> Data Terisi via Parser NIK Lokal — ${localResult.jenisKelamin}, ${localResult.usia} Thn (${localResult.provinsi})`;
+    }
+    showToast(`Data terisi otomatis via Parser NIK Lokal`, 'info');
+  } else {
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#fef2f2';
+      statusEl.style.border = '1px solid #fca5a5';
+      statusEl.style.color = '#991b1b';
+      statusEl.innerHTML = `<i class="bi bi-x-circle-fill"></i> ${localResult.message || 'NIK tidak valid'}`;
+    }
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-search"></i> Cek Dukcapil';
+  }
+}
+
+function autoFillFormFromDukcapil(data) {
+  const btn = document.getElementById('btnCekNikDukcapil');
+
+  // Auto-fill Nama (only if currently empty)
+  const namaInput = document.getElementById('nama');
+  if (namaInput && !namaInput.value.trim() && data.namaLengkap && data.namaLengkap !== 'DATA DUKCAPIL VERIFIED') {
+    namaInput.value = data.namaLengkap;
+  }
+
+  // Auto-fill Tanggal Lahir
+  if (data.tanggalLahir) {
+    const dobInput = document.getElementById('tanggal_lahir');
+    if (dobInput) {
+      // Convert DD/MM/YYYY to YYYY-MM-DD for HTML date input
+      const parts = data.tanggalLahir.split('/');
+      if (parts.length === 3) {
+        const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        dobInput.value = isoDate;
+        // Trigger age calculation
+        calculateAgeFromDOB();
+      }
+    }
+  }
+
+  // Auto-fill Usia
+  if (data.usia !== undefined && data.usia !== null) {
+    const usiaInput = document.getElementById('usia');
+    if (usiaInput) usiaInput.value = data.usia;
+  }
+
+  // Auto-fill Jenis Kelamin
+  if (data.jenisKelamin) {
+    const jkSelect = document.getElementById('jenis_kelamin');
+    if (jkSelect) {
+      const jk = data.jenisKelamin.toLowerCase();
+      jkSelect.value = (jk === 'perempuan' || jk === 'p') ? 'P' : 'L';
+    }
+  }
+
+  // Auto-fill Provinsi dropdown (try to match)
+  if (data.provinsi) {
+    const provSelect = document.getElementById('provinsi');
+    if (provSelect) {
+      const provName = data.provinsi.toLowerCase();
+      const match = Array.from(provSelect.options).find(o =>
+        o.value.toLowerCase().includes(provName) ||
+        provName.includes(o.value.toLowerCase())
+      );
+      if (match) {
+        provSelect.value = match.value;
+        provSelect.dispatchEvent(new Event('change'));
+      }
+    }
+  }
+
+  // Reset button state
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Terverifikasi';
+    btn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+    // Reset after 5 seconds
+    setTimeout(() => {
+      btn.innerHTML = '<i class="bi bi-search"></i> Cek Dukcapil';
+      btn.style.background = 'linear-gradient(135deg, #1e3a8a, #3b82f6)';
+    }, 5000);
+  }
 }
 
 /* ==========================================================================

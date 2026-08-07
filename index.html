@@ -982,7 +982,13 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label" for="nik">NIK Pasien (16 Digit) <span class="required">*</span></label>
-                <input type="text" id="nik" class="form-control" maxlength="16" placeholder="Masukkan 16 Digit NIK" required>
+                <div style="display: flex; gap: 6px; align-items: stretch;">
+                  <input type="text" id="nik" class="form-control" maxlength="16" placeholder="Masukkan 16 Digit NIK" required style="flex: 1; font-family: monospace; letter-spacing: 1px;">
+                  <button type="button" id="btnCekNikDukcapil" onclick="triggerNikDukcapilLookup()" title="Verifikasi NIK via Dukcapil" style="padding: 8px 14px; border-radius: var(--radius-sm); background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: #fff; border: none; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; box-shadow: 0 2px 8px rgba(37,99,235,0.25); transition: all 0.2s;">
+                    <i class="bi bi-search"></i> Cek Dukcapil
+                  </button>
+                </div>
+                <div id="nikDukcapilStatus" style="display: none; margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; display: none;"></div>
               </div>
 
               <div class="form-group">

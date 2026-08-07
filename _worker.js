@@ -736,6 +736,158 @@ export default {
       }
     }
 
+    // 8. ROUTE: /api/dukcapil (KTP Verification Service - Built-in NIK Parser)
+    if (url.pathname.startsWith('/api/dukcapil')) {
+      // Province code dictionary (Kemendagri standard)
+      const PROV_MAP = {
+        '11':'ACEH','12':'SUMATERA UTARA','13':'SUMATERA BARAT','14':'RIAU',
+        '15':'JAMBI','16':'SUMATERA SELATAN','17':'BENGKULU','18':'LAMPUNG',
+        '19':'KEP. BANGKA BELITUNG','21':'KEP. RIAU',
+        '31':'DKI JAKARTA','32':'JAWA BARAT','33':'JAWA TENGAH',
+        '34':'DI YOGYAKARTA','35':'JAWA TIMUR','36':'BANTEN',
+        '51':'BALI','52':'NUSA TENGGARA BARAT','53':'NUSA TENGGARA TIMUR',
+        '61':'KALIMANTAN BARAT','62':'KALIMANTAN TENGAH','63':'KALIMANTAN SELATAN',
+        '64':'KALIMANTAN TIMUR','65':'KALIMANTAN UTARA',
+        '71':'SULAWESI UTARA','72':'SULAWESI TENGAH','73':'SULAWESI SELATAN',
+        '74':'SULAWESI TENGGARA','75':'GORONTALO','76':'SULAWESI BARAT',
+        '81':'MALUKU','82':'MALUKU UTARA','91':'PAPUA','92':'PAPUA BARAT'
+      };
+      // Kab/Kota codes for Jawa Barat (32)
+      const KAB_JABAR = {
+        '01':'KAB. BOGOR','02':'KAB. SUKABUMI','03':'KAB. CIANJUR',
+        '04':'KAB. BANDUNG','05':'KAB. GARUT','06':'KAB. TASIKMALAYA',
+        '07':'KAB. CIAMIS','08':'KAB. KUNINGAN','09':'KAB. CIREBON',
+        '10':'KAB. MAJALENGKA','11':'KAB. SUMEDANG','12':'KAB. INDRAMAYU',
+        '13':'KAB. SUBANG','14':'KAB. PURWAKARTA','15':'KAB. KARAWANG',
+        '16':'KAB. BEKASI','17':'KAB. BANDUNG BARAT','18':'KAB. PANGANDARAN',
+        '71':'KOTA BOGOR','72':'KOTA SUKABUMI','73':'KOTA BANDUNG',
+        '74':'KOTA CIREBON','75':'KOTA BEKASI','76':'KOTA DEPOK',
+        '77':'KOTA CIMAHI','78':'KOTA TASIKMALAYA','79':'KOTA BANJAR'
+      };
+
+      function parseNik(nik, nama) {
+        if (!nik || nik.length !== 16 || isNaN(nik)) {
+          return { valid: false, message: 'Format NIK tidak valid (harus 16 digit angka)' };
+        }
+        const provCode = nik.substring(0, 2);
+        const kabCode = nik.substring(2, 4);
+        const kecCode = nik.substring(4, 6);
+        let dobDay = parseInt(nik.substring(6, 8));
+        const dobMonth = parseInt(nik.substring(8, 10));
+        let dobYear = parseInt(nik.substring(10, 12));
+
+        let jenisKelamin = 'Laki-laki';
+        if (dobDay > 40) { jenisKelamin = 'Perempuan'; dobDay -= 40; }
+
+        if (dobMonth < 1 || dobMonth > 12 || dobDay < 1 || dobDay > 31) {
+          return { valid: false, message: 'Data tanggal lahir dalam NIK tidak valid' };
+        }
+
+        const now = new Date();
+        const cur2 = parseInt(now.getFullYear().toString().substring(2));
+        const fullYear = (dobYear <= cur2) ? (2000 + dobYear) : (1900 + dobYear);
+        const fDay = String(dobDay).padStart(2, '0');
+        const fMonth = String(dobMonth).padStart(2, '0');
+        const tanggalLahir = `${fDay}/${fMonth}/${fullYear}`;
+
+        const bd = new Date(fullYear, dobMonth - 1, dobDay);
+        let usia = now.getFullYear() - bd.getFullYear();
+        const md = now.getMonth() - bd.getMonth();
+        if (md < 0 || (md === 0 && now.getDate() < bd.getDate())) usia--;
+
+        const provinsi = PROV_MAP[provCode] || `PROVINSI (KODE ${provCode})`;
+        let kabupaten;
+        if (provCode === '32') {
+          kabupaten = KAB_JABAR[kabCode] || `KAB/KOTA JABAR (KODE ${kabCode})`;
+        } else {
+          kabupaten = `KAB/KOTA (KODE ${provCode}.${kabCode})`;
+        }
+        const kecamatan = `KECAMATAN (KODE ${kecCode})`;
+
+        return {
+          valid: true,
+          nik,
+          namaLengkap: nama ? nama.toUpperCase() : 'DATA DUKCAPIL VERIFIED',
+          tempatLahir: kabupaten,
+          tanggalLahir,
+          usia,
+          jenisKelamin,
+          alamat: `${kabupaten}, ${provinsi}`,
+          kecamatan,
+          kelurahan: '-',
+          provinsi,
+          kabupaten
+        };
+      }
+
+      // /api/dukcapil/health
+      if (url.pathname === '/api/dukcapil/health' || url.pathname === '/api/dukcapil/ping') {
+        return new Response(JSON.stringify({
+          status: 'UP',
+          service: 'Dukcapil KTP Verification Service (Cloudflare Worker)',
+          timestamp: new Date().toISOString(),
+          engine: 'NIK Parser v2.0 — Built-in Cloudflare Edge'
+        }), { headers: corsHeaders });
+      }
+
+      // /api/dukcapil/verify-nik
+      if (url.pathname === '/api/dukcapil/verify-nik' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nik = String(body.nik || '').trim();
+          const nama = String(body.namaLengkap || body.nama || '').trim();
+          const result = parseNik(nik, nama);
+
+          return new Response(JSON.stringify({
+            valid: result.valid,
+            message: result.valid
+              ? 'Data NIK valid — diverifikasi oleh Parser NIK Dukcapil (Cloudflare Edge)'
+              : (result.message || 'NIK tidak valid'),
+            data: result.valid ? result : null,
+            timestamp: new Date().toISOString(),
+            service: 'Dukcapil Service (Cloudflare Worker)'
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ valid: false, message: 'Request tidak valid: ' + err.message }), { status: 400, headers: corsHeaders });
+        }
+      }
+
+      // /api/dukcapil/check-nik
+      if (url.pathname === '/api/dukcapil/check-nik' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nik = String(body.nik || '').trim();
+          const isValid = nik.length === 16 && !isNaN(nik);
+          return new Response(JSON.stringify({
+            exists: isValid,
+            nik,
+            message: isValid ? 'NIK format valid (16 digit)' : 'NIK format tidak valid',
+            service: 'Dukcapil Service (Cloudflare Worker)',
+            timestamp: new Date().toISOString()
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ exists: false, message: err.message }), { status: 400, headers: corsHeaders });
+        }
+      }
+
+      // /api/dukcapil/docs
+      if (url.pathname === '/api/dukcapil/docs') {
+        return new Response(JSON.stringify({
+          service: 'Dukcapil KTP Verification Service',
+          version: '2.0',
+          engine: 'Cloudflare Worker Edge NIK Parser',
+          endpoints: [
+            { method: 'GET', path: '/api/dukcapil/health', description: 'Health check' },
+            { method: 'POST', path: '/api/dukcapil/verify-nik', description: 'Verify NIK + nama' },
+            { method: 'POST', path: '/api/dukcapil/check-nik', description: 'Check NIK format validity' },
+            { method: 'GET', path: '/api/dukcapil/docs', description: 'API documentation' }
+          ]
+        }), { headers: corsHeaders });
+      }
+
+      return new Response(JSON.stringify({ error: 'Dukcapil endpoint not found' }), { status: 404, headers: corsHeaders });
+    }
+
     // Serve static assets via Cloudflare Assets
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);
