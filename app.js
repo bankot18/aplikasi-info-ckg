@@ -2282,6 +2282,17 @@ function setSimpusActionStatus(id, status) {
 }
 
 function openBagiPetugasModal() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  if (role !== 'admin' && role !== 'koordinator') {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Akses Ditolak',
+      text: 'Fitur Bagi Data ke Petugas hanya dapat diakses oleh Admin dan Koordinator.',
+      confirmButtonColor: '#7c3aed'
+    });
+    return;
+  }
+
   const belumBagi = simpusRecords.filter(r => !r.is_divided).length;
   const inputJml = document.getElementById('jumlahDataBagi');
   if (inputJml) {
@@ -5957,7 +5968,7 @@ async function triggerNikDukcapilLookup() {
     if (resp.ok) {
       const result = await resp.json();
       if (result.valid && result.data) {
-        autoFillFormFromDukcapil(result.data);
+        await autoFillFormFromDukcapil(result.data);
 
         if (statusEl) {
           statusEl.style.display = 'block';
@@ -5977,7 +5988,7 @@ async function triggerNikDukcapilLookup() {
   // Fallback to local parser
   const localResult = parseNikIndonesia(nik, '');
   if (localResult.valid) {
-    autoFillFormFromDukcapil(localResult);
+    await autoFillFormFromDukcapil(localResult);
 
     if (statusEl) {
       statusEl.style.display = 'block';
@@ -6003,7 +6014,7 @@ async function triggerNikDukcapilLookup() {
   }
 }
 
-function autoFillFormFromDukcapil(data) {
+async function autoFillFormFromDukcapil(data) {
   const btn = document.getElementById('btnCekNikDukcapil');
 
   // Auto-fill Nama (only if currently empty)
@@ -6042,7 +6053,7 @@ function autoFillFormFromDukcapil(data) {
     }
   }
 
-  // Auto-fill Provinsi dropdown (try to match)
+  // Auto-fill Provinsi, Kabupaten/Kota, dan Kecamatan dropdowns
   if (data.provinsi) {
     const provSelect = document.getElementById('provinsi');
     if (provSelect) {
@@ -6054,6 +6065,42 @@ function autoFillFormFromDukcapil(data) {
       if (match) {
         provSelect.value = match.value;
         provSelect.dispatchEvent(new Event('change'));
+
+        // Wait for Kab/Kota dropdown options to load asynchronously
+        await new Promise(r => setTimeout(r, 250));
+
+        if (data.kabupaten) {
+          const kabSelect = document.getElementById('kab_kota');
+          if (kabSelect) {
+            const kabNameClean = data.kabupaten.toLowerCase().replace(/^(kab\.|kota|kabupaten)\s*/i, '').trim();
+            const kabMatch = Array.from(kabSelect.options).find(o => {
+              const valClean = o.value.toLowerCase().replace(/^(kab\.|kota|kabupaten)\s*/i, '').trim();
+              return valClean.includes(kabNameClean) || kabNameClean.includes(valClean);
+            });
+            if (kabMatch) {
+              kabSelect.value = kabMatch.value;
+              kabSelect.dispatchEvent(new Event('change'));
+
+              // Wait for Kecamatan dropdown options to load asynchronously
+              await new Promise(r => setTimeout(r, 250));
+
+              if (data.kecamatan && !data.kecamatan.includes('KODE')) {
+                const kecSelect = document.getElementById('kecamatan');
+                if (kecSelect) {
+                  const kecNameClean = data.kecamatan.toLowerCase().replace(/^kecamatan\s*/i, '').trim();
+                  const kecMatch = Array.from(kecSelect.options).find(o => {
+                    const valClean = o.value.toLowerCase().replace(/^kecamatan\s*/i, '').trim();
+                    return valClean.includes(kecNameClean) || kecNameClean.includes(valClean);
+                  });
+                  if (kecMatch) {
+                    kecSelect.value = kecMatch.value;
+                    kecSelect.dispatchEvent(new Event('change'));
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
