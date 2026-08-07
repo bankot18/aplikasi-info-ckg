@@ -872,8 +872,8 @@
 
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" for="jumlahDataBagi">Jumlah Baris Data yang Di-Bagi <span class="required">*</span></label>
-            <input type="number" id="jumlahDataBagi" class="form-control" value="10" min="1" max="10" required>
-            <span style="font-size: 11px; color: var(--text-muted);">Maksimal data belum di-bagi saat ini: 10 data.</span>
+            <input type="number" id="jumlahDataBagi" class="form-control" value="10" min="1" required>
+            <span id="helpTextBagi" style="font-size: 11px; color: var(--text-muted);">Maksimal data belum di-bagi saat ini: 10 data.</span>
           </div>
 
           <div class="modal-footer" style="padding-right: 0; padding-left: 0; margin-top: 10px;">
@@ -1318,46 +1318,6 @@
           <i class="bi bi-upload"></i> Proses Import Data
         </button>
       </div>
-    </div>
-  </div>
-
-  <!-- Bagi Petugas Modal -->
-  <div id="bagiPetugasModalOverlay" class="modal-overlay">
-    <div class="modal-container" style="max-width: 520px;">
-      <div class="modal-header">
-        <div class="modal-title">
-          <i class="bi bi-person-fill-gear" style="color: var(--purple);"></i> Distribusi Data ke Petugas Entry
-        </div>
-        <button class="modal-close" onclick="closeBagiPetugasModal()">&times;</button>
-      </div>
-      <form onsubmit="handleBagiPetugasSubmit(event)">
-        <div class="modal-body">
-          <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 12.5px; display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
-            <i class="bi bi-info-circle-fill" style="font-size: 16px;"></i>
-            <span>Data yang belum di-bagi akan dialokasikan ke petugas yang dipilih. Data tersebut akan pindah ke tab <strong>"Data Sudah Di-Bagi"</strong>.</span>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label">Petugas Tujuan <span class="required">*</span></label>
-            <select id="targetPetugasSelect" class="form-control" required>
-              <option value="">-- Pilih Petugas --</option>
-              <option value="Anisa Rohmatunisa, AM.Keb">Anisa Rohmatunisa, AM.Keb</option>
-              <option value="Neng Yulia Trisnawati, AM.Keb">Neng Yulia Trisnawati, AM.Keb</option>
-              <option value="Teti Nuryati, S.Keb, Bdn">Teti Nuryati, S.Keb, Bdn</option>
-              <option value="Mochamad Fauzie, S.Gz">Mochamad Fauzie, S.Gz</option>
-            </select>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label">Jumlah Data yang Akan Di-Bagi <span class="required">*</span></label>
-            <input type="number" id="jumlahDataBagi" class="form-control" min="1" max="100" value="10" required>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeBagiPetugasModal()">Batal</button>
-          <button type="submit" class="btn btn-purple"><i class="bi bi-send-fill"></i> Distribusikan Sekarang</button>
-        </div>
-      </form>
     </div>
   </div>
 

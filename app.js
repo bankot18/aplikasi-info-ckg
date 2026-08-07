@@ -2316,12 +2316,37 @@ function openBagiPetugasModal() {
     return;
   }
 
-  const belumBagi = simpusRecords.filter(r => !r.is_divided).length;
+  const belumBagiRecords = simpusRecords.filter(r => !r.is_divided);
+  const belumBagi = belumBagiRecords.length;
+
+  if (belumBagi === 0) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Seluruh Data Sudah Di-bagi',
+      text: 'Saat ini tidak ada data SIMPUS yang belum di-bagi.',
+      confirmButtonColor: '#7c3aed'
+    });
+    return;
+  }
+
+  // Populate target petugas dropdown dynamically
+  const selectPetugas = document.getElementById('targetPetugasSelect');
+  if (selectPetugas) {
+    selectPetugas.innerHTML = '<option value="">-- Pilih Petugas Tujuan --</option>' +
+      usersDb.map(u => `<option value="${u.nama_user}">${u.nama_user} (${u.role || 'Petugas'})</option>`).join('');
+  }
+
   const inputJml = document.getElementById('jumlahDataBagi');
   if (inputJml) {
-    inputJml.max = belumBagi;
-    inputJml.value = Math.min(10, belumBagi);
+    inputJml.removeAttribute('max'); // Remove strict max attribute to prevent native browser validation tooltips
+    inputJml.value = Math.min(10, belumBagi) || 1;
   }
+
+  const helpText = document.getElementById('helpTextBagi');
+  if (helpText) {
+    helpText.textContent = `Maksimal data belum di-bagi saat ini: ${belumBagi} data.`;
+  }
+
   document.getElementById('bagiPetugasModalOverlay').classList.add('open');
 }
 
@@ -2332,15 +2357,32 @@ function closeBagiPetugasModal() {
 async function handleBagiPetugasSubmit(e) {
   e.preventDefault();
   const targetPetugas = document.getElementById('targetPetugasSelect').value;
-  const count = parseInt(document.getElementById('jumlahDataBagi').value) || 0;
+  const countInput = document.getElementById('jumlahDataBagi').value;
+  const count = parseInt(countInput) || 0;
 
   if (!targetPetugas) {
     showToast('Silakan pilih Petugas Tujuan terlebih dahulu!', 'error');
     return;
   }
 
-  // Collect IDs of belum_bagi records to move
   const belumBagiRecords = simpusRecords.filter(r => !r.is_divided);
+  const belumBagi = belumBagiRecords.length;
+
+  if (count <= 0) {
+    showToast('Jumlah baris data yang di-bagi minimal 1 data!', 'warning');
+    return;
+  }
+
+  if (count > belumBagi) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Jumlah Melebihi Batas',
+      text: `Jumlah data yang Anda masukkan (${count}) melebihi sisa data SIMPUS yang belum di-bagi (${belumBagi} data).`,
+      confirmButtonColor: '#7c3aed'
+    });
+    return;
+  }
+
   const idsToMove = belumBagiRecords.slice(0, count).map(r => r.id);
 
   if (idsToMove.length === 0) {
