@@ -1377,6 +1377,8 @@ function switchSimpusTab(tab) {
   const belumBagiActions = document.getElementById('simpusBelumBagiActions');
   const btnMultiImport = document.getElementById('btnSimpusAdminMultiImport');
   const thPetugas = document.getElementById('thSimpusPetugasEntry');
+  const tableViewContainer = document.getElementById('simpusTableViewContainer');
+  const cardsViewContainer = document.getElementById('simpusSudahBagiCardsView');
 
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
 
@@ -1387,6 +1389,8 @@ function switchSimpusTab(tab) {
     if (belumBagiActions) belumBagiActions.style.display = 'flex';
     if (btnMultiImport) btnMultiImport.style.display = 'none';
     if (thPetugas) thPetugas.style.display = 'none';
+    if (tableViewContainer) tableViewContainer.style.display = 'block';
+    if (cardsViewContainer) cardsViewContainer.style.display = 'none';
   } else {
     if (btnBelum) { btnBelum.className = 'simpus-pill-btn'; }
     if (btnSudah) { btnSudah.className = 'simpus-pill-btn active-emerald'; }
@@ -1394,14 +1398,16 @@ function switchSimpusTab(tab) {
     if (belumBagiActions) belumBagiActions.style.display = 'flex';
     if (btnMultiImport) btnMultiImport.style.display = role === 'admin' ? 'inline-flex' : 'none';
     if (thPetugas) thPetugas.style.display = '';
+    if (tableViewContainer) tableViewContainer.style.display = 'none';
+    if (cardsViewContainer) cardsViewContainer.style.display = 'flex';
   }
 
   renderSimpusTableRecords();
 }
 
 function renderSimpusTableRecords() {
-  const container = document.getElementById('simpusCardsContainer');
-  if (!container) return;
+  const containerTable = document.getElementById('simpusCardsContainer');
+  const containerCards = document.getElementById('simpusSudahBagiCardsView');
 
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
   const loggedUser = (sessionStorage.getItem('ckg_user_name') || '').trim().toLowerCase();
@@ -1436,64 +1442,150 @@ function renderSimpusTableRecords() {
 
   const isBelumBagi = (activeSimpusTab !== 'sudah_bagi');
 
-  if (dataset.length === 0) {
-    const colSpan = isBelumBagi ? 18 : 19;
-    container.innerHTML = `
-      <tr>
-        <td colspan="${colSpan}" style="text-align: center; padding: 40px; color: var(--text-muted);">
-          <i class="bi bi-inbox" style="font-size: 36px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
-          <strong style="font-size: 15px;">Tidak Ada Data Pasien SIMPUS</strong>
-          <p style="font-size: 12.5px; margin-top: 4px;">Tidak ada data yang sesuai dengan filter atau kategori status saat ini.</p>
-        </td>
-      </tr>
-    `;
-    return;
+  // RENDER 1: TABEL (Khusus Data Belum Di-Bagi)
+  if (isBelumBagi) {
+    if (!containerTable) return;
+    if (dataset.length === 0) {
+      containerTable.innerHTML = `
+        <tr>
+          <td colspan="18" style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <i class="bi bi-inbox" style="font-size: 36px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
+            <strong style="font-size: 15px;">Tidak Ada Data Pasien SIMPUS (Belum Di-Bagi)</strong>
+            <p style="font-size: 12.5px; margin-top: 4px;">Belum ada data yang di-import atau belum ada data yang belum dibagikan.</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    containerTable.innerHTML = dataset.map((r, i) => {
+      const statusPernikahan = r.status_pernikahan || 'MENIKAH';
+      const prov = r.provinsi || 'Jawa Barat';
+      const kabKota = r.kab_kota || 'Kab. Bandung';
+      const kec = r.kecamatan || 'Banjaran';
+      const kel = r.kelurahan || 'Tarajusari';
+      const recId = r.id || r.nik;
+
+      return `
+        <tr>
+          <td style="text-align: center; font-weight: 700; color: #475569;">${i + 1}</td>
+          <td><strong>${r.nama}</strong></td>
+          <td><span style="font-family: monospace; font-size: 12px;">${r.nik}</span></td>
+          <td>${r.dob}</td>
+          <td style="text-align: center;"><span class="badge badge-amber">${r.usia} th</span></td>
+          <td>${statusPernikahan}</td>
+          <td>${prov}</td>
+          <td>${kabKota}</td>
+          <td>${kec}</td>
+          <td>${kel}</td>
+          <td style="max-width: 180px; white-space: normal;">${r.alamat}</td>
+          <td style="text-align: center;">${r.bb}</td>
+          <td style="text-align: center;">${r.tb}</td>
+          <td style="text-align: center;">${r.sistol}</td>
+          <td style="text-align: center;">${r.diastol}</td>
+          <td style="text-align: center;">${r.gula}</td>
+          <td style="text-align: center;">${r.kolesterol}</td>
+          <td style="text-align: center; white-space: nowrap;">
+            <button class="btn btn-outline-danger btn-sm" style="padding: 4px 8px; font-size: 11px;" onclick="deleteSimpusRecord('${recId}')" title="Hapus Data Pasien">
+              <i class="bi bi-trash-fill"></i> Hapus
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+  } else {
+    // RENDER 2: CARD LIST VIEW (Khusus Data Sudah Di-Bagi)
+    if (!containerCards) return;
+    if (dataset.length === 0) {
+      containerCards.innerHTML = `
+        <div style="text-align: center; padding: 50px 20px; color: var(--text-muted); background: #ffffff; border-radius: var(--radius-md); border: 1px solid var(--border-color); width: 100%;">
+          <i class="bi bi-inbox" style="font-size: 42px; color: #94a3b8; display: block; margin-bottom: 10px;"></i>
+          <strong style="font-size: 16px; color: var(--text-main);">Tidak Ada Data Pasien (Sudah Di-Bagi)</strong>
+          <p style="font-size: 13px; margin-top: 4px;">Belum ada data yang dibagikan atau tidak ada data yang cocok dengan filter saat ini.</p>
+        </div>
+      `;
+      return;
+    }
+
+    containerCards.innerHTML = dataset.map((r, i) => {
+      const petugasName = r.petugas_entry || r.assigned_to || '-';
+      const recId = r.id || r.nik;
+      const initials = (r.nama || 'P').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      const kel = r.kelurahan || 'Tarajusari';
+
+      return `
+        <div class="simpus-patient-card" style="border-left: 4px solid var(--primary);">
+          <!-- Card Header -->
+          <div class="simpus-card-header">
+            <div class="simpus-patient-name-box">
+              <div class="simpus-avatar-icon">
+                ${initials}
+              </div>
+              <div>
+                <div class="simpus-patient-name" style="cursor: pointer; color: var(--primary); display: inline-flex; align-items: center; gap: 8px;" onclick="openSimpusDetailModal('${recId}')" title="Klik Nama untuk Buka Detail & Copy Data">
+                  <span>${i + 1}. ${r.nama}</span>
+                  <i class="bi bi-box-arrow-up-right" style="font-size: 13px; color: var(--primary); opacity: 0.85;"></i>
+                </div>
+                <div class="simpus-patient-subtext" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px; align-items: center;">
+                  <span class="copyable-field-sm" onclick="copyToClipboard('${r.nik}', 'NIK Pasien')" style="cursor: pointer; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; font-weight: 700; color: #1e293b;" title="Klik untuk Salin NIK">
+                    <i class="bi bi-card-text"></i> NIK: <strong style="font-family: monospace;">${r.nik}</strong> <i class="bi bi-copy" style="font-size: 11px; color: var(--primary); margin-left: 4px;"></i>
+                  </span>
+                  <span style="font-size: 12px; color: var(--text-muted);">
+                    <i class="bi bi-calendar"></i> Tgl Lahir: ${r.dob || '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="simpus-card-tags">
+              <span class="badge badge-purple" style="font-weight: 700; padding: 6px 12px; font-size: 12px;">
+                <i class="bi bi-person-fill"></i> ${petugasName}
+              </span>
+              <span class="badge badge-amber" style="padding: 6px 10px; font-size: 12px;">
+                ${r.usia} th (${r.keterangan || 'Dewasa'})
+              </span>
+            </div>
+          </div>
+
+          <!-- Summary Grid -->
+          <div class="simpus-card-body-summary">
+            <div class="simpus-info-item">
+              <span class="simpus-info-label">Alamat Lengkap</span>
+              <span class="simpus-info-val" style="white-space: normal;">${r.alamat || '-'}, ${kel}</span>
+            </div>
+            <div class="simpus-info-item">
+              <span class="simpus-info-label">Tekanan Darah (TD)</span>
+              <span class="simpus-info-val"><i class="bi bi-activity" style="color: var(--rose);"></i> ${r.sistol}/${r.diastol} mmHg</span>
+            </div>
+            <div class="simpus-info-item">
+              <span class="simpus-info-label">BB / TB / IMT</span>
+              <span class="simpus-info-val"><i class="bi bi-person-bounding-box" style="color: var(--emerald);"></i> ${r.bb}kg / ${r.tb}cm (${r.imt})</span>
+            </div>
+            <div class="simpus-info-item">
+              <span class="simpus-info-label">Gula / Kolesterol</span>
+              <span class="simpus-info-val"><i class="bi bi-droplet-fill" style="color: var(--cyan);"></i> Gula: ${r.gula || '-'} | Kol: ${r.kolesterol || '-'}</span>
+            </div>
+          </div>
+
+          <!-- Action Bar -->
+          <div class="simpus-card-actions">
+            <div style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+              <i class="bi bi-cursor-fill" style="color: var(--primary);"></i> Klik nama pasien atau tombol detail untuk salin data
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn-detail-info" onclick="openSimpusDetailModal('${recId}')">
+                <i class="bi bi-eye-fill"></i> Lihat Detail & Copy Data
+              </button>
+              <button class="btn btn-outline-danger btn-sm" style="padding: 6px 10px; font-size: 12px;" onclick="deleteSimpusRecord('${recId}')" title="Hapus Data">
+                <i class="bi bi-trash-fill"></i> Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
-
-  container.innerHTML = dataset.map((r, i) => {
-    const petugasName = r.petugas_entry || r.assigned_to || '-';
-    const statusPernikahan = r.status_pernikahan || 'MENIKAH';
-    const prov = r.provinsi || 'Jawa Barat';
-    const kabKota = r.kab_kota || 'Kab. Bandung';
-    const kec = r.kecamatan || 'Banjaran';
-    const kel = r.kelurahan || 'Tarajusari';
-    const recId = r.id || r.nik;
-
-    const petugasCell = isBelumBagi ? '' : `
-        <td>
-          <span class="badge badge-purple" style="font-weight:700;">
-            <i class="bi bi-person-fill"></i> ${petugasName}
-          </span>
-        </td>`;
-
-    return `
-      <tr>
-        <td style="text-align: center; font-weight: 700; color: #475569;">${i + 1}</td>
-        ${petugasCell}
-        <td><strong>${r.nama}</strong></td>
-        <td><span style="font-family: monospace; font-size: 12px;">${r.nik}</span></td>
-        <td>${r.dob}</td>
-        <td style="text-align: center;"><span class="badge badge-amber">${r.usia} th</span></td>
-        <td>${statusPernikahan}</td>
-        <td>${prov}</td>
-        <td>${kabKota}</td>
-        <td>${kec}</td>
-        <td>${kel}</td>
-        <td style="max-width: 180px; white-space: normal;">${r.alamat}</td>
-        <td style="text-align: center;">${r.bb}</td>
-        <td style="text-align: center;">${r.tb}</td>
-        <td style="text-align: center;">${r.sistol}</td>
-        <td style="text-align: center;">${r.diastol}</td>
-        <td style="text-align: center;">${r.gula}</td>
-        <td style="text-align: center;">${r.kolesterol}</td>
-        <td style="text-align: center; white-space: nowrap;">
-          <button class="btn btn-outline-danger btn-sm" style="padding: 4px 8px; font-size: 11px;" onclick="deleteSimpusRecord('${recId}')" title="Hapus Data Pasien Cloud">
-            <i class="bi bi-trash-fill"></i> Hapus
-          </button>
-        </td>
-      </tr>
-    `;
-  }).join('');
 }
 
 function copyToClipboard(text, label = 'Data') {
@@ -1639,7 +1731,47 @@ function openSimpusDetailModal(id) {
           <div class="copyable-field" onclick="copyToClipboard('${item.usia}', 'Usia Pasien')">
             <div>
               <div class="simpus-info-label">Usia & Kategori</div>
-              <div class="simpus-info-val">${item.usia} Tahun (${item.keterangan})</div>
+              <div class="simpus-info-val">${item.usia} Tahun (${item.keterangan || 'Dewasa'})</div>
+            </div>
+            <i class="bi bi-copy copy-icon"></i>
+          </div>
+
+          <div class="copyable-field" onclick="copyToClipboard('${item.status_pernikahan || 'MENIKAH'}', 'Status Pernikahan')">
+            <div>
+              <div class="simpus-info-label">Status Pernikahan</div>
+              <div class="simpus-info-val">${item.status_pernikahan || 'MENIKAH'}</div>
+            </div>
+            <i class="bi bi-copy copy-icon"></i>
+          </div>
+
+          <div class="copyable-field" onclick="copyToClipboard('${item.provinsi || 'Jawa Barat'}', 'Provinsi')">
+            <div>
+              <div class="simpus-info-label">Provinsi</div>
+              <div class="simpus-info-val">${item.provinsi || 'Jawa Barat'}</div>
+            </div>
+            <i class="bi bi-copy copy-icon"></i>
+          </div>
+
+          <div class="copyable-field" onclick="copyToClipboard('${item.kab_kota || 'Kab. Bandung'}', 'Kabupaten / Kota')">
+            <div>
+              <div class="simpus-info-label">Kabupaten / Kota</div>
+              <div class="simpus-info-val">${item.kab_kota || 'Kab. Bandung'}</div>
+            </div>
+            <i class="bi bi-copy copy-icon"></i>
+          </div>
+
+          <div class="copyable-field" onclick="copyToClipboard('${item.kecamatan || 'Banjaran'}', 'Kecamatan')">
+            <div>
+              <div class="simpus-info-label">Kecamatan</div>
+              <div class="simpus-info-val">${item.kecamatan || 'Banjaran'}</div>
+            </div>
+            <i class="bi bi-copy copy-icon"></i>
+          </div>
+
+          <div class="copyable-field" onclick="copyToClipboard('${item.kelurahan || 'Tarajusari'}', 'Kelurahan / Desa')">
+            <div>
+              <div class="simpus-info-label">Kelurahan / Desa</div>
+              <div class="simpus-info-val">${item.kelurahan || 'Tarajusari'}</div>
             </div>
             <i class="bi bi-copy copy-icon"></i>
           </div>
@@ -1652,10 +1784,10 @@ function openSimpusDetailModal(id) {
             <i class="bi bi-copy copy-icon"></i>
           </div>
 
-          <div class="copyable-field" onclick="copyToClipboard('${item.assigned_to || 'Puskesmas Banjaran Kota'}', 'Petugas Entry')">
+          <div class="copyable-field" onclick="copyToClipboard('${item.assigned_to || item.petugas_entry || 'Puskesmas Banjaran Kota'}', 'Petugas Entry')">
             <div>
               <div class="simpus-info-label">Petugas Entry / Faskes</div>
-              <div class="simpus-info-val">${item.assigned_to || 'Puskesmas Banjaran Kota'}</div>
+              <div class="simpus-info-val">${item.assigned_to || item.petugas_entry || 'Puskesmas Banjaran Kota'}</div>
             </div>
             <i class="bi bi-copy copy-icon"></i>
           </div>

@@ -594,8 +594,8 @@
             </button>
           </div>
 
-          <!-- SIMPUS Data Table View (Matching Excel Template Columns + NO) -->
-          <div class="table-responsive" style="margin-top: 12px; max-height: 650px; overflow-y: auto;">
+          <!-- SIMPUS Data Table View (Khusus Data Belum Di-Bagi) -->
+          <div id="simpusTableViewContainer" class="table-responsive" style="margin-top: 12px; max-height: 650px; overflow-y: auto;">
             <table class="custom-table" id="simpusDataTable">
               <thead>
                 <tr style="position: sticky; top: 0; background: var(--bg-subtle); z-index: 2;">
@@ -624,6 +624,11 @@
                 <!-- Rendered dynamically via JS -->
               </tbody>
             </table>
+          </div>
+
+          <!-- SIMPUS Cards List View (Khusus Data Sudah Di-Bagi) -->
+          <div id="simpusSudahBagiCardsView" class="simpus-cards-list" style="display: none; margin-top: 14px; max-height: 680px; overflow-y: auto; padding-right: 4px;">
+            <!-- Rendered dynamically via JS -->
           </div>
 
         </div>
