@@ -6917,14 +6917,18 @@ document.addEventListener('DOMContentLoaded', () => {
    ========================================================================== */
 
 function applyCustomLogo() {
-  const customLogo = localStorage.getItem('ckg_custom_logo');
-  if (customLogo) {
-    document.querySelectorAll('.brand-logo img, .visual-brand-logo img, .form-logo-img').forEach(img => {
-      img.src = customLogo;
-      img.style.display = 'block';
-      if (img.nextElementSibling) img.nextElementSibling.style.display = 'none';
-    });
-  }
+  const activeLogo = localStorage.getItem('ckg_custom_logo') || 'logo.png';
+
+  document.querySelectorAll('.brand-logo img, .visual-brand-logo img, .form-logo-img').forEach(img => {
+    img.src = activeLogo;
+    img.style.display = 'block';
+    if (img.nextElementSibling) img.nextElementSibling.style.display = 'none';
+  });
+
+  // Dynamically update browser tab favicon
+  document.querySelectorAll("link[rel*='icon']").forEach(link => {
+    link.href = activeLogo;
+  });
 }
 
 function openCustomLogoModal() {
