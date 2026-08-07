@@ -2611,7 +2611,7 @@ function processImportFromModal() {
         });
       }
 
-      const chunkSize = 5;
+      const chunkSize = 20;
       let uploaded = 0;
       let failed = 0;
       let lastError = '';
@@ -2623,26 +2623,29 @@ function processImportFromModal() {
         // Try up to 2 times per chunk
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
+            const tStart = performance.now();
             const res = await fetch('/api/simpus?tab=belum_bagi', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(chunk)
             });
+            const tEnd = performance.now();
             if (res.ok) {
               uploaded += chunk.length;
               success = true;
+              console.log(`[Import SIMPUS Speed] Upload ${chunk.length} data completed in ${(tEnd - tStart).toFixed(1)} ms (${Math.round((chunk.length / ((tEnd - tStart) / 1000)))} data/sec)`);
               break;
             } else {
               const errBody = await res.text();
               lastError = `HTTP ${res.status}: ${errBody.substring(0, 200)}`;
               console.error(`[Import SIMPUS] Chunk ${i}-${i+chunk.length} failed (attempt ${attempt+1}):`, lastError);
               // Wait before retry
-              await new Promise(r => setTimeout(r, 1000));
+              await new Promise(r => setTimeout(r, 500));
             }
           } catch (err) {
             lastError = err.message;
             console.error(`[Import SIMPUS] Network error chunk ${i} (attempt ${attempt+1}):`, err.message);
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 500));
           }
         }
 
