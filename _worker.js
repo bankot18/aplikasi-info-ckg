@@ -112,7 +112,8 @@ export default {
           'ALTER TABLE simpus_records ADD COLUMN provinsi TEXT',
           'ALTER TABLE simpus_records ADD COLUMN kab_kota TEXT',
           'ALTER TABLE simpus_records ADD COLUMN kecamatan TEXT',
-          'ALTER TABLE simpus_records ADD COLUMN kelurahan TEXT'
+          'ALTER TABLE simpus_records ADD COLUMN kelurahan TEXT',
+          'ALTER TABLE simpus_records ADD COLUMN raw_json TEXT'
         ];
         for (const q of alterQueries) {
           try { await env.DB.prepare(q).run(); } catch (_) {}
