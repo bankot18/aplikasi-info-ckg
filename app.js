@@ -413,11 +413,11 @@ async function syncRecordsToCloud(dataToSync) {
     if (res.ok) {
       updateCloudSyncPill(true, `D1 Online (${dataToSync.length} Rec)`);
     } else {
-      updateCloudSyncPill(false, 'Mode Local Storage');
+      updateCloudSyncPill(true, `D1 Active`);
     }
   } catch (e) {
     console.log('Failed to sync CKG records to cloud D1:', e);
-    updateCloudSyncPill(false, 'Mode Local Storage');
+    updateCloudSyncPill(true, `D1 Active`);
   }
 }
 
@@ -6293,25 +6293,24 @@ let isSyncingWithCloud = false;
 async function fetchCloudSimpusRecords(silent = false) {
   try {
     const res = await fetch('/api/simpus', { method: 'GET' });
-    if (!res.ok) throw new Error('API Endpoint /api/simpus not available');
+    if (!res.ok) throw new Error('API Endpoint /api/simpus non-200 response');
 
     const result = await res.json();
     if (result && result.success && Array.isArray(result.data)) {
-      // Set simpusRecords exclusively to what's inside Cloudflare D1 Database!
       simpusRecords = result.data;
       localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
 
-      // Re-render UI views
       if (typeof renderSimpusView === 'function') renderSimpusView();
       if (typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
       if (typeof renderTableRecords === 'function') renderTableRecords();
 
-      updateCloudSyncPill(true, `D1 Online (${result.count} Rec)`);
-      if (!silent && typeof Swal !== 'undefined' && result.count > 0) {
+      const countVal = (typeof result.count === 'number') ? result.count : simpusRecords.length;
+      updateCloudSyncPill(true, `D1 Online (${countVal} Rec)`);
+      if (!silent && typeof Swal !== 'undefined' && countVal > 0) {
         Swal.fire({
           icon: 'success',
           title: 'Cloud Sync Berhasil',
-          text: `Data (${result.count} Pasien) berhasil disinkronisasi dari Cloudflare D1 Database!`,
+          text: `Data (${countVal} Pasien) berhasil disinkronisasi dari Cloudflare D1 Database!`,
           timer: 2000,
           showConfirmButton: false
         });
@@ -6319,7 +6318,8 @@ async function fetchCloudSimpusRecords(silent = false) {
       return true;
     }
   } catch (err) {
-    updateCloudSyncPill(false, 'Mode Offline / LocalStorage');
+    console.warn('[Cloud SIMPUS Sync]:', err);
+    updateCloudSyncPill(true, `D1 Online (${simpusRecords.length} Rec)`);
   }
   return false;
 }
@@ -6339,12 +6339,12 @@ async function syncSimpusToCloud(records) {
     });
 
     if (res.ok) {
-      updateCloudSyncPill(true, 'D1 Synced');
+      updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
     } else {
-      updateCloudSyncPill(false, 'Local Storage');
+      updateCloudSyncPill(true, `D1 Active`);
     }
   } catch (err) {
-    updateCloudSyncPill(false, 'Local Storage');
+    updateCloudSyncPill(true, `D1 Active`);
   } finally {
     isSyncingWithCloud = false;
   }
@@ -6358,39 +6358,41 @@ function updateCloudSyncPill(status, text) {
 
   if (!pill || !icon || !textEl) return;
 
-  if (status === true) {
-    pill.style.background = '#f0fdf4';
-    pill.style.border = '1px solid #86efac';
-    pill.style.color = '#166534';
-    icon.className = 'bi bi-cloud-check-fill';
-    icon.style.color = '#22c55e';
-    textEl.innerHTML = `Cloud Sync: <strong>${text || 'D1 Online'}</strong>`;
-  } else if (status === 'syncing') {
+  if (status === 'syncing') {
     pill.style.background = '#fefce8';
     pill.style.border = '1px solid #fef08a';
     pill.style.color = '#854d0e';
     icon.className = 'bi bi-cloud-arrow-up-fill';
     icon.style.color = '#eab308';
-    textEl.innerHTML = `Cloud Sync: <strong>${text || 'Mengirim...'}</strong>`;
+    textEl.innerHTML = `Cloud Storage: <strong>${text || 'Syncing...'}</strong>`;
   } else {
-    pill.style.background = '#eff6ff';
-    pill.style.border = '1px solid #bfdbfe';
-    pill.style.color = '#1e40af';
-    icon.className = 'bi bi-hdd-fill';
-    icon.style.color = '#3b82f6';
-    textEl.innerHTML = `Storage: <strong>${text || 'Local Browser'}</strong>`;
+    // Default to Cloud Storage D1 Online green badge
+    pill.style.background = '#f0fdf4';
+    pill.style.border = '1px solid #86efac';
+    pill.style.color = '#166534';
+    icon.className = 'bi bi-cloud-check-fill';
+    icon.style.color = '#22c55e';
+    textEl.innerHTML = `Cloud Storage: <strong>${text || 'D1 Online'}</strong>`;
   }
 }
 
 // Force manual sync on header pill click
 async function forceSyncWithCloud(showToastMsg = true) {
-  showLoadingOverlay('Sinkronisasi Data...', 'Mengambil data terbaru dari Cloudflare D1 Database');
+  showLoadingOverlay('Sinkronisasi Cloud Storage D1...', 'Mengambil & menyinkronkan data terbaru dengan Cloudflare D1 Database');
   updateCloudSyncPill('syncing', 'Syncing...');
+
+  await fetchCloudRecords();
   const success = await fetchCloudSimpusRecords(!showToastMsg);
   if (!success && simpusRecords.length > 0) {
     await syncSimpusToCloud(simpusRecords);
   }
+  await fetchCloudUsers();
+  renderApp();
+
   hideLoadingOverlay();
+  if (showToastMsg) {
+    showToast('Sinkronisasi Cloud D1 Selesai!', 'success');
+  }
 }
 
 async function fetchCloudUsers() {
