@@ -1812,36 +1812,39 @@ async function handleBagiPetugasSubmit(e) {
     return;
   }
 
-  const updatedChunk = [];
-  let assigned = 0;
-  simpusRecords.forEach(r => {
-    if (!r.is_divided && assigned < count) {
-      r.is_divided = true;
-      r.assigned_to = targetPetugas;
-      updatedChunk.push(r);
-      assigned++;
-    }
-  });
+  // Collect IDs of belum_bagi records to move
+  const belumBagiRecords = simpusRecords.filter(r => !r.is_divided);
+  const idsToMove = belumBagiRecords.slice(0, count).map(r => r.id);
 
-  if (assigned === 0) {
+  if (idsToMove.length === 0) {
     showToast('Tidak ada data yang tersedia untuk di-bagi.', 'warning');
     closeBagiPetugasModal();
     return;
   }
 
   closeBagiPetugasModal();
-  showLoadingOverlay('Membagikan Data SIMPUS...', `Mengalokasikan ${assigned} data ke ${targetPetugas} & menyinkronkan ke Cloud D1`);
-
-  saveSimpusRecordsToStorage();
+  showLoadingOverlay('Membagikan Data SIMPUS...', `Mengalokasikan ${idsToMove.length} data ke ${targetPetugas} & menyinkronkan ke Cloud D1`);
 
   try {
-    await fetch('/api/simpus', {
+    const res = await fetch('/api/simpus/bagi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedChunk)
+      body: JSON.stringify({ ids: idsToMove, petugas: targetPetugas })
     });
+    const result = await res.json();
+
+    // Update local records
+    idsToMove.forEach(id => {
+      const rec = simpusRecords.find(r => r.id === id);
+      if (rec) {
+        rec.is_divided = true;
+        rec.assigned_to = targetPetugas;
+        rec.petugas_entry = targetPetugas;
+      }
+    });
+    localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
   } catch (err) {
-    console.error('Failed to sync allocated SIMPUS records to cloud:', err);
+    console.error('Failed to bagi SIMPUS records:', err);
   }
 
   hideLoadingOverlay();
@@ -1869,7 +1872,8 @@ async function deleteAllSimpusData() {
   const proceed = async () => {
     showLoadingOverlay('Menghapus Data SIMPUS...', 'Menghapus seluruh record SIMPUS di Cloudflare D1 Database');
     try {
-      await fetch('/api/simpus', { method: 'DELETE' });
+      await fetch('/api/simpus?tab=belum_bagi', { method: 'DELETE' });
+      await fetch('/api/simpus?tab=sudah_bagi', { method: 'DELETE' });
     } catch (err) {
       console.error('Cloud delete SIMPUS error:', err);
     }
@@ -2162,7 +2166,7 @@ function processImportFromModal() {
         // Try up to 2 times per chunk
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
-            const res = await fetch('/api/simpus', {
+            const res = await fetch('/api/simpus?tab=belum_bagi', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(chunk)
@@ -3635,7 +3639,8 @@ async function deleteSimpusRecord(id) {
 
   try {
     const targetId = targetSimpus.id || targetSimpus.nik || id;
-    const res = await fetch(`/api/simpus?id=${encodeURIComponent(targetId)}`, {
+    const deleteTab = targetSimpus.is_divided ? 'sudah_bagi' : 'belum_bagi';
+    const res = await fetch(`/api/simpus?tab=${deleteTab}&id=${encodeURIComponent(targetId)}`, {
       method: 'DELETE'
     });
 
@@ -4822,7 +4827,7 @@ async function executeSimpusAdminXLSXImport() {
   for (let i = 0; i < parsedSimpusAdminRecords.length; i += chunkSize) {
     const chunk = parsedSimpusAdminRecords.slice(i, i + chunkSize);
     try {
-      const res = await fetch('/api/simpus', {
+      const res = await fetch('/api/simpus?tab=sudah_bagi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(chunk)

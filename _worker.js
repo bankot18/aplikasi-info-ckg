@@ -65,190 +65,218 @@ export default {
       }
     }
 
-    // 2. ROUTE: /api/simpus
+    // 2. ROUTE: /api/simpus (Split: simpus_belum_bagi & simpus_sudah_bagi)
     if (url.pathname === '/api/simpus' || url.pathname.startsWith('/api/simpus/')) {
       if (!env.DB) {
         return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
-          status: 500,
-          headers: corsHeaders
+          status: 500, headers: corsHeaders
         });
       }
 
+      // Auto-create both tables
       try {
-        await env.DB.prepare(`
-          CREATE TABLE IF NOT EXISTS simpus_records (
-            id TEXT PRIMARY KEY,
-            no INTEGER,
-            petugas_entry TEXT,
-            nama TEXT,
-            nik TEXT,
-            tanggal TEXT,
-            dob TEXT,
-            usia INTEGER,
-            status_pernikahan TEXT,
-            provinsi TEXT,
-            kab_kota TEXT,
-            kecamatan TEXT,
-            kelurahan TEXT,
-            alamat TEXT,
-            bb REAL,
-            tb REAL,
-            imt REAL,
-            sistol INTEGER,
-            diastol INTEGER,
-            gula TEXT,
-            kolesterol TEXT,
-            keterangan TEXT,
-            is_divided INTEGER DEFAULT 0,
-            assigned_to TEXT,
-            entry_status TEXT DEFAULT 'belum',
-            raw_json TEXT
-          )
-        `).run();
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS simpus_belum_bagi (
+          id TEXT PRIMARY KEY, no INTEGER, nama TEXT, nik TEXT, tanggal TEXT, dob TEXT,
+          usia INTEGER, status_pernikahan TEXT, provinsi TEXT, kab_kota TEXT, kecamatan TEXT,
+          kelurahan TEXT, alamat TEXT, bb REAL, tb REAL, imt REAL, sistol INTEGER, diastol INTEGER,
+          gula TEXT, kolesterol TEXT, keterangan TEXT, entry_status TEXT DEFAULT 'belum', raw_json TEXT
+        )`).run();
+      } catch (_) {}
+      try {
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS simpus_sudah_bagi (
+          id TEXT PRIMARY KEY, no INTEGER, petugas_entry TEXT, assigned_to TEXT,
+          nama TEXT, nik TEXT, tanggal TEXT, dob TEXT, usia INTEGER, status_pernikahan TEXT,
+          provinsi TEXT, kab_kota TEXT, kecamatan TEXT, kelurahan TEXT, alamat TEXT,
+          bb REAL, tb REAL, imt REAL, sistol INTEGER, diastol INTEGER,
+          gula TEXT, kolesterol TEXT, keterangan TEXT, entry_status TEXT DEFAULT 'belum', raw_json TEXT
+        )`).run();
+      } catch (_) {}
 
-        const alterQueries = [
-          'ALTER TABLE simpus_records ADD COLUMN petugas_entry TEXT',
-          'ALTER TABLE simpus_records ADD COLUMN status_pernikahan TEXT',
-          'ALTER TABLE simpus_records ADD COLUMN provinsi TEXT',
-          'ALTER TABLE simpus_records ADD COLUMN kab_kota TEXT',
-          'ALTER TABLE simpus_records ADD COLUMN kecamatan TEXT',
-          'ALTER TABLE simpus_records ADD COLUMN kelurahan TEXT',
-          'ALTER TABLE simpus_records ADD COLUMN raw_json TEXT'
-        ];
-        for (const q of alterQueries) {
-          try { await env.DB.prepare(q).run(); } catch (_) {}
+      // One-time migration from old simpus_records table
+      try {
+        const { results: check } = await env.DB.prepare('SELECT COUNT(*) as cnt FROM simpus_records').all();
+        if (check && check[0] && check[0].cnt > 0) {
+          try {
+            await env.DB.prepare(`INSERT OR IGNORE INTO simpus_belum_bagi
+              (id,no,nama,nik,tanggal,dob,usia,status_pernikahan,provinsi,kab_kota,kecamatan,kelurahan,alamat,bb,tb,imt,sistol,diastol,gula,kolesterol,keterangan,entry_status,raw_json)
+              SELECT id,no,nama,nik,tanggal,dob,usia,status_pernikahan,provinsi,kab_kota,kecamatan,kelurahan,alamat,bb,tb,imt,sistol,diastol,gula,kolesterol,keterangan,entry_status,raw_json
+              FROM simpus_records WHERE is_divided = 0 OR is_divided IS NULL`).run();
+          } catch (_) {}
+          try {
+            await env.DB.prepare(`INSERT OR IGNORE INTO simpus_sudah_bagi
+              (id,no,petugas_entry,assigned_to,nama,nik,tanggal,dob,usia,status_pernikahan,provinsi,kab_kota,kecamatan,kelurahan,alamat,bb,tb,imt,sistol,diastol,gula,kolesterol,keterangan,entry_status,raw_json)
+              SELECT id,no,petugas_entry,assigned_to,nama,nik,tanggal,dob,usia,status_pernikahan,provinsi,kab_kota,kecamatan,kelurahan,alamat,bb,tb,imt,sistol,diastol,gula,kolesterol,keterangan,entry_status,raw_json
+              FROM simpus_records WHERE is_divided = 1`).run();
+          } catch (_) {}
+          try { await env.DB.prepare('DROP TABLE simpus_records').run(); } catch (_) {}
         }
       } catch (_) {}
 
-      if (request.method === 'GET') {
+      const tab = url.searchParams.get('tab') || '';
+
+      // SUB-ROUTE: /api/simpus/bagi (POST) — Move records from belum to sudah
+      if (url.pathname === '/api/simpus/bagi' && request.method === 'POST') {
         try {
-          const { results } = await env.DB.prepare('SELECT * FROM simpus_records ORDER BY no ASC').all();
-          const formatted = (results || []).map(r => {
-            let item = {};
-            if (r.raw_json) {
-              try { item = JSON.parse(r.raw_json); } catch (_) {}
-            }
-            return {
-              ...item,
-              ...r,
-              id: String(r.id || item.id || Date.now()),
-              petugas_entry: r.petugas_entry || item.petugas_entry || r.assigned_to || item.assigned_to || '',
-              nama: r.nama || item.nama || '',
-              nik: r.nik || item.nik || '',
-              status_pernikahan: r.status_pernikahan || item.status_pernikahan || 'MENIKAH',
-              provinsi: r.provinsi || item.provinsi || 'Jawa Barat',
-              kab_kota: r.kab_kota || item.kab_kota || 'Kab. Bandung',
-              kecamatan: r.kecamatan || item.kecamatan || 'Banjaran',
-              kelurahan: r.kelurahan || item.kelurahan || 'Tarajusari',
-              alamat: r.alamat || item.alamat || '-',
-              is_divided: Boolean(r.is_divided === 1 || r.is_divided === '1' || r.is_divided === true),
-              assigned_to: r.assigned_to || item.assigned_to || r.petugas_entry || item.petugas_entry || '',
-              entry_status: r.entry_status || item.entry_status || 'belum'
-            };
-          });
-          return new Response(JSON.stringify({ success: true, count: formatted.length, data: formatted }), { headers: corsHeaders });
+          const body = await request.json();
+          const ids = body.ids || [];
+          const petugas = body.petugas || '';
+          if (!petugas || ids.length === 0) {
+            return new Response(JSON.stringify({ success: false, error: 'petugas and ids required' }), { status: 400, headers: corsHeaders });
+          }
+          let moved = 0;
+          for (const id of ids) {
+            try {
+              const { results } = await env.DB.prepare('SELECT * FROM simpus_belum_bagi WHERE id = ?').bind(id).all();
+              if (results && results.length > 0) {
+                const r = results[0];
+                await env.DB.prepare(`INSERT INTO simpus_sudah_bagi
+                  (id,no,petugas_entry,assigned_to,nama,nik,tanggal,dob,usia,status_pernikahan,provinsi,kab_kota,kecamatan,kelurahan,alamat,bb,tb,imt,sistol,diastol,gula,kolesterol,keterangan,entry_status,raw_json)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                  ON CONFLICT(id) DO UPDATE SET petugas_entry=excluded.petugas_entry, assigned_to=excluded.assigned_to`
+                ).bind(
+                  r.id, r.no||0, petugas, petugas,
+                  r.nama||'', r.nik||'', r.tanggal||'', r.dob||'', r.usia||0,
+                  r.status_pernikahan||'MENIKAH', r.provinsi||'Jawa Barat', r.kab_kota||'Kab. Bandung',
+                  r.kecamatan||'Banjaran', r.kelurahan||'Tarajusari', r.alamat||'',
+                  r.bb||0, r.tb||0, r.imt||0, r.sistol||0, r.diastol||0,
+                  r.gula||'-', r.kolesterol||'-', r.keterangan||'Dewasa',
+                  r.entry_status||'belum', r.raw_json||'{}'
+                ).run();
+                await env.DB.prepare('DELETE FROM simpus_belum_bagi WHERE id = ?').bind(id).run();
+                moved++;
+              }
+            } catch (_) {}
+          }
+          return new Response(JSON.stringify({ success: true, moved }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
       }
 
-      if (request.method === 'POST') {
+      // GET
+      if (request.method === 'GET') {
         try {
-          const body = await request.json();
-          const records = Array.isArray(body) ? body : [body];
-          let inserted = 0;
-
-          const sqlText = `
-            INSERT INTO simpus_records (
-              id, no, petugas_entry, nama, nik, tanggal, dob, usia, status_pernikahan,
-              provinsi, kab_kota, kecamatan, kelurahan, alamat, bb, tb, imt,
-              sistol, diastol, gula, kolesterol, keterangan, is_divided, assigned_to, entry_status, raw_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-              no = excluded.no,
-              petugas_entry = excluded.petugas_entry,
-              nama = excluded.nama,
-              nik = excluded.nik,
-              tanggal = excluded.tanggal,
-              dob = excluded.dob,
-              usia = excluded.usia,
-              status_pernikahan = excluded.status_pernikahan,
-              provinsi = excluded.provinsi,
-              kab_kota = excluded.kab_kota,
-              kecamatan = excluded.kecamatan,
-              kelurahan = excluded.kelurahan,
-              alamat = excluded.alamat,
-              bb = excluded.bb,
-              tb = excluded.tb,
-              imt = excluded.imt,
-              sistol = excluded.sistol,
-              diastol = excluded.diastol,
-              gula = excluded.gula,
-              kolesterol = excluded.kolesterol,
-              keterangan = excluded.keterangan,
-              is_divided = excluded.is_divided,
-              assigned_to = excluded.assigned_to,
-              entry_status = excluded.entry_status,
-              raw_json = excluded.raw_json
-          ;`;
-
-          // Process in small batches - each bind() needs its own prepare()
-          const batchSize = 10;
-          for (let i = 0; i < records.length; i += batchSize) {
-            const chunk = records.slice(i, i + batchSize);
-            const statements = chunk.map(r => {
-              return env.DB.prepare(sqlText).bind(
-                String(r.id || r.nik || `auto-${Date.now()}-${Math.random()}`),
-                r.no || 0,
-                String(r.petugas_entry || r.assigned_to || ''),
-                String(r.nama || ''),
-                String(r.nik || ''),
-                String(r.tanggal || ''),
-                String(r.dob || ''),
-                Number(r.usia) || 0,
-                String(r.status_pernikahan || 'MENIKAH'),
-                String(r.provinsi || 'Jawa Barat'),
-                String(r.kab_kota || 'Kab. Bandung'),
-                String(r.kecamatan || 'Banjaran'),
-                String(r.kelurahan || 'Tarajusari'),
-                String(r.alamat || ''),
-                Number(r.bb) || 0,
-                Number(r.tb) || 0,
-                Number(r.imt) || 0,
-                Number(r.sistol) || 0,
-                Number(r.diastol) || 0,
-                String(r.gula || '-'),
-                String(r.kolesterol || '-'),
-                String(r.keterangan || 'Dewasa'),
-                r.is_divided ? 1 : 0,
-                String(r.assigned_to || r.petugas_entry || ''),
-                String(r.entry_status || 'belum'),
-                JSON.stringify(r)
-              );
-            });
-            await env.DB.batch(statements);
-            inserted += chunk.length;
+          if (tab === 'belum_bagi') {
+            const { results } = await env.DB.prepare('SELECT * FROM simpus_belum_bagi ORDER BY no ASC').all();
+            const data = (results||[]).map(r => ({ ...r, is_divided: false, petugas_entry: '', assigned_to: '' }));
+            return new Response(JSON.stringify({ success: true, count: data.length, data }), { headers: corsHeaders });
+          } else if (tab === 'sudah_bagi') {
+            const { results } = await env.DB.prepare('SELECT * FROM simpus_sudah_bagi ORDER BY no ASC').all();
+            const data = (results||[]).map(r => ({ ...r, is_divided: true, petugas_entry: r.petugas_entry||'', assigned_to: r.assigned_to||'' }));
+            return new Response(JSON.stringify({ success: true, count: data.length, data }), { headers: corsHeaders });
+          } else {
+            const { results: b } = await env.DB.prepare('SELECT * FROM simpus_belum_bagi ORDER BY no ASC').all();
+            const { results: s } = await env.DB.prepare('SELECT * FROM simpus_sudah_bagi ORDER BY no ASC').all();
+            const data = [
+              ...(b||[]).map(r => ({ ...r, is_divided: false, petugas_entry: '', assigned_to: '' })),
+              ...(s||[]).map(r => ({ ...r, is_divided: true, petugas_entry: r.petugas_entry||'', assigned_to: r.assigned_to||'' }))
+            ];
+            return new Response(JSON.stringify({ success: true, count: data.length, data }), { headers: corsHeaders });
           }
-
-          return new Response(JSON.stringify({ success: true, count: inserted }), { headers: corsHeaders });
         } catch (err) {
-          return new Response(JSON.stringify({ success: false, error: String(err.message || err), stack: String(err.stack || '') }), { status: 500, headers: corsHeaders });
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
       }
 
+      // POST
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const recs = Array.isArray(body) ? body : [body];
+          let inserted = 0;
+          const batchSize = 10;
+
+          if (tab === 'sudah_bagi') {
+            const sql = `INSERT INTO simpus_sudah_bagi
+              (id,no,petugas_entry,assigned_to,nama,nik,tanggal,dob,usia,status_pernikahan,provinsi,kab_kota,kecamatan,kelurahan,alamat,bb,tb,imt,sistol,diastol,gula,kolesterol,keterangan,entry_status,raw_json)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              ON CONFLICT(id) DO UPDATE SET
+                no=excluded.no, petugas_entry=excluded.petugas_entry, assigned_to=excluded.assigned_to,
+                nama=excluded.nama, nik=excluded.nik, tanggal=excluded.tanggal, dob=excluded.dob,
+                usia=excluded.usia, status_pernikahan=excluded.status_pernikahan,
+                provinsi=excluded.provinsi, kab_kota=excluded.kab_kota, kecamatan=excluded.kecamatan,
+                kelurahan=excluded.kelurahan, alamat=excluded.alamat, bb=excluded.bb, tb=excluded.tb,
+                imt=excluded.imt, sistol=excluded.sistol, diastol=excluded.diastol,
+                gula=excluded.gula, kolesterol=excluded.kolesterol, keterangan=excluded.keterangan,
+                entry_status=excluded.entry_status, raw_json=excluded.raw_json ;`;
+            for (let i = 0; i < recs.length; i += batchSize) {
+              const chunk = recs.slice(i, i + batchSize);
+              const stmts = chunk.map(r => env.DB.prepare(sql).bind(
+                String(r.id||r.nik||`auto-${Date.now()}-${Math.random()}`), r.no||0,
+                String(r.petugas_entry||r.assigned_to||''), String(r.assigned_to||r.petugas_entry||''),
+                String(r.nama||''), String(r.nik||''), String(r.tanggal||''), String(r.dob||''),
+                Number(r.usia)||0, String(r.status_pernikahan||'MENIKAH'),
+                String(r.provinsi||'Jawa Barat'), String(r.kab_kota||'Kab. Bandung'),
+                String(r.kecamatan||'Banjaran'), String(r.kelurahan||'Tarajusari'), String(r.alamat||''),
+                Number(r.bb)||0, Number(r.tb)||0, Number(r.imt)||0,
+                Number(r.sistol)||0, Number(r.diastol)||0,
+                String(r.gula||'-'), String(r.kolesterol||'-'), String(r.keterangan||'Dewasa'),
+                String(r.entry_status||'belum'), JSON.stringify(r)
+              ));
+              await env.DB.batch(stmts);
+              inserted += chunk.length;
+            }
+          } else {
+            const sql = `INSERT INTO simpus_belum_bagi
+              (id,no,nama,nik,tanggal,dob,usia,status_pernikahan,provinsi,kab_kota,kecamatan,kelurahan,alamat,bb,tb,imt,sistol,diastol,gula,kolesterol,keterangan,entry_status,raw_json)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+              ON CONFLICT(id) DO UPDATE SET
+                no=excluded.no, nama=excluded.nama, nik=excluded.nik,
+                tanggal=excluded.tanggal, dob=excluded.dob, usia=excluded.usia,
+                status_pernikahan=excluded.status_pernikahan,
+                provinsi=excluded.provinsi, kab_kota=excluded.kab_kota, kecamatan=excluded.kecamatan,
+                kelurahan=excluded.kelurahan, alamat=excluded.alamat, bb=excluded.bb, tb=excluded.tb,
+                imt=excluded.imt, sistol=excluded.sistol, diastol=excluded.diastol,
+                gula=excluded.gula, kolesterol=excluded.kolesterol, keterangan=excluded.keterangan,
+                entry_status=excluded.entry_status, raw_json=excluded.raw_json ;`;
+            for (let i = 0; i < recs.length; i += batchSize) {
+              const chunk = recs.slice(i, i + batchSize);
+              const stmts = chunk.map(r => env.DB.prepare(sql).bind(
+                String(r.id||r.nik||`auto-${Date.now()}-${Math.random()}`), r.no||0,
+                String(r.nama||''), String(r.nik||''), String(r.tanggal||''), String(r.dob||''),
+                Number(r.usia)||0, String(r.status_pernikahan||'MENIKAH'),
+                String(r.provinsi||'Jawa Barat'), String(r.kab_kota||'Kab. Bandung'),
+                String(r.kecamatan||'Banjaran'), String(r.kelurahan||'Tarajusari'), String(r.alamat||''),
+                Number(r.bb)||0, Number(r.tb)||0, Number(r.imt)||0,
+                Number(r.sistol)||0, Number(r.diastol)||0,
+                String(r.gula||'-'), String(r.kolesterol||'-'), String(r.keterangan||'Dewasa'),
+                String(r.entry_status||'belum'), JSON.stringify(r)
+              ));
+              await env.DB.batch(stmts);
+              inserted += chunk.length;
+            }
+          }
+          return new Response(JSON.stringify({ success: true, count: inserted }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: String(err.message||err), stack: String(err.stack||'') }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // DELETE
       if (request.method === 'DELETE') {
         try {
           const id = url.searchParams.get('id');
-          if (id) {
-            await env.DB.prepare('DELETE FROM simpus_records WHERE id = ?').bind(id).run();
+          if (tab === 'belum_bagi') {
+            if (id) { await env.DB.prepare('DELETE FROM simpus_belum_bagi WHERE id = ?').bind(id).run(); }
+            else { await env.DB.prepare('DELETE FROM simpus_belum_bagi').run(); }
+          } else if (tab === 'sudah_bagi') {
+            if (id) { await env.DB.prepare('DELETE FROM simpus_sudah_bagi WHERE id = ?').bind(id).run(); }
+            else { await env.DB.prepare('DELETE FROM simpus_sudah_bagi').run(); }
           } else {
-            await env.DB.prepare('DELETE FROM simpus_records').run();
+            if (id) {
+              await env.DB.prepare('DELETE FROM simpus_belum_bagi WHERE id = ?').bind(id).run();
+              await env.DB.prepare('DELETE FROM simpus_sudah_bagi WHERE id = ?').bind(id).run();
+            } else {
+              await env.DB.prepare('DELETE FROM simpus_belum_bagi').run();
+              await env.DB.prepare('DELETE FROM simpus_sudah_bagi').run();
+            }
           }
           return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
       }
+
     }
 
     // 3. ROUTE: /api/ckg
