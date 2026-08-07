@@ -1686,6 +1686,15 @@ function openSimpusDetailModal(id) {
           <button class="btn-copy-all" onclick="copyAllSimpusPatientData('${item.id}')">
             <i class="bi bi-clipboard-check-fill"></i> Salin Semua Data Pasien
           </button>
+          <button class="btn btn-emerald btn-sm" onclick="handleSimpusActionBerhasil('${item.id}')" style="font-weight: 700; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+            <i class="bi bi-check-circle-fill"></i> Berhasil Entry
+          </button>
+          <button class="btn btn-amber btn-sm" onclick="handleSimpusActionSudahEntry('${item.id}')" style="font-weight: 700; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+            <i class="bi bi-bookmark-check-fill"></i> Sudah di Entry
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="handleSimpusActionGagal('${item.id}')" style="font-weight: 700; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
+            <i class="bi bi-x-circle-fill"></i> Gagal
+          </button>
         </div>
       </div>
 
@@ -1900,6 +1909,322 @@ function openSimpusDetailModal(id) {
   `;
 
   document.getElementById('detailModalOverlay').classList.add('open');
+}
+
+async function handleSimpusActionBerhasil(id) {
+  const item = simpusRecords.find(r => (r.id || r.nik || '') === id);
+  if (!item) {
+    showToast('Data SIMPUS tidak ditemukan!', 'error');
+    return;
+  }
+
+  // Close detail modal
+  const detailModalOverlay = document.getElementById('detailModalOverlay');
+  if (detailModalOverlay) detailModalOverlay.classList.remove('open');
+
+  const todayStr = new Date().toISOString().substring(0, 10);
+  const defaultTgl = item.tanggal || todayStr;
+
+  const result = await Swal.fire({
+    title: 'Konfirmasi Entry Data CKG (BNBA)',
+    html: `
+      <div style="text-align: left; font-size: 13.5px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 14px; border-radius: 8px; color: #1e40af;">
+          <div style="font-weight: 700; font-size: 14px; margin-bottom: 2px;">
+            <i class="bi bi-person-check-fill"></i> ${item.nama}
+          </div>
+          <div>NIK: <strong>${item.nik}</strong> | Usia: ${item.usia} th</div>
+          <div style="font-size: 12px; opacity: 0.85; margin-top: 4px;">Data pasien ini akan dipindahkan dari SIMPUS ke database CKG (BNBA).</div>
+        </div>
+
+        <div>
+          <label style="font-weight: 700; color: #1e293b; display: block; margin-bottom: 6px;">
+            <i class="bi bi-geo-alt-fill" style="color: #2563eb;"></i> Pilih Kategori / Lokasi Entry CKG:
+          </label>
+          <select id="swalTargetKategori" class="custom-input" style="width: 100%; padding: 9px 12px; border-radius: 6px; font-weight: 600; font-size: 13.5px;">
+            <option value="Luar Gedung" selected>📍 CKG Luar Gedung</option>
+            <option value="Dalam Gedung">🏥 CKG Dalam Gedung</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-weight: 700; color: #1e293b; display: block; margin-bottom: 6px;">
+            <i class="bi bi-calendar-event-fill" style="color: #2563eb;"></i> Pilih Tanggal Entry:
+          </label>
+          <input type="date" id="swalTanggalEntry" class="custom-input" style="width: 100%; padding: 9px 12px; border-radius: 6px; font-size: 13.5px;" value="${defaultTgl}">
+        </div>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#059669',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Selesai & Pindahkan Data',
+    cancelButtonText: 'Batal',
+    preConfirm: () => {
+      const kat = document.getElementById('swalTargetKategori')?.value || 'Luar Gedung';
+      const tgl = document.getElementById('swalTanggalEntry')?.value || defaultTgl;
+      return { kategori: kat, tanggal_entry: tgl };
+    }
+  });
+
+  if (!result.isConfirmed || !result.value) return;
+
+  const { kategori, tanggal_entry } = result.value;
+
+  Swal.fire({
+    title: 'Memindahkan Data ke CKG BNBA...',
+    html: `<div style="font-size: 13px; color: #475569; margin-top: 6px;">
+            <i class="bi bi-cloud-arrow-up-fill" style="color: #059669;"></i> Menyimpan ke <strong>${kategori}</strong> dan menghapus dari SIMPUS...
+          </div>`,
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    // 1. Create new BNBA record object
+    const newCkgRecord = {
+      id: `CKG-${new Date().getFullYear()}-${String(records.length + 1).padStart(4, '0')}`,
+      jenis_kegiatan: kategori,
+      pos_lokasi: item.alamat || 'Puskesmas Banjaran Kota',
+      nik: item.nik,
+      nama: item.nama,
+      tanggal_lahir: item.dob || '',
+      usia: parseInt(item.usia) || 0,
+      jenis_kelamin: item.jenis_kelamin || 'Laki-laki',
+      no_whatsapp: item.no_whatsapp || '',
+      status_pernikahan: item.status_pernikahan || 'MENIKAH',
+      provinsi: item.provinsi || 'Jawa Barat',
+      kab_kota: item.kab_kota || 'Kab. Bandung',
+      kecamatan: item.kecamatan || 'Banjaran',
+      kelurahan: item.kelurahan || 'Tarajusari',
+      alamat: item.alamat || '',
+      pekerjaan: 'Lainnya',
+      merokok: 'Tidak',
+      bb: parseFloat(item.bb) || 0,
+      tb: parseFloat(item.tb) || 0,
+      lp: 0,
+      imt: parseFloat(item.imt) || 0,
+      td_sistolik: parseInt(item.sistol) || 0,
+      td_diastolik: parseInt(item.diastol) || 0,
+      gula_darah: parseInt(item.gula) || 0,
+      kolesterol: parseInt(item.kolesterol) || 0,
+      hb: 0,
+      telinga: 'Normal',
+      mata: 'Normal',
+      gigi: 'Baik',
+      katarak: 'Tidak',
+      status_validasi: 'Terverifikasi',
+      created_by: item.assigned_to || item.petugas_entry || sessionStorage.getItem('ckg_user_name') || 'Admin',
+      petugas_entry: item.assigned_to || item.petugas_entry || sessionStorage.getItem('ckg_user_name') || 'Admin',
+      created_at: tanggal_entry,
+      tanggal_entry: tanggal_entry
+    };
+
+    // 2. Post to /api/ckg
+    const resCkg = await fetch('/api/ckg', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([newCkgRecord])
+    });
+
+    if (!resCkg.ok) {
+      throw new Error(`Gagal menyimpan data CKG ke server (HTTP ${resCkg.status})`);
+    }
+
+    records.unshift(newCkgRecord);
+    localStorage.setItem('ckg_records', JSON.stringify(records));
+
+    // 3. Delete record from SIMPUS table (sudah_bagi or belum_bagi)
+    const targetId = item.id || item.nik || id;
+    const deleteTab = item.is_divided ? 'sudah_bagi' : 'belum_bagi';
+    await fetch(`/api/simpus?tab=${deleteTab}&id=${encodeURIComponent(targetId)}`, {
+      method: 'DELETE'
+    });
+
+    // 4. Update local SIMPUS array
+    simpusRecords = simpusRecords.filter(r => (r.id || r.nik || '') !== id);
+    localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+
+    renderApp();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Berhasil Dipindahkan!',
+      html: `Data pasien <strong>${item.nama}</strong> berhasil disimpan ke <strong>CKG ${kategori}</strong> pada tanggal <strong>${tanggal_entry}</strong> dan telah dihapus dari SIMPUS.`,
+      confirmButtonColor: '#059669'
+    });
+  } catch (err) {
+    console.error('Error during handleSimpusActionBerhasil:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Memindahkan Data!',
+      html: `Terjadi kesalahan saat memindahkan data: <strong>${err.message}</strong>`,
+      confirmButtonColor: '#dc2626'
+    });
+  }
+}
+
+async function handleSimpusActionSudahEntry(id) {
+  const item = simpusRecords.find(r => (r.id || r.nik || '') === id);
+  if (!item) {
+    showToast('Data SIMPUS tidak ditemukan!', 'error');
+    return;
+  }
+
+  const detailModalOverlay = document.getElementById('detailModalOverlay');
+  if (detailModalOverlay) detailModalOverlay.classList.remove('open');
+
+  const result = await Swal.fire({
+    title: 'Mark Sebagai "Sudah di Entry"?',
+    html: `
+      <div style="font-size: 13.5px; text-align: left; line-height: 1.5;">
+        Apakah Anda yakin ingin menandai data pasien ini sebagai <strong>"Sudah di Entry"</strong>?
+        <div style="background: #fffbebf; border: 1px solid #fef3c7; padding: 10px 12px; border-radius: 8px; margin: 10px 0; font-size: 13px; color: #92400e;">
+          <strong>Nama:</strong> ${item.nama}<br>
+          <strong>NIK:</strong> ${item.nik || '-'}<br>
+          <strong>Status:</strong> Sudah di Entry
+        </div>
+        <span style="color: #d97706; font-weight: 600; font-size: 12px;">
+          <i class="bi bi-trash3-fill"></i> Data akan dihapus dari daftar SIMPUS dan dipindahkan ke <strong>Recycle Data</strong>.
+        </span>
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#f59e0b',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: '<i class="bi bi-archive-fill"></i> Ya, Pindahkan ke Recycle Data',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!result.isConfirmed) return;
+
+  Swal.fire({
+    title: 'Memindahkan ke Recycle Data...',
+    html: `<div style="font-size: 13px; color: #475569; margin-top: 6px;">
+            <i class="bi bi-cloud-arrow-up-fill" style="color: #f59e0b;"></i> Mengupdate status data pasien <strong>${item.nama}</strong>...
+          </div>`,
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    const targetId = item.id || item.nik || id;
+    const deleteTab = item.is_divided ? 'sudah_bagi' : 'belum_bagi';
+    await fetch(`/api/simpus?tab=${deleteTab}&id=${encodeURIComponent(targetId)}`, {
+      method: 'DELETE'
+    });
+
+    item.deleted_at = new Date().toISOString().substring(0, 10) + ' ' + new Date().toLocaleTimeString('id-ID');
+    item.deleted_by = sessionStorage.getItem('ckg_user_name') || currentRole || 'User';
+    item.delete_reason = 'Sudah di Entry';
+    item.original_source = 'Data SIMPUS (Sudah di Entry)';
+
+    recycleBin.unshift(item);
+    await saveRecycleBinToStorage(item);
+
+    simpusRecords = simpusRecords.filter(r => (r.id || r.nik || '') !== id);
+    localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+
+    renderApp();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Berhasil Dipindahkan!',
+      html: `Data pasien <strong>${item.nama}</strong> telah ditandai sebagai <strong>Sudah di Entry</strong> dan dipindahkan ke <strong>Recycle Data</strong>.`,
+      confirmButtonColor: '#059669'
+    });
+  } catch (err) {
+    console.error('Error during handleSimpusActionSudahEntry:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Memindahkan Data!',
+      html: `Gagal memindahkan data ke Recycle Data: <strong>${err.message}</strong>`,
+      confirmButtonColor: '#dc2626'
+    });
+  }
+}
+
+async function handleSimpusActionGagal(id) {
+  const item = simpusRecords.find(r => (r.id || r.nik || '') === id);
+  if (!item) {
+    showToast('Data SIMPUS tidak ditemukan!', 'error');
+    return;
+  }
+
+  const detailModalOverlay = document.getElementById('detailModalOverlay');
+  if (detailModalOverlay) detailModalOverlay.classList.remove('open');
+
+  const result = await Swal.fire({
+    title: 'Mark Sebagai "Gagal Entry"?',
+    html: `
+      <div style="font-size: 13.5px; text-align: left; line-height: 1.5;">
+        Apakah Anda yakin ingin menandai data pasien ini sebagai <strong>"Gagal Entry"</strong>?
+        <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 10px 12px; border-radius: 8px; margin: 10px 0; font-size: 13px; color: #991b1b;">
+          <strong>Nama:</strong> ${item.nama}<br>
+          <strong>NIK:</strong> ${item.nik || '-'}<br>
+          <strong>Status:</strong> Gagal Entry
+        </div>
+        <span style="color: #dc2626; font-weight: 600; font-size: 12px;">
+          <i class="bi bi-trash3-fill"></i> Data akan dihapus dari daftar SIMPUS dan dipindahkan ke <strong>Recycle Data</strong>.
+        </span>
+      </div>
+    `,
+    icon: 'error',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: '<i class="bi bi-x-circle-fill"></i> Ya, Tandai Gagal & Pindahkan',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!result.isConfirmed) return;
+
+  Swal.fire({
+    title: 'Memindahkan ke Recycle Data...',
+    html: `<div style="font-size: 13px; color: #475569; margin-top: 6px;">
+            <i class="bi bi-cloud-arrow-up-fill" style="color: #dc2626;"></i> Mengupdate status data pasien <strong>${item.nama}</strong>...
+          </div>`,
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    const targetId = item.id || item.nik || id;
+    const deleteTab = item.is_divided ? 'sudah_bagi' : 'belum_bagi';
+    await fetch(`/api/simpus?tab=${deleteTab}&id=${encodeURIComponent(targetId)}`, {
+      method: 'DELETE'
+    });
+
+    item.deleted_at = new Date().toISOString().substring(0, 10) + ' ' + new Date().toLocaleTimeString('id-ID');
+    item.deleted_by = sessionStorage.getItem('ckg_user_name') || currentRole || 'User';
+    item.delete_reason = 'Gagal Entry';
+    item.original_source = 'Data SIMPUS (Gagal Entry)';
+
+    recycleBin.unshift(item);
+    await saveRecycleBinToStorage(item);
+
+    simpusRecords = simpusRecords.filter(r => (r.id || r.nik || '') !== id);
+    localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+
+    renderApp();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Berhasil Dipindahkan!',
+      html: `Data pasien <strong>${item.nama}</strong> telah ditandai sebagai <strong>Gagal Entry</strong> dan dipindahkan ke <strong>Recycle Data</strong>.`,
+      confirmButtonColor: '#059669'
+    });
+  } catch (err) {
+    console.error('Error during handleSimpusActionGagal:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Memindahkan Data!',
+      html: `Gagal memindahkan data ke Recycle Data: <strong>${err.message}</strong>`,
+      confirmButtonColor: '#dc2626'
+    });
+  }
 }
 
 function resetSimpusFilters() {
