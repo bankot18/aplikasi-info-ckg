@@ -180,27 +180,37 @@
           <span>Ping: <strong id="cloudPingMs">-- ms</strong></span>
         </div>
 
-        <div class="user-badge">
-          <div class="avatar" id="headerUserAvatar">MF</div>
-          <div style="line-height: 1.1;">
-            <span class="user-name-text" id="headerUserName">Mochamad Fauzie, S.Gz</span>
-            <div>
-              <span id="headerUserRoleBadge" class="badge-role-pill role-admin">ADMIN</span>
+        <!-- TOP-RIGHT USER PROFILE DROPDOWN MENU (Click Icon User -> Popover Menu) -->
+        <div id="userProfileDropdownContainer" class="user-profile-dropdown-container">
+          <button id="btnUserProfileMenu" class="btn-profile-trigger" onclick="toggleUserProfileDropdown(event)" title="Menu Profil & Akun User">
+            <i class="bi bi-person-fill" style="font-size: 20px; color: #475569;"></i>
+          </button>
+
+          <!-- DROPDOWN POPOVER CARD (gambar no 2) -->
+          <div id="userProfileDropdownMenu" class="user-profile-popover" style="display: none;">
+            <div class="user-badge" style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px; background: transparent; border: none; padding: 0;">
+              <div class="avatar" id="headerUserAvatar" style="width: 38px; height: 38px; border-radius: 50%; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px;">MF</div>
+              <div style="line-height: 1.2; text-align: left; overflow: hidden;">
+                <span class="user-name-text" id="headerUserName" style="font-weight: 800; font-size: 13px; color: #1e293b; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Mochamad Fauzie, S.Gz</span>
+                <span id="headerUserRoleBadge" class="badge-role-pill role-admin" style="font-size: 9.5px; font-weight: 800; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;">ADMIN</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <button class="btn btn-amber btn-sm admin-koordinator-only" onclick="openEditAnnouncementModal(); closeUserProfileDropdown();" style="width: 100%; justify-content: flex-start; padding: 8px 12px; font-size: 12.5px;">
+                <i class="bi bi-megaphone-fill"></i> Pengumuman
+              </button>
+
+              <button id="btnAccountSettingsTop" class="btn btn-primary btn-sm" onclick="openAccountSettingsModal(); closeUserProfileDropdown();" style="width: 100%; justify-content: flex-start; padding: 8px 12px; font-size: 12.5px;">
+                <i class="bi bi-gear-fill"></i> Setting Akun
+              </button>
+
+              <button class="btn btn-secondary btn-sm" onclick="handleLogout(); closeUserProfileDropdown();" style="width: 100%; justify-content: flex-start; padding: 8px 12px; font-size: 12.5px; background: #fff1f2; color: #e11d48; border-color: #fecdd3;">
+                <i class="bi bi-power"></i> Keluar
+              </button>
             </div>
           </div>
         </div>
-
-        <button class="btn btn-amber btn-sm admin-koordinator-only" onclick="openEditAnnouncementModal()" title="Kelola Pengumuman Sistem">
-          <i class="bi bi-megaphone-fill"></i> Pengumuman
-        </button>
-
-        <button id="btnAccountSettingsTop" class="btn btn-primary btn-sm" onclick="openAccountSettingsModal()" title="Setting Akun & Password">
-          <i class="bi bi-gear-fill"></i> Setting Akun
-        </button>
-
-        <button class="btn btn-secondary btn-sm" onclick="handleLogout()" title="Keluar / Logout">
-          <i class="bi bi-power"></i> Keluar
-        </button>
       </div>
     </header>
 

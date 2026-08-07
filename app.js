@@ -7220,3 +7220,29 @@ function showMaintenanceScreen(message) {
   document.body.appendChild(overlay);
 }
 
+/* ==========================================================================
+   👤 USER PROFILE DROPDOWN MENU POPOVER
+   ========================================================================== */
+
+function toggleUserProfileDropdown(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('userProfileDropdownMenu');
+  if (menu) {
+    menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+  }
+}
+
+function closeUserProfileDropdown() {
+  const menu = document.getElementById('userProfileDropdownMenu');
+  if (menu) {
+    menu.style.display = 'none';
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const container = document.getElementById('userProfileDropdownContainer');
+  if (container && !container.contains(e.target)) {
+    closeUserProfileDropdown();
+  }
+});
+
