@@ -1359,6 +1359,12 @@ function renderSimpusView() {
   if (countSudahEl) countSudahEl.textContent = sudahBagiCount;
   if (totalEntryEl) totalEntryEl.textContent = isPrivileged ? simpusRecords.length : (belumBagiCount + sudahBagiCount);
 
+  // Sync petugas column header visibility based on active tab
+  const thPetugas = document.getElementById('thSimpusPetugasEntry');
+  if (thPetugas) {
+    thPetugas.style.display = (activeSimpusTab !== 'sudah_bagi') ? 'none' : '';
+  }
+
   renderSimpusTableRecords();
 }
 
@@ -1370,6 +1376,7 @@ function switchSimpusTab(tab) {
   const petugasFilterGroup = document.getElementById('simpusPetugasFilterGroup');
   const belumBagiActions = document.getElementById('simpusBelumBagiActions');
   const btnMultiImport = document.getElementById('btnSimpusAdminMultiImport');
+  const thPetugas = document.getElementById('thSimpusPetugasEntry');
 
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
 
@@ -1379,12 +1386,14 @@ function switchSimpusTab(tab) {
     if (petugasFilterGroup) petugasFilterGroup.style.display = 'none';
     if (belumBagiActions) belumBagiActions.style.display = 'flex';
     if (btnMultiImport) btnMultiImport.style.display = 'none';
+    if (thPetugas) thPetugas.style.display = 'none';
   } else {
     if (btnBelum) { btnBelum.className = 'simpus-pill-btn'; }
     if (btnSudah) { btnSudah.className = 'simpus-pill-btn active-emerald'; }
     if (petugasFilterGroup) petugasFilterGroup.style.display = 'flex';
     if (belumBagiActions) belumBagiActions.style.display = 'flex';
     if (btnMultiImport) btnMultiImport.style.display = role === 'admin' ? 'inline-flex' : 'none';
+    if (thPetugas) thPetugas.style.display = '';
   }
 
   renderSimpusTableRecords();
@@ -1425,10 +1434,13 @@ function renderSimpusTableRecords() {
     dataset = dataset.filter(r => r.keterangan === umurVal);
   }
 
+  const isBelumBagi = (activeSimpusTab !== 'sudah_bagi');
+
   if (dataset.length === 0) {
+    const colSpan = isBelumBagi ? 18 : 19;
     container.innerHTML = `
       <tr>
-        <td colspan="19" style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <td colspan="${colSpan}" style="text-align: center; padding: 40px; color: var(--text-muted);">
           <i class="bi bi-inbox" style="font-size: 36px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
           <strong style="font-size: 15px;">Tidak Ada Data Pasien SIMPUS</strong>
           <p style="font-size: 12.5px; margin-top: 4px;">Tidak ada data yang sesuai dengan filter atau kategori status saat ini.</p>
@@ -1447,14 +1459,17 @@ function renderSimpusTableRecords() {
     const kel = r.kelurahan || 'Tarajusari';
     const recId = r.id || r.nik;
 
-    return `
-      <tr>
-        <td style="text-align: center; font-weight: 700; color: #475569;">${i + 1}</td>
+    const petugasCell = isBelumBagi ? '' : `
         <td>
           <span class="badge badge-purple" style="font-weight:700;">
             <i class="bi bi-person-fill"></i> ${petugasName}
           </span>
-        </td>
+        </td>`;
+
+    return `
+      <tr>
+        <td style="text-align: center; font-weight: 700; color: #475569;">${i + 1}</td>
+        ${petugasCell}
         <td><strong>${r.nama}</strong></td>
         <td><span style="font-family: monospace; font-size: 12px;">${r.nik}</span></td>
         <td>${r.dob}</td>
@@ -1983,19 +1998,19 @@ function setImportFile(file) {
 function downloadTemplateSimpusXlsx() {
   try {
     const headers = [
-      "Petugas Entry", "NAMA PASIEN", "NIK", "TANGGAL LAHIR", "USIA",
+      "NAMA PASIEN", "NIK", "TANGGAL LAHIR", "USIA",
       "Status Pernikahan", "Provinsi", "Kab/Kota", "Kecamatan", "Kelurahan", "Alamat Lengkap",
       "BB (kg)", "TB (cm)", "TD SISTOL", "TD DIASTOL", "GULA DARAH", "KOLESTEROL"
     ];
 
     const sampleRow1 = [
-      "", "EUIS SARIBANON", "3204123456780001", "1962-12-01", 63,
+      "EUIS SARIBANON", "3204123456780001", "1962-12-01", 63,
       "MENIKAH", "Jawa Barat", "Kab. Bandung", "Banjaran", "Tarajusari", "Kp Cipeundeuy",
       54, 153, 135, 99, "91", "180"
     ];
 
     const sampleRow2 = [
-      "", "SENY SEPTIANY", "3204134109910006", "1991-09-01", 34,
+      "SENY SEPTIANY", "3204134109910006", "1991-09-01", 34,
       "BELUM MENIKAH", "Jawa Barat", "Kab. Bandung", "Banjaran", "Tarajusari", "Kp Cipeundeuy",
       56, 159, 120, 92, "90", "180"
     ];
@@ -2078,12 +2093,10 @@ function processImportFromModal() {
         if (usia < 18) keterangan = 'Anak';
         else if (usia >= 60) keterangan = 'Lansia';
 
-        const petugasName = getVal('Petugas Entry', 'Petugas', 'Assigned To', 'Nama Petugas');
-
         const record = {
           id: newId,
           no: maxId + idx + 1,
-          petugas_entry: petugasName,
+          petugas_entry: '',
           nama: nama,
           nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
           tanggal: new Date().toISOString().substring(0, 10),
@@ -2104,7 +2117,7 @@ function processImportFromModal() {
           kolesterol: getVal('KOLESTEROL', 'Kolesterol') || '180',
           keterangan: keterangan,
           is_divided: false,
-          assigned_to: petugasName,
+          assigned_to: '',
           entry_status: 'belum'
         };
 

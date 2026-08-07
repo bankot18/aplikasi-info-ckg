@@ -189,7 +189,7 @@ export default {
               assigned_to = excluded.assigned_to,
               entry_status = excluded.entry_status,
               raw_json = excluded.raw_json
-          `;
+          ;`;
 
           // Process in small batches - each bind() needs its own prepare()
           const batchSize = 10;
