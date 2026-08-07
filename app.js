@@ -881,21 +881,9 @@ function handleLogin(e) {
 }
 
 function performLoginSuccess(user) {
-  // Show loading animation
   showLoadingOverlay('Memverifikasi Akses...', `Login sebagai ${user.nama_user}`);
 
-  setTimeout(async () => {
-    // Fetch latest maintenance settings from Cloud before allowing login
-    await loadMaintenanceSettings();
-
-    // Check maintenance web mode
-    const userRole = (user.role || 'Petugas').toLowerCase();
-    if (userRole !== 'admin' && maintenanceState.maintenance_web) {
-      hideLoadingOverlay();
-      showMaintenanceScreen(maintenanceState.maintenance_web_message);
-      return; // Block login
-    }
-
+  setTimeout(() => {
     // Set session
     sessionStorage.setItem('ckg_logged_in', 'true');
     sessionStorage.setItem('ckg_user_name', user.nama_user);
@@ -907,12 +895,17 @@ function performLoginSuccess(user) {
     checkAuthSession();
     hideLoadingOverlay();
 
-    // Apply menu locks after login
-    applyMaintenanceLocks();
+    // Background load maintenance settings and apply locks
+    loadMaintenanceSettings().then(() => {
+      const userRole = (user.role || 'Petugas').toLowerCase();
+      if (userRole !== 'admin' && maintenanceState.maintenance_web) {
+        showMaintenanceScreen(maintenanceState.maintenance_web_message);
+      }
+    });
 
-    // Directly open Announcement popup (no "Login Berhasil" SweetAlert overlay)
+    // Directly open Announcement popup
     setTimeout(checkAndShowAnnouncement, 300);
-  }, 600);
+  }, 200);
 }
 
 function handleLogout() {
@@ -6597,19 +6590,20 @@ async function deleteUserFromCloud(namaUser) {
   }
 }
 
-// Auto-trigger Cloud Sync on app startup with loading animation
+// Auto-trigger Cloud Sync on app startup with ultrafast D1 read
 document.addEventListener('DOMContentLoaded', () => {
   const isLoggedIn = sessionStorage.getItem('ckg_logged_in') === 'true';
 
   if (isLoggedIn) {
-    showLoadingOverlay('Memuat Aplikasi...', 'Menyinkronkan data dari Database Cloud');
+    showLoadingOverlay('Memuat Aplikasi...', 'Menyinkronkan data dari Cloudflare D1 Database');
   }
 
-  fetchCloudUsers().then(() => {
-    return fetchCloudSimpusRecords(true);
-  }).finally(() => {
+  Promise.all([
+    fetchCloudUsers().catch(() => {}),
+    fetchCloudSimpusRecords(true).catch(() => {})
+  ]).finally(() => {
     if (isLoggedIn) {
-      setTimeout(() => hideLoadingOverlay(), 600);
+      setTimeout(() => hideLoadingOverlay(), 400);
     }
   });
 });

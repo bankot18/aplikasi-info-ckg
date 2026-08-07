@@ -168,17 +168,20 @@ export default {
             await env.DB.prepare("DELETE FROM simpus_belum_bagi WHERE nik IS NOT NULL AND nik != '' AND nik IN (SELECT nik FROM simpus_sudah_bagi WHERE nik IS NOT NULL AND nik != '')").run();
           } catch (_) {}
 
+          const selectBelum = 'SELECT id, no, nama, nik, tanggal, dob, usia, status_pernikahan, provinsi, kab_kota, kecamatan, kelurahan, alamat, bb, tb, imt, sistol, diastol, gula, kolesterol, keterangan, entry_status FROM simpus_belum_bagi ORDER BY no ASC';
+          const selectSudah = 'SELECT id, no, petugas_entry, assigned_to, nama, nik, tanggal, dob, usia, status_pernikahan, provinsi, kab_kota, kecamatan, kelurahan, alamat, bb, tb, imt, sistol, diastol, gula, kolesterol, keterangan, entry_status FROM simpus_sudah_bagi ORDER BY no ASC';
+
           if (tab === 'belum_bagi') {
-            const { results } = await env.DB.prepare('SELECT * FROM simpus_belum_bagi ORDER BY no ASC').all();
+            const { results } = await env.DB.prepare(selectBelum).all();
             const data = (results||[]).map(r => ({ ...r, is_divided: false, petugas_entry: '', assigned_to: '' }));
             return new Response(JSON.stringify({ success: true, count: data.length, data }), { headers: corsHeaders });
           } else if (tab === 'sudah_bagi') {
-            const { results } = await env.DB.prepare('SELECT * FROM simpus_sudah_bagi ORDER BY no ASC').all();
+            const { results } = await env.DB.prepare(selectSudah).all();
             const data = (results||[]).map(r => ({ ...r, is_divided: true, petugas_entry: r.petugas_entry||'', assigned_to: r.assigned_to||'' }));
             return new Response(JSON.stringify({ success: true, count: data.length, data }), { headers: corsHeaders });
           } else {
-            const { results: b } = await env.DB.prepare('SELECT * FROM simpus_belum_bagi ORDER BY no ASC').all();
-            const { results: s } = await env.DB.prepare('SELECT * FROM simpus_sudah_bagi ORDER BY no ASC').all();
+            const { results: b } = await env.DB.prepare(selectBelum).all();
+            const { results: s } = await env.DB.prepare(selectSudah).all();
             const data = [
               ...(b||[]).map(r => ({ ...r, is_divided: false, petugas_entry: '', assigned_to: '' })),
               ...(s||[]).map(r => ({ ...r, is_divided: true, petugas_entry: r.petugas_entry||'', assigned_to: r.assigned_to||'' }))
