@@ -1342,6 +1342,41 @@ async function initWilayahDropdowns() {
   }
 }
 
+function getLearnedKampungMap() {
+  try {
+    const raw = localStorage.getItem('ckg_learned_kampung_map');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupaten Bandung', prov = 'Jawa Barat') {
+  if (!keyword || !kel) return;
+  const cleanKw = keyword.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT|RW)\s*/i, '').trim();
+  if (cleanKw.length < 3) return;
+
+  const current = getLearnedKampungMap();
+  const existing = current.find(item => item.keywords.includes(cleanKw));
+  if (existing) {
+    existing.kel = kel;
+    existing.kec = kec || existing.kec;
+    existing.kab = kab || existing.kab;
+    existing.prov = prov || existing.prov;
+  } else {
+    current.push({
+      keywords: [cleanKw],
+      kel: kel,
+      kec: kec || 'Banjaran',
+      kab: kab || 'Kabupaten Bandung',
+      prov: prov || 'Jawa Barat'
+    });
+  }
+  try {
+    localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(current));
+  } catch (e) {}
+}
+
 const BANJARAN_KAMPUNG_MAP = [
   { keywords: ['PAJAGALAN', 'PEJAGALAN', 'JAGALAN', 'BANJARAN KOTA', 'ALUN-ALUN BANJARAN', 'PASAR BANJARAN', 'STASIUN', 'BARULAKSANA', 'KAUM', 'BUNTRIS', 'PANGKAT'], kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['KAMASAN', 'SEKECANDANG', 'SITUANGANG', 'BANTARPANJANG', 'CIGENTUR', 'SANGKAN', 'LEBAKSARI'], kel: 'Kamasan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
@@ -1403,11 +1438,11 @@ async function autoDetectRegionalFromAddressText(addressText) {
     return match;
   };
 
-  // PRIORITY 1: Check Local Kampung Knowledge Map (Banjaran & Kab. Bandung First)
+  // PRIORITY 1: Check Combined Static + Learned Kampung Knowledge Map
+  const fullKnowledgeMap = [...BANJARAN_KAMPUNG_MAP, ...getLearnedKampungMap()];
   let localHit = null;
-  for (let entry of BANJARAN_KAMPUNG_MAP) {
+  for (let entry of fullKnowledgeMap) {
     for (let kw of entry.keywords) {
-      // Regex match word boundary so "PAJAGALAN" matches "KP. PAJAGALAN"
       const regex = new RegExp(`\\b${kw.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
       if (regex.test(textUpper) || textUpper.includes(kw)) {
         localHit = entry;
@@ -1454,6 +1489,46 @@ async function autoDetectRegionalFromAddressText(addressText) {
       kelSelect.value = kelMatch.value;
     }
     return;
+  }
+
+  // PRIORITY 2: OpenStreetMap Geocoding Fallback + Auto-Learning
+  try {
+    const cleanSearch = textUpper.replace(/KP\.|KAMPUNG|JLN?\.|JALAN|RT:?|\d+|RW:?|\d+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (cleanSearch.length >= 3) {
+      const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanSearch + ' Bandung Jawa Barat')}&format=json&addressdetails=1&limit=1`;
+      const resp = await fetch(osmUrl);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.length > 0) {
+          const addr = data[0].address || {};
+          const foundProv = addr.state || 'Jawa Barat';
+          const foundKab = addr.city || addr.regency || addr.county || 'Kabupaten Bandung';
+          const foundKec = addr.town || addr.district || addr.suburb || 'Banjaran';
+          const foundKel = addr.village || addr.quarter || addr.hamlet || addr.neighbourhood || '';
+
+          if (foundKel) {
+            // Auto-learn this keyword into local dictionary!
+            const firstKw = cleanSearch.split(' ')[0];
+            saveLearnedKampungKeyword(firstKw, foundKel, foundKec, foundKab, foundProv);
+
+            const provMatch = selectMatchingOption(provSelect, foundProv);
+            if (provMatch) { provSelect.value = provMatch.value; await triggerChange(provSelect); }
+
+            const kabMatch = selectMatchingOption(kabSelect, foundKab);
+            if (kabMatch) { kabSelect.value = kabMatch.value; await triggerChange(kabSelect); }
+
+            const kecMatch = selectMatchingOption(kecSelect, foundKec);
+            if (kecMatch) { kecSelect.value = kecMatch.value; await triggerChange(kecMatch); }
+
+            const kelMatch = selectMatchingOption(kelSelect, foundKel);
+            if (kelMatch) { kelSelect.value = kelMatch.value; }
+            return;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('OSM Geocoding fallback skipped:', err);
   }
 
   // PRIORITY 2: General Auto-Detect if not in local kampung map
