@@ -355,7 +355,7 @@ async function fetchCloudRecords() {
             jenis_kegiatan: r.jenis_kegiatan || r.lokasi_pelayanan || 'Luar Gedung',
             nik: r.nik || '',
             nama: r.nama || r.nama_pasien || 'Pasien',
-            tanggal_lahir: r.tanggal_lahir || '1990-01-01',
+            tanggal_lahir: formatDateToYYYYMMDD(r.tanggal_lahir) || '1990-01-01',
             usia: r.usia || 30,
             jenis_kelamin: r.jenis_kelamin || 'L',
             no_whatsapp: r.no_whatsapp || '',
@@ -1533,7 +1533,7 @@ function renderSimpusTableRecords() {
           <td style="text-align: center; font-weight: 700; color: #475569;">${i + 1}</td>
           <td><strong>${r.nama}</strong></td>
           <td><span style="font-family: monospace; font-size: 12px;">${r.nik}</span></td>
-          <td>${r.dob}</td>
+          <td>${formatDateToYYYYMMDD(r.dob) || '-'}</td>
           <td style="text-align: center;"><span class="badge badge-amber">${r.usia} th</span></td>
           <td>${statusPernikahan}</td>
           <td>${prov}</td>
@@ -1693,7 +1693,7 @@ function copyAllSimpusPatientData(id) {
 Nama Pasien: ${item.nama}
 NIK Pasien: ${item.nik}
 Tanggal Skrining: ${item.tanggal}
-Tanggal Lahir: ${item.dob || '-'}
+Tanggal Lahir: ${formatDateToYYYYMMDD(item.dob) || '-'}
 Usia / Kategori: ${item.usia} Tahun (${item.keterangan})
 Alamat Lengkap: ${item.alamat}
 Faskes / Lokasi: Puskesmas Banjaran Kota
@@ -1796,10 +1796,10 @@ function openSimpusDetailModal(id) {
             <i class="bi bi-copy copy-icon"></i>
           </div>
 
-          <div class="copyable-field" onclick="copyToClipboard('${item.dob || '-'}', 'Tanggal Lahir')">
+          <div class="copyable-field" onclick="copyToClipboard('${escapeAttr(formatDateToYYYYMMDD(item.dob)) || '-'}', 'Tanggal Lahir')">
             <div>
               <div class="simpus-info-label">Tanggal Lahir</div>
-              <div class="simpus-info-val">${item.dob || '-'}</div>
+              <div class="simpus-info-val">${formatDateToYYYYMMDD(item.dob) || '-'}</div>
             </div>
             <i class="bi bi-copy copy-icon"></i>
           </div>
@@ -2056,7 +2056,7 @@ async function handleSimpusActionBerhasil(id) {
       pos_lokasi: item.alamat || 'Puskesmas Banjaran Kota',
       nik: item.nik,
       nama: item.nama,
-      tanggal_lahir: item.dob || '',
+      tanggal_lahir: formatDateToYYYYMMDD(item.dob || ''),
       usia: parseInt(item.usia) || 0,
       jenis_kelamin: item.jenis_kelamin || 'Laki-laki',
       no_whatsapp: item.no_whatsapp || '',
@@ -2744,7 +2744,7 @@ function processImportFromModal() {
           nama: nama,
           nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
           tanggal: new Date().toISOString().substring(0, 10),
-          dob: getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB', 'Tanggal_Lahir') || '1990-01-01',
+          dob: formatDateToYYYYMMDD(getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB', 'Tanggal_Lahir')) || '1990-01-01',
           usia: usia,
           status_pernikahan: getVal('Status Pernikahan', 'Status', 'Pernikahan') || 'MENIKAH',
           provinsi: getVal('Provinsi', 'Prov') || 'Jawa Barat',
@@ -4430,7 +4430,7 @@ function buildTableRowsHtml(data) {
           <strong>${r.nama}</strong><br>
           <span style="font-size: 11px; color: var(--text-muted);">${r.nik}</span>
         </td>
-        <td>${formatDisplayDate(r.tanggal_lahir)}<br><span style="font-size: 11px; color: var(--text-muted);">${r.usia} th (${r.jenis_kelamin})</span></td>
+        <td>${formatDateToYYYYMMDD(r.tanggal_lahir)}<br><span style="font-size: 11px; color: var(--text-muted);">${r.usia} th (${r.jenis_kelamin})</span></td>
         <td>${r.alamat}<br><span style="font-size: 11px; color: var(--text-muted);">${r.kelurahan}, ${r.kecamatan}</span></td>
         <td>${r.bb} kg / ${r.tb} cm / ${r.lp || '-'} cm</td>
         <td>${imtBadge}</td>
@@ -4884,7 +4884,7 @@ function viewDetailModal(id) {
       <div><strong>Kegiatan:</strong> ${r.jenis_kegiatan}</div>
       <div><strong>NIK:</strong> ${r.nik}</div>
       <div><strong>Nama Lengkap:</strong> ${r.nama}</div>
-      <div><strong>Tanggal Lahir / Usia:</strong> ${r.tanggal_lahir} (${r.usia} Tahun)</div>
+      <div><strong>Tanggal Lahir / Usia:</strong> ${formatDateToYYYYMMDD(r.tanggal_lahir)} (${r.usia} Tahun)</div>
       <div><strong>Jenis Kelamin:</strong> ${r.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</div>
       <div><strong>Alamat:</strong> ${r.alamat}, Kel. ${r.kelurahan}, Kec. ${r.kecamatan}</div>
       <div><strong>BB / TB / LP:</strong> ${r.bb} kg / ${r.tb} cm / ${r.lp || '-'} cm</div>
@@ -4919,7 +4919,7 @@ function editRecord(id) {
   setVal('pos_lokasi', r.pos_lokasi);
   setVal('nik', r.nik);
   setVal('nama', r.nama);
-  setVal('tanggal_lahir', r.tanggal_lahir);
+  setVal('tanggal_lahir', formatDateToYYYYMMDD(r.tanggal_lahir));
   setVal('usia', r.usia);
   setVal('jenis_kelamin', r.jenis_kelamin || 'L');
   setVal('no_whatsapp', r.no_whatsapp);
@@ -5388,7 +5388,7 @@ function handleAdminImportFileSelect(event) {
         let petugasName = getVal('Petugas Entry', 'Petugas', 'Petugas Skrining', 'Created By', 'Nama Petugas');
         if (!petugasName) petugasName = loggedAdmin;
 
-        const dobStr = getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB') || '1990-01-01';
+        const dobStr = formatDateToYYYYMMDD(getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB')) || '1990-01-01';
         let age = parseInt(getVal('Usia', 'Umur')) || 30;
         if (isNaN(age) || age <= 0) {
           try { const bd = new Date(dobStr); if (!isNaN(bd.getTime())) age = new Date().getFullYear() - bd.getFullYear(); } catch(_){}
@@ -5751,7 +5751,7 @@ function handleSimpusAdminImportFileSelect(event) {
           nama: nama,
           nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
           tanggal: getVal('TANGGAL', 'Tanggal', 'Tanggal Entry') || new Date().toISOString().substring(0, 10),
-          dob: getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB') || '1990-01-01',
+          dob: formatDateToYYYYMMDD(getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB')) || '1990-01-01',
           usia: usia,
           status_pernikahan: getVal('Status Pernikahan', 'Status') || 'MENIKAH',
           provinsi: getVal('Provinsi', 'Prov') || 'Jawa Barat',
@@ -6025,7 +6025,7 @@ function executeXLSXImport() {
         const nama = getVal('Nama Pasien', 'Nama Lengkap', 'Nama Pasien & NIK', 'Nama');
         if (!nama && !nik) return;
 
-        const dobStr = getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB') || '1990-01-01';
+        const dobStr = formatDateToYYYYMMDD(getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB')) || '1990-01-01';
         let age = parseInt(getVal('Usia', 'Umur')) || 30;
         if (isNaN(age) || age <= 0) {
           try { const bd = new Date(dobStr); if (!isNaN(bd.getTime())) age = new Date().getFullYear() - bd.getFullYear(); } catch(_){}
