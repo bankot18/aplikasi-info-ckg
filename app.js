@@ -5046,10 +5046,17 @@ function getFilteredRecycleBin() {
 
   let dataset = getVisibleRecords(recycleBin);
 
+  const filterKegiatanVal = document.getElementById('filterRecycleKegiatan')?.value || '';
   const filterSourceVal = document.getElementById('filterRecycleSource')?.value || '';
   const filterPetugasVal = document.getElementById('filterRecyclePetugas')?.value || '';
   const searchQuery = document.getElementById('searchRecycle')?.value.trim().toLowerCase() || '';
 
+  // Filter Jenis Kegiatan
+  if (filterKegiatanVal) {
+    dataset = dataset.filter(r => (r.jenis_kegiatan || '').toLowerCase() === filterKegiatanVal.toLowerCase());
+  }
+
+  // Filter Sumber Data
   if (filterSourceVal) {
     dataset = dataset.filter(r => {
       const src = r.original_source || 'BNBA';
@@ -5061,6 +5068,7 @@ function getFilteredRecycleBin() {
     });
   }
 
+  // Filter Petugas
   if (filterPetugasVal) {
     dataset = dataset.filter(r => 
       r.deleted_by === filterPetugasVal || 
@@ -5069,6 +5077,7 @@ function getFilteredRecycleBin() {
     );
   }
 
+  // Search Query
   if (searchQuery) {
     dataset = dataset.filter(r => {
       const nama = (r.nama || r.nama_pasien || '').toLowerCase();
@@ -5076,8 +5085,9 @@ function getFilteredRecycleBin() {
       const deletedBy = (r.deleted_by || '').toLowerCase();
       const createdBy = (r.created_by || r.petugas_entry || '').toLowerCase();
       const alamat = (r.alamat || '').toLowerCase();
+      const kegiatan = (r.jenis_kegiatan || '').toLowerCase();
 
-      return nama.includes(searchQuery) || nik.includes(searchQuery) || deletedBy.includes(searchQuery) || createdBy.includes(searchQuery) || alamat.includes(searchQuery);
+      return nama.includes(searchQuery) || nik.includes(searchQuery) || deletedBy.includes(searchQuery) || createdBy.includes(searchQuery) || alamat.includes(searchQuery) || kegiatan.includes(searchQuery);
     });
   }
 
@@ -5149,6 +5159,9 @@ function resetRecycleFilters() {
   const s = document.getElementById('searchRecycle');
   if (s) s.value = '';
 
+  const keg = document.getElementById('filterRecycleKegiatan');
+  if (keg) keg.value = '';
+
   const src = document.getElementById('filterRecycleSource');
   if (src) src.value = '';
 
@@ -5156,7 +5169,7 @@ function resetRecycleFilters() {
   if (pet) pet.value = '';
 
   renderRecycleTable();
-  showToast('Filter Recycle Data telah di-reset.', 'info');
+  showToast('Filter & Pencarian Recycle Data telah di-reset.', 'info');
 }
 
 function restoreFilteredRecycle() {
@@ -5173,8 +5186,10 @@ function restoreFilteredRecycle() {
     return;
   }
 
+  const filterKegiatanVal = document.getElementById('filterRecycleKegiatan')?.value || 'Semua';
   const filterSourceVal = document.getElementById('filterRecycleSource')?.value || 'Semua';
   const filterPetugasVal = document.getElementById('filterRecyclePetugas')?.value || 'Semua';
+  const searchQuery = (document.getElementById('searchRecycle')?.value || '').trim();
 
   Swal.fire({
     title: '<div style="font-size: 17px; font-weight: 800; color: #059669; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-arrow-counterclockwise" style="color: #10b981; font-size: 24px;"></i> Restore Data Terfilter?</div>',
@@ -5182,10 +5197,12 @@ function restoreFilteredRecycle() {
       <div style="text-align: left; font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif; padding: 4px;">
         <p style="color: #475569; margin-bottom: 12px; line-height: 1.5;">Apakah Anda yakin ingin memulihkan <strong>${itemsToRestore.length} data</strong> yang saat ini muncul sesuai filter?</p>
         
-        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #065f46;">
-          <div>• Sumber Data Filter: <strong>${filterSourceVal || 'Semua Sumber'}</strong></div>
-          <div>• Petugas Filter: <strong>${filterPetugasVal || 'Semua Petugas'}</strong></div>
-          <div style="margin-top: 4px; font-weight: 700;">Data akan dikembalikan dari Tempat Sampah ke Database Aktif.</div>
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #065f46; line-height: 1.6;">
+          <div>• Jenis Kegiatan: <strong>${filterKegiatanVal || 'Semua Kegiatan'}</strong></div>
+          <div>• Sumber Data: <strong>${filterSourceVal || 'Semua Sumber'}</strong></div>
+          <div>• Petugas: <strong>${filterPetugasVal || 'Semua Petugas'}</strong></div>
+          ${searchQuery ? `<div>• Kata Kunci Cari: <strong>"${searchQuery}"</strong></div>` : ''}
+          <div style="margin-top: 6px; font-weight: 700; color: #047857;">Semua data terfilter di atas akan dikembalikan dari Tempat Sampah ke Database Aktif.</div>
         </div>
       </div>
     `,
@@ -5222,7 +5239,7 @@ function restoreFilteredRecycle() {
       Swal.fire({
         icon: 'success',
         title: 'Berhasil Mempulihkan Data!',
-        html: `Sebanyak <strong>${restoredCount} data</strong> telah dikembalikan dari Tempat Sampah ke Database Aktif.`,
+        html: `Sebanyak <strong>${restoredCount} data terfilter</strong> telah dikembalikan dari Tempat Sampah ke Database Aktif.`,
         confirmButtonColor: '#059669'
       });
     }
@@ -5281,30 +5298,50 @@ function permanentDeleteFromRecycle(id) {
 function emptyRecycleBin() {
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
   if (role !== 'admin' && role !== 'koordinator') {
-    Swal.fire('Akses Ditolak', 'Hanya Admin & Koordinator yang dapat mengosongkan Recycle Data.', 'warning');
+    Swal.fire('Akses Ditolak', 'Hanya Admin & Koordinator yang dapat menghapus data di Recycle Data.', 'warning');
     return;
   }
 
-  if (recycleBin.length === 0) {
-    showToast('Recycle Data sudah kosong!', 'info');
+  const filteredItems = getFilteredRecycleBin();
+
+  if (filteredItems.length === 0) {
+    showToast('Tidak ada data di tempat sampah yang sesuai filter untuk dihapus.', 'info');
     return;
   }
+
+  const isFiltered = (
+    (document.getElementById('searchRecycle')?.value || '').trim() !== '' ||
+    (document.getElementById('filterRecycleKegiatan')?.value || '') !== '' ||
+    (document.getElementById('filterRecycleSource')?.value || '') !== '' ||
+    (document.getElementById('filterRecyclePetugas')?.value || '') !== ''
+  );
+
+  const actionTitle = isFiltered ? `Hapus Permanen ${filteredItems.length} Data Terfilter?` : 'Kosongkan Tempat Sampah?';
+  const actionText = isFiltered 
+    ? `Sebanyak ${filteredItems.length} data yang muncul sesuai filter saat ini akan DIHAPUS PERMANEN dari sistem!`
+    : `Semua (${recycleBin.length}) data di tempat sampah akan dihapus secara permanen!`;
 
   Swal.fire({
-    title: 'Kosongkan Tempat Sampah?',
-    text: `Semua (${recycleBin.length}) data di tempat sampah akan dihapus secara permanen!`,
+    title: actionTitle,
+    text: actionText,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#64748b',
-    confirmButtonText: 'Ya, Kosongkan!',
+    confirmButtonText: `Ya, Hapus Permanen (${filteredItems.length} Data)!`,
     cancelButtonText: 'Batal'
   }).then((result) => {
     if (result.isConfirmed) {
-      recycleBin = [];
+      if (isFiltered) {
+        const idsToRemove = new Set(filteredItems.map(item => String(item.id || item.nik)));
+        recycleBin = recycleBin.filter(r => !idsToRemove.has(String(r.id || r.nik)));
+      } else {
+        recycleBin = [];
+      }
+
       saveRecycleBinToStorage();
       renderRecycleTable();
-      Swal.fire('Dikosongkan!', 'Semua data di tempat sampah telah dihapus permanen.', 'success');
+      Swal.fire('Terhapus Permanen!', `Sebanyak ${filteredItems.length} data telah dihapus permanen dari sistem.`, 'success');
     }
   });
 }
