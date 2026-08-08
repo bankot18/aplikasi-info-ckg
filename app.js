@@ -2959,43 +2959,47 @@ function exportSinglePetugasXlsx(petugasName) {
 
   const exportData = records.map((r, i) => ({
     'NO': i + 1,
-    'TANGGAL': formatDateToYYYYMMDD(r.tanggal || r.tanggal_entry || r.created_at),
+    'PETUGAS ENTRY': r.assigned_to || r.petugas_entry || petugasName,
     'NAMA PASIEN': r.nama || '',
     'NIK': r.nik || '',
-    'ALAMAT': r.alamat || '',
     'TANGGAL LAHIR': formatDateToYYYYMMDD(r.dob || r.tanggal_lahir),
     'USIA': r.usia || 0,
-    'KATEGORI': r.keterangan || 'Dewasa',
-    'BERAT BADAN (KG)': r.bb || '',
-    'TINGGI BADAN (CM)': r.tb || '',
-    'IMT': r.imt || '',
-    'TD SISTOLIK': r.sistol || '',
-    'TD DIASTOLIK': r.diastol || '',
+    'STATUS PERNIKAHAN': r.status_pernikahan || 'MENIKAH',
+    'PROVINSI': r.provinsi || 'Jawa Barat',
+    'KAB/KOTA': r.kab_kota || 'Kab. Bandung',
+    'KECAMATAN': r.kecamatan || 'Banjaran',
+    'KELURAHAN': r.kelurahan || 'Tarajusari',
+    'ALAMAT LENGKAP': r.alamat || '',
+    'BB (KG)': r.bb !== undefined && r.bb !== null ? r.bb : '',
+    'TB (CM)': r.tb !== undefined && r.tb !== null ? r.tb : '',
+    'TD SISTOL': r.sistol !== undefined && r.sistol !== null ? r.sistol : '',
+    'TD DIASTOL': r.diastol !== undefined && r.diastol !== null ? r.diastol : '',
     'GULA DARAH': r.gula || '',
     'KOLESTEROL': r.kolesterol || '',
-    'STATUS ENTRY': (r.entry_status || 'belum').toUpperCase(),
-    'PETUGAS': r.assigned_to || petugasName
+    'STATUS ENTRY': (r.entry_status || 'belum').toUpperCase()
   }));
 
   const ws = XLSX.utils.json_to_sheet(exportData);
   ws['!cols'] = [
     { wch: 6 },   // NO
-    { wch: 14 },  // TANGGAL (yyyy-mm-dd)
+    { wch: 25 },  // PETUGAS ENTRY
     { wch: 26 },  // NAMA PASIEN
     { wch: 18 },  // NIK
-    { wch: 35 },  // ALAMAT
     { wch: 14 },  // TANGGAL LAHIR (yyyy-mm-dd)
     { wch: 8 },   // USIA
-    { wch: 12 },  // KATEGORI
-    { wch: 16 },  // BB
-    { wch: 18 },  // TB
-    { wch: 10 },  // IMT
-    { wch: 14 },  // TD SISTOLIK
-    { wch: 14 },  // TD DIASTOLIK
+    { wch: 18 },  // STATUS PERNIKAHAN
+    { wch: 16 },  // PROVINSI
+    { wch: 16 },  // KAB/KOTA
+    { wch: 16 },  // KECAMATAN
+    { wch: 16 },  // KELURAHAN
+    { wch: 35 },  // ALAMAT LENGKAP
+    { wch: 10 },  // BB (KG)
+    { wch: 10 },  // TB (CM)
+    { wch: 12 },  // TD SISTOL
+    { wch: 12 },  // TD DIASTOL
     { wch: 14 },  // GULA DARAH
     { wch: 14 },  // KOLESTEROL
-    { wch: 16 },  // STATUS ENTRY
-    { wch: 25 }   // PETUGAS
+    { wch: 16 }   // STATUS ENTRY
   ];
 
   const wb = XLSX.utils.book_new();
@@ -3026,43 +3030,47 @@ function exportAllPetugasXlsx() {
     const records = petugasMap[petugas];
     const exportData = records.map((r, i) => ({
       'NO': i + 1,
-      'TANGGAL': formatDateToYYYYMMDD(r.tanggal || r.tanggal_entry || r.created_at),
+      'PETUGAS ENTRY': r.assigned_to || r.petugas_entry || petugas,
       'NAMA PASIEN': r.nama || '',
       'NIK': r.nik || '',
-      'ALAMAT': r.alamat || '',
       'TANGGAL LAHIR': formatDateToYYYYMMDD(r.dob || r.tanggal_lahir),
       'USIA': r.usia || 0,
-      'KATEGORI': r.keterangan || 'Dewasa',
-      'BERAT BADAN (KG)': r.bb || '',
-      'TINGGI BADAN (CM)': r.tb || '',
-      'IMT': r.imt || '',
-      'TD SISTOLIK': r.sistol || '',
-      'TD DIASTOLIK': r.diastol || '',
+      'STATUS PERNIKAHAN': r.status_pernikahan || 'MENIKAH',
+      'PROVINSI': r.provinsi || 'Jawa Barat',
+      'KAB/KOTA': r.kab_kota || 'Kab. Bandung',
+      'KECAMATAN': r.kecamatan || 'Banjaran',
+      'KELURAHAN': r.kelurahan || 'Tarajusari',
+      'ALAMAT LENGKAP': r.alamat || '',
+      'BB (KG)': r.bb !== undefined && r.bb !== null ? r.bb : '',
+      'TB (CM)': r.tb !== undefined && r.tb !== null ? r.tb : '',
+      'TD SISTOL': r.sistol !== undefined && r.sistol !== null ? r.sistol : '',
+      'TD DIASTOL': r.diastol !== undefined && r.diastol !== null ? r.diastol : '',
       'GULA DARAH': r.gula || '',
       'KOLESTEROL': r.kolesterol || '',
-      'STATUS ENTRY': (r.entry_status || 'belum').toUpperCase(),
-      'PETUGAS': petugas
+      'STATUS ENTRY': (r.entry_status || 'belum').toUpperCase()
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     ws['!cols'] = [
       { wch: 6 },   // NO
-      { wch: 14 },  // TANGGAL (yyyy-mm-dd)
+      { wch: 25 },  // PETUGAS ENTRY
       { wch: 26 },  // NAMA PASIEN
       { wch: 18 },  // NIK
-      { wch: 35 },  // ALAMAT
       { wch: 14 },  // TANGGAL LAHIR (yyyy-mm-dd)
       { wch: 8 },   // USIA
-      { wch: 12 },  // KATEGORI
-      { wch: 16 },  // BB
-      { wch: 18 },  // TB
-      { wch: 10 },  // IMT
-      { wch: 14 },  // TD SISTOLIK
-      { wch: 14 },  // TD DIASTOLIK
+      { wch: 18 },  // STATUS PERNIKAHAN
+      { wch: 16 },  // PROVINSI
+      { wch: 16 },  // KAB/KOTA
+      { wch: 16 },  // KECAMATAN
+      { wch: 16 },  // KELURAHAN
+      { wch: 35 },  // ALAMAT LENGKAP
+      { wch: 10 },  // BB (KG)
+      { wch: 10 },  // TB (CM)
+      { wch: 12 },  // TD SISTOL
+      { wch: 12 },  // TD DIASTOL
       { wch: 14 },  // GULA DARAH
       { wch: 14 },  // KOLESTEROL
-      { wch: 16 },  // STATUS ENTRY
-      { wch: 25 }   // PETUGAS
+      { wch: 16 }   // STATUS ENTRY
     ];
 
     const sheetName = petugas.substring(0, 31);
@@ -3082,44 +3090,48 @@ function exportSimpusXlsx() {
 
   const exportData = simpusRecords.map((r, i) => ({
     'NO': i + 1,
-    'TANGGAL': formatDateToYYYYMMDD(r.tanggal || r.tanggal_entry || r.created_at),
+    'PETUGAS ENTRY': r.assigned_to || r.petugas_entry || '-',
     'NAMA PASIEN': r.nama || '',
     'NIK': r.nik || '',
-    'ALAMAT': r.alamat || '',
     'TANGGAL LAHIR': formatDateToYYYYMMDD(r.dob || r.tanggal_lahir),
     'USIA': r.usia || 0,
-    'KATEGORI': r.keterangan || 'Dewasa',
-    'BERAT BADAN (KG)': r.bb || '',
-    'TINGGI BADAN (CM)': r.tb || '',
-    'IMT': r.imt || '',
-    'TD SISTOLIK': r.sistol || '',
-    'TD DIASTOLIK': r.diastol || '',
+    'STATUS PERNIKAHAN': r.status_pernikahan || 'MENIKAH',
+    'PROVINSI': r.provinsi || 'Jawa Barat',
+    'KAB/KOTA': r.kab_kota || 'Kab. Bandung',
+    'KECAMATAN': r.kecamatan || 'Banjaran',
+    'KELURAHAN': r.kelurahan || 'Tarajusari',
+    'ALAMAT LENGKAP': r.alamat || '',
+    'BB (KG)': r.bb !== undefined && r.bb !== null ? r.bb : '',
+    'TB (CM)': r.tb !== undefined && r.tb !== null ? r.tb : '',
+    'TD SISTOL': r.sistol !== undefined && r.sistol !== null ? r.sistol : '',
+    'TD DIASTOL': r.diastol !== undefined && r.diastol !== null ? r.diastol : '',
     'GULA DARAH': r.gula || '',
     'KOLESTEROL': r.kolesterol || '',
     'STATUS BAGI': r.is_divided ? 'Sudah Di-Bagi' : 'Belum Di-Bagi',
-    'PETUGAS': r.assigned_to || '-',
     'STATUS ENTRY': (r.entry_status || 'belum').toUpperCase()
   }));
 
   const ws = XLSX.utils.json_to_sheet(exportData);
   ws['!cols'] = [
     { wch: 6 },   // NO
-    { wch: 14 },  // TANGGAL (yyyy-mm-dd)
+    { wch: 25 },  // PETUGAS ENTRY
     { wch: 26 },  // NAMA PASIEN
     { wch: 18 },  // NIK
-    { wch: 35 },  // ALAMAT
     { wch: 14 },  // TANGGAL LAHIR (yyyy-mm-dd)
     { wch: 8 },   // USIA
-    { wch: 12 },  // KATEGORI
-    { wch: 16 },  // BB
-    { wch: 18 },  // TB
-    { wch: 10 },  // IMT
-    { wch: 14 },  // TD SISTOLIK
-    { wch: 14 },  // TD DIASTOLIK
+    { wch: 18 },  // STATUS PERNIKAHAN
+    { wch: 16 },  // PROVINSI
+    { wch: 16 },  // KAB/KOTA
+    { wch: 16 },  // KECAMATAN
+    { wch: 16 },  // KELURAHAN
+    { wch: 35 },  // ALAMAT LENGKAP
+    { wch: 10 },  // BB (KG)
+    { wch: 10 },  // TB (CM)
+    { wch: 12 },  // TD SISTOL
+    { wch: 12 },  // TD DIASTOL
     { wch: 14 },  // GULA DARAH
     { wch: 14 },  // KOLESTEROL
-    { wch: 16 },  // STATUS BAGI
-    { wch: 25 },  // PETUGAS
+    { wch: 14 },  // STATUS BAGI
     { wch: 16 }   // STATUS ENTRY
   ];
 
