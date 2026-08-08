@@ -960,6 +960,7 @@ function loadStoredRecords() {
 
 function saveRecordsToStorage() {
   localStorage.setItem('ckg_records_db', JSON.stringify(records));
+  localStorage.setItem('ckg_records', JSON.stringify(records));
 }
 
 function populateAllYearDropdowns() {
@@ -3678,53 +3679,57 @@ function resetFilters() {
 
 let currentRekapFilter = 'semua';
 
+function isRecordCreatedByOfficer(r, u) {
+  if (!r || !u) return false;
+
+  const recOfficerRaw = (r.petugas_entry || r.created_by || r.assigned_to || r.petugas || '').toString().trim().toLowerCase();
+  if (!recOfficerRaw) return false;
+
+  const namaUser = (u.nama_user || '').toString().trim().toLowerCase();
+  const username = (u.username || '').toString().trim().toLowerCase();
+
+  if (recOfficerRaw === namaUser || recOfficerRaw === username) return true;
+  if (recOfficerRaw === `petugas_${username}` || recOfficerRaw === `petugas_${namaUser}`) return true;
+
+  const cleanNamaUser = namaUser.split(',')[0].trim();
+  const cleanRecOfficer = recOfficerRaw.split(',')[0].trim();
+
+  if (cleanNamaUser && (cleanRecOfficer === cleanNamaUser || cleanRecOfficer.includes(cleanNamaUser) || cleanNamaUser.includes(cleanRecOfficer))) {
+    return true;
+  }
+  if (username && (cleanRecOfficer.includes(username) || username.includes(cleanRecOfficer))) {
+    return true;
+  }
+
+  return false;
+}
+
+function isLuarGedungRecord(r) {
+  const jk = (r.jenis_kegiatan || r.kegiatan || '').toString().trim().toLowerCase();
+  if (!jk) return true;
+  return jk.includes('luar') || jk.includes('posyandu') || jk.includes('field') || jk === 'l';
+}
+
+function isDalamGedungRecord(r) {
+  const jk = (r.jenis_kegiatan || r.kegiatan || '').toString().trim().toLowerCase();
+  if (!jk) return false;
+  return jk.includes('dalam') || (jk.includes('gedung') && !jk.includes('luar')) || jk.includes('puskesmas') || jk === 'd';
+}
+
 function isRecordInMonthYear(r, targetMonth, targetYear) {
-  const tMonth = targetMonth ? String(targetMonth).padStart(2, '0') : '';
-  const tYear = targetYear ? String(targetYear) : '';
+  const tMonthNum = targetMonth ? parseInt(targetMonth, 10) : null;
+  const tYearNum = targetYear ? parseInt(targetYear, 10) : null;
 
-  if (!tMonth && !tYear) return true;
+  if (!tMonthNum && !tYearNum) return true;
 
-  const rawDate = r.tanggal_entry || r.created_at || r.created_date || r.tanggal || r.entry_date || '';
-  if (!rawDate) return false;
+  const d = getRecordEntryDate(r);
+  if (!d) return false;
 
-  let recMonth = '';
-  let recYear = '';
+  const rMonthNum = parseInt(d.month, 10);
+  const rYearNum = parseInt(d.year, 10);
 
-  const dStr = String(rawDate).trim();
-
-  // Case 1: ISO format YYYY-MM-DD or YYYY-MM-DD HH:mm:ss
-  if (/^\d{4}-\d{1,2}-\d{1,2}/.test(dStr)) {
-    const parts = dStr.split(' ')[0].split('T')[0].split('-');
-    recYear = parts[0];
-    recMonth = parts[1].padStart(2, '0');
-  }
-  // Case 2: DD-MM-YYYY or DD/MM/YYYY
-  else if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/.test(dStr)) {
-    const parts = dStr.split(' ')[0].split(/[\/-]/);
-    recMonth = String(parts[1]).padStart(2, '0');
-    recYear = parts[2].substring(0, 4);
-  }
-  // Case 3: Excel serial date number (e.g. 45475)
-  else if (/^\d{4,5}$/.test(dStr)) {
-    const serial = parseInt(dStr, 10);
-    const utc_days = Math.floor(serial - 25569);
-    const date_info = new Date(utc_days * 86400 * 1000);
-    if (!isNaN(date_info.getTime())) {
-      recYear = String(date_info.getFullYear());
-      recMonth = String(date_info.getMonth() + 1).padStart(2, '0');
-    }
-  }
-  // Case 4: General Native JS Date fallback
-  else {
-    const parsed = new Date(dStr);
-    if (!isNaN(parsed.getTime())) {
-      recYear = String(parsed.getFullYear());
-      recMonth = String(parsed.getMonth() + 1).padStart(2, '0');
-    }
-  }
-
-  if (tMonth && recMonth !== tMonth) return false;
-  if (tYear && recYear !== tYear) return false;
+  if (tMonthNum && rMonthNum !== tMonthNum) return false;
+  if (tYearNum && rYearNum !== tYearNum) return false;
 
   return true;
 }
@@ -3761,12 +3766,12 @@ function getOfficerPerformanceData(monthFilter = null, yearFilter = null) {
   const filteredRecords = records.filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
 
   return usersDb.map(u => {
-    const name = u.nama_user;
-    const ckgLuar = filteredRecords.filter(r => (r.petugas_entry === name || r.created_by === name || r.created_by === `petugas_${name}`) && r.jenis_kegiatan === 'Luar Gedung').length;
-    const ckgDalam = filteredRecords.filter(r => (r.petugas_entry === name || r.created_by === name || r.created_by === `petugas_${name}`) && r.jenis_kegiatan === 'Dalam Gedung').length;
+    const officerRecords = filteredRecords.filter(r => isRecordCreatedByOfficer(r, u));
+    const ckgLuar = officerRecords.filter(r => isLuarGedungRecord(r)).length;
+    const ckgDalam = officerRecords.filter(r => isDalamGedungRecord(r)).length;
 
     return {
-      nama: name,
+      nama: u.nama_user,
       role: u.role || 'Petugas',
       luarCount: ckgLuar,
       dalamCount: ckgDalam
@@ -6066,7 +6071,8 @@ function handleAdminImportFileSelect(event) {
         const tb = parseFloat(getVal('TB (cm)', 'TB', 'Tinggi Badan')) || 165;
         const lp = parseFloat(getVal('LP (cm)', 'LP', 'Lingkar Perut')) || 80;
         const imtVal = (tb > 0) ? (bb / ((tb/100)*(tb/100))).toFixed(2) : '22.0';
-        const rowDate = getVal('Tanggal Entry', 'Tanggal Skrining', 'Tanggal') || fallbackTanggal;
+        const rawRowDate = getVal('Tanggal Entry', 'Tanggal Skrining', 'Tanggal', 'Tgl Entry');
+        const rowDate = formatDateToYYYYMMDD(rawRowDate) || fallbackTanggal;
 
         const record = {
           id: 'CKG-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
@@ -6238,7 +6244,7 @@ async function executeAdminXLSXImport() {
   }
 
   records = [...parsedAdminRecords, ...records];
-  localStorage.setItem('ckg_records', JSON.stringify(records));
+  saveRecordsToStorage();
 
   renderApp();
   updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
@@ -6703,7 +6709,8 @@ function executeXLSXImport() {
         const tb = parseFloat(getVal('TB (cm)', 'TB', 'Tinggi Badan')) || 165;
         const lp = parseFloat(getVal('LP (cm)', 'LP', 'Lingkar Perut')) || 80;
         const imtVal = (tb > 0) ? (bb / ((tb/100)*(tb/100))).toFixed(2) : '22.0';
-        const rowDate = getVal('Tanggal Entry', 'Tanggal Skrining', 'Tanggal') || selectedTanggal;
+        const rawRowDate = getVal('Tanggal Entry', 'Tanggal Skrining', 'Tanggal', 'Tgl Entry');
+        const rowDate = formatDateToYYYYMMDD(rawRowDate) || selectedTanggal;
 
         newRecords.push({
           id: 'CKG-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
@@ -6775,7 +6782,7 @@ function executeXLSXImport() {
 
       // Update local cache
       records = [...newRecords, ...records];
-      localStorage.setItem('ckg_records', JSON.stringify(records));
+      saveRecordsToStorage();
       renderApp();
       updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
 
