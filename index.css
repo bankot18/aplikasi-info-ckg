@@ -2129,10 +2129,30 @@ html {
    ✨ PREMIUM & STYLISH SWEETALERT2 MODAL CUSTOM THEME
    ========================================================================== */
 
-.swal2-container {
+/* Modal Backdrop Overlay (Only for standard dialog modals, NOT toasts) */
+.swal2-container.swal2-backdrop-show:not(.swal2-toast-container):not(.swal2-top-end) {
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
   background: rgba(15, 23, 42, 0.45) !important;
+}
+
+/* Toast Notifications Container (Remove dark gray background & blur overlay) */
+.swal2-container.swal2-toast-container,
+.swal2-container.swal2-top-end,
+.swal2-container.swal2-top-start,
+.swal2-container.swal2-bottom-end,
+.swal2-container.swal2-bottom-start,
+body.swal2-toast-shown .swal2-container {
+  background: transparent !important;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+.swal2-toast {
+  pointer-events: auto !important;
 }
 
 .swal2-popup {

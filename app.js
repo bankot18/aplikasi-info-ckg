@@ -1164,6 +1164,7 @@ function updateRoleUI() {
   }
 
   applyPetugasFilterLock();
+  initAddressAutoDetector();
 }
 
 // API Wilayah Indonesia (Emsifa API) Integration
@@ -1339,6 +1340,110 @@ async function initWilayahDropdowns() {
       }
     }
   }
+}
+
+let addressAutoDetectTimeout = null;
+
+async function autoDetectRegionalFromAddressText(addressText) {
+  if (!addressText || typeof addressText !== 'string') return;
+  const rawText = addressText.trim();
+  if (rawText.length < 3) return;
+
+  const textUpper = rawText.toUpperCase();
+  const provSelect = document.getElementById('provinsi');
+  const kabSelect = document.getElementById('kab_kota');
+  const kecSelect = document.getElementById('kecamatan');
+  const kelSelect = document.getElementById('kelurahan');
+
+  if (!provSelect || !kabSelect || !kecSelect || !kelSelect) return;
+
+  const triggerChange = async (el) => {
+    el.dispatchEvent(new Event('change'));
+    await new Promise(r => setTimeout(r, 200));
+  };
+
+  // 1. Detect Province
+  let provMatched = false;
+  let provOptions = Array.from(provSelect.options).filter(o => o.value);
+  for (let o of provOptions) {
+    const pValUpper = o.value.toUpperCase();
+    if (textUpper.includes(pValUpper)) {
+      if (provSelect.value !== o.value) {
+        provSelect.value = o.value;
+        await triggerChange(provSelect);
+      }
+      provMatched = true;
+      break;
+    }
+  }
+
+  if (!provMatched) {
+    if (textUpper.includes('JAWA BARAT') || textUpper.includes('JABAR')) {
+      const match = provOptions.find(o => o.value.toUpperCase().includes('JAWA BARAT'));
+      if (match && provSelect.value !== match.value) {
+        provSelect.value = match.value;
+        await triggerChange(provSelect);
+        provMatched = true;
+      }
+    }
+  }
+
+  // 2. Detect Kab / Kota
+  let kabOptions = Array.from(kabSelect.options).filter(o => o.value);
+  for (let o of kabOptions) {
+    const valUpper = o.value.toUpperCase();
+    const cleanName = valUpper.replace(/^KABUPATEN\s+/i, '').replace(/^KOTA\s+/i, '').replace(/^KAB\.\s+/i, '').trim();
+    if (textUpper.includes(valUpper) || (cleanName.length >= 4 && textUpper.includes(cleanName))) {
+      if (kabSelect.value !== o.value) {
+        kabSelect.value = o.value;
+        await triggerChange(kabSelect);
+      }
+      break;
+    }
+  }
+
+  // 3. Detect Kecamatan
+  let kecOptions = Array.from(kecSelect.options).filter(o => o.value);
+  for (let o of kecOptions) {
+    const valUpper = o.value.toUpperCase().replace(/^KECAMATAN\s+/i, '').replace(/^KEC\.\s+/i, '').trim();
+    if (valUpper.length >= 3 && textUpper.includes(valUpper)) {
+      if (kecSelect.value !== o.value) {
+        kecSelect.value = o.value;
+        await triggerChange(kecSelect);
+      }
+      break;
+    }
+  }
+
+  // 4. Detect Kelurahan / Desa
+  let kelOptions = Array.from(kelSelect.options).filter(o => o.value);
+  for (let o of kelOptions) {
+    const valUpper = o.value.toUpperCase().replace(/^KELURAHAN\s+/i, '').replace(/^DESA\s+/i, '').replace(/^KEL\.\s+/i, '').trim();
+    if (valUpper.length >= 3 && textUpper.includes(valUpper)) {
+      if (kelSelect.value !== o.value) {
+        kelSelect.value = o.value;
+      }
+      break;
+    }
+  }
+}
+
+function initAddressAutoDetector() {
+  const alamatEl = document.getElementById('alamat');
+  if (!alamatEl) return;
+
+  const handleInput = () => {
+    if (addressAutoDetectTimeout) clearTimeout(addressAutoDetectTimeout);
+    addressAutoDetectTimeout = setTimeout(() => {
+      autoDetectRegionalFromAddressText(alamatEl.value);
+    }, 300);
+  };
+
+  alamatEl.addEventListener('input', handleInput);
+  alamatEl.addEventListener('change', handleInput);
+  alamatEl.addEventListener('paste', () => {
+    setTimeout(handleInput, 50);
+  });
 }
 
 function calculateAgeFromDOB() {
@@ -3322,8 +3427,9 @@ function validateCurrentStep(step) {
       document.getElementById('tanggal_lahir').focus();
       return false;
     }
-    if (!prov || !kab || !kec || !kel || !alamat) {
-      showToast('Data Wilayah & Alamat Lengkap Pasien wajib diisi!', 'error');
+    if (!alamat) {
+      showToast('Alamat Lengkap Pasien wajib diisi!', 'error');
+      document.getElementById('alamat').focus();
       return false;
     }
     return true;
