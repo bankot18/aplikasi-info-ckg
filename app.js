@@ -1358,37 +1358,56 @@ function getLearnedKampungMap() {
 
 async function syncKamusFromCloudServer() {
   try {
+    console.log('☁️ [Kamus Sync] Fetching /api/kamus (GET)...');
     const res = await fetch('/api/kamus');
+    console.log('☁️ [Kamus Sync] Response status:', res.status);
     if (res.ok) {
       const json = await res.json();
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-        const local = getLearnedKampungMap();
-        const merged = [...local];
+      console.log('☁️ [Kamus Sync] D1 returned:', json.success, 'items:', (json.data || []).length);
+      if (json.success && Array.isArray(json.data)) {
+        // Replace local with D1 cloud data as authoritative source
+        const cloudMap = [];
         json.data.forEach(item => {
           const kw = String(item.keyword).toUpperCase().trim();
           if (!kw) return;
-          const existing = merged.find(m => m.keywords.includes(kw));
+          const existing = cloudMap.find(m => m.keywords.includes(kw));
           if (existing) {
             existing.kel = item.kel || existing.kel;
             existing.kec = item.kec || existing.kec;
             existing.kab = item.kab || existing.kab;
             existing.prov = item.prov || existing.prov;
           } else {
-            merged.push({
+            cloudMap.push({
               keywords: [kw],
-              kel: item.kel,
-              kec: item.kec,
-              kab: item.kab,
-              prov: item.prov
+              kel: item.kel || '',
+              kec: item.kec || 'Banjaran',
+              kab: item.kab || 'Kabupaten Bandung',
+              prov: item.prov || 'Jawa Barat'
             });
           }
         });
-        localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(merged));
+
+        // Also merge any local-only items not yet in cloud
+        const local = getLearnedKampungMap();
+        local.forEach(localItem => {
+          if (!localItem.keywords || !Array.isArray(localItem.keywords)) return;
+          localItem.keywords.forEach(lkw => {
+            const inCloud = cloudMap.find(m => m.keywords.includes(lkw));
+            if (!inCloud) {
+              cloudMap.push(localItem);
+            }
+          });
+        });
+
+        localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(cloudMap));
+        console.log('☁️ [Kamus Sync] Local storage updated, total entries:', cloudMap.length);
         refreshAdminKamusStats();
       }
+    } else {
+      console.warn('☁️ [Kamus Sync] Non-OK response:', res.status);
     }
   } catch (err) {
-    console.warn('Sync kamus from D1 server error:', err);
+    console.warn('☁️ [Kamus Sync] Error:', err);
   }
 }
 
@@ -1468,15 +1487,26 @@ async function handleExcelAddressUpload(event) {
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
 
+    console.log('📊 [Kamus Import] Sheet parsed, total rows:', rows.length);
+    if (rows.length > 0) {
+      console.log('📊 [Kamus Import] Column headers:', Object.keys(rows[0]));
+      console.log('📊 [Kamus Import] Sample row 1:', JSON.stringify(rows[0]));
+    }
+
     if (!rows || rows.length === 0) {
       Swal.fire('File Kosong', 'Tidak ada data ditemukan dalam file Excel tersebut.', 'warning');
       return;
     }
 
     let addedCount = 0;
+    let skippedCount = 0;
     const batchMap = new Map();
+    const prefixRegex = /^(KP\.?\s*|KAMPUNG\s+|JL\.?\s*|JLN\.?\s*|JALAN\s+|GG\.?\s*|GANG\s+|DS\.?\s*|DUSUN\s+)/i;
+    const rtRwRegex = /\s*RT\.?\s*\d*\s*\/?\s*RW\.?\s*\d*/gi;
+    const digitOnlyRegex = /^\d+$/;
 
-    for (let r of rows) {
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
       let addressVal = '';
       let kelVal = '';
       let kecVal = '';
@@ -1489,11 +1519,11 @@ async function handleExcelAddressUpload(event) {
         const valStr = String(r[k]).trim();
         if (!valStr) continue;
 
-        if (keyLower.includes('alamat') || keyLower.includes('street') || keyLower.includes('jalan') || keyLower.includes('kampung') || keyLower.includes('dusun') || keyLower.includes('lokasi') || keyLower.includes('nama') || keyLower.includes('keyword')) {
-          addressVal = valStr;
-        } else if (keyLower.includes('kelurahan') || keyLower.includes('desa') || keyLower.includes('kel')) {
+        if (keyLower.includes('alamat') || keyLower.includes('street') || keyLower.includes('jalan') || keyLower.includes('kampung') || keyLower.includes('dusun') || keyLower.includes('lokasi') || keyLower.includes('keyword')) {
+          if (!addressVal) addressVal = valStr;
+        } else if (keyLower.includes('kelurahan') || keyLower.includes('desa') || keyLower === 'kel') {
           kelVal = valStr;
-        } else if (keyLower.includes('kecamatan') || keyLower.includes('kec')) {
+        } else if (keyLower.includes('kecamatan') || keyLower === 'kec') {
           kecVal = valStr;
         } else if (keyLower.includes('kabupaten') || keyLower.includes('kab') || keyLower.includes('kota')) {
           kabVal = valStr;
@@ -1502,7 +1532,7 @@ async function handleExcelAddressUpload(event) {
         }
       }
 
-      // Ultra-Flexible Fallbacks if header names are unusual
+      // Fallback: if no recognized header matched, use first two columns
       if (!addressVal && keys.length > 0) {
         addressVal = String(r[keys[0]] || '').trim();
       }
@@ -1513,28 +1543,48 @@ async function handleExcelAddressUpload(event) {
         kelVal = 'Banjaran Kota';
       }
 
-      if (addressVal) {
-        const words = addressVal.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT:?|\d+|RW:?|\d+)\s*/gi, ' ').split(/\s+/).filter(w => w.length >= 3);
-        if (words.length > 0) {
-          const kw = words[0];
-          if (!batchMap.has(kw)) {
-            saveLearnedKampungKeyword(kw, kelVal, kecVal || 'Banjaran', kabVal || 'Kabupaten Bandung', provVal || 'Jawa Barat', false);
-            batchMap.set(kw, {
-              keyword: kw,
-              kel: kelVal,
-              kec: kecVal || 'Banjaran',
-              kab: kabVal || 'Kabupaten Bandung',
-              prov: provVal || 'Jawa Barat'
-            });
-            addedCount++;
-          }
-        }
+      if (!addressVal) {
+        skippedCount++;
+        continue;
+      }
+
+      // Clean the address: strip common prefixes and RT/RW segments
+      let cleaned = addressVal.toUpperCase().trim();
+      cleaned = cleaned.replace(prefixRegex, '').trim();
+      cleaned = cleaned.replace(rtRwRegex, '').trim();
+
+      // Extract meaningful words (length >= 3, not pure digits)
+      const words = cleaned.split(/[\s,;\/\\]+/).filter(w => w.length >= 3 && !digitOnlyRegex.test(w));
+
+      if (words.length === 0) {
+        skippedCount++;
+        continue;
+      }
+
+      const kw = words[0];
+
+      if (!batchMap.has(kw)) {
+        saveLearnedKampungKeyword(kw, kelVal, kecVal || 'Banjaran', kabVal || 'Kabupaten Bandung', provVal || 'Jawa Barat', false);
+        batchMap.set(kw, {
+          keyword: kw,
+          kel: kelVal,
+          kec: kecVal || 'Banjaran',
+          kab: kabVal || 'Kabupaten Bandung',
+          prov: provVal || 'Jawa Barat'
+        });
+        addedCount++;
       }
     }
 
     const batchPayload = Array.from(batchMap.values());
+    console.log('📊 [Kamus Import] Batch payload size:', batchPayload.length, 'Skipped rows:', skippedCount);
+    if (batchPayload.length > 0) {
+      console.log('📊 [Kamus Import] Sample keywords:', batchPayload.slice(0, 5).map(b => b.keyword + ' → ' + b.kel).join(', '));
+    }
 
     // Push batch to D1 Cloud Server
+    let d1Success = false;
+    let d1Message = '';
     if (batchPayload.length > 0) {
       try {
         const res = await fetch('/api/kamus', {
@@ -1543,10 +1593,18 @@ async function handleExcelAddressUpload(event) {
           body: JSON.stringify(batchPayload)
         });
         const resJson = await res.json();
-        console.log('⚡ D1 Kamus Import Response:', resJson);
+        console.log('⚡ [Kamus Import] D1 Response status:', res.status, 'Body:', JSON.stringify(resJson));
+        d1Success = res.ok && resJson.success;
+        d1Message = d1Success
+          ? `✅ Cloud D1: ${resJson.count || batchPayload.length} kata kunci tersimpan.`
+          : `⚠️ Cloud D1 Error: ${resJson.error || 'Unknown error'} (Status: ${res.status})`;
       } catch (e) {
-        console.warn('Batch D1 push error:', e);
+        console.error('❌ [Kamus Import] Fetch /api/kamus failed:', e);
+        d1Success = false;
+        d1Message = `❌ Network Error: ${e.message}`;
       }
+    } else {
+      d1Message = 'Tidak ada data baru untuk dikirim ke Cloud.';
     }
 
     event.target.value = '';
@@ -1558,19 +1616,31 @@ async function handleExcelAddressUpload(event) {
       Swal.fire({
         icon: 'info',
         title: 'File Excel Berhasil Dibaca',
-        html: `Data dari file Excel telah dibaca, namun <strong>0 kata kunci baru</strong> ditambahkan.<br><br>Sebab: Kata kunci kampung di file tersebut sudah tersimpan sebelumnya di Kamus atau format teks terlalu pendek.`,
+        html: `<div style="font-size:13px; line-height:1.7;">
+          Data dari file Excel telah dibaca (<strong>${rows.length}</strong> baris), namun <strong>0 kata kunci baru</strong> ditambahkan.<br><br>
+          <strong>Kemungkinan penyebab:</strong><br>
+          • Kata kunci kampung sudah tersimpan di Kamus<br>
+          • Teks alamat terlalu pendek (< 3 karakter)<br>
+          • Kolom alamat tidak terdeteksi<br><br>
+          <span style="color:#64748b; font-size:12px;">Baris dilewati: ${skippedCount} | Headers: ${Object.keys(rows[0] || {}).join(', ')}</span>
+        </div>`,
         confirmButtonText: 'Mengerti'
       });
     } else {
       Swal.fire({
-        icon: 'success',
-        title: 'Impor Kamus Alamat Berhasil!',
-        html: `Berhasil mengekstrak & menyimpan <strong>${addedCount}</strong> kata kunci kampung unik ke <strong>Cloud Database D1 & Local Storage</strong>.`,
-        confirmButtonText: 'Mantap!'
+        icon: d1Success ? 'success' : 'warning',
+        title: d1Success ? 'Impor Kamus Alamat Berhasil!' : 'Tersimpan Lokal, Cloud Gagal',
+        html: `<div style="font-size:13px; line-height:1.7;">
+          Berhasil mengekstrak <strong>${addedCount}</strong> kata kunci kampung unik dari <strong>${rows.length}</strong> baris data.<br><br>
+          <div style="padding: 8px 12px; background: ${d1Success ? '#f0fdf4' : '#fef2f2'}; border-radius: 6px; margin-top: 4px; font-size: 12px;">
+            ${d1Message}
+          </div>
+        </div>`,
+        confirmButtonText: 'OK'
       });
     }
   } catch (err) {
-    console.error('Error importing Excel address dictionary:', err);
+    console.error('❌ [Kamus Import] Fatal error:', err);
     Swal.fire('Gagal Impor', 'Terjadi kesalahan saat membaca file Excel: ' + err.message, 'error');
   }
 }
