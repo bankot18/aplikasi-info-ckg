@@ -1044,6 +1044,9 @@ function setupEventListeners() {
   const dobInput = document.getElementById('tanggal_lahir');
   if (dobInput) dobInput.addEventListener('change', calculateAgeFromDOB);
 
+  // Sync address dictionary from Cloudflare D1 Server on startup
+  syncKamusFromCloudServer();
+
   // Auto-trigger Dukcapil lookup when NIK reaches 16 digits
   const nikInput = document.getElementById('nik');
   if (nikInput) {
@@ -1353,6 +1356,42 @@ function getLearnedKampungMap() {
   }
 }
 
+async function syncKamusFromCloudServer() {
+  try {
+    const res = await fetch('/api/kamus');
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        const local = getLearnedKampungMap();
+        const merged = [...local];
+        json.data.forEach(item => {
+          const kw = String(item.keyword).toUpperCase().trim();
+          if (!kw) return;
+          const existing = merged.find(m => m.keywords.includes(kw));
+          if (existing) {
+            existing.kel = item.kel || existing.kel;
+            existing.kec = item.kec || existing.kec;
+            existing.kab = item.kab || existing.kab;
+            existing.prov = item.prov || existing.prov;
+          } else {
+            merged.push({
+              keywords: [kw],
+              kel: item.kel,
+              kec: item.kec,
+              kab: item.kab,
+              prov: item.prov
+            });
+          }
+        });
+        localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(merged));
+        refreshAdminKamusStats();
+      }
+    }
+  } catch (err) {
+    console.warn('Sync kamus from D1 server error:', err);
+  }
+}
+
 function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupaten Bandung', prov = 'Jawa Barat') {
   if (!keyword || !kel) return;
   const cleanKw = keyword.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT|RW)\s*/i, '').trim();
@@ -1377,6 +1416,13 @@ function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupa
   try {
     localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(current));
   } catch (e) {}
+
+  // Sync to D1 Cloud Server
+  fetch('/api/kamus', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify([{ keyword: cleanKw, kel, kec, kab, prov }])
+  }).catch(err => console.warn('D1 Kamus push failed:', err));
 }
 
 async function handleExcelAddressUpload(event) {
@@ -1407,6 +1453,8 @@ async function handleExcelAddressUpload(event) {
     }
 
     let addedCount = 0;
+    const batchMap = new Map();
+
     for (let r of rows) {
       let addressVal = '';
       let kelVal = '';
@@ -1436,9 +1484,33 @@ async function handleExcelAddressUpload(event) {
         const words = addressVal.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT:?|\d+|RW:?|\d+)\s*/gi, ' ').split(/\s+/).filter(w => w.length >= 3);
         if (words.length > 0) {
           const kw = words[0];
-          saveLearnedKampungKeyword(kw, kelVal, kecVal || 'Banjaran', kabVal || 'Kabupaten Bandung', provVal || 'Jawa Barat');
-          addedCount++;
+          if (!batchMap.has(kw)) {
+            saveLearnedKampungKeyword(kw, kelVal, kecVal || 'Banjaran', kabVal || 'Kabupaten Bandung', provVal || 'Jawa Barat');
+            batchMap.set(kw, {
+              keyword: kw,
+              kel: kelVal,
+              kec: kecVal || 'Banjaran',
+              kab: kabVal || 'Kabupaten Bandung',
+              prov: provVal || 'Jawa Barat'
+            });
+            addedCount++;
+          }
         }
+      }
+    }
+
+    const batchPayload = Array.from(batchMap.values());
+
+    // Push batch to D1 Cloud Server
+    if (batchPayload.length > 0) {
+      try {
+        await fetch('/api/kamus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(batchPayload)
+        });
+      } catch (e) {
+        console.warn('Batch D1 push error:', e);
       }
     }
 
@@ -1448,7 +1520,7 @@ async function handleExcelAddressUpload(event) {
     Swal.fire({
       icon: 'success',
       title: 'Impor Kamus Alamat Berhasil!',
-      html: `Berhasil mengekstrak & menyimpan <strong>${addedCount}</strong> kata kunci kampung ke dalam <strong>Kamus Pembelajaran Lokal</strong>.`,
+      html: `Berhasil mengekstrak & menyimpan <strong>${addedCount}</strong> kata kunci kampung unik (bebas duplikat) ke <strong>Cloud Database D1 & Local Storage</strong>.`,
       confirmButtonText: 'Mantap!'
     });
   } catch (err) {
@@ -1470,7 +1542,7 @@ function refreshAdminKamusStats() {
 
   statEl.innerHTML = `
     🟢 <strong>Kamus Bawaan (Banjaran):</strong> ${staticCount} Wilayah Kelurahan (${totalKeywords - learnedCount} Kata Kunci)<br>
-    🧠 <strong>Kamus Pembelajaran (Auto-Learned / Excel Import):</strong> ${learnedCount} Kata Kunci Baru Tersimpan<br>
+    ☁️ <strong>Kamus Cloud Database (D1 Cloud Sync & Excel Import):</strong> ${learnedCount} Kata Kunci Tersinkronisasi Seluruh Device<br>
     ✨ <strong>Total Bank Data Wilayah Siap Pakai:</strong> <strong>${staticCount + learnedCount} Wilayah / Entry</strong>
   `;
 }
@@ -1482,7 +1554,7 @@ function clearLearnedKampungMap() {
   }
   Swal.fire({
     title: 'Reset Kamus Pembelajaran?',
-    text: 'Tindakan ini akan menghapus kata kunci kampung hasil Auto-Learning & Impor Excel. Kamus dasar bawaan Banjaran akan tetap ada.',
+    text: 'Tindakan ini akan menghapus kata kunci kampung dari Cloud Database D1 & Local Storage. Kamus dasar bawaan Banjaran akan tetap ada.',
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#e11d48',
@@ -1492,9 +1564,85 @@ function clearLearnedKampungMap() {
   }).then((res) => {
     if (res.isConfirmed) {
       localStorage.removeItem('ckg_learned_kampung_map');
+      fetch('/api/kamus', { method: 'DELETE' }).catch(err => console.warn('D1 kamus delete failed:', err));
       refreshAdminKamusStats();
       showToast('Kamus Pembelajaran berhasil di-reset!', 'success');
     }
+  });
+}
+
+async function scanExistingRecordsForAddressDictionary() {
+  if (currentRole !== 'Admin' && currentRole !== 'admin') {
+    Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat memicu Scan Kamus Alamat.', 'error');
+    return;
+  }
+
+  const combined = [...(simpusRecords || []), ...(ckgRecords || [])];
+
+  if (combined.length === 0) {
+    Swal.fire('Data Pasien Kosong', 'Tidak ada data pasien SIMPUS/CKG yang tersimpan saat ini.', 'info');
+    return;
+  }
+
+  Swal.fire({
+    title: 'Memindai Data Pasien Existing...',
+    text: `Sedang menganalisis & mengekstrak alamat dari ${combined.length} data pasien yang tersimpan...`,
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  let scannedCount = 0;
+  let learnedCount = 0;
+  const batchMap = new Map();
+
+  for (let r of combined) {
+    const alamatText = String(r.alamat || r.alamat_lengkap || '').trim();
+    const kelVal = String(r.kelurahan || r.kel || '').trim();
+    const kecVal = String(r.kecamatan || r.kec || 'Banjaran').trim();
+    const kabVal = String(r.kab_kota || r.kab || 'Kabupaten Bandung').trim();
+    const provVal = String(r.provinsi || r.prov || 'Jawa Barat').trim();
+
+    if (alamatText && kelVal) {
+      scannedCount++;
+      const words = alamatText.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT:?|\d+|RW:?|\d+)\s*/gi, ' ').split(/\s+/).filter(w => w.length >= 3);
+      if (words.length > 0) {
+        const kw = words[0];
+        if (!batchMap.has(kw)) {
+          saveLearnedKampungKeyword(kw, kelVal, kecVal, kabVal, provVal);
+          batchMap.set(kw, {
+            keyword: kw,
+            kel: kelVal,
+            kec: kecVal,
+            kab: kabVal,
+            prov: provVal
+          });
+          learnedCount++;
+        }
+      }
+    }
+  }
+
+  const batchPayload = Array.from(batchMap.values());
+
+  if (batchPayload.length > 0) {
+    try {
+      await fetch('/api/kamus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(batchPayload)
+      });
+    } catch (e) {
+      console.warn('Batch D1 push error during scan:', e);
+    }
+  }
+
+  refreshAdminKamusStats();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Pemeriksaan & Auto-Learning Selesai!',
+    html: `Berhasil memindai <strong>${scannedCount}</strong> alamat pasien existing dan menyerap <strong>${learnedCount}</strong> kata kunci kampung unik (bebas duplikat) ke <strong>Cloud Database D1 & Kamus Lokal</strong>.`,
+    confirmButtonText: 'Mantap!'
   });
 }
 

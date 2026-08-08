@@ -913,7 +913,84 @@ export default {
         }), { headers: corsHeaders });
       }
 
-      return new Response(JSON.stringify({ error: 'Dukcapil endpoint not found' }), { status: 404, headers: corsHeaders });
+      // 9. ROUTE: /api/kamus (Centralized Address Knowledge Base & Cloud Auto-Learning)
+    if (url.pathname === '/api/kamus' || url.pathname.startsWith('/api/kamus/')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+
+      // Auto-create table if not existing
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS kamus_alamat (
+            keyword TEXT PRIMARY KEY,
+            kel TEXT,
+            kec TEXT,
+            kab TEXT,
+            prov TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (e) {}
+
+      if (request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare('SELECT keyword, kel, kec, kab, prov FROM kamus_alamat').all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const items = Array.isArray(body) ? body : [body];
+          if (items.length === 0) {
+            return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
+          }
+
+          const stmt = env.DB.prepare(`
+            INSERT INTO kamus_alamat (keyword, kel, kec, kab, prov) VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(keyword) DO UPDATE SET
+              kel = excluded.kel,
+              kec = excluded.kec,
+              kab = excluded.kab,
+              prov = excluded.prov,
+              updated_at = CURRENT_TIMESTAMP
+          `);
+
+          // Chunk operations into batches of 50 to respect D1 limits
+          const batchSize = 50;
+          for (let i = 0; i < items.length; i += batchSize) {
+            const chunk = items.slice(i, i + batchSize);
+            const statements = chunk.map(item => stmt.bind(
+              String(item.keyword).toUpperCase().trim(),
+              item.kel || '',
+              item.kec || 'Banjaran',
+              item.kab || 'Kabupaten Bandung',
+              item.prov || 'Jawa Barat'
+            ));
+            await env.DB.batch(statements);
+          }
+
+          return new Response(JSON.stringify({ success: true, count: items.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      if (request.method === 'DELETE') {
+        try {
+          await env.DB.prepare('DELETE FROM kamus_alamat').run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
     }
 
     // Serve static assets via Cloudflare Assets
