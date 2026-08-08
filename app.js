@@ -1427,7 +1427,7 @@ function switchSimpusTab(tab) {
     if (btnMultiImport) btnMultiImport.style.display = role === 'admin' ? 'inline-flex' : 'none';
     if (thPetugas) thPetugas.style.display = '';
     if (tableViewContainer) tableViewContainer.style.display = 'none';
-    if (cardsViewContainer) cardsViewContainer.style.display = 'flex';
+    if (cardsViewContainer) cardsViewContainer.style.display = 'block';
     if (infoBar) infoBar.style.display = 'none';
   }
 
@@ -1552,7 +1552,7 @@ function renderSimpusTableRecords() {
     }).join('');
 
   } else {
-    // RENDER 2: CARD LIST VIEW (Khusus Data Sudah Di-Bagi - Modern Compact View)
+    // RENDER 2: SIMPUS ID REGISTRATION TABLE MODEL (Khusus Data Sudah Di-Bagi - Image 1 Style)
     if (!containerCards) return;
 
     const totalCount = dataset.length;
@@ -1578,58 +1578,125 @@ function renderSimpusTableRecords() {
       return;
     }
 
-    containerCards.innerHTML = displayDataset.map((r, i) => {
+    const tableRowsHtml = displayDataset.map((r, i) => {
       const petugasName = r.petugas_entry || r.assigned_to || '-';
       const recId = r.id || r.nik;
       const safeRecId = escapeAttr(recId);
       const safeNik = escapeAttr(r.nik);
       const kel = r.kelurahan || 'Tarajusari';
+      const kec = r.kecamatan || 'Banjaran';
+      const statusPernikahan = r.status_pernikahan || 'MENIKAH';
 
       return `
-        <div class="simpus-patient-card-compact" style="border-left: 4px solid var(--primary); background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
-          <!-- Top Row: Name, NIK, Age, Petugas & Quick Actions -->
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <span style="font-weight: 800; font-size: 13.5px; color: #475569; min-width: 24px;">${i + 1}.</span>
-              <span style="font-size: 15px; font-weight: 800; color: var(--primary); cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" onclick="openSimpusDetailModal('${safeRecId}')" title="Klik untuk Buka Detail & Copy Data">
-                ${r.nama} <i class="bi bi-box-arrow-up-right" style="font-size: 11px; opacity: 0.85;"></i>
-              </span>
-              <span class="copyable-field-sm" onclick="copyToClipboard('${safeNik}', 'NIK Pasien')" style="cursor: pointer; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 11.5px; font-weight: 700; color: #1e293b;" title="Klik untuk Salin NIK">
-                <i class="bi bi-card-text"></i> NIK: <strong style="font-family: monospace;">${r.nik}</strong> <i class="bi bi-copy" style="font-size: 10px; color: var(--primary); margin-left: 3px;"></i>
-              </span>
-              <span class="badge badge-amber" style="padding: 3px 8px; font-size: 11px; font-weight: 700;">
-                ${r.usia} th (${r.keterangan || 'Dewasa'})
-              </span>
-            </div>
+        <tr>
+          <!-- No -->
+          <td style="text-align: center; font-weight: 700; color: #475569; vertical-align: middle;">${i + 1}</td>
 
-            <div style="display: flex; align-items: center; gap: 8px;">
+          <!-- Nama Pasien & Identitas -->
+          <td>
+            <div style="font-size: 14px; font-weight: 800; color: #0284c7; margin-bottom: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" onclick="openSimpusDetailModal('${safeRecId}')" title="Klik untuk Buka Detail Data">
+              ${r.nama} <i class="bi bi-box-arrow-up-right" style="font-size: 11px; color: #0284c7;"></i>
+            </div>
+            <div class="simpus-kv-list">
+              <div class="simpus-kv-row">
+                <span class="simpus-kv-label" style="width: 100px;">NIK</span>
+                <span class="simpus-kv-colon">:</span>
+                <span class="simpus-kv-value" style="font-family: monospace;">${r.nik}</span>
+                <i class="bi bi-copy" style="font-size: 11px; color: #0284c7; margin-left: 6px; cursor: pointer;" onclick="copyToClipboard('${safeNik}', 'NIK')" title="Salin NIK"></i>
+              </div>
+              <div class="simpus-kv-row">
+                <span class="simpus-kv-label" style="width: 100px;">Usia / Kategori</span>
+                <span class="simpus-kv-colon">:</span>
+                <span class="simpus-kv-value">${r.usia} th (${r.keterangan || 'Dewasa'})</span>
+              </div>
+              <div class="simpus-kv-row">
+                <span class="simpus-kv-label" style="width: 100px;">Status Kawin</span>
+                <span class="simpus-kv-colon">:</span>
+                <span class="simpus-kv-value">${statusPernikahan}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Hasil Skrining / Pemeriksaan CKG -->
+          <td>
+            <div class="simpus-kv-list">
+              <div class="simpus-kv-row">
+                <span class="simpus-kv-label" style="width: 110px;">Tensi (TD)</span>
+                <span class="simpus-kv-colon">:</span>
+                <span class="simpus-kv-value" style="color: #e11d48; font-weight: 800;">${r.sistol && r.diastol ? r.sistol + '/' + r.diastol + ' mmHg' : '-'}</span>
+              </div>
+              <div class="simpus-kv-row">
+                <span class="simpus-kv-label" style="width: 110px;">BB / TB (IMT)</span>
+                <span class="simpus-kv-colon">:</span>
+                <span class="simpus-kv-value" style="color: #059669; font-weight: 800;">${r.bb ? r.bb + 'kg' : '-'} / ${r.tb ? r.tb + 'cm' : '-'} (${r.imt || '-'})</span>
+              </div>
+              <div class="simpus-kv-row">
+                <span class="simpus-kv-label" style="width: 110px;">Gula / Kolesterol</span>
+                <span class="simpus-kv-colon">:</span>
+                <span class="simpus-kv-value" style="color: #0284c7; font-weight: 800;">${r.gula || '-'} / ${r.kolesterol || '-'} mg/dL</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Alamat -->
+          <td>
+            <div class="simpus-kv-list">
+              <div class="simpus-kv-row">
+                <span class="simpus-kv-label" style="width: 80px;">Alamat</span>
+                <span class="simpus-kv-colon">:</span>
+                <span class="simpus-kv-value">${r.alamat || '-'}</span>
+              </div>
+              <div class="simpus-kv-row">
+                <span class="simpus-kv-label" style="width: 80px;">Kelurahan</span>
+                <span class="simpus-kv-colon">:</span>
+                <span class="simpus-kv-value">${kel}</span>
+              </div>
+              <div class="simpus-kv-row">
+                <span class="simpus-kv-label" style="width: 80px;">Kecamatan</span>
+                <span class="simpus-kv-colon">:</span>
+                <span class="simpus-kv-value">${kec}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Petugas Entry & Tindakan -->
+          <td style="text-align: center; vertical-align: middle;">
+            <div style="margin-bottom: 8px;">
               <span class="badge badge-purple" style="font-weight: 700; padding: 4px 10px; font-size: 11.5px;">
                 <i class="bi bi-person-fill"></i> ${petugasName}
               </span>
-              <button class="btn-detail-info" style="padding: 4px 12px; font-size: 12px; border-radius: 6px;" onclick="openSimpusDetailModal('${safeRecId}')">
-                <i class="bi bi-eye-fill"></i> Detail & Copy
+            </div>
+            <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
+              <button class="btn-detail-info" style="padding: 4px 10px; font-size: 11.5px; border-radius: 6px;" onclick="openSimpusDetailModal('${safeRecId}')" title="Detail & Copy Data">
+                <i class="bi bi-eye-fill"></i> Detail & Salin
               </button>
               <button class="btn btn-outline-danger btn-sm" style="padding: 4px 8px; font-size: 11.5px;" onclick="deleteSimpusRecord('${safeRecId}')" title="Hapus Data Pasien">
-                <i class="bi bi-trash-fill"></i>
+                <i class="bi bi-trash-fill"></i> Hapus
               </button>
             </div>
-          </div>
-
-          <!-- Bottom Row: Compact Inline Clinical & Address Summary Strip -->
-          <div style="display: flex; gap: 12px; font-size: 12.5px; background: #f8fafc; padding: 7px 12px; border-radius: 6px; border: 1px solid #edf2f7; align-items: center; flex-wrap: wrap; color: #334155;">
-            <div style="display: flex; align-items: center; gap: 5px; max-width: 320px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-              <i class="bi bi-geo-alt-fill" style="color: #64748b;"></i> <strong>Alamat:</strong> ${r.alamat || '-'}, ${kel}
-            </div>
-            <div style="height: 14px; width: 1px; background: #cbd5e1;"></div>
-            <div><i class="bi bi-activity" style="color: #e11d48;"></i> <strong>TD:</strong> <span style="color: #e11d48; font-weight: 800;">${r.sistol}/${r.diastol}</span> mmHg</div>
-            <div style="height: 14px; width: 1px; background: #cbd5e1;"></div>
-            <div><i class="bi bi-person-bounding-box" style="color: #059669;"></i> <strong>BB/TB:</strong> <span style="color: #059669; font-weight: 800;">${r.bb}kg / ${r.tb}cm (${r.imt})</span></div>
-            <div style="height: 14px; width: 1px; background: #cbd5e1;"></div>
-            <div><i class="bi bi-droplet-fill" style="color: #0284c7;"></i> <strong>Gula/Kol:</strong> <span style="color: #0284c7; font-weight: 800;">${r.gula || '-'} / ${r.kolesterol || '-'}</span></div>
-          </div>
-        </div>
+          </td>
+        </tr>
       `;
     }).join('');
+
+    containerCards.innerHTML = `
+      <div class="simpus-table-wrapper">
+        <table class="simpus-registration-table">
+          <thead>
+            <tr>
+              <th style="width: 45px; text-align: center;">No</th>
+              <th>Nama Pasien & Identitas</th>
+              <th>Hasil Skrining / Pemeriksaan CKG</th>
+              <th>Alamat</th>
+              <th style="width: 170px; text-align: center;">Petugas & Tindakan</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+      </div>
+    `;
   }
 }
 
