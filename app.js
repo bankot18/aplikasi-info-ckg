@@ -1425,11 +1425,30 @@ function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupa
   }).catch(err => console.warn('D1 Kamus push failed:', err));
 }
 
+function downloadKamusAlamatTemplate() {
+  if (typeof XLSX === 'undefined') {
+    Swal.fire('Library XLSX Belum Siap', 'Silakan refresh halaman dan coba kembali.', 'warning');
+    return;
+  }
+  const templateData = [
+    { "Alamat Lengkap / Nama Kampung": "Kp. Pajagalan RT 02 RW 05", "Kelurahan / Desa": "Banjaran Kota", "Kecamatan": "Banjaran", "Kabupaten / Kota": "Kabupaten Bandung", "Provinsi": "Jawa Barat" },
+    { "Alamat Lengkap / Nama Kampung": "Kp. Kamasan Hilir", "Kelurahan / Desa": "Kamasan", "Kecamatan": "Banjaran", "Kabupaten / Kota": "Kabupaten Bandung", "Provinsi": "Jawa Barat" },
+    { "Alamat Lengkap / Nama Kampung": "Jl. Raya Ciapus No. 12", "Kelurahan / Desa": "Ciapus", "Kecamatan": "Banjaran", "Kabupaten / Kota": "Kabupaten Bandung", "Provinsi": "Jawa Barat" },
+    { "Alamat Lengkap / Nama Kampung": "Dusun Margahayu", "Kelurahan / Desa": "Margahayu", "Kecamatan": "Banjaran", "Kabupaten / Kota": "Kabupaten Bandung", "Provinsi": "Jawa Barat" },
+    { "Alamat Lengkap / Nama Kampung": "Kp. Sindangpanon", "Kelurahan / Desa": "Sindangpanon", "Kecamatan": "Banjaran", "Kabupaten / Kota": "Kabupaten Bandung", "Provinsi": "Jawa Barat" }
+  ];
+  const worksheet = XLSX.utils.json_to_sheet(templateData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Kamus Alamat CKG");
+  XLSX.writeFile(workbook, "Template_Kamus_Alamat_CKG.xlsx");
+}
+
 async function handleExcelAddressUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  if (currentRole !== 'Admin' && currentRole !== 'admin') {
+  const activeRole = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (activeRole !== 'admin') {
     Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat mengimpor Kamus Alamat.', 'error');
     return;
   }
@@ -1462,16 +1481,17 @@ async function handleExcelAddressUpload(event) {
       let kabVal = '';
       let provVal = '';
 
-      for (let k in r) {
+      const keys = Object.keys(r);
+      for (let k of keys) {
         const keyLower = k.toLowerCase().trim();
         const valStr = String(r[k]).trim();
         if (!valStr) continue;
 
-        if (keyLower.includes('alamat') || keyLower.includes('street') || keyLower.includes('jalan')) {
+        if (keyLower.includes('alamat') || keyLower.includes('street') || keyLower.includes('jalan') || keyLower.includes('kampung') || keyLower.includes('dusun') || keyLower.includes('lokasi') || keyLower.includes('nama') || keyLower.includes('keyword')) {
           addressVal = valStr;
-        } else if (keyLower.includes('kelurahan') || keyLower.includes('desa') || keyLower === 'kel') {
+        } else if (keyLower.includes('kelurahan') || keyLower.includes('desa') || keyLower.includes('kel')) {
           kelVal = valStr;
-        } else if (keyLower.includes('kecamatan') || keyLower === 'kec') {
+        } else if (keyLower.includes('kecamatan') || keyLower.includes('kec')) {
           kecVal = valStr;
         } else if (keyLower.includes('kabupaten') || keyLower.includes('kab') || keyLower.includes('kota')) {
           kabVal = valStr;
@@ -1480,7 +1500,18 @@ async function handleExcelAddressUpload(event) {
         }
       }
 
-      if (addressVal && kelVal) {
+      // Ultra-Flexible Fallbacks if header names are unusual
+      if (!addressVal && keys.length > 0) {
+        addressVal = String(r[keys[0]] || '').trim();
+      }
+      if (!kelVal && keys.length > 1) {
+        kelVal = String(r[keys[1]] || '').trim();
+      }
+      if (!kelVal) {
+        kelVal = 'Banjaran Kota';
+      }
+
+      if (addressVal) {
         const words = addressVal.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT:?|\d+|RW:?|\d+)\s*/gi, ' ').split(/\s+/).filter(w => w.length >= 3);
         if (words.length > 0) {
           const kw = words[0];
@@ -1517,12 +1548,21 @@ async function handleExcelAddressUpload(event) {
     event.target.value = '';
     refreshAdminKamusStats();
 
-    Swal.fire({
-      icon: 'success',
-      title: 'Impor Kamus Alamat Berhasil!',
-      html: `Berhasil mengekstrak & menyimpan <strong>${addedCount}</strong> kata kunci kampung unik (bebas duplikat) ke <strong>Cloud Database D1 & Local Storage</strong>.`,
-      confirmButtonText: 'Mantap!'
-    });
+    if (addedCount === 0) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Tidak Ada Kata Kunci Baru',
+        html: `File Excel berhasil dibaca, namun kata kunci kampung dalam file tersebut <strong>sudah tersimpan di Kamus</strong>.<br><br><span style="font-size:12px; color:#64748b;">Tips: Gunakan tombol <strong>Download Template Excel</strong> untuk melihat contoh format kolom resmi.</span>`,
+        confirmButtonText: 'Mengerti'
+      });
+    } else {
+      Swal.fire({
+        icon: 'success',
+        title: 'Impor Kamus Alamat Berhasil!',
+        html: `Berhasil mengekstrak & menyimpan <strong>${addedCount}</strong> kata kunci kampung unik (bebas duplikat) ke <strong>Cloud Database D1 & Local Storage</strong>.`,
+        confirmButtonText: 'Mantap!'
+      });
+    }
   } catch (err) {
     console.error('Error importing Excel address dictionary:', err);
     Swal.fire('Gagal Impor', 'Terjadi kesalahan saat membaca file Excel: ' + err.message, 'error');
@@ -1548,7 +1588,8 @@ function refreshAdminKamusStats() {
 }
 
 function clearLearnedKampungMap() {
-  if (currentRole !== 'Admin' && currentRole !== 'admin') {
+  const activeRole = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (activeRole !== 'admin') {
     Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat mereset Kamus Pembelajaran.', 'error');
     return;
   }
@@ -1572,21 +1613,25 @@ function clearLearnedKampungMap() {
 }
 
 async function scanExistingRecordsForAddressDictionary() {
-  if (currentRole !== 'Admin' && currentRole !== 'admin') {
+  const activeRole = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (activeRole !== 'admin') {
     Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat memicu Scan Kamus Alamat.', 'error');
     return;
   }
 
-  const combined = [...(simpusRecords || []), ...(ckgRecords || [])];
+  const combined = [
+    ...(Array.isArray(simpusRecords) ? simpusRecords : []),
+    ...(Array.isArray(records) ? records : [])
+  ];
 
   if (combined.length === 0) {
-    Swal.fire('Data Pasien Kosong', 'Tidak ada data pasien SIMPUS/CKG yang tersimpan saat ini.', 'info');
+    Swal.fire('Data Pasien Kosong', 'Tidak ada data pasien SIMPUS atau CKG yang tersimpan saat ini.', 'info');
     return;
   }
 
   Swal.fire({
     title: 'Memindai Data Pasien Existing...',
-    text: `Sedang menganalisis & mengekstrak alamat dari ${combined.length} data pasien yang tersimpan...`,
+    text: `Sedang menganalisis & mengekstrak alamat dari ${combined.length} data pasien...`,
     allowOutsideClick: false,
     didOpen: () => { Swal.showLoading(); }
   });
@@ -1596,6 +1641,7 @@ async function scanExistingRecordsForAddressDictionary() {
   const batchMap = new Map();
 
   for (let r of combined) {
+    if (!r) continue;
     const alamatText = String(r.alamat || r.alamat_lengkap || '').trim();
     const kelVal = String(r.kelurahan || r.kel || '').trim();
     const kecVal = String(r.kecamatan || r.kec || 'Banjaran').trim();
