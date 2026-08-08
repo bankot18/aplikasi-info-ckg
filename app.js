@@ -1148,6 +1148,8 @@ function switchView(viewId) {
     renderTableRecords();
   } else if (viewId === 'recycle-data') {
     renderRecycleTable();
+  } else if (viewId === 'admin-panel') {
+    refreshAdminKamusStats();
   }
 }
 
@@ -1375,6 +1377,125 @@ function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupa
   try {
     localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(current));
   } catch (e) {}
+}
+
+async function handleExcelAddressUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (currentRole !== 'Admin' && currentRole !== 'admin') {
+    Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat mengimpor Kamus Alamat.', 'error');
+    return;
+  }
+
+  Swal.fire({
+    title: 'Membaca File Excel...',
+    text: 'Mohon tunggu sebentar, sistem sedang mengekstrak nama kampung & kelurahan dari file Excel Anda.',
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: 'array' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+
+    if (!rows || rows.length === 0) {
+      Swal.fire('File Kosong', 'Tidak ada data ditemukan dalam file Excel tersebut.', 'warning');
+      return;
+    }
+
+    let addedCount = 0;
+    for (let r of rows) {
+      let addressVal = '';
+      let kelVal = '';
+      let kecVal = '';
+      let kabVal = '';
+      let provVal = '';
+
+      for (let k in r) {
+        const keyLower = k.toLowerCase().trim();
+        const valStr = String(r[k]).trim();
+        if (!valStr) continue;
+
+        if (keyLower.includes('alamat') || keyLower.includes('street') || keyLower.includes('jalan')) {
+          addressVal = valStr;
+        } else if (keyLower.includes('kelurahan') || keyLower.includes('desa') || keyLower === 'kel') {
+          kelVal = valStr;
+        } else if (keyLower.includes('kecamatan') || keyLower === 'kec') {
+          kecVal = valStr;
+        } else if (keyLower.includes('kabupaten') || keyLower.includes('kab') || keyLower.includes('kota')) {
+          kabVal = valStr;
+        } else if (keyLower.includes('provinsi') || keyLower.includes('prov')) {
+          provVal = valStr;
+        }
+      }
+
+      if (addressVal && kelVal) {
+        const words = addressVal.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT:?|\d+|RW:?|\d+)\s*/gi, ' ').split(/\s+/).filter(w => w.length >= 3);
+        if (words.length > 0) {
+          const kw = words[0];
+          saveLearnedKampungKeyword(kw, kelVal, kecVal || 'Banjaran', kabVal || 'Kabupaten Bandung', provVal || 'Jawa Barat');
+          addedCount++;
+        }
+      }
+    }
+
+    event.target.value = '';
+    refreshAdminKamusStats();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Impor Kamus Alamat Berhasil!',
+      html: `Berhasil mengekstrak & menyimpan <strong>${addedCount}</strong> kata kunci kampung ke dalam <strong>Kamus Pembelajaran Lokal</strong>.`,
+      confirmButtonText: 'Mantap!'
+    });
+  } catch (err) {
+    console.error('Error importing Excel address dictionary:', err);
+    Swal.fire('Gagal Impor', 'Terjadi kesalahan saat membaca file Excel: ' + err.message, 'error');
+  }
+}
+
+function refreshAdminKamusStats() {
+  const statEl = document.getElementById('statKamusAlamatText');
+  if (!statEl) return;
+  const learnedMap = getLearnedKampungMap();
+  const staticCount = BANJARAN_KAMPUNG_MAP.length;
+  const learnedCount = learnedMap.length;
+  
+  let totalKeywords = 0;
+  BANJARAN_KAMPUNG_MAP.forEach(m => totalKeywords += m.keywords.length);
+  learnedMap.forEach(m => totalKeywords += m.keywords.length);
+
+  statEl.innerHTML = `
+    🟢 <strong>Kamus Bawaan (Banjaran):</strong> ${staticCount} Wilayah Kelurahan (${totalKeywords - learnedCount} Kata Kunci)<br>
+    🧠 <strong>Kamus Pembelajaran (Auto-Learned / Excel Import):</strong> ${learnedCount} Kata Kunci Baru Tersimpan<br>
+    ✨ <strong>Total Bank Data Wilayah Siap Pakai:</strong> <strong>${staticCount + learnedCount} Wilayah / Entry</strong>
+  `;
+}
+
+function clearLearnedKampungMap() {
+  if (currentRole !== 'Admin' && currentRole !== 'admin') {
+    Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat mereset Kamus Pembelajaran.', 'error');
+    return;
+  }
+  Swal.fire({
+    title: 'Reset Kamus Pembelajaran?',
+    text: 'Tindakan ini akan menghapus kata kunci kampung hasil Auto-Learning & Impor Excel. Kamus dasar bawaan Banjaran akan tetap ada.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#e11d48',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Reset Kamus!',
+    cancelButtonText: 'Batal'
+  }).then((res) => {
+    if (res.isConfirmed) {
+      localStorage.removeItem('ckg_learned_kampung_map');
+      refreshAdminKamusStats();
+      showToast('Kamus Pembelajaran berhasil di-reset!', 'success');
+    }
+  });
 }
 
 const BANJARAN_KAMPUNG_MAP = [
