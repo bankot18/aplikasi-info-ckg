@@ -4521,7 +4521,11 @@ function buildTableRowsHtml(data) {
           </div>
         </td>
         <td style="text-align: center; font-weight: bold;">${i + 1}</td>
-        <td><span style="font-size: 12px; font-weight: 600; color: var(--primary);">${formatDisplayDate(r.tanggal_entry || r.created_at)}</span></td>
+        <td>
+          <span style="font-size: 12px; font-weight: 700; color: #0284c7; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; display: inline-flex; align-items: center; gap: 4px;" onclick="promptChangeSingleRecordDate('${r.id}')" title="Klik untuk mengubah Tanggal Entry pasien ini">
+            <i class="bi bi-pencil-square" style="font-size: 11px; opacity: 0.85;"></i>${formatDisplayDate(r.tanggal_entry || r.created_at)}
+          </span>
+        </td>
         <td>${kegiatanBadge}</td>
         <td>
           <strong>${r.nama}</strong><br>
@@ -4540,6 +4544,188 @@ function buildTableRowsHtml(data) {
       </tr>
     `;
   }).join('');
+}
+
+/* ==========================================================================
+   📅 DATE UPDATE ENGINE (SINGLE RECORD & BULK MONTHLY FOR ADMIN)
+   ========================================================================== */
+
+function promptChangeSingleRecordDate(recordId) {
+  const item = records.find(r => String(r.id) === String(recordId));
+  if (!item) {
+    showToast('Record data tidak ditemukan!', 'error');
+    return;
+  }
+
+  const currentDateIso = formatDateToYYYYMMDD(item.created_at || item.tanggal_entry || item.tanggal) || new Date().toISOString().substring(0, 10);
+  const currentFormatted = formatDisplayDate(item.tanggal_entry || item.created_at || item.tanggal);
+
+  Swal.fire({
+    title: '<div style="font-size: 16px; font-weight: 800; color: #0284c7; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-calendar-event-fill" style="color: #0284c7; font-size: 20px;"></i> Ubah Tanggal Entry Pasien</div>',
+    html: `
+      <div style="text-align: left; font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif; padding: 4px;">
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;">
+          <div style="font-weight: 800; color: #0284c7; font-size: 14px;">${item.nama}</div>
+          <div style="font-size: 12px; color: #64748b;">NIK: ${item.nik || '-'} | Petugas: ${item.petugas_entry || item.created_by || '-'}</div>
+          <div style="font-size: 12px; color: #475569; margin-top: 4px;">Tanggal Entry Saat Ini: <strong>${currentFormatted}</strong></div>
+        </div>
+
+        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;">Pilih Tanggal Entry Baru:</label>
+        <input type="date" id="swalSingleDateInput" class="swal2-input" value="${currentDateIso}" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-check-lg"></i> Simpan Perubahan',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#0284c7',
+    cancelButtonColor: '#64748b',
+    preConfirm: () => {
+      const newDate = document.getElementById('swalSingleDateInput')?.value;
+      if (!newDate) {
+        Swal.showValidationMessage('Silakan pilih tanggal entry baru yang valid.');
+        return false;
+      }
+      return newDate;
+    }
+  }).then((result) => {
+    if (result.isConfirmed && result.value) {
+      const newDateVal = result.value;
+      item.created_at = newDateVal;
+      item.tanggal_entry = newDateVal;
+      item.tanggal = newDateVal;
+
+      saveRecordsToStorage();
+      renderTableRecords();
+      showToast(`✓ Tanggal entry untuk ${item.nama} berhasil diubah ke ${formatDisplayDate(newDateVal)}!`, 'success');
+    }
+  });
+}
+
+function openBulkUpdateDateModal() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  if (role !== 'admin' && role !== 'koordinator') {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Akses Ditolak',
+      text: 'Fitur Ubah Tanggal Entry Massal hanya dapat diakses oleh Admin.',
+      confirmButtonColor: '#2563eb'
+    });
+    return;
+  }
+
+  const now = new Date();
+  const currentMonthStr = String(now.getMonth() + 1).padStart(2, '0');
+  const currentYearStr = String(now.getFullYear());
+  const todayIsoStr = now.toISOString().substring(0, 10);
+
+  Swal.fire({
+    title: '<div style="font-size: 16px; font-weight: 800; color: #0369a1; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-calendar-range-fill" style="color: #0284c7; font-size: 22px;"></i> Ubah Tanggal Entry Massal (Khusus Admin)</div>',
+    html: `
+      <div style="text-align: left; font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif; padding: 4px 6px;">
+        <p style="color: #64748b; margin-bottom: 14px; line-height: 1.5;">Pilih bulan & tahun data yang ingin diubah, lalu tentukan tanggal entry baru yang akan diterapkan pada seluruh data di bulan tersebut:</p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+          <div>
+            <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-calendar3" style="color: #0284c7;"></i> Bulan Target:</label>
+            <select id="swalBulkMonthTarget" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
+              <option value="01">Januari</option>
+              <option value="02">Februari</option>
+              <option value="03">Maret</option>
+              <option value="04">April</option>
+              <option value="05">Mei</option>
+              <option value="06">Juni</option>
+              <option value="07" ${currentMonthStr === '07' ? 'selected' : ''}>Juli</option>
+              <option value="08" ${currentMonthStr === '08' ? 'selected' : ''}>Agustus</option>
+              <option value="09">September</option>
+              <option value="10">Oktober</option>
+              <option value="11">November</option>
+              <option value="12">Desember</option>
+            </select>
+          </div>
+          
+          <div>
+            <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-calendar-year" style="color: #0284c7;"></i> Tahun Target:</label>
+            <select id="swalBulkYearTarget" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-calendar-check-fill" style="color: #059669;"></i> Ubah Semua Ke Tanggal Entry Baru:</label>
+          <input type="date" id="swalBulkNewDateInput" class="swal2-input" value="${todayIsoStr}" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 700; border-color: #059669;">
+        </div>
+
+        <div style="font-size: 11.5px; color: #b45309; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 8px 10px; margin-top: 10px;">
+          <i class="bi bi-exclamation-triangle-fill"></i> <strong>Perhatian:</strong> Seluruh data rekam medis CKG pada bulan dan tahun target yang dipilih akan diperbarui ke tanggal entry baru.
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Terapkan Perubahan Massal',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#0284c7',
+    cancelButtonColor: '#64748b',
+    preConfirm: () => {
+      const monthVal = document.getElementById('swalBulkMonthTarget')?.value;
+      const yearVal = document.getElementById('swalBulkYearTarget')?.value;
+      const newDateVal = document.getElementById('swalBulkNewDateInput')?.value;
+
+      if (!monthVal || !yearVal) {
+        Swal.showValidationMessage('Pilih Bulan dan Tahun target terlebih dahulu.');
+        return false;
+      }
+      if (!newDateVal) {
+        Swal.showValidationMessage('Pilih Tanggal Entry Baru yang valid.');
+        return false;
+      }
+
+      return { monthVal, yearVal, newDateVal };
+    }
+  }).then((result) => {
+    if (result.isConfirmed && result.value) {
+      const { monthVal, yearVal, newDateVal } = result.value;
+      processBulkUpdateDate(monthVal, yearVal, newDateVal);
+    }
+  });
+}
+
+function processBulkUpdateDate(monthVal, yearVal, newDateVal) {
+  const monthNames = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const targetMonthName = monthNames[parseInt(monthVal, 10)] || monthVal;
+
+  const matchingRecords = records.filter(r => {
+    const d = getRecordEntryDate(r);
+    return d ? (d.month === monthVal && d.year === yearVal) : false;
+  });
+
+  if (matchingRecords.length === 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Data Tidak Ditemukan',
+      text: `Tidak ditemukan data CKG pada bulan ${targetMonthName} ${yearVal}.`,
+      confirmButtonColor: '#2563eb'
+    });
+    return;
+  }
+
+  matchingRecords.forEach(r => {
+    r.created_at = newDateVal;
+    r.tanggal_entry = newDateVal;
+    r.tanggal = newDateVal;
+  });
+
+  saveRecordsToStorage();
+  renderTableRecords();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Berhasil Memperbarui Tanggal Entry Massal!',
+    html: `Sebanyak <strong>${matchingRecords.length} data CKG</strong> pada bulan <strong>${targetMonthName} ${yearVal}</strong> telah berhasil diubah ke tanggal entry baru: <strong style="color: #0284c7;">${formatDisplayDate(newDateVal)}</strong>.`,
+    confirmButtonColor: '#0284c7'
+  });
 }
 
 function confirmDeleteAllCkgRecords() {
