@@ -1342,6 +1342,21 @@ async function initWilayahDropdowns() {
   }
 }
 
+const BANJARAN_KAMPUNG_MAP = [
+  { keywords: ['PAJAGALAN', 'PEJAGALAN', 'JAGALAN', 'BANJARAN KOTA', 'ALUN-ALUN BANJARAN', 'PASAR BANJARAN', 'STASIUN', 'BARULAKSANA', 'KAUM', 'BUNTRIS', 'PANGKAT'], kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['KAMASAN', 'SEKECANDANG', 'SITUANGANG', 'BANTARPANJANG', 'CIGENTUR', 'SANGKAN', 'LEBAKSARI'], kel: 'Kamasan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['CIAPUS', 'CITARIM', 'CIPEUNEUY', 'LEUWIWUNGGU', 'PALASARI', 'PASIRPANJANG'], kel: 'Ciapus', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['TARAJUSARI', 'TARAJU', 'SAMPORA', 'WARUNGLEBAK', 'SUKAMUKTI', 'BABAKAN TARAJU'], kel: 'Tarajusari', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['PASIRHUNI', 'PASIR HUNI', 'CIKUPA', 'SUKASARI', 'CIBEROD', 'LEBAKMUDA'], kel: 'Pasirhuni', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['SINDANGPANON', 'SINDANG PANON', 'SUKAGALIH', 'CIGANITRI', 'SINDANG'], kel: 'Sindangpanon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['MARGAHURUN', 'MARGA HURUN', 'CILUNCAT', 'CIMANGGU'], kel: 'Margahurun', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['KIANGROKE', 'KIANG ROKE', 'CITEUREUP', 'NAGRAK', 'BABAKAN KIANGROKE'], kel: 'Kiangroke', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['CIMAUNG', 'PUNTANG', 'CAMPAKA', 'WARUNGBANTENG', 'CIPALASARI', 'SUKAMAJU'], kel: 'Cimaung', kec: 'Cimaung', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['CANGKUANG', 'BANDASARI', 'JATISARI', 'PANANJUNG'], kel: 'Cangkuang', kec: 'Cangkuang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['ARJASARI', 'PINGGIRSARI', 'PATROL', 'BARTIM'], kel: 'Arjasari', kec: 'Arjasari', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['PAMEUNGPEUK', 'LANGONSARI', 'WAAS'], kel: 'Pameungpeuk', kec: 'Pameungpeuk', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' }
+];
+
 let addressAutoDetectTimeout = null;
 
 async function autoDetectRegionalFromAddressText(addressText) {
@@ -1359,9 +1374,89 @@ async function autoDetectRegionalFromAddressText(addressText) {
 
   const triggerChange = async (el) => {
     el.dispatchEvent(new Event('change'));
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 180));
   };
 
+  const selectMatchingOption = (selectEl, targetVal, fuzzy = true) => {
+    if (!targetVal || !selectEl) return null;
+    const targetClean = targetVal.toLowerCase().replace(/^(kab\.|kota|kabupaten|kecamatan|kelurahan|desa)\s*/i, '').trim();
+    const options = Array.from(selectEl.options).filter(o => o.value);
+    
+    // Direct exact match
+    let match = options.find(o => o.value.toLowerCase() === targetVal.toLowerCase());
+    if (match) return match;
+
+    // Clean match
+    match = options.find(o => {
+      const oClean = o.value.toLowerCase().replace(/^(kab\.|kota|kabupaten|kecamatan|kelurahan|desa)\s*/i, '').trim();
+      return oClean === targetClean;
+    });
+    if (match) return match;
+
+    // Fuzzy contains match
+    if (fuzzy) {
+      match = options.find(o => {
+        const oClean = o.value.toLowerCase().replace(/^(kab\.|kota|kabupaten|kecamatan|kelurahan|desa)\s*/i, '').trim();
+        return oClean.includes(targetClean) || targetClean.includes(oClean);
+      });
+    }
+    return match;
+  };
+
+  // PRIORITY 1: Check Local Kampung Knowledge Map (Banjaran & Kab. Bandung First)
+  let localHit = null;
+  for (let entry of BANJARAN_KAMPUNG_MAP) {
+    for (let kw of entry.keywords) {
+      // Regex match word boundary so "PAJAGALAN" matches "KP. PAJAGALAN"
+      const regex = new RegExp(`\\b${kw.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
+      if (regex.test(textUpper) || textUpper.includes(kw)) {
+        localHit = entry;
+        break;
+      }
+    }
+    if (localHit) break;
+  }
+
+  if (localHit) {
+    // 1. Set Province
+    const provMatch = selectMatchingOption(provSelect, localHit.prov);
+    if (provMatch) {
+      if (provSelect.value !== provMatch.value) {
+        provSelect.value = provMatch.value;
+        await triggerChange(provSelect);
+      }
+    } else if (provSelect.options.length > 1 && !provSelect.value) {
+      provSelect.value = provSelect.options[1].value;
+      await triggerChange(provSelect);
+    }
+
+    // 2. Set Kab / Kota
+    const kabMatch = selectMatchingOption(kabSelect, localHit.kab);
+    if (kabMatch) {
+      if (kabSelect.value !== kabMatch.value) {
+        kabSelect.value = kabMatch.value;
+        await triggerChange(kabSelect);
+      }
+    }
+
+    // 3. Set Kecamatan
+    const kecMatch = selectMatchingOption(kecSelect, localHit.kec);
+    if (kecMatch) {
+      if (kecSelect.value !== kecMatch.value) {
+        kecSelect.value = kecMatch.value;
+        await triggerChange(kecSelect);
+      }
+    }
+
+    // 4. Set Kelurahan
+    const kelMatch = selectMatchingOption(kelSelect, localHit.kel);
+    if (kelMatch) {
+      kelSelect.value = kelMatch.value;
+    }
+    return;
+  }
+
+  // PRIORITY 2: General Auto-Detect if not in local kampung map
   // 1. Detect Province
   let provMatched = false;
   let provOptions = Array.from(provSelect.options).filter(o => o.value);
@@ -1385,6 +1480,13 @@ async function autoDetectRegionalFromAddressText(addressText) {
         await triggerChange(provSelect);
         provMatched = true;
       }
+    } else {
+      // Default to Jawa Barat if unspecified
+      const match = provOptions.find(o => o.value.toUpperCase().includes('JAWA BARAT'));
+      if (match && !provSelect.value) {
+        provSelect.value = match.value;
+        await triggerChange(provSelect);
+      }
     }
   }
 
@@ -1402,6 +1504,14 @@ async function autoDetectRegionalFromAddressText(addressText) {
     }
   }
 
+  if (!kabSelect.value) {
+    const match = kabOptions.find(o => o.value.toUpperCase().includes('BANDUNG'));
+    if (match) {
+      kabSelect.value = match.value;
+      await triggerChange(kabSelect);
+    }
+  }
+
   // 3. Detect Kecamatan
   let kecOptions = Array.from(kecSelect.options).filter(o => o.value);
   for (let o of kecOptions) {
@@ -1412,6 +1522,14 @@ async function autoDetectRegionalFromAddressText(addressText) {
         await triggerChange(kecSelect);
       }
       break;
+    }
+  }
+
+  if (!kecSelect.value) {
+    const match = kecOptions.find(o => o.value.toUpperCase().includes('BANJARAN'));
+    if (match) {
+      kecSelect.value = match.value;
+      await triggerChange(kecSelect);
     }
   }
 
