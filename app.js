@@ -4618,11 +4618,19 @@ function openBulkUpdateDateModal() {
   const currentYearStr = String(now.getFullYear());
   const todayIsoStr = now.toISOString().substring(0, 10);
 
+  // Build Officers Dropdown Options for Bulk Update Modal
+  let bulkPetugasOptionsHtml = `<option value="">-- Semua Petugas --</option>`;
+  if (Array.isArray(usersDb) && usersDb.length > 0) {
+    usersDb.forEach(u => {
+      bulkPetugasOptionsHtml += `<option value="${escapeAttr(u.nama_user)}">${u.nama_user}</option>`;
+    });
+  }
+
   Swal.fire({
     title: '<div style="font-size: 16px; font-weight: 800; color: #0369a1; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-calendar-range-fill" style="color: #0284c7; font-size: 22px;"></i> Ubah Tanggal Entry Massal (Khusus Admin)</div>',
     html: `
       <div style="text-align: left; font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif; padding: 4px 6px;">
-        <p style="color: #64748b; margin-bottom: 14px; line-height: 1.5;">Pilih bulan & tahun data yang ingin diubah, lalu tentukan tanggal entry baru yang akan diterapkan pada seluruh data di bulan tersebut:</p>
+        <p style="color: #64748b; margin-bottom: 14px; line-height: 1.5;">Pilih bulan, tahun, dan petugas entry target, lalu tentukan tanggal entry baru yang akan diterapkan pada seluruh data tersebut:</p>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
           <div>
@@ -4654,12 +4662,19 @@ function openBulkUpdateDateModal() {
         </div>
 
         <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-person-badge" style="color: #0284c7;"></i> Filter Petugas Entry Target:</label>
+          <select id="swalBulkPetugasTarget" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 700; color: #1e3a8a;">
+            ${bulkPetugasOptionsHtml}
+          </select>
+        </div>
+
+        <div style="margin-bottom: 12px;">
           <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-calendar-check-fill" style="color: #059669;"></i> Ubah Semua Ke Tanggal Entry Baru:</label>
           <input type="date" id="swalBulkNewDateInput" class="swal2-input" value="${todayIsoStr}" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 700; border-color: #059669;">
         </div>
 
         <div style="font-size: 11.5px; color: #b45309; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 8px 10px; margin-top: 10px;">
-          <i class="bi bi-exclamation-triangle-fill"></i> <strong>Perhatian:</strong> Seluruh data rekam medis CKG pada bulan dan tahun target yang dipilih akan diperbarui ke tanggal entry baru.
+          <i class="bi bi-exclamation-triangle-fill"></i> <strong>Perhatian:</strong> Seluruh data rekam medis CKG pada kriteria filter target yang dipilih akan diperbarui ke tanggal entry baru.
         </div>
       </div>
     `,
@@ -4671,6 +4686,7 @@ function openBulkUpdateDateModal() {
     preConfirm: () => {
       const monthVal = document.getElementById('swalBulkMonthTarget')?.value;
       const yearVal = document.getElementById('swalBulkYearTarget')?.value;
+      const petugasVal = document.getElementById('swalBulkPetugasTarget')?.value || '';
       const newDateVal = document.getElementById('swalBulkNewDateInput')?.value;
 
       if (!monthVal || !yearVal) {
@@ -4682,30 +4698,37 @@ function openBulkUpdateDateModal() {
         return false;
       }
 
-      return { monthVal, yearVal, newDateVal };
+      return { monthVal, yearVal, petugasVal, newDateVal };
     }
   }).then((result) => {
     if (result.isConfirmed && result.value) {
-      const { monthVal, yearVal, newDateVal } = result.value;
-      processBulkUpdateDate(monthVal, yearVal, newDateVal);
+      const { monthVal, yearVal, petugasVal, newDateVal } = result.value;
+      processBulkUpdateDate(monthVal, yearVal, petugasVal, newDateVal);
     }
   });
 }
 
-function processBulkUpdateDate(monthVal, yearVal, newDateVal) {
+function processBulkUpdateDate(monthVal, yearVal, petugasVal, newDateVal) {
   const monthNames = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const targetMonthName = monthNames[parseInt(monthVal, 10)] || monthVal;
 
   const matchingRecords = records.filter(r => {
     const d = getRecordEntryDate(r);
-    return d ? (d.month === monthVal && d.year === yearVal) : false;
+    const matchMonthYear = d ? (d.month === monthVal && d.year === yearVal) : false;
+    if (!matchMonthYear) return false;
+
+    if (petugasVal) {
+      return (r.created_by === petugasVal || r.petugas_entry === petugasVal);
+    }
+    return true;
   });
 
   if (matchingRecords.length === 0) {
+    const petugasText = petugasVal ? ` untuk petugas "${petugasVal}"` : '';
     Swal.fire({
       icon: 'warning',
       title: 'Data Tidak Ditemukan',
-      text: `Tidak ditemukan data CKG pada bulan ${targetMonthName} ${yearVal}.`,
+      text: `Tidak ditemukan data CKG pada bulan ${targetMonthName} ${yearVal}${petugasText}.`,
       confirmButtonColor: '#2563eb'
     });
     return;
@@ -4720,10 +4743,11 @@ function processBulkUpdateDate(monthVal, yearVal, newDateVal) {
   saveRecordsToStorage();
   renderTableRecords();
 
+  const petugasText = petugasVal ? ` (Petugas: ${petugasVal})` : ' (Semua Petugas)';
   Swal.fire({
     icon: 'success',
     title: 'Berhasil Memperbarui Tanggal Entry Massal!',
-    html: `Sebanyak <strong>${matchingRecords.length} data CKG</strong> pada bulan <strong>${targetMonthName} ${yearVal}</strong> telah berhasil diubah ke tanggal entry baru: <strong style="color: #0284c7;">${formatDisplayDate(newDateVal)}</strong>.`,
+    html: `Sebanyak <strong>${matchingRecords.length} data CKG</strong> pada bulan <strong>${targetMonthName} ${yearVal}</strong>${petugasText} telah berhasil diubah ke tanggal entry baru: <strong style="color: #0284c7;">${formatDisplayDate(newDateVal)}</strong>.`,
     confirmButtonColor: '#0284c7'
   });
 }
