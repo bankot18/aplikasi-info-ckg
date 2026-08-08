@@ -2310,3 +2310,148 @@ html {
   border-color: #2563eb !important;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
 }
+
+/* ==========================================================================
+   🏥 SIMPUS ID REGISTRATION TABLE MODEL (IMAGE 1 STYLE REPLICA)
+   ========================================================================== */
+
+.simpus-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.simpus-registration-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12.5px;
+  color: #334155;
+}
+
+.simpus-registration-table th {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+  padding: 12px 16px !important;
+  text-align: left;
+  border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+  letter-spacing: 0.5px !important;
+}
+
+.simpus-registration-table td {
+  padding: 14px 16px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  border-right: 1px solid #f1f5f9 !important;
+  vertical-align: top !important;
+  line-height: 1.5 !important;
+}
+
+.simpus-registration-table td:last-child {
+  border-right: none !important;
+}
+
+.simpus-registration-table tbody tr:nth-child(even) {
+  background-color: #f8fafc !important;
+}
+
+.simpus-registration-table tbody tr:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* Key-Value Pair Layout Inside Table Cells */
+.simpus-kv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11.5px;
+}
+
+.simpus-kv-row {
+  display: flex;
+  align-items: center;
+}
+
+.simpus-kv-label {
+  font-weight: 600;
+  color: #475569;
+  width: 135px;
+  flex-shrink: 0;
+}
+
+.simpus-kv-colon {
+  margin-right: 6px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.simpus-kv-value {
+  color: #0f172a;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+/* Action Buttons Matching Image 1 */
+.simpus-action-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.simpus-action-row {
+  display: flex;
+  gap: 6px;
+}
+
+.simpus-btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.simpus-btn-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.simpus-btn-daftar {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.simpus-btn-detail {
+  background: #ffffff;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.simpus-btn-bpjs {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.simpus-btn-1sehat {
+  background: #84cc16;
+  color: #ffffff;
+}
+
+.simpus-btn-hapus {
+  background: #ef4444;
+  color: #ffffff;
+}
