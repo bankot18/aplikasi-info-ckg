@@ -238,7 +238,7 @@ function populateUserDropdowns() {
     });
   }
 
-  ['filterPetugas', 'filterSimpusPetugas', 'filterLaporanPetugas', 'filterSekolahPetugas'].forEach(selectId => {
+  ['filterPetugas', 'filterSimpusPetugas', 'filterLaporanPetugas', 'filterSekolahPetugas', 'filterRecyclePetugas'].forEach(selectId => {
     const sel = document.getElementById(selectId);
     if (sel) {
       const prev = sel.value;
@@ -277,7 +277,7 @@ function applyPetugasFilterLock() {
   const isPrivileged = (role === 'admin' || role === 'koordinator');
   const loggedUser = sessionStorage.getItem('ckg_user_name') || '';
 
-  ['filterPetugas', 'filterSimpusPetugas', 'filterLaporanPetugas', 'filterSekolahPetugas'].forEach(id => {
+  ['filterPetugas', 'filterSimpusPetugas', 'filterLaporanPetugas', 'filterSekolahPetugas', 'filterRecyclePetugas'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       if (!isPrivileged && loggedUser) {
@@ -5038,6 +5038,52 @@ async function deleteSimpusRecord(id) {
   }
 }
 
+function getFilteredRecycleBin() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (role !== 'admin' && role !== 'koordinator') {
+    return [];
+  }
+
+  let dataset = getVisibleRecords(recycleBin);
+
+  const filterSourceVal = document.getElementById('filterRecycleSource')?.value || '';
+  const filterPetugasVal = document.getElementById('filterRecyclePetugas')?.value || '';
+  const searchQuery = document.getElementById('searchRecycle')?.value.trim().toLowerCase() || '';
+
+  if (filterSourceVal) {
+    dataset = dataset.filter(r => {
+      const src = r.original_source || 'BNBA';
+      if (filterSourceVal === 'SIMPUS') {
+        return src.includes('SIMPUS');
+      } else {
+        return !src.includes('SIMPUS');
+      }
+    });
+  }
+
+  if (filterPetugasVal) {
+    dataset = dataset.filter(r => 
+      r.deleted_by === filterPetugasVal || 
+      r.created_by === filterPetugasVal || 
+      r.petugas_entry === filterPetugasVal
+    );
+  }
+
+  if (searchQuery) {
+    dataset = dataset.filter(r => {
+      const nama = (r.nama || r.nama_pasien || '').toLowerCase();
+      const nik = String(r.nik || '').toLowerCase();
+      const deletedBy = (r.deleted_by || '').toLowerCase();
+      const createdBy = (r.created_by || r.petugas_entry || '').toLowerCase();
+      const alamat = (r.alamat || '').toLowerCase();
+
+      return nama.includes(searchQuery) || nik.includes(searchQuery) || deletedBy.includes(searchQuery) || createdBy.includes(searchQuery) || alamat.includes(searchQuery);
+    });
+  }
+
+  return dataset;
+}
+
 function renderRecycleTable() {
   const tbody = document.getElementById('recycleTableBody');
   if (!tbody) return;
@@ -5055,15 +5101,14 @@ function renderRecycleTable() {
     return;
   }
 
-  // Filter recycle bin items by user visibility rules
-  const visibleRecycle = getVisibleRecords(recycleBin);
+  const visibleRecycle = getFilteredRecycleBin();
 
   if (visibleRecycle.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="8" style="text-align: center; padding: 35px; color: var(--text-muted);">
           <i class="bi bi-trash3" style="font-size: 32px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
-          Tempat sampah kosong. Tidak ada data yang dihapus.
+          Tidak ada data di tempat sampah yang sesuai dengan filter.
         </td>
       </tr>
     `;
@@ -5098,6 +5143,90 @@ function renderRecycleTable() {
       </tr>
     `;
   }).join('');
+}
+
+function resetRecycleFilters() {
+  const s = document.getElementById('searchRecycle');
+  if (s) s.value = '';
+
+  const src = document.getElementById('filterRecycleSource');
+  if (src) src.value = '';
+
+  const pet = document.getElementById('filterRecyclePetugas');
+  if (pet) pet.value = '';
+
+  renderRecycleTable();
+  showToast('Filter Recycle Data telah di-reset.', 'info');
+}
+
+function restoreFilteredRecycle() {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (role !== 'admin' && role !== 'koordinator') {
+    Swal.fire('Akses Ditolak', 'Hanya Admin & Koordinator yang dapat memulihkan data.', 'warning');
+    return;
+  }
+
+  const itemsToRestore = getFilteredRecycleBin();
+
+  if (itemsToRestore.length === 0) {
+    showToast('Tidak ada data terfilter untuk dipulihkan.', 'warning');
+    return;
+  }
+
+  const filterSourceVal = document.getElementById('filterRecycleSource')?.value || 'Semua';
+  const filterPetugasVal = document.getElementById('filterRecyclePetugas')?.value || 'Semua';
+
+  Swal.fire({
+    title: '<div style="font-size: 17px; font-weight: 800; color: #059669; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-arrow-counterclockwise" style="color: #10b981; font-size: 24px;"></i> Restore Data Terfilter?</div>',
+    html: `
+      <div style="text-align: left; font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif; padding: 4px;">
+        <p style="color: #475569; margin-bottom: 12px; line-height: 1.5;">Apakah Anda yakin ingin memulihkan <strong>${itemsToRestore.length} data</strong> yang saat ini muncul sesuai filter?</p>
+        
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #065f46;">
+          <div>• Sumber Data Filter: <strong>${filterSourceVal || 'Semua Sumber'}</strong></div>
+          <div>• Petugas Filter: <strong>${filterPetugasVal || 'Semua Petugas'}</strong></div>
+          <div style="margin-top: 4px; font-weight: 700;">Data akan dikembalikan dari Tempat Sampah ke Database Aktif.</div>
+        </div>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#059669',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: `<i class="bi bi-check-lg"></i> Ya, Pulihkan ${itemsToRestore.length} Data!`,
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      let restoredCount = 0;
+
+      itemsToRestore.forEach(item => {
+        const itemIndex = recycleBin.findIndex(r => (r.id || r.nik || '') === (item.id || item.nik || ''));
+        if (itemIndex !== -1) {
+          const [restoredItem] = recycleBin.splice(itemIndex, 1);
+          restoredCount++;
+
+          if (restoredItem.original_source && restoredItem.original_source.includes('SIMPUS')) {
+            simpusRecords.unshift(restoredItem);
+          } else {
+            records.unshift(restoredItem);
+          }
+        }
+      });
+
+      saveRecycleBinToStorage();
+      saveSimpusRecordsToStorage();
+      saveRecordsToStorage();
+
+      renderApp();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil Mempulihkan Data!',
+        html: `Sebanyak <strong>${restoredCount} data</strong> telah dikembalikan dari Tempat Sampah ke Database Aktif.`,
+        confirmButtonColor: '#059669'
+      });
+    }
+  });
 }
 
 function restoreFromRecycle(id) {

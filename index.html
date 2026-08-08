@@ -984,11 +984,44 @@
               </p>
             </div>
             <div class="action-buttons-group">
+              <button class="btn btn-emerald" onclick="restoreFilteredRecycle()" title="Pulihkan Seluruh Data Sesuai Filter saat ini" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; padding: 8px 14px; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25); display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-arrow-counterclockwise"></i> Restore Data Terfilter
+              </button>
               <button class="btn btn-secondary" onclick="renderRecycleTable()">
                 <i class="bi bi-arrow-clockwise"></i> Refresh Recycle
               </button>
               <button class="btn btn-danger" onclick="emptyRecycleBin()">
                 <i class="bi bi-trash-fill"></i> Kosongkan Tempat Sampah
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter Bar for Recycle Data -->
+          <div class="filter-bar-box" style="margin-bottom: 16px;">
+            <div class="filter-group-grid" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+              <div class="search-input-wrapper" style="flex: 1; min-width: 240px;">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" id="searchRecycle" class="search-control" placeholder="Cari Nama Pasien / NIK / Petugas..." onkeyup="renderRecycleTable()">
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-hdd-network" style="color: #0284c7;"></i> Sumber Data:
+                <select id="filterRecycleSource" class="filter-control" onchange="renderRecycleTable()" style="font-weight: 600; color: #1e3a8a;">
+                  <option value="">-- Semua Sumber Data --</option>
+                  <option value="SIMPUS">SIMPUS</option>
+                  <option value="BNBA">BNBA CKG</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-person-badge" style="color: #0284c7;"></i> Petugas:
+                <select id="filterRecyclePetugas" class="filter-control" onchange="renderRecycleTable()" style="font-weight: 600; color: #1e3a8a;">
+                  <option value="">-- Semua Petugas --</option>
+                </select>
+              </div>
+
+              <button class="btn btn-secondary btn-sm" onclick="resetRecycleFilters()" title="Reset Filter">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset Filter
               </button>
             </div>
           </div>
