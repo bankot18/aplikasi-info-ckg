@@ -2073,6 +2073,14 @@ function openSimpusDetailModal(id) {
   document.getElementById('detailModalOverlay').classList.add('open');
 }
 
+function getTodayIsoString() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 async function handleSimpusActionBerhasil(id) {
   const item = simpusRecords.find(r => (r.id || r.nik || '') === id);
   if (!item) {
@@ -2084,8 +2092,7 @@ async function handleSimpusActionBerhasil(id) {
   const detailModalOverlay = document.getElementById('detailModalOverlay');
   if (detailModalOverlay) detailModalOverlay.classList.remove('open');
 
-  const todayStr = new Date().toISOString().substring(0, 10);
-  const defaultTgl = item.tanggal || todayStr;
+  const defaultTgl = getTodayIsoString();
 
   const result = await Swal.fire({
     title: 'Konfirmasi Entry Data CKG (BNBA)',
