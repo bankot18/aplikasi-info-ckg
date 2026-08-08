@@ -962,6 +962,33 @@ function saveRecordsToStorage() {
   localStorage.setItem('ckg_records_db', JSON.stringify(records));
 }
 
+function populateAllYearDropdowns() {
+  const currentYearStr = String(new Date().getFullYear());
+  const yearSelectIds = [
+    { id: 'dashTahun', defaultLabel: 'Semua Tahun' },
+    { id: 'filterLaporanTahun', defaultLabel: '-- Semua Tahun --' },
+    { id: 'filterTahun', defaultLabel: '-- Semua Tahun --' },
+    { id: 'filterSekolahTahun', defaultLabel: '-- Semua Tahun --' }
+  ];
+
+  yearSelectIds.forEach(item => {
+    const el = document.getElementById(item.id);
+    if (el) {
+      const savedVal = el.value;
+      let html = `<option value="">${item.defaultLabel}</option>`;
+      for (let y = 2045; y >= 2000; y--) {
+        html += `<option value="${y}">${y}</option>`;
+      }
+      el.innerHTML = html;
+      if (savedVal) {
+        el.value = savedVal;
+      } else if (item.id === 'dashTahun') {
+        el.value = currentYearStr;
+      }
+    }
+  });
+}
+
 function setupEventListeners() {
   const loginForm = document.getElementById('loginForm');
   if (loginForm) loginForm.addEventListener('submit', handleLogin);
@@ -982,6 +1009,8 @@ function setupEventListeners() {
   const now = new Date();
   const currentMonthStr = String(now.getMonth() + 1).padStart(2, '0');
   const currentYearStr = String(now.getFullYear());
+
+  populateAllYearDropdowns();
 
   const dashBulanEl = document.getElementById('dashBulan');
   const dashTahunEl = document.getElementById('dashTahun');
@@ -2472,29 +2501,29 @@ async function handleBagiPetugasSubmit(e) {
   closeBagiPetugasModal();
   showLoadingOverlay('Membagikan Data SIMPUS...', `Mengalokasikan ${idsToMove.length} data ke ${targetPetugas} & menyinkronkan ke Cloud D1`);
 
+  // 1. Update local records state immediately
+  idsToMove.forEach(id => {
+    const rec = simpusRecords.find(r => r.id === id);
+    if (rec) {
+      rec.is_divided = true;
+      rec.assigned_to = targetPetugas;
+      rec.petugas_entry = targetPetugas;
+    }
+  });
+  saveSimpusRecordsToStorage();
+
+  // 2. Network sync to backend API (non-blocking)
   try {
     const res = await fetch('/api/simpus/bagi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: idsToMove, petugas: targetPetugas })
     });
-    const result = await res.json();
-
-    // Update local records
-    idsToMove.forEach(id => {
-      const rec = simpusRecords.find(r => r.id === id);
-      if (rec) {
-        rec.is_divided = true;
-        rec.assigned_to = targetPetugas;
-        rec.petugas_entry = targetPetugas;
-      }
-    });
-    localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
-    
-    // Fetch clean state from Cloud D1
-    await fetchCloudSimpusRecords(true);
+    if (res.ok) {
+      fetchCloudSimpusRecords(true).catch(() => {});
+    }
   } catch (err) {
-    console.error('Failed to bagi SIMPUS records:', err);
+    console.warn('Backend API /api/simpus/bagi sync notice:', err);
   }
 
   const assignedCount = idsToMove.length;
@@ -2505,7 +2534,7 @@ async function handleBagiPetugasSubmit(e) {
     Swal.fire({
       icon: 'success',
       title: 'Pembagian Data Berhasil!',
-      html: `Berhasil membagikan <strong>${assignedCount} Data Pasien SIMPUS</strong> kepada petugas <strong>${targetPetugas}</strong>.<br><br><span style="color:#059669; font-weight:700;">Data otomatis berpindah ke tab "Data Sudah Di-Bagi" & tersimpan di Cloud D1.</span>`,
+      html: `Berhasil membagikan <strong>${assignedCount} Data Pasien SIMPUS</strong> kepada petugas <strong>${targetPetugas}</strong>.<br><br><span style="color:#059669; font-weight:700;">Data otomatis berpindah ke tab "Data Sudah Di-Bagi".</span>`,
       confirmButtonColor: '#7c3aed'
     });
   } else {
@@ -4636,6 +4665,12 @@ function openBulkUpdateDateModal() {
     });
   }
 
+  let bulkYearOptionsHtml = '';
+  const cYear = parseInt(currentYearStr, 10);
+  for (let y = 2045; y >= 2000; y--) {
+    bulkYearOptionsHtml += `<option value="${y}" ${y === cYear ? 'selected' : ''}>${y}</option>`;
+  }
+
   Swal.fire({
     title: '<div style="font-size: 16px; font-weight: 800; color: #0369a1; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-calendar-range-fill" style="color: #0284c7; font-size: 22px;"></i> Ubah Tanggal Entry Massal (Khusus Admin)</div>',
     html: `
@@ -4664,9 +4699,7 @@ function openBulkUpdateDateModal() {
           <div>
             <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-calendar-year" style="color: #0284c7;"></i> Tahun Target:</label>
             <select id="swalBulkYearTarget" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
-              <option value="2026" selected>2026</option>
-              <option value="2025">2025</option>
-              <option value="2024">2024</option>
+              ${bulkYearOptionsHtml}
             </select>
           </div>
         </div>
@@ -4722,42 +4755,68 @@ function processBulkUpdateDate(monthVal, yearVal, petugasVal, newDateVal) {
   const monthNames = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const targetMonthName = monthNames[parseInt(monthVal, 10)] || monthVal;
 
-  const matchingRecords = records.filter(r => {
-    const d = getRecordEntryDate(r);
-    const matchMonthYear = d ? (d.month === monthVal && d.year === yearVal) : false;
-    if (!matchMonthYear) return false;
+  const targetMonthNum = parseInt(monthVal, 10);
+  const targetYearNum = parseInt(yearVal, 10);
+  const targetPetugasClean = (petugasVal || '').trim().toLowerCase();
 
-    if (petugasVal) {
-      return (r.created_by === petugasVal || r.petugas_entry === petugasVal);
+  const isMatch = (r) => {
+    const d = getRecordEntryDate(r);
+    if (!d) return false;
+    const mNum = parseInt(d.month, 10);
+    const yNum = parseInt(d.year, 10);
+    if (mNum !== targetMonthNum || yNum !== targetYearNum) return false;
+
+    if (targetPetugasClean) {
+      const creator = (r.created_by || r.petugas_entry || r.assigned_to || r.petugas || '').trim().toLowerCase();
+      return creator === targetPetugasClean || creator.includes(targetPetugasClean);
     }
     return true;
-  });
+  };
 
-  if (matchingRecords.length === 0) {
+  const matchingCkg = records.filter(isMatch);
+  const matchingSimpus = simpusRecords.filter(isMatch);
+  const totalMatching = matchingCkg.length + matchingSimpus.length;
+
+  if (totalMatching === 0) {
     const petugasText = petugasVal ? ` untuk petugas "${petugasVal}"` : '';
     Swal.fire({
       icon: 'warning',
       title: 'Data Tidak Ditemukan',
-      text: `Tidak ditemukan data CKG pada bulan ${targetMonthName} ${yearVal}${petugasText}.`,
+      text: `Tidak ditemukan data CKG / SIMPUS pada bulan ${targetMonthName} ${yearVal}${petugasText}.`,
       confirmButtonColor: '#2563eb'
     });
     return;
   }
 
-  matchingRecords.forEach(r => {
+  matchingCkg.forEach(r => {
     r.created_at = newDateVal;
     r.tanggal_entry = newDateVal;
     r.tanggal = newDateVal;
   });
 
+  matchingSimpus.forEach(r => {
+    r.tanggal = newDateVal;
+    r.created_at = newDateVal;
+    r.tanggal_entry = newDateVal;
+  });
+
   saveRecordsToStorage();
-  renderTableRecords();
+  saveSimpusRecordsToStorage();
+
+  if (typeof syncRecordsToCloud === 'function' && matchingCkg.length > 0) {
+    syncRecordsToCloud(matchingCkg);
+  }
+  if (typeof syncSimpusToCloud === 'function' && matchingSimpus.length > 0) {
+    syncSimpusToCloud(matchingSimpus);
+  }
+
+  renderApp();
 
   const petugasText = petugasVal ? ` (Petugas: ${petugasVal})` : ' (Semua Petugas)';
   Swal.fire({
     icon: 'success',
     title: 'Berhasil Memperbarui Tanggal Entry Massal!',
-    html: `Sebanyak <strong>${matchingRecords.length} data CKG</strong> pada bulan <strong>${targetMonthName} ${yearVal}</strong>${petugasText} telah berhasil diubah ke tanggal entry baru: <strong style="color: #0284c7;">${formatDisplayDate(newDateVal)}</strong>.`,
+    html: `Sebanyak <strong>${totalMatching} data</strong> (${matchingCkg.length} Data CKG & ${matchingSimpus.length} Data SIMPUS) pada bulan <strong>${targetMonthName} ${yearVal}</strong>${petugasText} telah berhasil diubah ke tanggal entry baru: <strong style="color: #0284c7;">${formatDisplayDate(newDateVal)}</strong>.`,
     confirmButtonColor: '#0284c7'
   });
 }
@@ -5465,6 +5524,12 @@ function exportToXLSX() {
     ? '' 
     : `<div style="font-size: 11.5px; color: #0284c7; margin-top: 4px; font-weight: 600;"><i class="bi bi-lock-fill"></i> Terkunci: Petugas hanya dapat mengunduh data miliknya sendiri.</div>`;
 
+  let exportYearOptionsHtml = '<option value="">-- Semua Tahun --</option>';
+  const curY = new Date().getFullYear();
+  for (let y = 2045; y >= 2000; y--) {
+    exportYearOptionsHtml += `<option value="${y}" ${y === curY ? 'selected' : ''}>${y}</option>`;
+  }
+
   Swal.fire({
     title: '<div style="font-size: 17px; font-weight: 800; color: #065f46; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-file-earmark-excel-fill" style="color: #10b981; font-size: 22px;"></i> Filter Download Data CKG (Excel)</div>',
     html: `
@@ -5493,10 +5558,7 @@ function exportToXLSX() {
         <div style="margin-bottom: 12px;">
           <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-calendar-year" style="color: #0284c7;"></i> Pilih Tahun:</label>
           <select id="swalExportTahun" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
-            <option value="">-- Semua Tahun --</option>
-            <option value="2026" selected>2026</option>
-            <option value="2025">2025</option>
-            <option value="2024">2024</option>
+            ${exportYearOptionsHtml}
           </select>
         </div>
 
