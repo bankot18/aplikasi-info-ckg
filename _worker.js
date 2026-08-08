@@ -913,7 +913,10 @@ export default {
         }), { headers: corsHeaders });
       }
 
-      // 9. ROUTE: /api/kamus (Centralized Address Knowledge Base & Cloud Auto-Learning)
+      return new Response(JSON.stringify({ error: 'Dukcapil endpoint not found' }), { status: 404, headers: corsHeaders });
+    }
+
+    // 9. ROUTE: /api/kamus (Centralized Address Knowledge Base & Cloud Auto-Learning)
     if (url.pathname === '/api/kamus' || url.pathname.startsWith('/api/kamus/')) {
       if (!env.DB) {
         return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
