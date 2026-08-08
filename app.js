@@ -1392,7 +1392,7 @@ async function syncKamusFromCloudServer() {
   }
 }
 
-function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupaten Bandung', prov = 'Jawa Barat') {
+function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupaten Bandung', prov = 'Jawa Barat', syncToCloud = true) {
   if (!keyword || !kel) return;
   const cleanKw = keyword.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT|RW)\s*/i, '').trim();
   if (cleanKw.length < 3) return;
@@ -1417,12 +1417,14 @@ function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupa
     localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(current));
   } catch (e) {}
 
-  // Sync to D1 Cloud Server
-  fetch('/api/kamus', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify([{ keyword: cleanKw, kel, kec, kab, prov }])
-  }).catch(err => console.warn('D1 Kamus push failed:', err));
+  if (syncToCloud) {
+    // Sync to D1 Cloud Server
+    fetch('/api/kamus', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([{ keyword: cleanKw, kel, kec, kab, prov }])
+    }).catch(err => console.warn('D1 Kamus push failed:', err));
+  }
 }
 
 function downloadKamusAlamatTemplate() {
@@ -1516,7 +1518,7 @@ async function handleExcelAddressUpload(event) {
         if (words.length > 0) {
           const kw = words[0];
           if (!batchMap.has(kw)) {
-            saveLearnedKampungKeyword(kw, kelVal, kecVal || 'Banjaran', kabVal || 'Kabupaten Bandung', provVal || 'Jawa Barat');
+            saveLearnedKampungKeyword(kw, kelVal, kecVal || 'Banjaran', kabVal || 'Kabupaten Bandung', provVal || 'Jawa Barat', false);
             batchMap.set(kw, {
               keyword: kw,
               kel: kelVal,
@@ -1535,17 +1537,20 @@ async function handleExcelAddressUpload(event) {
     // Push batch to D1 Cloud Server
     if (batchPayload.length > 0) {
       try {
-        await fetch('/api/kamus', {
+        const res = await fetch('/api/kamus', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(batchPayload)
         });
+        const resJson = await res.json();
+        console.log('⚡ D1 Kamus Import Response:', resJson);
       } catch (e) {
         console.warn('Batch D1 push error:', e);
       }
     }
 
     event.target.value = '';
+    await syncKamusFromCloudServer();
     refreshAdminKamusStats();
 
     if (addedCount === 0) {
@@ -1654,7 +1659,7 @@ async function scanExistingRecordsForAddressDictionary() {
       if (words.length > 0) {
         const kw = words[0];
         if (!batchMap.has(kw)) {
-          saveLearnedKampungKeyword(kw, kelVal, kecVal, kabVal, provVal);
+          saveLearnedKampungKeyword(kw, kelVal, kecVal, kabVal, provVal, false);
           batchMap.set(kw, {
             keyword: kw,
             kel: kelVal,
@@ -1672,16 +1677,19 @@ async function scanExistingRecordsForAddressDictionary() {
 
   if (batchPayload.length > 0) {
     try {
-      await fetch('/api/kamus', {
+      const res = await fetch('/api/kamus', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(batchPayload)
       });
+      const resJson = await res.json();
+      console.log('⚡ D1 Scan Batch Push Result:', resJson);
     } catch (e) {
       console.warn('Batch D1 push error during scan:', e);
     }
   }
 
+  await syncKamusFromCloudServer();
   refreshAdminKamusStats();
 
   Swal.fire({
