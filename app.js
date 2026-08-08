@@ -3628,6 +3628,10 @@ function resetFilters() {
       }
     }
   });
+
+  const lim = document.getElementById('filterRecordLimit');
+  if (lim) lim.value = '10';
+
   applyPetugasFilterLock();
   renderTableRecords();
   showToast('Filter telah di-reset.', 'info');
@@ -4411,7 +4415,14 @@ function renderTableRecords() {
     });
   }
 
-  tbody.innerHTML = buildTableRowsHtml(filtered);
+  const limitVal = document.getElementById('filterRecordLimit')?.value || '10';
+  let displayFiltered = filtered;
+  if (limitVal !== 'semua') {
+    const limitNum = parseInt(limitVal) || 10;
+    displayFiltered = filtered.slice(0, limitNum);
+  }
+
+  tbody.innerHTML = buildTableRowsHtml(displayFiltered);
 
   const totalBulanBadge = document.getElementById('totalEntryBulanText');
   if (totalBulanBadge) {
@@ -5046,7 +5057,126 @@ function exportToXLSX() {
     return;
   }
 
-  showLoadingOverlay('Mengekspor Data...', 'Menyusun File Excel (.XLSX)');
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const isPrivileged = (role === 'admin' || role === 'koordinator');
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || '';
+
+  // Build Officers Dropdown Options
+  let petugasOptionsHtml = '';
+  if (isPrivileged) {
+    petugasOptionsHtml = `<option value="">-- Semua Petugas --</option>`;
+    if (Array.isArray(usersDb) && usersDb.length > 0) {
+      usersDb.forEach(u => {
+        petugasOptionsHtml += `<option value="${escapeAttr(u.nama_user)}">${u.nama_user}</option>`;
+      });
+    }
+  } else {
+    petugasOptionsHtml = `<option value="${escapeAttr(loggedUser)}" selected>${loggedUser}</option>`;
+  }
+
+  const disabledPetugasAttr = isPrivileged ? '' : 'disabled="disabled"';
+  const petugasLockNote = isPrivileged 
+    ? '' 
+    : `<div style="font-size: 11.5px; color: #0284c7; margin-top: 4px; font-weight: 600;"><i class="bi bi-lock-fill"></i> Terkunci: Petugas hanya dapat mengunduh data miliknya sendiri.</div>`;
+
+  Swal.fire({
+    title: '<div style="font-size: 17px; font-weight: 800; color: #065f46; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-file-earmark-excel-fill" style="color: #10b981; font-size: 22px;"></i> Filter Download Data CKG (Excel)</div>',
+    html: `
+      <div style="text-align: left; font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif; padding: 4px 6px;">
+        <p style="color: #64748b; margin-bottom: 14px; line-height: 1.5;">Silakan pilih filter bulan, tahun, dan petugas entry untuk menyaring data yang ingin diunduh:</p>
+        
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-calendar3" style="color: #0284c7;"></i> Pilih Bulan:</label>
+          <select id="swalExportBulan" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
+            <option value="">-- Semua Bulan --</option>
+            <option value="01">Januari</option>
+            <option value="02">Februari</option>
+            <option value="03">Maret</option>
+            <option value="04">April</option>
+            <option value="05">Mei</option>
+            <option value="06">Juni</option>
+            <option value="07">Juli</option>
+            <option value="08">Agustus</option>
+            <option value="09">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-calendar-year" style="color: #0284c7;"></i> Pilih Tahun:</label>
+          <select id="swalExportTahun" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
+            <option value="">-- Semua Tahun --</option>
+            <option value="2026" selected>2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-person-badge" style="color: #0284c7;"></i> Nama Petugas Entry:</label>
+          <select id="swalExportPetugas" class="swal2-input" ${disabledPetugasAttr} style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 700; ${!isPrivileged ? 'background-color: #f1f5f9; cursor: not-allowed;' : ''}">
+            ${petugasOptionsHtml}
+          </select>
+          ${petugasLockNote}
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-download"></i> Unduh Excel (.xlsx)',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#059669',
+    cancelButtonColor: '#64748b',
+    preConfirm: () => {
+      const bulanVal = document.getElementById('swalExportBulan')?.value || '';
+      const tahunVal = document.getElementById('swalExportTahun')?.value || '';
+      const petugasVal = isPrivileged 
+        ? (document.getElementById('swalExportPetugas')?.value || '') 
+        : loggedUser;
+
+      return { bulanVal, tahunVal, petugasVal };
+    }
+  }).then((result) => {
+    if (result.isConfirmed && result.value) {
+      const { bulanVal, tahunVal, petugasVal } = result.value;
+      processExportXLSX(bulanVal, tahunVal, petugasVal);
+    }
+  });
+}
+
+function processExportXLSX(bulanVal, tahunVal, petugasVal) {
+  let targetRecords = getVisibleRecords(records);
+
+  if (bulanVal) {
+    targetRecords = targetRecords.filter(r => {
+      const d = getRecordEntryDate(r);
+      return d ? d.month === bulanVal : false;
+    });
+  }
+
+  if (tahunVal) {
+    targetRecords = targetRecords.filter(r => {
+      const d = getRecordEntryDate(r);
+      return d ? d.year === tahunVal : false;
+    });
+  }
+
+  if (petugasVal) {
+    targetRecords = targetRecords.filter(r => r.created_by === petugasVal || r.petugas_entry === petugasVal);
+  }
+
+  if (targetRecords.length === 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Data Tidak Ditemukan',
+      text: 'Tidak ada data rekam medis CKG yang cocok dengan kriteria filter yang Anda pilih.',
+      confirmButtonColor: '#2563eb'
+    });
+    return;
+  }
+
+  showLoadingOverlay('Mengekspor Data...', `Menyusun ${targetRecords.length} Data Excel (.XLSX)`);
 
   setTimeout(() => {
     try {
@@ -5059,7 +5189,7 @@ function exportToXLSX() {
         "Status Validasi", "Petugas Entry", "Tanggal Entry"
       ];
 
-      const rows = records.map(r => [
+      const rows = targetRecords.map(r => [
         r.id || '',
         r.jenis_kegiatan || 'Luar Gedung',
         r.nik || '',
@@ -5104,11 +5234,13 @@ function exportToXLSX() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Data BNBA CKG");
 
-      const filename = `Laporan_BNBA_CKG_${new Date().toISOString().substring(0, 10)}.xlsx`;
+      const fileDateStr = new Date().toISOString().substring(0, 10);
+      const safePetugasLabel = petugasVal ? petugasVal.replace(/\s+/g, '_') : 'SemuaPetugas';
+      const filename = `Laporan_BNBA_CKG_${safePetugasLabel}_${tahunVal || 'All'}-${bulanVal || 'All'}_${fileDateStr}.xlsx`;
       XLSX.writeFile(wb, filename);
 
       hideLoadingOverlay();
-      showToast('Laporan BNBA Excel (.XLSX) Berhasil Diunduh!', 'success');
+      showToast(`✓ Berhasil Mengunduh ${targetRecords.length} Data CKG!`, 'success');
     } catch (err) {
       hideLoadingOverlay();
       console.error('Export XLSX error:', err);
