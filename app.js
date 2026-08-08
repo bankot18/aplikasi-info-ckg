@@ -1366,6 +1366,11 @@ function renderSimpusView() {
   const loggedUser = (sessionStorage.getItem('ckg_user_name') || '').trim().toLowerCase();
   const isPrivileged = (role === 'admin' || role === 'koordinator');
 
+  // Petugas role is restricted from 'belum_bagi' tab
+  if (!isPrivileged) {
+    activeSimpusTab = 'sudah_bagi';
+  }
+
   const belumBagiCount = simpusRecords.filter(r => !r.is_divided).length;
   
   let sudahBagiRecords = simpusRecords.filter(r => Boolean(r.is_divided));
@@ -1379,7 +1384,6 @@ function renderSimpusView() {
 
   const countBelumEl = document.getElementById('countBelumBagi');
   const countSudahEl = document.getElementById('countSudahBagi');
-  const totalEntryEl = document.getElementById('totalEntryMonth');
 
   if (countBelumEl) countBelumEl.textContent = belumBagiCount;
   if (countSudahEl) countSudahEl.textContent = sudahBagiCount;
@@ -1391,10 +1395,18 @@ function renderSimpusView() {
     thPetugas.style.display = (activeSimpusTab !== 'sudah_bagi') ? 'none' : '';
   }
 
-  renderSimpusTableRecords();
+  // Also trigger switchSimpusTab to set DOM view states properly
+  switchSimpusTab(activeSimpusTab);
 }
 
 function switchSimpusTab(tab) {
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const isPrivileged = (role === 'admin' || role === 'koordinator');
+
+  if (!isPrivileged && tab === 'belum_bagi') {
+    tab = 'sudah_bagi';
+  }
+
   activeSimpusTab = tab;
 
   const btnBelum = document.getElementById('btnSimpusBelumBagi');
@@ -1407,10 +1419,8 @@ function switchSimpusTab(tab) {
   const cardsViewContainer = document.getElementById('simpusSudahBagiCardsView');
   const infoBar = document.getElementById('simpusTableInfoBar');
 
-  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
-
   if (tab === 'belum_bagi') {
-    if (btnBelum) { btnBelum.className = 'simpus-pill-btn active-purple'; }
+    if (btnBelum) { btnBelum.className = 'simpus-pill-btn active-purple admin-koordinator-only'; }
     if (btnSudah) { btnSudah.className = 'simpus-pill-btn'; }
     if (petugasFilterGroup) petugasFilterGroup.style.display = 'none';
     if (belumBagiActions) belumBagiActions.style.display = 'flex';
@@ -1420,9 +1430,9 @@ function switchSimpusTab(tab) {
     if (cardsViewContainer) cardsViewContainer.style.display = 'none';
     if (infoBar) infoBar.style.display = 'flex';
   } else {
-    if (btnBelum) { btnBelum.className = 'simpus-pill-btn'; }
+    if (btnBelum) { btnBelum.className = 'simpus-pill-btn admin-koordinator-only'; }
     if (btnSudah) { btnSudah.className = 'simpus-pill-btn active-emerald'; }
-    if (petugasFilterGroup) petugasFilterGroup.style.display = 'flex';
+    if (petugasFilterGroup) petugasFilterGroup.style.display = isPrivileged ? 'flex' : 'none';
     if (belumBagiActions) belumBagiActions.style.display = 'flex';
     if (btnMultiImport) btnMultiImport.style.display = role === 'admin' ? 'inline-flex' : 'none';
     if (thPetugas) thPetugas.style.display = '';
