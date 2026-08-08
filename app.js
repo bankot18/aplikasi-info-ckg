@@ -238,29 +238,20 @@ function populateUserDropdowns() {
     });
   }
 
-  if (filterPetugasSelect) {
-    const prevFilter = filterPetugasSelect.value;
-    filterPetugasSelect.innerHTML = '<option value="">-- Semua Petugas --</option>';
-    usersDb.forEach(u => {
-      const opt = document.createElement('option');
-      opt.value = u.nama_user;
-      opt.textContent = u.nama_user;
-      if (prevFilter && u.nama_user === prevFilter) opt.selected = true;
-      filterPetugasSelect.appendChild(opt);
-    });
-  }
-
-  if (filterSimpusSelect) {
-    const prevSimpusFilter = filterSimpusSelect.value;
-    filterSimpusSelect.innerHTML = '<option value="">-- Semua Petugas --</option>';
-    usersDb.forEach(u => {
-      const opt = document.createElement('option');
-      opt.value = u.nama_user;
-      opt.textContent = u.nama_user;
-      if (prevSimpusFilter && u.nama_user === prevSimpusFilter) opt.selected = true;
-      filterSimpusSelect.appendChild(opt);
-    });
-  }
+  ['filterPetugas', 'filterSimpusPetugas', 'filterLaporanPetugas', 'filterSekolahPetugas'].forEach(selectId => {
+    const sel = document.getElementById(selectId);
+    if (sel) {
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">-- Semua Petugas --</option>';
+      usersDb.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.nama_user;
+        opt.textContent = u.nama_user;
+        if (prev && u.nama_user === prev) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+  });
 
   if (importTargetSelect && !importTargetSelect.disabled) {
     const prevImportTarget = importTargetSelect.value;
@@ -286,41 +277,25 @@ function applyPetugasFilterLock() {
   const isPrivileged = (role === 'admin' || role === 'koordinator');
   const loggedUser = sessionStorage.getItem('ckg_user_name') || '';
 
-  const filterPetugasSelect = document.getElementById('filterPetugas');
-  if (filterPetugasSelect) {
-    if (!isPrivileged && loggedUser) {
-      filterPetugasSelect.value = loggedUser;
-      filterPetugasSelect.disabled = true;
-      filterPetugasSelect.title = `Terkunci: Hak Akses Petugas hanya melihat data sendiri (${loggedUser})`;
-      filterPetugasSelect.style.backgroundColor = '#f1f5f9';
-      filterPetugasSelect.style.cursor = 'not-allowed';
-      filterPetugasSelect.style.opacity = '0.85';
-    } else {
-      filterPetugasSelect.disabled = false;
-      filterPetugasSelect.title = '';
-      filterPetugasSelect.style.backgroundColor = '';
-      filterPetugasSelect.style.cursor = '';
-      filterPetugasSelect.style.opacity = '';
+  ['filterPetugas', 'filterSimpusPetugas', 'filterLaporanPetugas', 'filterSekolahPetugas'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (!isPrivileged && loggedUser) {
+        el.value = loggedUser;
+        el.disabled = true;
+        el.title = `Terkunci: Hak Akses Petugas hanya melihat data sendiri (${loggedUser})`;
+        el.style.backgroundColor = '#f1f5f9';
+        el.style.cursor = 'not-allowed';
+        el.style.opacity = '0.85';
+      } else {
+        el.disabled = false;
+        el.title = '';
+        el.style.backgroundColor = '';
+        el.style.cursor = '';
+        el.style.opacity = '';
+      }
     }
-  }
-
-  const filterSimpusSelect = document.getElementById('filterSimpusPetugas');
-  if (filterSimpusSelect) {
-    if (!isPrivileged && loggedUser) {
-      filterSimpusSelect.value = loggedUser;
-      filterSimpusSelect.disabled = true;
-      filterSimpusSelect.title = `Terkunci: Hak Akses Petugas hanya melihat data sendiri (${loggedUser})`;
-      filterSimpusSelect.style.backgroundColor = '#f1f5f9';
-      filterSimpusSelect.style.cursor = 'not-allowed';
-      filterSimpusSelect.style.opacity = '0.85';
-    } else {
-      filterSimpusSelect.disabled = false;
-      filterSimpusSelect.title = '';
-      filterSimpusSelect.style.backgroundColor = '';
-      filterSimpusSelect.style.cursor = '';
-      filterSimpusSelect.style.opacity = '';
-    }
-  }
+  });
 }
 
 function loadStoredRecords() {
@@ -1135,6 +1110,12 @@ function switchView(viewId) {
     setTimeout(() => initDashboardCharts(officersData), 50);
   } else if (viewId === 'simpus') {
     renderSimpusView();
+  } else if (viewId === 'laporan') {
+    renderLaporanView();
+  } else if (viewId === 'sekolah') {
+    renderSekolahView();
+  } else if (viewId === 'data-records') {
+    renderTableRecords();
   } else if (viewId === 'recycle-data') {
     renderRecycleTable();
   }
@@ -1487,6 +1468,20 @@ function renderSimpusTableRecords() {
 
   if (umurVal) {
     dataset = dataset.filter(r => r.keterangan === umurVal);
+  }
+
+  const searchQuery = document.getElementById('searchSimpusRecords')?.value.trim().toLowerCase() || '';
+  if (searchQuery) {
+    dataset = dataset.filter(r => {
+      const nama = (r.nama || '').toLowerCase();
+      const nik = String(r.nik || '').toLowerCase();
+      const alamat = (r.alamat || '').toLowerCase();
+      const petugas = (r.assigned_to || r.petugas_entry || '').toLowerCase();
+      const kel = (r.kelurahan || '').toLowerCase();
+      const kec = (r.kecamatan || '').toLowerCase();
+      const no_index = (r.no_index || '').toLowerCase();
+      return nama.includes(searchQuery) || nik.includes(searchQuery) || alamat.includes(searchQuery) || petugas.includes(searchQuery) || kel.includes(searchQuery) || kec.includes(searchQuery) || no_index.includes(searchQuery);
+    });
   }
 
   const isBelumBagi = (activeSimpusTab !== 'sudah_bagi');
@@ -2295,12 +2290,15 @@ async function handleSimpusActionGagal(id) {
 }
 
 function resetSimpusFilters() {
+  const s = document.getElementById('searchSimpusRecords');
   const p = document.getElementById('filterSimpusPetugas');
   const u = document.getElementById('filterSimpusUmur');
   const l = document.getElementById('filterSimpusLimit');
+  if (s) s.value = '';
   if (p) p.value = '';
   if (u) u.value = '';
   if (l) l.value = '10';
+  applyPetugasFilterLock();
   renderSimpusTableRecords();
   showToast('Filter SIMPUS telah di-reset.', 'info');
 }
@@ -3557,6 +3555,9 @@ function resetFilters() {
   const isPrivileged = (role === 'admin' || role === 'koordinator');
   const loggedUser = sessionStorage.getItem('ckg_user_name') || '';
 
+  const s = document.getElementById('searchDataRecords');
+  if (s) s.value = '';
+
   ['filterKegiatan', 'filterBulan', 'filterTahun', 'filterTanggal', 'filterPetugas', 'filterUmur'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -4335,6 +4336,19 @@ function renderTableRecords() {
     filtered = filtered.filter(r => r.usia >= 18 && r.usia < 60);
   } else if (filterUmurVal === 'lansia') {
     filtered = filtered.filter(r => r.usia >= 60);
+  }
+
+  const searchQuery = document.getElementById('searchDataRecords')?.value.trim().toLowerCase() || '';
+  if (searchQuery) {
+    filtered = filtered.filter(r => {
+      const nama = (r.nama || '').toLowerCase();
+      const nik = String(r.nik || '').toLowerCase();
+      const alamat = (r.alamat || '').toLowerCase();
+      const petugas = (r.petugas_entry || r.created_by || '').toLowerCase();
+      const pos = (r.pos_lokasi || '').toLowerCase();
+      const kegiatan = (r.jenis_kegiatan || '').toLowerCase();
+      return nama.includes(searchQuery) || nik.includes(searchQuery) || alamat.includes(searchQuery) || petugas.includes(searchQuery) || pos.includes(searchQuery) || kegiatan.includes(searchQuery);
+    });
   }
 
   tbody.innerHTML = buildTableRowsHtml(filtered);
@@ -7270,4 +7284,270 @@ document.addEventListener('click', (e) => {
     closeUserProfileDropdown();
   }
 });
+
+/* ==========================================================================
+   🔍 UNIVERSAL SEARCH & RENDERING LOGIC FOR LAPORAN & CKG SEKOLAH
+   ========================================================================== */
+
+function renderLaporanView() {
+  const tbody = document.getElementById('tableBodyLaporan');
+  if (!tbody) return;
+
+  applyPetugasFilterLock();
+
+  const searchQuery = document.getElementById('searchLaporanRecords')?.value.trim().toLowerCase() || '';
+  const filterKegiatanVal = document.getElementById('filterLaporanKegiatan')?.value || '';
+  const filterBulanVal = document.getElementById('filterLaporanBulan')?.value || '';
+  const filterTahunVal = document.getElementById('filterLaporanTahun')?.value || '';
+  const filterPetugasVal = document.getElementById('filterLaporanPetugas')?.value || '';
+
+  // RBAC Data Visibility
+  let dataset = getVisibleRecords(records);
+
+  if (filterKegiatanVal) {
+    dataset = dataset.filter(r => r.jenis_kegiatan === filterKegiatanVal);
+  }
+
+  if (filterBulanVal) {
+    dataset = dataset.filter(r => {
+      const recDate = getRecordEntryDate(r);
+      return recDate ? recDate.month === filterBulanVal : false;
+    });
+  }
+
+  if (filterTahunVal) {
+    dataset = dataset.filter(r => {
+      const recDate = getRecordEntryDate(r);
+      return recDate ? recDate.year === filterTahunVal : false;
+    });
+  }
+
+  if (filterPetugasVal) {
+    dataset = dataset.filter(r => r.created_by === filterPetugasVal || r.petugas_entry === filterPetugasVal);
+  }
+
+  if (searchQuery) {
+    dataset = dataset.filter(r => {
+      const nama = (r.nama || '').toLowerCase();
+      const nik = String(r.nik || '').toLowerCase();
+      const alamat = (r.alamat || '').toLowerCase();
+      const petugas = (r.petugas_entry || r.created_by || '').toLowerCase();
+      const pos = (r.pos_lokasi || '').toLowerCase();
+      const kegiatan = (r.jenis_kegiatan || '').toLowerCase();
+      return nama.includes(searchQuery) || nik.includes(searchQuery) || alamat.includes(searchQuery) || petugas.includes(searchQuery) || pos.includes(searchQuery) || kegiatan.includes(searchQuery);
+    });
+  }
+
+  // Update Metric Summaries
+  const metricTotal = document.getElementById('metricLaporanTotal');
+  const metricLuar = document.getElementById('metricLaporanLuar');
+  const metricDalam = document.getElementById('metricLaporanDalam');
+  const metricHipertensi = document.getElementById('metricLaporanHipertensi');
+
+  if (metricTotal) metricTotal.textContent = dataset.length.toLocaleString('id-ID');
+  if (metricLuar) metricLuar.textContent = dataset.filter(r => r.jenis_kegiatan === 'Luar Gedung').length.toLocaleString('id-ID');
+  if (metricDalam) metricDalam.textContent = dataset.filter(r => r.jenis_kegiatan === 'Dalam Gedung').length.toLocaleString('id-ID');
+  if (metricHipertensi) metricHipertensi.textContent = dataset.filter(r => (r.td_sistolik > 140 || r.td_diastolik > 90 || r.gula_darah > 200)).length.toLocaleString('id-ID');
+
+  if (dataset.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="12" style="text-align: center; padding: 36px; color: var(--text-muted);">
+          <i class="bi bi-inbox" style="font-size: 32px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
+          <strong>Tidak ada data Laporan CKG yang sesuai dengan pencarian / filter.</strong>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = dataset.map((r, i) => {
+    const isHipertensi = r.td_sistolik > 140 || r.td_diastolik > 90;
+    const isGulaTinggi = r.gula_darah > 200;
+    const trClass = isHipertensi ? 'tr-alert-hipertensi' : '';
+    const tensiClass = isHipertensi ? 'cell-hipertensi' : '';
+    const gulaClass = isGulaTinggi ? 'cell-gula-tinggi' : '';
+
+    let imtBadge = `<span class="badge badge-emerald">${r.imt || '-'}</span>`;
+    if (r.imt < 18.5) imtBadge = `<span class="badge badge-amber">${r.imt} (Kurus)</span>`;
+    else if (r.imt >= 25.0 && r.imt <= 29.9) imtBadge = `<span class="badge badge-amber">${r.imt} (Gemuk)</span>`;
+    else if (r.imt >= 30.0) imtBadge = `<span class="badge badge-rose">${r.imt} (Obesitas)</span>`;
+
+    const kegiatanBadge = r.jenis_kegiatan === 'Luar Gedung'
+      ? `<span class="badge badge-cyan"><i class="bi bi-geo-alt-fill"></i> Luar Gedung</span>`
+      : `<span class="badge badge-emerald"><i class="bi bi-building-fill"></i> Dalam Gedung</span>`;
+
+    return `
+      <tr class="${trClass}">
+        <td style="text-align: center; font-weight: 700; color: var(--text-muted);">${i + 1}</td>
+        <td>${formatDisplayDate(r.created_at || r.tanggal_entry || r.tanggal)}</td>
+        <td>${kegiatanBadge}</td>
+        <td>
+          <div style="font-weight: 700; color: var(--primary);">${r.nama || '-'}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">NIK: ${r.nik || '-'}</div>
+        </td>
+        <td>
+          <div>${formatDisplayDate(r.tanggal_lahir)}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${r.usia ? r.usia + ' Th' : '-'}</div>
+        </td>
+        <td>
+          <div style="font-weight: 600;">${r.alamat || '-'}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${r.pos_lokasi || 'Puskesmas'}</div>
+        </td>
+        <td><span class="${tensiClass}">${r.td_sistolik && r.td_diastolik ? r.td_sistolik + '/' + r.td_diastolik : '-'}</span></td>
+        <td><span class="${gulaClass}">${r.gula_darah ? r.gula_darah + ' mg/dL' : '-'}</span></td>
+        <td>${r.kolesterol ? r.kolesterol + ' mg/dL' : '-'}</td>
+        <td>${imtBadge}</td>
+        <td><span class="badge badge-purple">${r.petugas_entry || r.created_by || '-'}</span></td>
+        <td><span class="badge badge-emerald"><i class="bi bi-check-all"></i> Valid</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function resetLaporanFilters() {
+  const s = document.getElementById('searchLaporanRecords');
+  const k = document.getElementById('filterLaporanKegiatan');
+  const b = document.getElementById('filterLaporanBulan');
+  const t = document.getElementById('filterLaporanTahun');
+  const p = document.getElementById('filterLaporanPetugas');
+  if (s) s.value = '';
+  if (k) k.value = '';
+  if (b) b.value = '';
+  if (t) t.value = '';
+  if (p) p.value = '';
+  applyPetugasFilterLock();
+  renderLaporanView();
+  showToast('Filter Laporan telah di-reset.', 'info');
+}
+
+function renderSekolahView() {
+  const tbody = document.getElementById('tableBodySekolah');
+  if (!tbody) return;
+
+  applyPetugasFilterLock();
+
+  const searchQuery = document.getElementById('searchSekolahRecords')?.value.trim().toLowerCase() || '';
+  const filterBulanVal = document.getElementById('filterSekolahBulan')?.value || '';
+  const filterTahunVal = document.getElementById('filterSekolahTahun')?.value || '';
+  const filterPetugasVal = document.getElementById('filterSekolahPetugas')?.value || '';
+
+  // RBAC Data Visibility
+  let dataset = getVisibleRecords(records);
+
+  // Filter for School / Children Screening Records
+  dataset = dataset.filter(r => {
+    const isUnder18 = r.usia && r.usia < 18;
+    const isSekolahKegiatan = (r.jenis_kegiatan || '').toLowerCase().includes('sekolah') || (r.pos_lokasi || '').toLowerCase().includes('sekolah');
+    return isUnder18 || isSekolahKegiatan;
+  });
+
+  if (filterBulanVal) {
+    dataset = dataset.filter(r => {
+      const recDate = getRecordEntryDate(r);
+      return recDate ? recDate.month === filterBulanVal : false;
+    });
+  }
+
+  if (filterTahunVal) {
+    dataset = dataset.filter(r => {
+      const recDate = getRecordEntryDate(r);
+      return recDate ? recDate.year === filterTahunVal : false;
+    });
+  }
+
+  if (filterPetugasVal) {
+    dataset = dataset.filter(r => r.created_by === filterPetugasVal || r.petugas_entry === filterPetugasVal);
+  }
+
+  if (searchQuery) {
+    dataset = dataset.filter(r => {
+      const nama = (r.nama || '').toLowerCase();
+      const nik = String(r.nik || '').toLowerCase();
+      const alamat = (r.alamat || '').toLowerCase();
+      const pos = (r.pos_lokasi || '').toLowerCase();
+      const petugas = (r.petugas_entry || r.created_by || '').toLowerCase();
+      return nama.includes(searchQuery) || nik.includes(searchQuery) || alamat.includes(searchQuery) || pos.includes(searchQuery) || petugas.includes(searchQuery);
+    });
+  }
+
+  // Summary Metrics CKG Sekolah
+  const metricTotal = document.getElementById('metricSekolahTotal');
+  const metricAnak = document.getElementById('metricSekolahAnak');
+  const metricNormal = document.getElementById('metricSekolahNormal');
+  const metricRujukan = document.getElementById('metricSekolahRujukan');
+
+  const countAnak = dataset.filter(r => r.usia < 18).length;
+  const countNormal = dataset.filter(r => (!r.imt || (r.imt >= 18.5 && r.imt <= 24.9)) && (!r.hb || r.hb >= 11.0)).length;
+  const countRujukan = dataset.filter(r => (r.hb && r.hb < 11.0) || (r.imt && (r.imt < 18.5 || r.imt >= 25.0))).length;
+
+  if (metricTotal) metricTotal.textContent = dataset.length.toLocaleString('id-ID');
+  if (metricAnak) metricAnak.textContent = countAnak.toLocaleString('id-ID');
+  if (metricNormal) metricNormal.textContent = countNormal.toLocaleString('id-ID');
+  if (metricRujukan) metricRujukan.textContent = countRujukan.toLocaleString('id-ID');
+
+  if (dataset.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="11" style="text-align: center; padding: 36px; color: var(--text-muted);">
+          <i class="bi bi-mortarboard" style="font-size: 32px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
+          <strong>Tidak ada data CKG Anak Sekolah & Remaja yang sesuai pencarian / filter.</strong>
+          <p style="font-size: 12px; margin-top: 4px;">Gunakan tombol "Input Skrining Sekolah" untuk menambahkan data baru.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = dataset.map((r, i) => {
+    const isAnemia = r.hb > 0 && r.hb < 11.0;
+    const hbClass = isAnemia ? 'cell-anemia' : '';
+
+    let imtBadge = `<span class="badge badge-emerald">${r.imt || '-'}</span>`;
+    if (r.imt < 18.5) imtBadge = `<span class="badge badge-amber">${r.imt} (Kurus)</span>`;
+    else if (r.imt >= 25.0 && r.imt <= 29.9) imtBadge = `<span class="badge badge-amber">${r.imt} (Gemuk)</span>`;
+    else if (r.imt >= 30.0) imtBadge = `<span class="badge badge-rose">${r.imt} (Obesitas)</span>`;
+
+    return `
+      <tr>
+        <td style="text-align: center; font-weight: 700; color: var(--text-muted);">${i + 1}</td>
+        <td>${formatDisplayDate(r.created_at || r.tanggal_entry || r.tanggal)}</td>
+        <td>
+          <div style="font-weight: 700; color: var(--purple);">${r.nama || '-'}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">NIK: ${r.nik || '-'}</div>
+        </td>
+        <td>
+          <div>${r.usia ? r.usia + ' Tahun' : '-'}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${r.jenis_kelamin || '-'}</div>
+        </td>
+        <td>
+          <div style="font-weight: 600;">${r.pos_lokasi || 'Sekolah'}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${r.alamat || '-'}</div>
+        </td>
+        <td>${r.bb ? r.bb + ' kg' : '-'}</td>
+        <td>${r.tb ? r.tb + ' cm' : '-'}</td>
+        <td>${imtBadge}</td>
+        <td>
+          ${r.hb ? `<span class="${hbClass}">Hb: ${r.hb} g/dL</span>` : '<span style="color: var(--text-muted);">-</span>'}
+        </td>
+        <td><span class="badge badge-purple">${r.petugas_entry || r.created_by || '-'}</span></td>
+        <td><span class="badge badge-emerald"><i class="bi bi-check-all"></i> Terverifikasi</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function resetSekolahFilters() {
+  const s = document.getElementById('searchSekolahRecords');
+  const b = document.getElementById('filterSekolahBulan');
+  const t = document.getElementById('filterSekolahTahun');
+  const p = document.getElementById('filterSekolahPetugas');
+  if (s) s.value = '';
+  if (b) b.value = '';
+  if (t) t.value = '';
+  if (p) p.value = '';
+  applyPetugasFilterLock();
+  renderSekolahView();
+  showToast('Filter CKG Sekolah telah di-reset.', 'info');
+}
 

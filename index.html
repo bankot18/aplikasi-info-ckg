@@ -406,21 +406,144 @@
       </section>
 
       <!-- VIEW 2: LAPORAN DATA -->
-      <section id="view-laporan" class="view-panel">
+      <section id="view-laporan" class="view-panel admin-koordinator-only">
         <div class="card-panel">
           <div class="card-header-bar">
-            <div class="card-header-title">
-              <i class="bi bi-file-earmark-bar-graph"></i> Rekapitulasi Laporan BNBA CKG
+            <div>
+              <div class="card-header-title">
+                <i class="bi bi-file-earmark-bar-graph" style="color: var(--primary);"></i> Rekapitulasi Laporan BNBA CKG
+              </div>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Modul ekspor dan rekapitulasi laporan bulanan program CKG Puskesmas Banjaran Kota.
+              </p>
             </div>
             <div class="action-buttons-group">
-              <button class="btn btn-emerald" onclick="exportToCSV()">
-                <i class="bi bi-file-earmark-excel"></i> Download XLSX / CSV
+              <button class="btn btn-emerald" onclick="exportToXLSX()">
+                <i class="bi bi-file-earmark-excel-fill"></i> Ekspor Excel (XLSX)
+              </button>
+              <button class="btn btn-secondary" onclick="renderLaporanView()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Laporan
               </button>
             </div>
           </div>
-          <p style="font-size: 13px; color: var(--text-muted);">
-            Modul ekspor dan rekapitulasi laporan bulanan program CKG Puskesmas Banjaran Kota.
-          </p>
+
+          <!-- Metric Cards Summary Laporan -->
+          <div class="metric-cards-grid" style="margin-bottom: 20px;">
+            <div class="metric-card-solid bg-blue">
+              <div class="metric-card-info">
+                <span class="metric-card-title">TOTAL DATA LAPORAN</span>
+                <span class="metric-card-value" id="metricLaporanTotal">0</span>
+              </div>
+              <div class="metric-card-icon"><i class="bi bi-journal-check"></i></div>
+            </div>
+
+            <div class="metric-card-solid bg-cyan">
+              <div class="metric-card-info">
+                <span class="metric-card-title">LUAR GEDUNG</span>
+                <span class="metric-card-value" id="metricLaporanLuar">0</span>
+              </div>
+              <div class="metric-card-icon"><i class="bi bi-geo-alt-fill"></i></div>
+            </div>
+
+            <div class="metric-card-solid bg-emerald">
+              <div class="metric-card-info">
+                <span class="metric-card-title">DALAM GEDUNG</span>
+                <span class="metric-card-value" id="metricLaporanDalam">0</span>
+              </div>
+              <div class="metric-card-icon"><i class="bi bi-building-fill"></i></div>
+            </div>
+
+            <div class="metric-card-solid bg-purple">
+              <div class="metric-card-info">
+                <span class="metric-card-title">PASIEN RISIKO / HIPERTENSI</span>
+                <span class="metric-card-value" id="metricLaporanHipertensi">0</span>
+              </div>
+              <div class="metric-card-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            </div>
+          </div>
+
+          <!-- Filter Bar for Laporan with Universal Search -->
+          <div class="filter-bar-box">
+            <div class="filter-item" style="flex: 1; min-width: 220px;">
+              <i class="bi bi-search" style="color: var(--primary);"></i> Pencarian Laporan:
+              <input type="text" id="searchLaporanRecords" class="filter-control" placeholder="Cari Nama Pasien / NIK / Alamat / Petugas..." style="width: 100%; font-weight: 600;" oninput="renderLaporanView()">
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-buildings"></i> Kegiatan:
+              <select id="filterLaporanKegiatan" class="filter-control" style="font-weight: 700; color: var(--primary);" onchange="renderLaporanView()">
+                <option value="">-- Semua Kegiatan --</option>
+                <option value="Luar Gedung">Luar Gedung</option>
+                <option value="Dalam Gedung">Dalam Gedung</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-calendar3"></i> Bulan:
+              <select id="filterLaporanBulan" class="filter-control" onchange="renderLaporanView()">
+                <option value="">-- Semua Bulan --</option>
+                <option value="01">Januari</option>
+                <option value="02">Februari</option>
+                <option value="03">Maret</option>
+                <option value="04">April</option>
+                <option value="05">Mei</option>
+                <option value="06">Juni</option>
+                <option value="07">Juli</option>
+                <option value="08">Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-calendar-year"></i> Tahun:
+              <select id="filterLaporanTahun" class="filter-control" onchange="renderLaporanView()">
+                <option value="">-- Semua Tahun --</option>
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-person-badge"></i> Petugas Entry:
+              <select id="filterLaporanPetugas" class="filter-control" onchange="renderLaporanView()">
+                <option value="">-- Semua Petugas --</option>
+              </select>
+            </div>
+
+            <button class="btn btn-secondary btn-sm" onclick="resetLaporanFilters()">
+              <i class="bi bi-arrow-counterclockwise"></i> Reset Filter
+            </button>
+          </div>
+
+          <!-- Laporan Table View -->
+          <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+            <table class="custom-table">
+              <thead>
+                <tr style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
+                  <th style="width: 50px; text-align: center;">NO</th>
+                  <th>TGL ENTRY</th>
+                  <th>KEGIATAN</th>
+                  <th>NAMA PASIEN & NIK</th>
+                  <th>TGL LAHIR / USIA</th>
+                  <th>ALAMAT & WILAYAH</th>
+                  <th>TD (TENSI)</th>
+                  <th>GULA DARAH</th>
+                  <th>KOLESTEROL</th>
+                  <th>IMT</th>
+                  <th>PETUGAS ENTRY</th>
+                  <th>STATUS VALIDASI</th>
+                </tr>
+              </thead>
+              <tbody id="tableBodyLaporan">
+                <!-- Rendered dynamically via JS -->
+              </tbody>
+            </table>
+          </div>
+
         </div>
       </section>
 
@@ -453,9 +576,14 @@
             </div>
           </div>
 
-          <!-- Filter Bar with Mandatory "Kegiatan" Dropdown Filter -->
+          <!-- Filter Bar with Mandatory "Kegiatan" Dropdown Filter & Search -->
           <div class="filter-bar-box">
             
+            <div class="filter-item" style="flex: 1; min-width: 220px;">
+              <i class="bi bi-search" style="color: var(--primary);"></i> Pencarian:
+              <input type="text" id="searchDataRecords" class="filter-control" placeholder="Cari Nama Pasien / NIK / Alamat / Petugas..." style="width: 100%; font-weight: 600;" oninput="renderTableRecords()">
+            </div>
+
             <div class="filter-item">
               <i class="bi bi-buildings"></i> Jenis Kegiatan:
               <select id="filterKegiatan" class="filter-control" style="font-weight: 700; color: var(--primary);">
@@ -605,9 +733,14 @@
             </div>
           </div>
 
-          <!-- Dynamic Filter Bar for SIMPUS -->
+          <!-- Dynamic Filter Bar for SIMPUS with Universal Search -->
           <div class="filter-bar-box" style="margin-bottom: 16px; padding: 12px 14px;">
             
+            <div class="filter-item" style="flex: 1; min-width: 220px;">
+              <i class="bi bi-search" style="color: var(--primary);"></i> Pencarian SIMPUS:
+              <input type="text" id="searchSimpusRecords" class="filter-control" placeholder="Cari Nama Pasien / NIK / Alamat / Petugas..." style="width: 100%; font-weight: 600;" oninput="renderSimpusTableRecords()">
+            </div>
+
             <div id="simpusPetugasFilterGroup" class="filter-item" style="display: none;">
               <i class="bi bi-person-badge-fill"></i> Petugas Entry:
               <select id="filterSimpusPetugas" class="filter-control" style="font-weight: 700;">
@@ -693,13 +826,131 @@
       <section id="view-sekolah" class="view-panel">
         <div class="card-panel">
           <div class="card-header-bar">
-            <div class="card-header-title">
-              <i class="bi bi-mortarboard-fill"></i> Pencatatan CKG Anak Sekolah
+            <div>
+              <div class="card-header-title">
+                <i class="bi bi-mortarboard-fill" style="color: var(--purple);"></i> Pencatatan CKG Anak Sekolah & Remaja
+              </div>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Pencatatan skrining kesehatan anak sekolah & remaja di wilayah Puskesmas Banjaran Kota.
+              </p>
+            </div>
+            <div class="action-buttons-group">
+              <button class="btn btn-primary" onclick="openInputModal('Luar Gedung')">
+                <i class="bi bi-plus-lg"></i> Input Skrining Sekolah
+              </button>
+              <button class="btn btn-secondary" onclick="renderSekolahView()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Sekolah
+              </button>
             </div>
           </div>
-          <p style="font-size: 13px; color: var(--text-muted);">
-            Pencatatan skrining kesehatan anak sekolah & remaja di lingkungan Puskesmas.
-          </p>
+
+          <!-- Metric Cards Summary CKG Sekolah -->
+          <div class="metric-cards-grid" style="margin-bottom: 20px;">
+            <div class="metric-card-solid bg-purple">
+              <div class="metric-card-info">
+                <span class="metric-card-title">TOTAL SKRINING SEKOLAH</span>
+                <span class="metric-card-value" id="metricSekolahTotal">0</span>
+              </div>
+              <div class="metric-card-icon"><i class="bi bi-mortarboard"></i></div>
+            </div>
+
+            <div class="metric-card-solid bg-blue">
+              <div class="metric-card-info">
+                <span class="metric-card-title">ANAK & REMAJA (&lt;18 TH)</span>
+                <span class="metric-card-value" id="metricSekolahAnak">0</span>
+              </div>
+              <div class="metric-card-icon"><i class="bi bi-people-fill"></i></div>
+            </div>
+
+            <div class="metric-card-solid bg-emerald">
+              <div class="metric-card-info">
+                <span class="metric-card-title">STATUS NORMAL</span>
+                <span class="metric-card-value" id="metricSekolahNormal">0</span>
+              </div>
+              <div class="metric-card-icon"><i class="bi bi-check-circle-fill"></i></div>
+            </div>
+
+            <div class="metric-card-solid bg-cyan">
+              <div class="metric-card-info">
+                <span class="metric-card-title">PERLU PENDAMPINGAN</span>
+                <span class="metric-card-value" id="metricSekolahRujukan">0</span>
+              </div>
+              <div class="metric-card-icon"><i class="bi bi-heart-pulse-fill"></i></div>
+            </div>
+          </div>
+
+          <!-- Filter Bar for CKG Sekolah with Universal Search -->
+          <div class="filter-bar-box">
+            <div class="filter-item" style="flex: 1; min-width: 220px;">
+              <i class="bi bi-search" style="color: var(--primary);"></i> Pencarian CKG Sekolah:
+              <input type="text" id="searchSekolahRecords" class="filter-control" placeholder="Cari Nama Siswa / NIK / Sekolah / Petugas..." style="width: 100%; font-weight: 600;" oninput="renderSekolahView()">
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-calendar3"></i> Bulan:
+              <select id="filterSekolahBulan" class="filter-control" onchange="renderSekolahView()">
+                <option value="">-- Semua Bulan --</option>
+                <option value="01">Januari</option>
+                <option value="02">Februari</option>
+                <option value="03">Maret</option>
+                <option value="04">April</option>
+                <option value="05">Mei</option>
+                <option value="06">Juni</option>
+                <option value="07">Juli</option>
+                <option value="08">Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-calendar-year"></i> Tahun:
+              <select id="filterSekolahTahun" class="filter-control" onchange="renderSekolahView()">
+                <option value="">-- Semua Tahun --</option>
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-person-badge"></i> Petugas Entry:
+              <select id="filterSekolahPetugas" class="filter-control" onchange="renderSekolahView()">
+                <option value="">-- Semua Petugas --</option>
+              </select>
+            </div>
+
+            <button class="btn btn-secondary btn-sm" onclick="resetSekolahFilters()">
+              <i class="bi bi-arrow-counterclockwise"></i> Reset Filter
+            </button>
+          </div>
+
+          <!-- CKG Sekolah Table View -->
+          <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+            <table class="custom-table">
+              <thead>
+                <tr style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
+                  <th style="width: 50px; text-align: center;">NO</th>
+                  <th>TGL SKRINING</th>
+                  <th>NAMA SISWA & NIK</th>
+                  <th>USIA & JK</th>
+                  <th>SEKOLAH / ALAMAT</th>
+                  <th>BB (KG)</th>
+                  <th>TB (CM)</th>
+                  <th>IMT & STATUS</th>
+                  <th>FISIK / ANEMIA</th>
+                  <th>PETUGAS ENTRY</th>
+                  <th>STATUS VALIDASI</th>
+                </tr>
+              </thead>
+              <tbody id="tableBodySekolah">
+                <!-- Rendered dynamically via JS -->
+              </tbody>
+            </table>
+          </div>
+
         </div>
       </section>
 
