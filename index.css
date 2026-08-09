@@ -2475,3 +2475,37 @@ body.swal2-toast-shown .swal2-container {
   background: #ef4444;
   color: #ffffff;
 }
+
+/* Interactive Map & Address Learning Styles */
+.map-address-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.map-address-card:hover {
+  border-color: #0284c7;
+  background: #f0f9ff;
+  transform: translateX(3px);
+}
+
+.map-address-card.active {
+  border-color: #0284c7;
+  background: #e0f2fe;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2);
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 14px !important;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2) !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+.leaflet-popup-content {
+  margin: 14px 18px !important;
+  font-size: 12.5px !important;
+  line-height: 1.5 !important;
+}

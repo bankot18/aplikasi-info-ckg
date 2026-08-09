@@ -925,7 +925,7 @@ export default {
         });
       }
 
-      // Auto-create table if not existing
+      // Auto-create table if not existing & auto-alter for lat/lng
       try {
         await env.DB.prepare(`
           CREATE TABLE IF NOT EXISTS kamus_alamat (
@@ -934,14 +934,23 @@ export default {
             kec TEXT,
             kab TEXT,
             prov TEXT,
+            lat REAL,
+            lng REAL,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `).run();
       } catch (e) {}
 
+      try {
+        await env.DB.prepare('ALTER TABLE kamus_alamat ADD COLUMN lat REAL').run();
+      } catch (_) {}
+      try {
+        await env.DB.prepare('ALTER TABLE kamus_alamat ADD COLUMN lng REAL').run();
+      } catch (_) {}
+
       if (request.method === 'GET') {
         try {
-          const { results } = await env.DB.prepare('SELECT keyword, kel, kec, kab, prov FROM kamus_alamat').all();
+          const { results } = await env.DB.prepare('SELECT keyword, kel, kec, kab, prov, lat, lng FROM kamus_alamat').all();
           return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
@@ -957,12 +966,14 @@ export default {
           }
 
           const stmt = env.DB.prepare(`
-            INSERT INTO kamus_alamat (keyword, kel, kec, kab, prov) VALUES (?, ?, ?, ?, ?)
+            INSERT INTO kamus_alamat (keyword, kel, kec, kab, prov, lat, lng) VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(keyword) DO UPDATE SET
               kel = excluded.kel,
               kec = excluded.kec,
               kab = excluded.kab,
               prov = excluded.prov,
+              lat = COALESCE(excluded.lat, kamus_alamat.lat),
+              lng = COALESCE(excluded.lng, kamus_alamat.lng),
               updated_at = CURRENT_TIMESTAMP
           `);
 
@@ -975,7 +986,9 @@ export default {
               item.kel || '',
               item.kec || 'Banjaran',
               item.kab || 'Kabupaten Bandung',
-              item.prov || 'Jawa Barat'
+              item.prov || 'Jawa Barat',
+              item.lat ? Number(item.lat) : null,
+              item.lng ? Number(item.lng) : null
             ));
             await env.DB.batch(statements);
           }

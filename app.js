@@ -1151,6 +1151,8 @@ function switchView(viewId) {
     renderTableRecords();
   } else if (viewId === 'recycle-data') {
     renderRecycleTable();
+  } else if (viewId === 'peta-wilayah') {
+    initInteractiveMap();
   } else if (viewId === 'admin-panel') {
     refreshAdminKamusStats();
   }
@@ -1376,13 +1378,17 @@ async function syncKamusFromCloudServer() {
             existing.kec = item.kec || existing.kec;
             existing.kab = item.kab || existing.kab;
             existing.prov = item.prov || existing.prov;
+            if (item.lat) existing.lat = item.lat;
+            if (item.lng) existing.lng = item.lng;
           } else {
             cloudMap.push({
               keywords: [kw],
               kel: item.kel || '',
               kec: item.kec || 'Banjaran',
               kab: item.kab || 'Kabupaten Bandung',
-              prov: item.prov || 'Jawa Barat'
+              prov: item.prov || 'Jawa Barat',
+              lat: item.lat || null,
+              lng: item.lng || null
             });
           }
         });
@@ -1402,6 +1408,7 @@ async function syncKamusFromCloudServer() {
         localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(cloudMap));
         console.log('☁️ [Kamus Sync] Local storage updated, total entries:', cloudMap.length);
         refreshAdminKamusStats();
+        if (typeof renderMapMarkers === 'function') renderMapMarkers();
       }
     } else {
       console.warn('☁️ [Kamus Sync] Non-OK response:', res.status);
@@ -1411,7 +1418,7 @@ async function syncKamusFromCloudServer() {
   }
 }
 
-function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupaten Bandung', prov = 'Jawa Barat', syncToCloud = true) {
+function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupaten Bandung', prov = 'Jawa Barat', syncToCloud = true, lat = null, lng = null) {
   if (!keyword || !kel) return;
   const cleanKw = keyword.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT|RW)\s*/i, '').trim();
   if (cleanKw.length < 3) return;
@@ -1423,13 +1430,17 @@ function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupa
     existing.kec = kec || existing.kec;
     existing.kab = kab || existing.kab;
     existing.prov = prov || existing.prov;
+    if (lat) existing.lat = lat;
+    if (lng) existing.lng = lng;
   } else {
     current.push({
       keywords: [cleanKw],
       kel: kel,
       kec: kec || 'Banjaran',
       kab: kab || 'Kabupaten Bandung',
-      prov: prov || 'Jawa Barat'
+      prov: prov || 'Jawa Barat',
+      lat: lat || null,
+      lng: lng || null
     });
   }
   try {
@@ -1441,7 +1452,7 @@ function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupa
     fetch('/api/kamus', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([{ keyword: cleanKw, kel, kec, kab, prov }])
+      body: JSON.stringify([{ keyword: cleanKw, kel, kec, kab, prov, lat, lng }])
     }).catch(err => console.warn('D1 Kamus push failed:', err));
   }
 }
@@ -9032,5 +9043,409 @@ function resetSekolahFilters() {
   applyPetugasFilterLock();
   renderSekolahView();
   showToast('Filter CKG Sekolah telah di-reset.', 'info');
+}
+
+// ==========================================================================
+// 🗺️ INTERACTIVE MAP & ADDRESS LEARNING (KABUPATEN BANDUNG, JAWA BARAT)
+// ==========================================================================
+
+let leafletMap = null;
+let mapMarkersGroup = null;
+let currentAddingPinMarker = null;
+
+// Pre-defined coordinate lookup dictionary for Kabupaten Bandung kampungs/kelurahans
+const KAB_BANDUNG_COORDS_MAP = {
+  // Kecamatan Banjaran
+  'BANJARAN KOTA': [-7.0427, 107.5878],
+  'BANJARAN WETAN': [-7.0485, 107.5920],
+  'BANJARAN': [-7.0427, 107.5878],
+  'PAJAGALAN': [-7.0410, 107.5890],
+  'ALUN-ALUN': [-7.0435, 107.5865],
+  'CIAPUS': [-7.0350, 107.5810],
+  'KAMASAN': [-7.0380, 107.5950],
+  'KIANGROKE': [-7.0250, 107.5890],
+  'MARGAHAYU': [-7.0510, 107.5820],
+  'NEGLASARI': [-7.0600, 107.5980],
+  'PASIRHUNI': [-7.0650, 107.5750],
+  'SINDANGPANON': [-7.0550, 107.6050],
+  'TARAJUSARI': [-7.0310, 107.6010],
+  // Kecamatan Cangkuang
+  'BANDASARI': [-7.0210, 107.5620],
+  'CANGKUANG': [-7.0150, 107.5580],
+  'CILUNCAT': [-7.0180, 107.5690],
+  'JATISARI': [-7.0230, 107.5740],
+  'NAGRAK': [-7.0090, 107.5610],
+  'TANJUNGSARI': [-7.0120, 107.5510],
+  // Kecamatan Arjasari
+  'ARJASARI': [-7.0450, 107.6250],
+  'ANCOLMEKAR': [-7.0520, 107.6350],
+  'BAROS': [-7.0380, 107.6150],
+  'BINGKUR': [-7.0620, 107.6410],
+  'MANGGUNGJAYA': [-7.0410, 107.6290],
+  'MEKARJAYA': [-7.0480, 107.6210],
+  'PINGGIRSARI': [-7.0580, 107.6320],
+  'RANCAKOLE': [-7.0650, 107.6250],
+  'WARGALAKSANA': [-7.0350, 107.6380],
+  // Kecamatan Pameungpeuk
+  'PAMEUNGPEUK': [-7.0050, 107.6050],
+  'BATUKARUT': [-7.0050, 107.6050],
+  'LANGONSARI': [-7.0120, 107.6120],
+  'RANCAMANYAR': [-6.9850, 107.5950],
+  'RANCATUNGKU': [-7.0010, 107.5980],
+  'SUKASARI': [-7.0080, 107.6010],
+  // Kecamatan Cimaung
+  'CIMAUNG': [-7.0750, 107.5650],
+  'CIKAPUNDUNG': [-7.0810, 107.5720],
+  'MALASARI': [-7.0880, 107.5610],
+  'PASIRHUNI': [-7.0690, 107.5780],
+  'WARJABAKTI': [-7.0950, 107.5580],
+  // Other Kab Bandung Key Hubs
+  'SOREANG': [-7.0320, 107.5270],
+  'KATAPANG': [-6.9980, 107.5620],
+  'BALEENDAH': [-6.9820, 107.6280],
+  'DAYEUHKOLOT': [-6.9850, 107.6180]
+};
+
+function initInteractiveMap() {
+  const container = document.getElementById('interactiveMap');
+  if (!container) return;
+
+  if (typeof L === 'undefined') {
+    console.warn('Leaflet JS library not loaded yet.');
+    return;
+  }
+
+  if (!leafletMap) {
+    // Center map around Banjaran, Kabupaten Bandung, Jawa Barat
+    leafletMap = L.map('interactiveMap', {
+      center: [-7.0427, 107.5878],
+      zoom: 13,
+      zoomControl: true
+    });
+
+    // Add OpenStreetMap tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Puskesmas Banjaran Kota CKG',
+      maxZoom: 19
+    }).addTo(leafletMap);
+
+    mapMarkersGroup = L.layerGroup().addTo(leafletMap);
+
+    // Map click handler to place a pin & add address
+    leafletMap.on('click', function (e) {
+      const lat = parseFloat(e.latlng.lat.toFixed(6));
+      const lng = parseFloat(e.latlng.lng.toFixed(6));
+
+      if (currentAddingPinMarker) {
+        leafletMap.removeLayer(currentAddingPinMarker);
+      }
+
+      currentAddingPinMarker = L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: 'custom-adding-pin',
+          html: `<div style="background: #ef4444; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); border: 2px solid white; animation: pulse 1.5s infinite;"><i class="bi bi-geo-alt-fill"></i></div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 32]
+        })
+      }).addTo(leafletMap);
+
+      openAddPinModalFromMap(lat, lng);
+    });
+  } else {
+    // Invalidate size when view turns active to ensure full tile rendering
+    setTimeout(() => leafletMap.invalidateSize(), 200);
+  }
+
+  renderMapMarkers();
+}
+
+function resetMapFocusToBanjaran() {
+  if (leafletMap) {
+    leafletMap.setView([-7.0427, 107.5878], 13);
+  }
+}
+
+function renderMapMarkers() {
+  if (!leafletMap || !mapMarkersGroup) return;
+
+  mapMarkersGroup.clearLayers();
+
+  const learnedMap = getLearnedKampungMap();
+  const searchVal = (document.getElementById('mapSearchInput')?.value || '').toLowerCase().trim();
+  const selectedKec = document.getElementById('mapKecamatanSelect')?.value || '';
+  const displayMode = document.getElementById('mapDisplayMode')?.value || 'all';
+
+  const allRecords = (typeof records !== 'undefined' ? records : []).concat(typeof simpusRecords !== 'undefined' ? simpusRecords : []);
+
+  let totalPoints = 0;
+  let kecSet = new Set();
+  let totalPatientsMapped = 0;
+  let banjaranPoints = 0;
+
+  const sidebarListContainer = document.getElementById('mapAddressListContainer');
+  if (sidebarListContainer) sidebarListContainer.innerHTML = '';
+
+  learnedMap.forEach((item, index) => {
+    const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase() : 'KAMPUNG';
+    const kel = item.kel || 'Banjaran Kota';
+    const kec = item.kec || 'Banjaran';
+    const kab = item.kab || 'Kabupaten Bandung';
+
+    // Count patients matched with this address keyword
+    const patientCount = allRecords.filter(r => {
+      const addr = String(r.alamat || '').toUpperCase();
+      return addr.includes(kw) || (item.keywords && item.keywords.some(k => addr.includes(k)));
+    }).length;
+
+    // Apply Filters
+    if (searchVal && !kw.toLowerCase().includes(searchVal) && !kel.toLowerCase().includes(searchVal) && !kec.toLowerCase().includes(searchVal)) {
+      return;
+    }
+
+    if (selectedKec && kec.toLowerCase() !== selectedKec.toLowerCase()) {
+      return;
+    }
+
+    if (displayMode === 'with_patients' && patientCount === 0) {
+      return;
+    }
+
+    // Determine Lat / Lng coordinates
+    let lat = item.lat ? Number(item.lat) : null;
+    let lng = item.lng ? Number(item.lng) : null;
+
+    if (!lat || !lng) {
+      // Look up fallback coordinates in Kabupaten Bandung map dictionary
+      const lookupKey = kw.toUpperCase();
+      const kelLookupKey = kel.toUpperCase();
+
+      if (KAB_BANDUNG_COORDS_MAP[lookupKey]) {
+        [lat, lng] = KAB_BANDUNG_COORDS_MAP[lookupKey];
+      } else if (KAB_BANDUNG_COORDS_MAP[kelLookupKey]) {
+        [lat, lng] = KAB_BANDUNG_COORDS_MAP[kelLookupKey];
+      } else {
+        // Pseudo offset around Banjaran center for unanchored kampungs
+        const hash = kw.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const offsetLat = ((hash % 100) - 50) * 0.0008;
+        const offsetLng = (((hash * 7) % 100) - 50) * 0.0008;
+        lat = -7.0427 + offsetLat;
+        lng = 107.5878 + offsetLng;
+      }
+    }
+
+    totalPoints++;
+    if (kec) kecSet.add(kec);
+    totalPatientsMapped += patientCount;
+    if (kec.toLowerCase() === 'banjaran') banjaranPoints++;
+
+    // Custom Marker Badge Icon
+    const markerColor = patientCount > 5 ? '#059669' : (patientCount > 0 ? '#2563eb' : '#0284c7');
+    const markerHtml = `
+      <div style="background: ${markerColor}; color: white; border-radius: 20px; padding: 4px 10px; font-weight: 800; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.25); border: 2px solid white; white-space: nowrap; cursor: pointer;">
+        <i class="bi bi-geo-alt-fill"></i> ${kw} ${patientCount > 0 ? `<span style="background: rgba(255,255,255,0.3); padding: 1px 6px; border-radius: 10px; font-size: 10px;">${patientCount}</span>` : ''}
+      </div>
+    `;
+
+    const markerIcon = L.divIcon({
+      className: 'custom-map-address-marker',
+      html: markerHtml,
+      iconAnchor: [30, 15]
+    });
+
+    const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(mapMarkersGroup);
+
+    // Popup Content
+    const popupContent = `
+      <div style="min-width: 220px; font-family: 'Plus Jakarta Sans', sans-serif;">
+        <div style="font-weight: 800; font-size: 14px; color: #0f172a; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+          <span>📍 ${kw}</span>
+          <span style="font-size: 10px; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 10px; font-weight: 700;">${kec}</span>
+        </div>
+        <div style="font-size: 12px; color: #475569; margin-bottom: 8px;">
+          <strong>Desa/Kel:</strong> ${kel}<br>
+          <strong>Kecamatan:</strong> ${kec}<br>
+          <strong>Kabupaten:</strong> ${kab}<br>
+          <strong>Koordinat:</strong> ${lat.toFixed(5)}, ${lng.toFixed(5)}
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="color: #64748b; font-weight: 600;">Jumlah Pasien CKG:</span>
+          <strong style="color: #2563eb; font-size: 13px;">${patientCount} Pasien</strong>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-primary btn-sm" style="flex: 1; font-size: 11px;" onclick="prefillFormWithAddress('${kw}', '${kel}', '${kec}')">
+            <i class="bi bi-plus-circle"></i> Input CKG
+          </button>
+          <button class="btn btn-secondary btn-sm" style="font-size: 11px;" onclick="deleteAddressPin('${kw}')">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+    `;
+
+    marker.bindPopup(popupContent);
+
+    // Sidebar card entry
+    if (sidebarListContainer) {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'map-address-card';
+      cardEl.onclick = () => {
+        leafletMap.setView([lat, lng], 15);
+        marker.openPopup();
+        document.querySelectorAll('.map-address-card').forEach(c => c.classList.remove('active'));
+        cardEl.classList.add('active');
+      };
+
+      cardEl.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div style="font-size: 13px; font-weight: 800; color: #0f172a;">${kw}</div>
+            <div style="font-size: 11.5px; color: #64748b; margin-top: 1px;">
+              ${kel}, Kec. ${kec}
+            </div>
+          </div>
+          <span class="badge ${patientCount > 0 ? 'badge-emerald' : 'badge-cyan'}" style="font-size: 10px;">
+            ${patientCount} Pasien
+          </span>
+        </div>
+      `;
+      sidebarListContainer.appendChild(cardEl);
+    }
+  });
+
+  // Update Stat Pills
+  const totalPointsEl = document.getElementById('mapStatTotalPoints');
+  const totalKecEl = document.getElementById('mapStatTotalKec');
+  const totalPatientsEl = document.getElementById('mapStatTotalPatients');
+  const banjaranPointsEl = document.getElementById('mapStatBanjaranPoints');
+  const sidebarBadgeEl = document.getElementById('mapSidebarCountBadge');
+
+  if (totalPointsEl) totalPointsEl.textContent = `${totalPoints} Titik`;
+  if (totalKecEl) totalKecEl.textContent = `${kecSet.size} Kec`;
+  if (totalPatientsEl) totalPatientsEl.textContent = `${totalPatientsMapped} Pasien`;
+  if (banjaranPointsEl) banjaranPointsEl.textContent = `${banjaranPoints} Titik`;
+  if (sidebarBadgeEl) sidebarBadgeEl.textContent = `${totalPoints} Titik`;
+}
+
+function filterMapMarkers() {
+  renderMapMarkers();
+}
+
+function openAddPinModalFromMap(lat = null, lng = null) {
+  const defaultLat = lat || -7.0427;
+  const defaultLng = lng || 107.5878;
+
+  Swal.fire({
+    title: '<i class="bi bi-geo-alt-fill" style="color:#0284c7;"></i> Catat Titik Alamat di Peta',
+    html: `
+      <div style="text-align: left; font-size: 13px; margin-top: 10px;">
+        <p style="color: #64748b; font-size: 12px; margin-bottom: 14px;">
+          Pilih lokasi kampung di <strong>Kabupaten Bandung</strong> dan catat nama kampung untuk disimpan ke Kamus Alamat D1.
+        </p>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label">Nama Kampung / Keyword Alamat <span class="required">*</span></label>
+          <input type="text" id="swalMapKw" class="swal2-input" placeholder="Contoh: Kp. Pajagalan / Kp. Ciapus" style="width: 100%; margin: 4px 0 0 0;" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label class="form-label">Kecamatan (Kab. Bandung) <span class="required">*</span></label>
+            <select id="swalMapKec" class="swal2-select" style="width: 100%; margin: 4px 0 0 0; font-weight:700;">
+              <option value="Banjaran" selected>Banjaran</option>
+              <option value="Cangkuang">Cangkuang</option>
+              <option value="Pameungpeuk">Pameungpeuk</option>
+              <option value="Arjasari">Arjasari</option>
+              <option value="Cimaung">Cimaung</option>
+              <option value="Soreang">Soreang</option>
+              <option value="Katapang">Katapang</option>
+              <option value="Baleendah">Baleendah</option>
+              <option value="Dayeuhkolot">Dayeuhkolot</option>
+              <option value="Margahayu">Margahayu</option>
+              <option value="Margaasih">Margaasih</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kelurahan / Desa <span class="required">*</span></label>
+            <input type="text" id="swalMapKel" class="swal2-input" placeholder="Contoh: Banjaran Kota" style="width: 100%; margin: 4px 0 0 0;" value="Banjaran Kota" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label class="form-label">Latitude</label>
+            <input type="number" id="swalMapLat" class="swal2-input" value="${defaultLat}" step="any" style="width: 100%; margin: 4px 0 0 0;" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Longitude</label>
+            <input type="number" id="swalMapLng" class="swal2-input" value="${defaultLng}" step="any" style="width: 100%; margin: 4px 0 0 0;" readonly>
+          </div>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-check-lg"></i> Simpan Titik Alamat',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#0284c7',
+    preConfirm: () => {
+      const kw = document.getElementById('swalMapKw').value.trim();
+      const kel = document.getElementById('swalMapKel').value.trim();
+      const kec = document.getElementById('swalMapKec').value;
+      const latVal = parseFloat(document.getElementById('swalMapLat').value);
+      const lngVal = parseFloat(document.getElementById('swalMapLng').value);
+
+      if (!kw || !kel) {
+        Swal.showValidationMessage('Harap isi Nama Kampung dan Kelurahan!');
+        return false;
+      }
+      return { kw, kel, kec, lat: latVal, lng: lngVal };
+    }
+  }).then((res) => {
+    if (currentAddingPinMarker && leafletMap) {
+      leafletMap.removeLayer(currentAddingPinMarker);
+      currentAddingPinMarker = null;
+    }
+
+    if (res.isConfirmed && res.value) {
+      const { kw, kel, kec, lat: pLat, lng: pLng } = res.value;
+      saveLearnedKampungKeyword(kw, kel, kec, 'Kabupaten Bandung', 'Jawa Barat', true, pLat, pLng);
+      showToast('Titik Alamat Berhasil Dicatat di Peta!', 'success');
+      renderMapMarkers();
+    }
+  });
+}
+
+function prefillFormWithAddress(kw, kel, kec) {
+  switchView('data-records');
+  setTimeout(() => {
+    const alamatEl = document.getElementById('alamat');
+    const kelEl = document.getElementById('kelurahan');
+    const kecEl = document.getElementById('kecamatan');
+
+    if (alamatEl) alamatEl.value = `Kp. ${kw}`;
+    if (kelEl) kelEl.value = kel;
+    if (kecEl) kecEl.value = kec;
+
+    showToast(`Form diisi dengan lokasi: Kp. ${kw}, ${kel}`, 'info');
+  }, 200);
+}
+
+function deleteAddressPin(kw) {
+  Swal.fire({
+    title: 'Hapus Titik Alamat?',
+    text: `Titik alamat "${kw}" akan dihapus dari peta lokal.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Hapus',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#dc2626'
+  }).then((res) => {
+    if (res.isConfirmed) {
+      const current = getLearnedKampungMap();
+      const filtered = current.filter(item => !item.keywords.includes(kw));
+      localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(filtered));
+      showToast('Titik alamat berhasil dihapus.', 'success');
+      renderMapMarkers();
+    }
+  });
 }
 
