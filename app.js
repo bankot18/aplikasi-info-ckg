@@ -9144,11 +9144,30 @@ function initInteractiveMap() {
       zoomControl: true
     });
 
-    // Add OpenStreetMap tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Puskesmas Banjaran Kota CKG',
-      maxZoom: 19
-    }).addTo(leafletMap);
+    // Add Google Maps Tile Layers (Roadmap, Satelit & Jalan, Terrain)
+    const googleRoadmap = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      attribution: '&copy; Google Maps | Puskesmas Banjaran Kota CKG',
+      maxZoom: 20
+    });
+
+    const googleSatellite = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      attribution: '&copy; Google Maps Satelit & Jalan | Puskesmas Banjaran Kota CKG',
+      maxZoom: 20
+    });
+
+    const googleTerrain = L.tileLayer('https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
+      attribution: '&copy; Google Maps Terrain | Puskesmas Banjaran Kota CKG',
+      maxZoom: 20
+    });
+
+    googleRoadmap.addTo(leafletMap);
+
+    // Layer switcher control for Google Maps views
+    L.control.layers({
+      '🗺️ Google Maps Standard': googleRoadmap,
+      '🛰️ Google Maps Satelit & Jalan': googleSatellite,
+      '⛰️ Google Maps Terrain': googleTerrain
+    }, null, { position: 'topright' }).addTo(leafletMap);
 
     mapMarkersGroup = L.layerGroup().addTo(leafletMap);
 
