@@ -1349,10 +1349,38 @@ async function initWilayahDropdowns() {
   }
 }
 
+function getDeletedKampungList() {
+  try {
+    const raw = localStorage.getItem('ckg_deleted_kampung_list');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function addToDeletedBlacklist(keyword) {
+  if (!keyword) return;
+  const kwUpper = String(keyword).toUpperCase().trim();
+  const list = getDeletedKampungList();
+  if (!list.includes(kwUpper)) {
+    list.push(kwUpper);
+    localStorage.setItem('ckg_deleted_kampung_list', JSON.stringify(list));
+  }
+}
+
 function getLearnedKampungMap() {
   try {
     const raw = localStorage.getItem('ckg_learned_kampung_map');
-    return raw ? JSON.parse(raw) : [];
+    const list = raw ? JSON.parse(raw) : [];
+    const deletedList = getDeletedKampungList();
+    if (deletedList.length === 0) return list;
+
+    return list.filter(item => {
+      if (Array.isArray(item.keywords)) {
+        return !item.keywords.some(k => deletedList.includes(String(k).toUpperCase()));
+      }
+      return !deletedList.includes(String(item.keywords).toUpperCase());
+    });
   } catch (e) {
     return [];
   }
@@ -1367,11 +1395,13 @@ async function syncKamusFromCloudServer() {
       const json = await res.json();
       console.log('☁️ [Kamus Sync] D1 returned:', json.success, 'items:', (json.data || []).length);
       if (json.success && Array.isArray(json.data)) {
+        const deletedList = getDeletedKampungList();
         // Replace local with D1 cloud data as authoritative source
         const cloudMap = [];
         json.data.forEach(item => {
           const kw = String(item.keyword).toUpperCase().trim();
-          if (!kw) return;
+          if (!kw || deletedList.includes(kw)) return; // 🚫 Skip deleted keywords!
+
           const existing = cloudMap.find(m => m.keywords.includes(kw));
           if (existing) {
             existing.kel = item.kel || existing.kel;
@@ -1398,7 +1428,9 @@ async function syncKamusFromCloudServer() {
         local.forEach(localItem => {
           if (!localItem.keywords || !Array.isArray(localItem.keywords)) return;
           localItem.keywords.forEach(lkw => {
-            const inCloud = cloudMap.find(m => m.keywords.includes(lkw));
+            const cleanLkw = String(lkw).toUpperCase().trim();
+            if (deletedList.includes(cleanLkw)) return; // 🚫 Skip deleted keywords!
+            const inCloud = cloudMap.find(m => m.keywords.includes(cleanLkw));
             if (!inCloud) {
               cloudMap.push(localItem);
             }
@@ -1775,6 +1807,7 @@ async function clearLearnedKampungMap() {
     if (res.isConfirmed) {
       try {
         localStorage.removeItem('ckg_learned_kampung_map');
+        localStorage.removeItem('ckg_deleted_kampung_list');
         const apiRes = await fetch('/api/kamus', { method: 'DELETE' });
         const json = await apiRes.json();
         console.log('☁️ [D1 Kamus Delete] Result:', json);
@@ -1808,24 +1841,27 @@ async function deleteSingleKamusKeyword(keyword) {
     cancelButtonText: 'Batal'
   }).then(async (res) => {
     if (res.isConfirmed) {
+      const cleanKw = String(keyword).toUpperCase().trim();
+      addToDeletedBlacklist(cleanKw);
+
       const current = getLearnedKampungMap();
       const filtered = current.filter(item => {
         if (Array.isArray(item.keywords)) {
-          return !item.keywords.includes(keyword);
+          return !item.keywords.some(k => String(k).toUpperCase().trim() === cleanKw);
         }
-        return String(item.keywords) !== String(keyword);
+        return String(item.keywords).toUpperCase().trim() !== cleanKw;
       });
       localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(filtered));
 
       try {
-        await fetch(`/api/kamus?keyword=${encodeURIComponent(keyword)}`, { method: 'DELETE' });
+        await fetch(`/api/kamus?keyword=${encodeURIComponent(cleanKw)}`, { method: 'DELETE' });
       } catch (err) {
         console.warn('Single kamus delete error:', err);
       }
 
       refreshAdminKamusStats();
       if (typeof renderMapMarkers === 'function') renderMapMarkers();
-      showToast(`Kata kunci "${keyword}" berhasil dihapus.`, 'success');
+      showToast(`Kata kunci "${cleanKw}" berhasil dihapus.`, 'success');
     }
   });
 }
@@ -9480,21 +9516,47 @@ function prefillFormWithAddress(kw, kel, kec) {
 }
 
 function deleteAddressPin(kw) {
+  if (!kw) return;
+  const cleanKw = String(kw).toUpperCase().trim();
+
   Swal.fire({
     title: 'Hapus Titik Alamat?',
-    text: `Titik alamat "${kw}" akan dihapus dari peta lokal.`,
+    text: `Titik alamat "${cleanKw}" akan dihapus secara permanen dari Peta & Database Cloud D1.`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'Hapus',
+    confirmButtonText: 'Ya, Hapus Permanen!',
     cancelButtonText: 'Batal',
     confirmButtonColor: '#dc2626'
-  }).then((res) => {
+  }).then(async (res) => {
     if (res.isConfirmed) {
-      const current = getLearnedKampungMap();
-      const filtered = current.filter(item => !item.keywords.includes(kw));
-      localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(filtered));
-      showToast('Titik alamat berhasil dihapus.', 'success');
-      renderMapMarkers();
+      // 1. Add to blacklist to prevent restoration on refresh
+      addToDeletedBlacklist(cleanKw);
+
+      // 2. Remove from local storage map cache
+      const raw = localStorage.getItem('ckg_learned_kampung_map');
+      if (raw) {
+        try {
+          const list = JSON.parse(raw);
+          const filtered = list.filter(item => {
+            if (Array.isArray(item.keywords)) {
+              return !item.keywords.some(k => String(k).toUpperCase().trim() === cleanKw);
+            }
+            return String(item.keywords).toUpperCase().trim() !== cleanKw;
+          });
+          localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(filtered));
+        } catch (e) {}
+      }
+
+      // 3. Delete from Cloudflare D1 Cloud Server
+      try {
+        await fetch(`/api/kamus?keyword=${encodeURIComponent(cleanKw)}`, { method: 'DELETE' });
+      } catch (err) {
+        console.warn('D1 pin delete error:', err);
+      }
+
+      showToast(`Titik alamat "${cleanKw}" berhasil dihapus secara permanen.`, 'success');
+      refreshAdminKamusStats();
+      if (typeof renderMapMarkers === 'function') renderMapMarkers();
     }
   });
 }
