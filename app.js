@@ -9792,8 +9792,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initDarkMode() {
   const savedTheme = localStorage.getItem('ckg_theme_mode');
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const isDark = savedTheme ? (savedTheme === 'dark') : prefersDark;
+  // Default is strictly Light Mode unless user explicitly saved 'dark'
+  const isDark = (savedTheme === 'dark');
   
   if (isDark) {
     document.body.classList.add('dark-mode');
