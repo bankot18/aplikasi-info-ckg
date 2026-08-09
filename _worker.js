@@ -29,6 +29,17 @@ export default {
         });
       }
 
+      // Auto-create users table if not existing
+      try {
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS users (
+          nama_user TEXT PRIMARY KEY,
+          password TEXT,
+          role TEXT DEFAULT 'Petugas',
+          is_banned INTEGER DEFAULT 0,
+          banned_duration_label TEXT
+        )`).run();
+      } catch (_) {}
+
       if (request.method === 'GET') {
         try {
           const { results } = await env.DB.prepare('SELECT nama_user, password, role FROM users ORDER BY rowid ASC').all();
