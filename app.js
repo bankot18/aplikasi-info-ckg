@@ -1833,83 +1833,34 @@ async function deleteSingleKamusKeyword(keyword) {
 async function scanExistingRecordsForAddressDictionary() {
   const activeRole = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
   if (activeRole !== 'admin') {
-    Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat memicu Scan Kamus Alamat.', 'error');
-    return;
-  }
-
-  const combined = [
-    ...(Array.isArray(simpusRecords) ? simpusRecords : []),
-    ...(Array.isArray(records) ? records : [])
-  ];
-
-  if (combined.length === 0) {
-    Swal.fire('Data Pasien Kosong', 'Tidak ada data pasien SIMPUS atau CKG yang tersimpan saat ini.', 'info');
+    Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat mengelola Kamus Alamat.', 'error');
     return;
   }
 
   Swal.fire({
-    title: 'Memindai Data Pasien Existing...',
-    text: `Sedang menganalisis & mengekstrak alamat dari ${combined.length} data pasien...`,
-    allowOutsideClick: false,
-    didOpen: () => { Swal.showLoading(); }
-  });
-
-  let scannedCount = 0;
-  let learnedCount = 0;
-  const batchMap = new Map();
-
-  for (let r of combined) {
-    if (!r) continue;
-    const alamatText = String(r.alamat || r.alamat_lengkap || '').trim();
-    const kelVal = String(r.kelurahan || r.kel || '').trim();
-    const kecVal = String(r.kecamatan || r.kec || 'Banjaran').trim();
-    const kabVal = String(r.kab_kota || r.kab || 'Kabupaten Bandung').trim();
-    const provVal = String(r.provinsi || r.prov || 'Jawa Barat').trim();
-
-    if (alamatText && kelVal) {
-      scannedCount++;
-      const words = alamatText.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT:?|\d+|RW:?|\d+)\s*/gi, ' ').split(/\s+/).filter(w => w.length >= 3);
-      if (words.length > 0) {
-        const kw = words[0];
-        if (!batchMap.has(kw)) {
-          saveLearnedKampungKeyword(kw, kelVal, kecVal, kabVal, provVal, false);
-          batchMap.set(kw, {
-            keyword: kw,
-            kel: kelVal,
-            kec: kecVal,
-            kab: kabVal,
-            prov: provVal
-          });
-          learnedCount++;
-        }
-      }
+    title: 'Perekaman Alamat Berbasis Peta',
+    html: `
+      <div style="text-align: left; font-size: 13px; color: #475569;">
+        <p style="margin-bottom: 10px;">
+          Sesuai standar validasi data, perekaman Kamus Alamat <strong>TIDAK LAGI diambil dari entrian data pasien CKG</strong> untuk menghindari salah ketik/alamat tidak valid.
+        </p>
+        <p style="margin-bottom: 10px; color: #0f172a; font-weight: 700;">
+          📍 Untuk menambah titik alamat baru ke Kamus Alamat & Peta:
+        </p>
+        <ol style="padding-left: 20px; color: #0369a1; font-weight: 600;">
+          <li>Buka menu <strong>"Peta Alamat Kab. Bandung"</strong>.</li>
+          <li>Klik di titik peta lokasi kampung tersebut (Click-to-Pin).</li>
+          <li>Atau impor file Excel resmi melalui tombol <strong>"Import Kamus Alamat (Excel)"</strong>.</li>
+        </ol>
+      </div>
+    `,
+    icon: 'info',
+    confirmButtonText: 'Paham, Buka Peta Alamat',
+    confirmButtonColor: '#0284c7'
+  }).then((res) => {
+    if (res.isConfirmed) {
+      switchView('peta-wilayah');
     }
-  }
-
-  const batchPayload = Array.from(batchMap.values());
-
-  if (batchPayload.length > 0) {
-    try {
-      const res = await fetch('/api/kamus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(batchPayload)
-      });
-      const resJson = await res.json();
-      console.log('⚡ D1 Scan Batch Push Result:', resJson);
-    } catch (e) {
-      console.warn('Batch D1 push error during scan:', e);
-    }
-  }
-
-  await syncKamusFromCloudServer();
-  refreshAdminKamusStats();
-
-  Swal.fire({
-    icon: 'success',
-    title: 'Pemeriksaan & Auto-Learning Selesai!',
-    html: `Berhasil memindai <strong>${scannedCount}</strong> alamat pasien existing dan menyerap <strong>${learnedCount}</strong> kata kunci kampung unik (bebas duplikat) ke <strong>Cloud Database D1 & Kamus Lokal</strong>.`,
-    confirmButtonText: 'Mantap!'
   });
 }
 
@@ -2043,10 +1994,7 @@ async function autoDetectRegionalFromAddressText(addressText) {
           const foundKel = addr.village || addr.quarter || addr.hamlet || addr.neighbourhood || '';
 
           if (foundKel) {
-            // Auto-learn this keyword into local dictionary!
-            const firstKw = cleanSearch.split(' ')[0];
-            saveLearnedKampungKeyword(firstKw, foundKel, foundKec, foundKab, foundProv);
-
+            // Auto-fill dropdowns from Nominatim lookup without auto-saving to Kamus Peta
             const provMatch = selectMatchingOption(provSelect, foundProv);
             if (provMatch) { provSelect.value = provMatch.value; await triggerChange(provSelect); }
 
