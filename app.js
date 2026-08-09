@@ -1088,21 +1088,21 @@ function switchView(viewId) {
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
 
   if (role === 'petugas') {
-    if (viewId === 'laporan' || viewId === 'recycle-data' || viewId === 'admin-panel' || viewId === 'tukang-input') {
+    if (viewId === 'laporan' || viewId === 'recycle-data' || viewId === 'admin-panel') {
       Swal.fire({
         icon: 'warning',
         title: 'Akses Ditolak',
-        text: 'Menu ini hanya dapat diakses oleh Admin.',
+        text: 'Menu ini hanya dapat diakses oleh Role Admin dan Koordinator.',
         confirmButtonColor: '#2563eb'
       });
       return;
     }
   } else if (role === 'koordinator') {
-    if (viewId === 'admin-panel' || viewId === 'tukang-input') {
+    if (viewId === 'admin-panel') {
       Swal.fire({
         icon: 'warning',
         title: 'Akses Ditolak',
-        text: 'Menu Tukang Input CKG hanya dapat diakses oleh Admin.',
+        text: 'Admin Panel hanya dapat diakses oleh Admin.',
         confirmButtonColor: '#2563eb'
       });
       return;
@@ -10106,8 +10106,19 @@ function filterTukangInputTable() {
     };
   });
 
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const loggedUser = (sessionStorage.getItem('ckg_user_name') || '').trim().toLowerCase();
+  const isPrivileged = (role === 'admin' || role === 'koordinator');
+
   // Apply filters
   let filtered = processedLogs.filter(item => {
+    if (role === 'petugas' && loggedUser) {
+      const logPetugas = String(item.petugas || '').toLowerCase().trim();
+      if (logPetugas && !logPetugas.includes(loggedUser) && !loggedUser.includes(logPetugas)) {
+        return false;
+      }
+    }
+
     if (filterMatch === 'MATCHED' && !item.isMatch) return false;
     if (filterMatch === 'NEW' && item.isMatch) return false;
 
@@ -10344,4 +10355,6 @@ window.addEventListener('message', (event) => {
     }
   }
 });
+
+
 
