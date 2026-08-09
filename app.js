@@ -155,15 +155,7 @@ function loadStoredUserDatabase() {
     const legacyBlacklist = ['babeh', 'babcri', 'testuser', 'demo'];
 
     if (Array.isArray(loaded) && loaded.length > 0) {
-      usersDb = loaded
-        .map(u => ({
-          nama_user: (u ? (u.nama_user || u.nama || u.username) : '') || '',
-          password: (u ? u.password : '') || '',
-          role: (u ? u.role : 'Petugas') || 'Petugas',
-          is_banned: u ? !!u.is_banned : false,
-          banned_duration_label: (u ? u.banned_duration_label : '') || ''
-        }))
-        .filter(u => u && u.nama_user && !legacyBlacklist.includes(String(u.nama_user).toLowerCase().trim()));
+      usersDb = loaded.filter(u => u && u.nama_user && !legacyBlacklist.includes(String(u.nama_user).toLowerCase().trim()));
 
       INITIAL_USERS_DB.forEach(initUser => {
         if (!usersDb.some(u => u.nama_user === initUser.nama_user)) {
@@ -223,16 +215,13 @@ function populateUserDropdowns() {
   if (loginSelect) {
     const prevVal = loginSelect.value;
     loginSelect.innerHTML = '<option value="">-- Pilih Nama Pegawai Terdaftar BNBA --</option>';
-    (usersDb || []).forEach((u) => {
-      const name = (u ? (u.nama_user || u.nama || u.username) : '') || '';
-      if (!name) return;
-      const role = (u ? u.role : 'Petugas') || 'Petugas';
+    usersDb.forEach((u) => {
       const opt = document.createElement('option');
-      opt.value = name;
-      opt.dataset.role = role;
+      opt.value = u.nama_user;
+      opt.dataset.role = u.role || 'Petugas';
       opt.dataset.needPass = 'true';
-      opt.textContent = `${name}${role !== 'Petugas' ? ' (' + role + ')' : ''}`;
-      if (prevVal && name === prevVal) opt.selected = true;
+      opt.textContent = `${u.nama_user}${u.role !== 'Petugas' ? ' (' + u.role + ')' : ''}`;
+      if (prevVal && u.nama_user === prevVal) opt.selected = true;
       loginSelect.appendChild(opt);
     });
   }
@@ -240,13 +229,11 @@ function populateUserDropdowns() {
   if (targetSelect) {
     const prevTarget = targetSelect.value;
     targetSelect.innerHTML = '<option value="">-- Pilih Petugas --</option>';
-    (usersDb || []).forEach(u => {
-      const name = (u ? (u.nama_user || u.nama || u.username) : '') || '';
-      if (!name) return;
+    usersDb.forEach(u => {
       const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      if (prevTarget && name === prevTarget) opt.selected = true;
+      opt.value = u.nama_user;
+      opt.textContent = u.nama_user;
+      if (prevTarget && u.nama_user === prevTarget) opt.selected = true;
       targetSelect.appendChild(opt);
     });
   }
@@ -723,10 +710,7 @@ function checkAuthSession() {
 }
 
 function setupAuthFormEvents() {
-  const loginForm = document.getElementById('loginForm');
-  if (loginForm) {
-    loginForm.addEventListener('submit', handleLogin);
-  }
+  // No need for change listener anymore since password is popup-based
 }
 
 function updatePasswordVisibility() {
@@ -783,10 +767,8 @@ function handleLogin(e) {
 
   const selectedPegawai = selectEl.value.trim();
 
-  const user = usersDb.find(u => {
-    const name = (u ? (u.nama_user || u.nama || u.username) : '') || '';
-    return name.toLowerCase() === selectedPegawai.toLowerCase();
-  });
+  // Match against usersDb database
+  const user = usersDb.find(u => u.nama_user.toLowerCase() === selectedPegawai.toLowerCase());
 
   if (!user) {
     Swal.fire({
@@ -874,14 +856,13 @@ function handleLogin(e) {
 }
 
 function performLoginSuccess(user) {
-  const userName = (user ? (user.nama_user || user.nama || user.username) : '') || 'User';
-  showLoadingOverlay('Memverifikasi Akses...', `Login sebagai ${userName}`);
+  showLoadingOverlay('Memverifikasi Akses...', `Login sebagai ${user.nama_user}`);
 
   setTimeout(() => {
     // Set session
     sessionStorage.setItem('ckg_logged_in', 'true');
-    sessionStorage.setItem('ckg_user_name', userName);
-    sessionStorage.setItem('ckg_user_role', (user ? user.role : 'Petugas') || 'Petugas');
+    sessionStorage.setItem('ckg_user_name', user.nama_user);
+    sessionStorage.setItem('ckg_user_role', user.role || 'Petugas');
 
     sendUserHeartbeat('active');
     fetchLiveSessions();
