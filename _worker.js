@@ -67,6 +67,9 @@ export default {
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
+      }
+    }
+
     // 1.5. ROUTE: /api/extension-logs (Logging Aktivitas Extension Tukang Input CKG)
     if (url.pathname === '/api/extension-logs' || url.pathname.startsWith('/api/extension-logs/')) {
       if (!env.DB) {
