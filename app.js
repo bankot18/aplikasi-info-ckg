@@ -9564,34 +9564,67 @@ function attachGoogleMapsAddressAutocomplete(kwInput, kelInput, kecSelect, latIn
         }
       });
 
-      // 3. OpenStreetMap Nominatim Geocoding API
-      if (suggestions.length < 5) {
+      // 3. LocationIQ High-Precision Autocomplete Engine (Free 5,000 req/day API)
+      if (suggestions.length < 6) {
         try {
-          const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' Kabupaten Bandung Jawa Barat')}&format=json&addressdetails=1&limit=5`;
+          const locIqKey = 'pk.87f2b960c1d68379ba5189288e7343e0';
+          const locIqUrl = `https://api.locationiq.com/v1/autocomplete?key=${locIqKey}&q=${encodeURIComponent(query + ' Bandung Jawa Barat')}&limit=6&countrycodes=id&viewbox=107.45,-7.25,107.85,-6.85&bounded=1&format=json`;
+          const res = await fetch(locIqUrl);
+          if (res.ok) {
+            const data = await res.json();
+            data.forEach(place => {
+              const addr = place.address || {};
+              const village = addr.village || addr.quarter || addr.hamlet || addr.suburb || addr.neighbourhood || addr.road || place.display_name.split(',')[0];
+              const kwClean = village.toUpperCase().replace(/^(KP\.|KAMPUNG|DESA|KELURAHAN|JALAN|JLN?\.)\s*/gi, '').trim();
+              const kecFound = addr.town || addr.district || addr.suburb || addr.city_district || 'Banjaran';
+              const kelFound = addr.village || addr.quarter || addr.suburb || kwClean;
+
+              if (kwClean && !addedSet.has(kwClean)) {
+                addedSet.add(kwClean);
+                suggestions.push({
+                  title: `Kp. ${kwClean}`,
+                  kw: kwClean,
+                  kel: kelFound,
+                  kec: kecFound,
+                  lat: parseFloat(place.lat),
+                  lng: parseFloat(place.lon),
+                  source: 'LocationIQ Presisi'
+                });
+              }
+            });
+          }
+        } catch (err) {
+          console.warn('LocationIQ Autocomplete error:', err);
+        }
+      }
+
+      // 4. OpenStreetMap Nominatim Fallback
+      if (suggestions.length < 6) {
+        try {
+          const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' Bandung Jawa Barat')}&format=json&addressdetails=1&countrycodes=id&viewbox=107.45,-7.25,107.85,-6.85&bounded=1&limit=6`;
           const res = await fetch(osmUrl);
           if (res.ok) {
             const data = await res.json();
             data.forEach(place => {
               const addr = place.address || {};
-              const village = addr.village || addr.quarter || addr.hamlet || addr.suburb || place.display_name.split(',')[0];
-              const kwClean = village.toUpperCase().replace(/^(KP\.|KAMPUNG|DESA|KELURAHAN)\s*/gi, '').trim();
+              const village = addr.village || addr.quarter || addr.hamlet || addr.suburb || addr.neighbourhood || place.display_name.split(',')[0];
+              const kwClean = village.toUpperCase().replace(/^(KP\.|KAMPUNG|DESA|KELURAHAN|JALAN|JLN?\.)\s*/gi, '').trim();
+              const kecFound = addr.town || addr.district || addr.suburb || addr.city_district || 'Banjaran';
               if (kwClean && !addedSet.has(kwClean)) {
                 addedSet.add(kwClean);
                 suggestions.push({
                   title: `Kp. ${kwClean}`,
                   kw: kwClean,
                   kel: addr.village || addr.quarter || kwClean,
-                  kec: addr.town || addr.district || 'Banjaran',
+                  kec: kecFound,
                   lat: parseFloat(place.lat),
                   lng: parseFloat(place.lon),
-                  source: 'Peta OpenStreetMap'
+                  source: 'Peta Presisi Bandung'
                 });
               }
             });
           }
-        } catch (err) {
-          console.warn('OSM Autocomplete error:', err);
-        }
+        } catch (err) {}
       }
 
       if (suggestions.length === 0) {
