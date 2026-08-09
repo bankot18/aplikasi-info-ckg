@@ -723,7 +723,10 @@ function checkAuthSession() {
 }
 
 function setupAuthFormEvents() {
-  // No need for change listener anymore since password is popup-based
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', handleLogin);
+  }
 }
 
 function updatePasswordVisibility() {
@@ -780,8 +783,10 @@ function handleLogin(e) {
 
   const selectedPegawai = selectEl.value.trim();
 
-  // Match against usersDb database
-  const user = usersDb.find(u => u.nama_user.toLowerCase() === selectedPegawai.toLowerCase());
+  const user = usersDb.find(u => {
+    const name = (u ? (u.nama_user || u.nama || u.username) : '') || '';
+    return name.toLowerCase() === selectedPegawai.toLowerCase();
+  });
 
   if (!user) {
     Swal.fire({
@@ -869,13 +874,14 @@ function handleLogin(e) {
 }
 
 function performLoginSuccess(user) {
-  showLoadingOverlay('Memverifikasi Akses...', `Login sebagai ${user.nama_user}`);
+  const userName = (user ? (user.nama_user || user.nama || user.username) : '') || 'User';
+  showLoadingOverlay('Memverifikasi Akses...', `Login sebagai ${userName}`);
 
   setTimeout(() => {
     // Set session
     sessionStorage.setItem('ckg_logged_in', 'true');
-    sessionStorage.setItem('ckg_user_name', user.nama_user);
-    sessionStorage.setItem('ckg_user_role', user.role || 'Petugas');
+    sessionStorage.setItem('ckg_user_name', userName);
+    sessionStorage.setItem('ckg_user_role', (user ? user.role : 'Petugas') || 'Petugas');
 
     sendUserHeartbeat('active');
     fetchLiveSessions();
