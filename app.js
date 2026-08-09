@@ -8459,11 +8459,19 @@ async function fetchCloudUsers() {
         }));
         saveUserDatabaseToStorage();
         if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
+        return;
       }
     }
   } catch (e) {
     console.warn('[Cloud Sync Warning] Failed to fetch users from D1:', e);
   }
+
+  // Fallback if D1 returns empty array or error: ensure local INITIAL_USERS_DB is loaded & seeded to D1
+  if (!Array.isArray(usersDb) || usersDb.length === 0) {
+    usersDb = [...INITIAL_USERS_DB];
+    saveUserDatabaseToStorage();
+  }
+  syncUsersToCloud(usersDb);
 }
 
 async function syncUsersToCloud(users) {

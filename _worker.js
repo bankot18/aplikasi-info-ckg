@@ -31,7 +31,7 @@ export default {
 
       if (request.method === 'GET') {
         try {
-          const { results } = await env.DB.prepare('SELECT nama_user, password, role FROM users ORDER BY id ASC').all();
+          const { results } = await env.DB.prepare('SELECT nama_user, password, role FROM users ORDER BY rowid ASC').all();
           return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
