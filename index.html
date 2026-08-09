@@ -28,7 +28,6 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 </head>
 <body>
 
@@ -119,14 +118,11 @@
           <form id="loginForm" class="login-form">
             
             <div class="form-group">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                <label class="form-label" for="loginPegawaiSelect" style="margin: 0;">Pilih Nama Pegawai <span class="required">*</span></label>
-                <span class="badge badge-blue" style="font-size: 10px; font-weight: 800; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 2px 8px; border-radius: 12px;"><i class="bi bi-database-check"></i> Database BNBA User</span>
-              </div>
+              <label class="form-label" for="loginPegawaiSelect">Pilih Nama Pegawai <span class="required">*</span></label>
               <div class="input-with-icon">
                 <i class="bi bi-person-badge-fill"></i>
                 <select id="loginPegawaiSelect" class="form-control" style="height: 48px; font-weight: 700; font-size: 13.5px;" required>
-                  <option value="">-- Pilih Nama Pegawai Terdaftar BNBA --</option>
+                  <option value="">-- Pilih Nama Pegawai --</option>
                 </select>
               </div>
             </div>
@@ -229,10 +225,9 @@
       <button class="nav-tab-btn" data-view="data-records">
         <i class="bi bi-folder-symlink-fill"></i> Data Records CKG
       </button>
-      <button class="nav-tab-btn" data-view="simpus" style="font-weight: 700; color: #7c3aed;">
-        <i class="bi bi-cpu-fill" style="color: #7c3aed;"></i> ⚡ Integrasi & Data SIMPUS
+      <button class="nav-tab-btn" data-view="simpus">
+        <i class="bi bi-hdd-network"></i> Data Entry CKG Dari SIMPUS
       </button>
-
       <button class="nav-tab-btn" data-view="sekolah">
         <i class="bi bi-mortarboard-fill"></i> CKG Sekolah
       </button>
@@ -428,9 +423,6 @@
               </p>
             </div>
             <div class="action-buttons-group">
-              <button class="btn btn-primary" onclick="exportLaporanResmiDinkes()" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: none; font-weight: 700; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
-                <i class="bi bi-file-earmark-pdf-fill"></i> 📄 Laporan Resmi Dinkes (PDF & Excel)
-              </button>
               <button class="btn btn-emerald" onclick="exportToXLSX()">
                 <i class="bi bi-file-earmark-excel-fill"></i> Ekspor Excel (XLSX)
               </button>
@@ -716,7 +708,7 @@
           <div class="card-header-bar" style="margin-bottom: 16px;">
             <div>
               <div class="card-header-title" style="font-size: 18px;">
-                <i class="bi bi-database-fill-down" style="color: #7c3aed;"></i> Data Entry CKG Dari SIMPUS
+                <i class="bi bi-database-fill-down" style="color: var(--primary);"></i> Data Entry CKG Dari SIMPUS
               </div>
             </div>
 
@@ -849,7 +841,8 @@
             <!-- Rendered dynamically via JS -->
           </div>
 
-
+        </div>
+      </section>
 
       <!-- VIEW 5: CKG SEKOLAH -->
       <section id="view-sekolah" class="view-panel">
@@ -1302,9 +1295,6 @@
               </p>
             </div>
             <div class="action-buttons-group">
-              <button id="btnToggleHeatmap" class="btn btn-rose" onclick="toggleMapHeatmapMode()" style="background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: white; border: none; font-weight: 700; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3);">
-                <i class="bi bi-fire"></i> 🔥 Mode Heatmap Risiko Anemia
-              </button>
               <button class="btn btn-primary" onclick="openAddPinModalFromMap()">
                 <i class="bi bi-geo-fill"></i> Catat Titik Alamat di Peta
               </button>

@@ -91,12 +91,12 @@ function toggleTablePasswordVisibility(index, realPass) {
   const codeEl = document.getElementById(`passCode_${index}`);
   const iconEl = document.getElementById(`eyeIcon_${index}`);
   if (!codeEl || !iconEl) return;
-  if (codeEl.textContent === 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢') {
+  if (codeEl.textContent === '••••••••') {
     codeEl.textContent = realPass;
     iconEl.className = 'bi bi-eye-fill';
     iconEl.style.color = '#2563eb';
   } else {
-    codeEl.textContent = 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢';
+    codeEl.textContent = '••••••••';
     iconEl.className = 'bi bi-eye-slash-fill';
     iconEl.style.color = '#64748b';
   }
@@ -214,7 +214,7 @@ function populateUserDropdowns() {
 
   if (loginSelect) {
     const prevVal = loginSelect.value;
-    loginSelect.innerHTML = '<option value="">-- Pilih Nama Pegawai Terdaftar BNBA --</option>';
+    loginSelect.innerHTML = '<option value="">-- Pilih Nama Pegawai --</option>';
     usersDb.forEach((u) => {
       const opt = document.createElement('option');
       opt.value = u.nama_user;
@@ -714,7 +714,7 @@ function setupAuthFormEvents() {
 }
 
 function updatePasswordVisibility() {
-  // Removed â€” password is now handled via SweetAlert2 popup
+  // Removed — password is now handled via SweetAlert2 popup
 }
 
 function selectPegawaiQuick(namaPegawai) {
@@ -730,7 +730,7 @@ function selectPegawaiQuick(namaPegawai) {
 }
 
 /* ==========================================================================
-   ðŸ“Š LOADING OVERLAY HELPERS
+   📊 LOADING OVERLAY HELPERS
    ========================================================================== */
 
 function showLoadingOverlay(text = 'Memuat Data...', subtext = 'Menghubungkan ke Database Cloudflare D1') {
@@ -748,7 +748,7 @@ function hideLoadingOverlay() {
 }
 
 /* ==========================================================================
-   ðŸ” LOGIN HANDLER WITH SWEETALERT2 PASSWORD POPUP
+   🔐 LOGIN HANDLER WITH SWEETALERT2 PASSWORD POPUP
    ========================================================================== */
 
 function handleLogin(e) {
@@ -807,13 +807,13 @@ function handleLogin(e) {
 
   const dbPassword = (user.password || '').trim();
 
-  // If user has NO password â†’ login directly
+  // If user has NO password → login directly
   if (dbPassword === '') {
     performLoginSuccess(user);
     return;
   }
 
-  // If user HAS a password â†’ show SweetAlert2 password popup
+  // If user HAS a password → show SweetAlert2 password popup
   Swal.fire({
     title: 'Masukkan Kata Sandi',
     html: `<div style="text-align:center; margin-bottom: 8px;">
@@ -1170,10 +1170,6 @@ function updateRoleUI() {
     roleBadgeEl.className = 'badge-role-pill role-' + role;
   }
 
-  // ðŸ”’ RESTRICT EXTENSION SIMPUS PILL TO ADMIN ONLY
-
-
-
   applyPetugasFilterLock();
   initAddressAutoDetector();
 }
@@ -1392,19 +1388,19 @@ function getLearnedKampungMap() {
 
 async function syncKamusFromCloudServer() {
   try {
-    console.log('â˜ï¸ [Kamus Sync] Fetching /api/kamus (GET)...');
+    console.log('☁️ [Kamus Sync] Fetching /api/kamus (GET)...');
     const res = await fetch('/api/kamus');
-    console.log('â˜ï¸ [Kamus Sync] Response status:', res.status);
+    console.log('☁️ [Kamus Sync] Response status:', res.status);
     if (res.ok) {
       const json = await res.json();
-      console.log('â˜ï¸ [Kamus Sync] D1 returned:', json.success, 'items:', (json.data || []).length);
+      console.log('☁️ [Kamus Sync] D1 returned:', json.success, 'items:', (json.data || []).length);
       if (json.success && Array.isArray(json.data)) {
         const deletedList = getDeletedKampungList();
         // Replace local with D1 cloud data as authoritative source
         const cloudMap = [];
         json.data.forEach(item => {
           const kw = String(item.keyword).toUpperCase().trim();
-          if (!kw || deletedList.includes(kw)) return; // ðŸš« Skip deleted keywords!
+          if (!kw || deletedList.includes(kw)) return; // 🚫 Skip deleted keywords!
 
           const existing = cloudMap.find(m => m.keywords.includes(kw));
           if (existing) {
@@ -1433,7 +1429,7 @@ async function syncKamusFromCloudServer() {
           if (!localItem.keywords || !Array.isArray(localItem.keywords)) return;
           localItem.keywords.forEach(lkw => {
             const cleanLkw = String(lkw).toUpperCase().trim();
-            if (deletedList.includes(cleanLkw)) return; // ðŸš« Skip deleted keywords!
+            if (deletedList.includes(cleanLkw)) return; // 🚫 Skip deleted keywords!
             const inCloud = cloudMap.find(m => m.keywords.includes(cleanLkw));
             if (!inCloud) {
               cloudMap.push(localItem);
@@ -1442,15 +1438,15 @@ async function syncKamusFromCloudServer() {
         });
 
         localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(cloudMap));
-        console.log('â˜ï¸ [Kamus Sync] Local storage updated, total entries:', cloudMap.length);
+        console.log('☁️ [Kamus Sync] Local storage updated, total entries:', cloudMap.length);
         refreshAdminKamusStats();
         if (typeof renderMapMarkers === 'function') renderMapMarkers();
       }
     } else {
-      console.warn('â˜ï¸ [Kamus Sync] Non-OK response:', res.status);
+      console.warn('☁️ [Kamus Sync] Non-OK response:', res.status);
     }
   } catch (err) {
-    console.warn('â˜ï¸ [Kamus Sync] Error:', err);
+    console.warn('☁️ [Kamus Sync] Error:', err);
   }
 }
 
@@ -1534,10 +1530,10 @@ async function handleExcelAddressUpload(event) {
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
 
-    console.log('ðŸ“Š [Kamus Import] Sheet parsed, total rows:', rows.length);
+    console.log('📊 [Kamus Import] Sheet parsed, total rows:', rows.length);
     if (rows.length > 0) {
-      console.log('ðŸ“Š [Kamus Import] Column headers:', Object.keys(rows[0]));
-      console.log('ðŸ“Š [Kamus Import] Sample row 1:', JSON.stringify(rows[0]));
+      console.log('📊 [Kamus Import] Column headers:', Object.keys(rows[0]));
+      console.log('📊 [Kamus Import] Sample row 1:', JSON.stringify(rows[0]));
     }
 
     if (!rows || rows.length === 0) {
@@ -1624,9 +1620,9 @@ async function handleExcelAddressUpload(event) {
     }
 
     const batchPayload = Array.from(batchMap.values());
-    console.log('ðŸ“Š [Kamus Import] Batch payload size:', batchPayload.length, 'Skipped rows:', skippedCount);
+    console.log('📊 [Kamus Import] Batch payload size:', batchPayload.length, 'Skipped rows:', skippedCount);
     if (batchPayload.length > 0) {
-      console.log('ðŸ“Š [Kamus Import] Sample keywords:', batchPayload.slice(0, 5).map(b => b.keyword + ' â†’ ' + b.kel).join(', '));
+      console.log('📊 [Kamus Import] Sample keywords:', batchPayload.slice(0, 5).map(b => b.keyword + ' → ' + b.kel).join(', '));
     }
 
     // Push batch to D1 Cloud Server
@@ -1640,15 +1636,15 @@ async function handleExcelAddressUpload(event) {
           body: JSON.stringify(batchPayload)
         });
         const resJson = await res.json();
-        console.log('âš¡ [Kamus Import] D1 Response status:', res.status, 'Body:', JSON.stringify(resJson));
+        console.log('⚡ [Kamus Import] D1 Response status:', res.status, 'Body:', JSON.stringify(resJson));
         d1Success = res.ok && resJson.success;
         d1Message = d1Success
-          ? `âœ… Cloud D1: ${resJson.count || batchPayload.length} kata kunci tersimpan.`
-          : `âš ï¸ Cloud D1 Error: ${resJson.error || 'Unknown error'} (Status: ${res.status})`;
+          ? `✅ Cloud D1: ${resJson.count || batchPayload.length} kata kunci tersimpan.`
+          : `⚠️ Cloud D1 Error: ${resJson.error || 'Unknown error'} (Status: ${res.status})`;
       } catch (e) {
-        console.error('âŒ [Kamus Import] Fetch /api/kamus failed:', e);
+        console.error('❌ [Kamus Import] Fetch /api/kamus failed:', e);
         d1Success = false;
-        d1Message = `âŒ Network Error: ${e.message}`;
+        d1Message = `❌ Network Error: ${e.message}`;
       }
     } else {
       d1Message = 'Tidak ada data baru untuk dikirim ke Cloud.';
@@ -1666,9 +1662,9 @@ async function handleExcelAddressUpload(event) {
         html: `<div style="font-size:13px; line-height:1.7;">
           Data dari file Excel telah dibaca (<strong>${rows.length}</strong> baris), namun <strong>0 kata kunci baru</strong> ditambahkan.<br><br>
           <strong>Kemungkinan penyebab:</strong><br>
-          â€¢ Kata kunci kampung sudah tersimpan di Kamus<br>
-          â€¢ Teks alamat terlalu pendek (< 3 karakter)<br>
-          â€¢ Kolom alamat tidak terdeteksi<br><br>
+          • Kata kunci kampung sudah tersimpan di Kamus<br>
+          • Teks alamat terlalu pendek (< 3 karakter)<br>
+          • Kolom alamat tidak terdeteksi<br><br>
           <span style="color:#64748b; font-size:12px;">Baris dilewati: ${skippedCount} | Headers: ${Object.keys(rows[0] || {}).join(', ')}</span>
         </div>`,
         confirmButtonText: 'Mengerti'
@@ -1687,7 +1683,7 @@ async function handleExcelAddressUpload(event) {
       });
     }
   } catch (err) {
-    console.error('âŒ [Kamus Import] Fatal error:', err);
+    console.error('❌ [Kamus Import] Fatal error:', err);
     Swal.fire('Gagal Impor', 'Terjadi kesalahan saat membaca file Excel: ' + err.message, 'error');
   }
 }
@@ -1704,9 +1700,9 @@ function refreshAdminKamusStats() {
   learnedMap.forEach(m => totalKeywords += m.keywords.length);
 
   statEl.innerHTML = `
-    ðŸŸ¢ <strong>Kamus Bawaan (Banjaran):</strong> ${staticCount} Wilayah Kelurahan (${totalKeywords - learnedCount} Kata Kunci)<br>
-    â˜ï¸ <strong>Kamus Cloud Database (D1 Cloud Sync & Excel Import):</strong> ${learnedCount} Kata Kunci Tersinkronisasi Seluruh Device<br>
-    âœ¨ <strong>Total Bank Data Wilayah Siap Pakai:</strong> <strong>${staticCount + learnedCount} Wilayah / Entry</strong>
+    🟢 <strong>Kamus Bawaan (Banjaran):</strong> ${staticCount} Wilayah Kelurahan (${totalKeywords - learnedCount} Kata Kunci)<br>
+    ☁️ <strong>Kamus Cloud Database (D1 Cloud Sync & Excel Import):</strong> ${learnedCount} Kata Kunci Tersinkronisasi Seluruh Device<br>
+    ✨ <strong>Total Bank Data Wilayah Siap Pakai:</strong> <strong>${staticCount + learnedCount} Wilayah / Entry</strong>
   `;
 
   renderKamusAlamatTable();
@@ -1724,7 +1720,7 @@ function renderKamusAlamatTable() {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; padding: 16px; color: #94a3b8;">
-          â˜ï¸ Belum ada kata kunci tersimpan di Kamus Cloud D1. Silakan impor file Excel atau jalankan Scan Existing.
+          ☁️ Belum ada kata kunci tersimpan di Kamus Cloud D1. Silakan impor file Excel atau jalankan Scan Existing.
         </td>
       </tr>`;
     return;
@@ -1792,12 +1788,12 @@ async function clearLearnedKampungMap() {
           Tindakan ini akan <strong>MENGHAPUS PERMANEN</strong> seluruh <strong>${totalCount} data kata kunci alamat/kampung</strong> dari:
         </p>
         <ul style="padding-left: 20px; color: #0f172a; margin-bottom: 12px;">
-          <li>â˜ï¸ Cloud Database D1 Cloudflare</li>
-          <li>ðŸ’¾ LocalStorage Penyimpanan Browser</li>
-          <li>ðŸ—ºï¸ Penanda Titik Peta Alamat Kab. Bandung</li>
+          <li>☁️ Cloud Database D1 Cloudflare</li>
+          <li>💾 LocalStorage Penyimpanan Browser</li>
+          <li>🗺️ Penanda Titik Peta Alamat Kab. Bandung</li>
         </ul>
         <div style="padding: 10px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; color: #be123c; font-weight: 700; font-size: 12px;">
-          âš ï¸ PERINGATAN: Tindakan ini tidak dapat dibatalkan!
+          ⚠️ PERINGATAN: Tindakan ini tidak dapat dibatalkan!
         </div>
       </div>
     `,
@@ -1814,7 +1810,7 @@ async function clearLearnedKampungMap() {
         localStorage.removeItem('ckg_deleted_kampung_list');
         const apiRes = await fetch('/api/kamus', { method: 'DELETE' });
         const json = await apiRes.json();
-        console.log('â˜ï¸ [D1 Kamus Delete] Result:', json);
+        console.log('☁️ [D1 Kamus Delete] Result:', json);
       } catch (err) {
         console.warn('D1 kamus delete failed:', err);
       }
@@ -1885,7 +1881,7 @@ async function scanExistingRecordsForAddressDictionary() {
           Sesuai standar validasi data, perekaman Kamus Alamat <strong>TIDAK LAGI diambil dari entrian data pasien CKG</strong> untuk menghindari salah ketik/alamat tidak valid.
         </p>
         <p style="margin-bottom: 10px; color: #0f172a; font-weight: 700;">
-          ðŸ“ Untuk menambah titik alamat baru ke Kamus Alamat & Peta:
+          📍 Untuk menambah titik alamat baru ke Kamus Alamat & Peta:
         </p>
         <ol style="padding-left: 20px; color: #0369a1; font-weight: 600;">
           <li>Buka menu <strong>"Peta Alamat Kab. Bandung"</strong>.</li>
@@ -2195,7 +2191,7 @@ function calculateIMT() {
     if (rounded < 18.5) { badgeText = 'Kurus (<18.5)'; badgeClass = 'badge-amber'; }
     else if (rounded <= 24.9) { badgeText = 'Normal (18.5-24.9)'; badgeClass = 'badge-emerald'; }
     else if (rounded <= 29.9) { badgeText = 'Gemuk (25-29.9)'; badgeClass = 'badge-amber'; }
-    else { badgeText = 'Obesitas (â‰¥30)'; badgeClass = 'badge-rose'; }
+    else { badgeText = 'Obesitas (≥30)'; badgeClass = 'badge-rose'; }
 
     if (imtBadge) {
       imtBadge.className = `badge ${badgeClass}`;
@@ -2577,7 +2573,7 @@ function copyToClipboard(text, label = 'Data') {
 
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(cleanText).then(() => {
-      showToast(`âœ“ ${label} ("${cleanText}") Berhasil Disalin!`, 'success');
+      showToast(`✓ ${label} ("${cleanText}") Berhasil Disalin!`, 'success');
     }).catch(() => {
       fallbackCopyToClipboard(cleanText, label);
     });
@@ -2595,7 +2591,7 @@ function fallbackCopyToClipboard(text, label) {
   ta.select();
   try {
     document.execCommand('copy');
-    showToast(`âœ“ ${label} ("${text}") Berhasil Disalin!`, 'success');
+    showToast(`✓ ${label} ("${text}") Berhasil Disalin!`, 'success');
   } catch (err) {
     showToast(`Gagal menyalin ${label}`, 'error');
   }
@@ -2933,8 +2929,8 @@ async function handleSimpusActionBerhasil(id) {
             <i class="bi bi-geo-alt-fill" style="color: #2563eb;"></i> Pilih Kategori / Lokasi Entry CKG:
           </label>
           <select id="swalTargetKategori" class="custom-input" style="width: 100%; padding: 9px 12px; border-radius: 6px; font-weight: 600; font-size: 13.5px;">
-            <option value="Luar Gedung" selected>ðŸ“ CKG Luar Gedung</option>
-            <option value="Dalam Gedung">ðŸ¥ CKG Dalam Gedung</option>
+            <option value="Luar Gedung" selected>📍 CKG Luar Gedung</option>
+            <option value="Dalam Gedung">🏥 CKG Dalam Gedung</option>
           </select>
         </div>
 
@@ -4777,7 +4773,7 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
 
     const theme = isRank1 ? {
       pillBg: 'linear-gradient(135deg, #d97706, #b45309)',
-      pillText: 'ðŸ† JUARA 1 (RANK 1)',
+      pillText: '🏆 JUARA 1 (RANK 1)',
       medalBadge: '1',
       medalBg: '#fef3c7',
       medalBorder: '#f59e0b',
@@ -4798,7 +4794,7 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
       offset: '-16px'
     } : isRank2 ? {
       pillBg: 'linear-gradient(135deg, #64748b, #475569)',
-      pillText: 'ðŸ¥ˆ JUARA 2 (RANK 2)',
+      pillText: '🥈 JUARA 2 (RANK 2)',
       medalBadge: '2',
       medalBg: '#f1f5f9',
       medalBorder: '#94a3b8',
@@ -4819,7 +4815,7 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
       offset: '0px'
     } : {
       pillBg: 'linear-gradient(135deg, #ea580c, #c2410c)',
-      pillText: 'ðŸ¥‰ JUARA 3 (RANK 3)',
+      pillText: '🥉 JUARA 3 (RANK 3)',
       medalBadge: '3',
       medalBg: '#ffedd5',
       medalBorder: '#fdba74',
@@ -4899,8 +4895,8 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
             </div>
 
             <div style="font-size: 11px; color: #475569; display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
-              <span>ðŸ“ Luar: <strong>${item.luarCount}</strong></span>
-              <span>ðŸ¢ Dalam: <strong>${item.dalamCount}</strong></span>
+              <span>📍 Luar: <strong>${item.luarCount}</strong></span>
+              <span>🏢 Dalam: <strong>${item.dalamCount}</strong></span>
             </div>
           </div>
 
@@ -5070,7 +5066,7 @@ function renderUserDatabaseTable() {
 
     const passwordDisplayHtml = hasPassword ? `
       <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-        <code id="passCode_${i}" style="color: #dc2626; font-weight: 800; font-family: monospace; font-size: 13px; letter-spacing: 2px;">â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</code>
+        <code id="passCode_${i}" style="color: #dc2626; font-weight: 800; font-family: monospace; font-size: 13px; letter-spacing: 2px;">••••••••</code>
         <button type="button" onclick="toggleTablePasswordVisibility('${i}', '${safePassword}')" style="border: none; background: transparent; cursor: pointer; color: #64748b; padding: 0 2px; font-size: 13px; display: inline-flex; align-items: center;" title="Lihat/Sembunyikan Password">
           <i id="eyeIcon_${i}" class="bi bi-eye-slash-fill"></i>
         </button>
@@ -5474,7 +5470,7 @@ function buildTableRowsHtml(data) {
 }
 
 /* ==========================================================================
-   ðŸ“… DATE UPDATE ENGINE (SINGLE RECORD & BULK MONTHLY FOR ADMIN)
+   📅 DATE UPDATE ENGINE (SINGLE RECORD & BULK MONTHLY FOR ADMIN)
    ========================================================================== */
 
 function promptChangeSingleRecordDate(recordId) {
@@ -5523,7 +5519,7 @@ function promptChangeSingleRecordDate(recordId) {
 
       saveRecordsToStorage();
       renderTableRecords();
-      showToast(`âœ“ Tanggal entry untuk ${item.nama} berhasil diubah ke ${formatDisplayDate(newDateVal)}!`, 'success');
+      showToast(`✓ Tanggal entry untuk ${item.nama} berhasil diubah ke ${formatDisplayDate(newDateVal)}!`, 'success');
     }
   });
 }
@@ -6155,10 +6151,10 @@ function restoreFilteredRecycle() {
         <p style="color: #475569; margin-bottom: 12px; line-height: 1.5;">Apakah Anda yakin ingin memulihkan <strong>${itemsToRestore.length} data</strong> yang saat ini muncul sesuai filter?</p>
         
         <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #065f46; line-height: 1.6;">
-          <div>â€¢ Jenis Kegiatan: <strong>${filterKegiatanVal || 'Semua Kegiatan'}</strong></div>
-          <div>â€¢ Sumber Data: <strong>${filterSourceVal || 'Semua Sumber'}</strong></div>
-          <div>â€¢ Petugas: <strong>${filterPetugasVal || 'Semua Petugas'}</strong></div>
-          ${searchQuery ? `<div>â€¢ Kata Kunci Cari: <strong>"${searchQuery}"</strong></div>` : ''}
+          <div>• Jenis Kegiatan: <strong>${filterKegiatanVal || 'Semua Kegiatan'}</strong></div>
+          <div>• Sumber Data: <strong>${filterSourceVal || 'Semua Sumber'}</strong></div>
+          <div>• Petugas: <strong>${filterPetugasVal || 'Semua Petugas'}</strong></div>
+          ${searchQuery ? `<div>• Kata Kunci Cari: <strong>"${searchQuery}"</strong></div>` : ''}
           <div style="margin-top: 6px; font-weight: 700; color: #047857;">Semua data terfilter di atas akan dikembalikan dari Tempat Sampah ke Database Aktif.</div>
         </div>
       </div>
@@ -6406,7 +6402,7 @@ function editRecord(id) {
 
 
 /* ==========================================================================
-   ðŸ“Š EXPORT & IMPORT XLSX ENGINE (SheetJS)
+   📊 EXPORT & IMPORT XLSX ENGINE (SheetJS)
    ========================================================================== */
 
 function exportToXLSX() {
@@ -6601,7 +6597,7 @@ function processExportXLSX(bulanVal, tahunVal, petugasVal) {
       XLSX.writeFile(wb, filename);
 
       hideLoadingOverlay();
-      showToast(`âœ“ Berhasil Mengunduh ${targetRecords.length} Data CKG!`, 'success');
+      showToast(`✓ Berhasil Mengunduh ${targetRecords.length} Data CKG!`, 'success');
     } catch (err) {
       hideLoadingOverlay();
       console.error('Export XLSX error:', err);
@@ -6811,7 +6807,7 @@ function handleImportFileSelect(event) {
         const hasNik = keys.some(k => /nik/i.test(k) && String(r[k]).trim());
         return hasNama || hasNik;
       });
-      if (fileNameEl) fileNameEl.innerHTML = `<strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) â€” <span style="color:#059669;font-weight:700;">${validRows.length} Data Pasien Terdeteksi</span>`;
+      if (fileNameEl) fileNameEl.innerHTML = `<strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) — <span style="color:#059669;font-weight:700;">${validRows.length} Data Pasien Terdeteksi</span>`;
     } catch(_) {
       if (fileNameEl) fileNameEl.textContent = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
     }
@@ -6823,7 +6819,7 @@ function handleImportFileSelect(event) {
 }
 
 /* ==========================================================================
-   ðŸ‘‘ FITUR IMPORT DATA KHUSUS ADMIN (MULTI-PETUGAS)
+   👑 FITUR IMPORT DATA KHUSUS ADMIN (MULTI-PETUGAS)
    ========================================================================== */
 
 let selectedAdminImportFile = null;
@@ -7051,7 +7047,7 @@ function handleAdminImportFileSelect(event) {
                 <i class="bi bi-eye-fill"></i> PREVIEW REKAPITULASI MULTI-PETUGAS
               </div>
               <div style="font-size:12px; color:#6b21a8; margin-top:2px;">
-                File: <strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) â€” Total <strong>${parsedAdminRecords.length} Data Pasien</strong> untuk <strong>${officerCount} Petugas Entry</strong>
+                File: <strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) — Total <strong>${parsedAdminRecords.length} Data Pasien</strong> untuk <strong>${officerCount} Petugas Entry</strong>
               </div>
             </div>
             <span class="badge badge-emerald" style="font-size:12px; padding:6px 12px;"><i class="bi bi-check-circle-fill"></i> Ready Import</span>
@@ -7178,7 +7174,7 @@ async function executeAdminXLSXImport() {
 }
 
 /* ==========================================================================
-   ðŸ‘‘ FITUR IMPORT DATA SIMPUS MULTI-PETUGAS KHUSUS ADMIN (SUDAH DI-BAGI)
+   👑 FITUR IMPORT DATA SIMPUS MULTI-PETUGAS KHUSUS ADMIN (SUDAH DI-BAGI)
    ========================================================================== */
 
 let selectedSimpusAdminImportFile = null;
@@ -7390,7 +7386,7 @@ function handleSimpusAdminImportFileSelect(event) {
                 <i class="bi bi-eye-fill"></i> PREVIEW SIMPUS MULTI-PETUGAS (SUDAH DI-BAGI)
               </div>
               <div style="font-size:12px; color:#6b21a8; margin-top:2px;">
-                File: <strong>${file.name}</strong> â€” Total <strong>${parsedSimpusAdminRecords.length} Data Pasien</strong> untuk <strong>${officerCount} Petugas</strong>
+                File: <strong>${file.name}</strong> — Total <strong>${parsedSimpusAdminRecords.length} Data Pasien</strong> untuk <strong>${officerCount} Petugas</strong>
               </div>
             </div>
             <span class="badge badge-emerald" style="font-size:12px; padding:6px 12px;"><i class="bi bi-check-circle-fill"></i> Ready Sync D1</span>
@@ -7767,7 +7763,7 @@ function showToast(message, type = 'info') {
 }
 
 /* ==========================================================================
-   ðŸ›ï¸ DUKCAPIL KTP VERIFICATION SERVICE MODULE
+   🏛️ DUKCAPIL KTP VERIFICATION SERVICE MODULE
    ========================================================================== */
 
 const DUKCAPIL_API_BASE = '/api/dukcapil';
@@ -7788,7 +7784,7 @@ async function checkDukcapilHealth(showToastMsg = false) {
     if (resp.ok) {
       isDukcapilServiceOnline = true;
       if (statusIndicator) statusIndicator.style.background = '#22c55e';
-      if (statusText) statusText.innerHTML = 'ðŸŸ¢ Layanan Dukcapil Aktif (Cloudflare Edge Engine)';
+      if (statusText) statusText.innerHTML = '🟢 Layanan Dukcapil Aktif (Cloudflare Edge Engine)';
       if (statusBanner) {
         statusBanner.style.background = '#f0fdf4';
         statusBanner.style.borderColor = '#86efac';
@@ -7803,7 +7799,7 @@ async function checkDukcapilHealth(showToastMsg = false) {
 
   isDukcapilServiceOnline = false;
   if (statusIndicator) statusIndicator.style.background = '#f59e0b';
-  if (statusText) statusText.innerHTML = 'ðŸŸ¡ Mode Lokal: Validator & Parser NIK (Server Offline)';
+  if (statusText) statusText.innerHTML = '🟡 Mode Lokal: Validator & Parser NIK (Server Offline)';
   if (statusBanner) {
     statusBanner.style.background = '#fffbeb';
     statusBanner.style.borderColor = '#fde68a';
@@ -7907,7 +7903,7 @@ const NIK_PROVINSI_MAP = {
   '91': 'PAPUA', '92': 'PAPUA BARAT'
 };
 
-// Kab/Kota code for Jawa Barat (32xx) â€” most relevant for Puskesmas Banjaran Kota
+// Kab/Kota code for Jawa Barat (32xx) — most relevant for Puskesmas Banjaran Kota
 const NIK_KAB_JABAR_MAP = {
   '01': 'KAB. BOGOR', '02': 'KAB. SUKABUMI', '03': 'KAB. CIANJUR',
   '04': 'KAB. BANDUNG', '05': 'KAB. GARUT', '06': 'KAB. TASIKMALAYA',
@@ -8067,7 +8063,7 @@ function renderDukcapilResultCard(data, isOfficial = false, isValid = true) {
 }
 
 /* ==========================================================================
-   ðŸ” DUKCAPIL AUTO-FILL FOR CKG INPUT FORM
+   🔍 DUKCAPIL AUTO-FILL FOR CKG INPUT FORM
    Triggers when user enters 16-digit NIK or clicks "Cek Dukcapil" button
    ========================================================================== */
 
@@ -8124,9 +8120,9 @@ async function triggerNikDukcapilLookup() {
           statusEl.style.background = '#f0fdf4';
           statusEl.style.border = '1px solid #86efac';
           statusEl.style.color = '#166534';
-          statusEl.innerHTML = `<i class="bi bi-check-circle-fill"></i> Data Dukcapil Ditemukan! <strong>${result.data.namaLengkap}</strong> â€” ${result.data.jenisKelamin}, ${result.data.usia} Thn (${result.data.provinsi})`;
+          statusEl.innerHTML = `<i class="bi bi-check-circle-fill"></i> Data Dukcapil Ditemukan! <strong>${result.data.namaLengkap}</strong> — ${result.data.jenisKelamin}, ${result.data.usia} Thn (${result.data.provinsi})`;
         }
-        showToast(`âœ“ Data Dukcapil berhasil diisi otomatis untuk NIK ${nik}`, 'success');
+        showToast(`✓ Data Dukcapil berhasil diisi otomatis untuk NIK ${nik}`, 'success');
         return;
       }
     }
@@ -8144,7 +8140,7 @@ async function triggerNikDukcapilLookup() {
       statusEl.style.background = '#fffbeb';
       statusEl.style.border = '1px solid #fde68a';
       statusEl.style.color = '#92400e';
-      statusEl.innerHTML = `<i class="bi bi-cpu-fill"></i> Data Terisi via Parser NIK Lokal â€” ${localResult.jenisKelamin}, ${localResult.usia} Thn (${localResult.provinsi})`;
+      statusEl.innerHTML = `<i class="bi bi-cpu-fill"></i> Data Terisi via Parser NIK Lokal — ${localResult.jenisKelamin}, ${localResult.usia} Thn (${localResult.provinsi})`;
     }
     showToast(`Data terisi otomatis via Parser NIK Lokal`, 'info');
   } else {
@@ -8450,21 +8446,12 @@ async function fetchCloudUsers() {
           banned_duration_label: u.banned_duration_label || ''
         }));
         saveUserDatabaseToStorage();
-        populateUserDropdowns();
         if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
-        return;
       }
     }
   } catch (e) {
     console.warn('[Cloud Sync Warning] Failed to fetch users from D1:', e);
   }
-
-  // Fallback if D1 returns empty array or error: ensure local INITIAL_USERS_DB is loaded & seeded to D1
-  if (!Array.isArray(usersDb) || usersDb.length === 0) {
-    usersDb = [...INITIAL_USERS_DB];
-    saveUserDatabaseToStorage();
-  }
-  syncUsersToCloud(usersDb);
 }
 
 async function syncUsersToCloud(users) {
@@ -8512,7 +8499,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ==========================================================================
-   ðŸ–¼ï¸ CUSTOM PNG LOGO MANAGER
+   🖼️ CUSTOM PNG LOGO MANAGER
    ========================================================================== */
 
 function applyCustomLogo() {
@@ -8601,7 +8588,7 @@ function openCustomLogoModal() {
 }
 
 /* ==========================================================================
-   ðŸ”§ MAINTENANCE MODE SYSTEM (Web & Menu Lock)
+   🔧 MAINTENANCE MODE SYSTEM (Web & Menu Lock)
    ========================================================================== */
 
 let maintenanceState = {
@@ -8807,7 +8794,7 @@ function showMaintenanceScreen(message) {
       <div class="maintenance-icon-box">
         <i class="bi bi-tools"></i>
       </div>
-      <h1>ðŸ”§ Sistem Dalam Maintenance</h1>
+      <h1>🔧 Sistem Dalam Maintenance</h1>
       <p>${message || 'Sistem sedang dalam pemeliharaan oleh Administrator. Silakan coba beberapa saat lagi.'}</p>
       <div class="maint-badge">
         <i class="bi bi-clock-history"></i>
@@ -8824,7 +8811,7 @@ function showMaintenanceScreen(message) {
 }
 
 /* ==========================================================================
-   ðŸ‘¤ USER PROFILE DROPDOWN MENU POPOVER
+   👤 USER PROFILE DROPDOWN MENU POPOVER
    ========================================================================== */
 
 function toggleUserProfileDropdown(e) {
@@ -8850,7 +8837,7 @@ document.addEventListener('click', (e) => {
 });
 
 /* ==========================================================================
-   ðŸ” UNIVERSAL SEARCH & RENDERING LOGIC FOR LAPORAN & CKG SEKOLAH
+   🔍 UNIVERSAL SEARCH & RENDERING LOGIC FOR LAPORAN & CKG SEKOLAH
    ========================================================================== */
 
 function renderLaporanView() {
@@ -9116,7 +9103,7 @@ function resetSekolahFilters() {
 }
 
 // ==========================================================================
-// ðŸ—ºï¸ INTERACTIVE MAP & ADDRESS LEARNING (KABUPATEN BANDUNG, JAWA BARAT)
+// 🗺️ INTERACTIVE MAP & ADDRESS LEARNING (KABUPATEN BANDUNG, JAWA BARAT)
 // ==========================================================================
 
 let leafletMap = null;
@@ -9213,9 +9200,9 @@ function initInteractiveMap() {
 
     // Layer switcher control for Google Maps views
     L.control.layers({
-      'ðŸ—ºï¸ Google Maps Standard': googleRoadmap,
-      'ðŸ›°ï¸ Google Maps Satelit & Jalan': googleSatellite,
-      'â›°ï¸ Google Maps Terrain': googleTerrain
+      '🗺️ Google Maps Standard': googleRoadmap,
+      '🛰️ Google Maps Satelit & Jalan': googleSatellite,
+      '⛰️ Google Maps Terrain': googleTerrain
     }, null, { position: 'topright' }).addTo(leafletMap);
 
     mapMarkersGroup = L.layerGroup().addTo(leafletMap);
@@ -9347,7 +9334,7 @@ function renderMapMarkers() {
     const popupContent = `
       <div style="min-width: 220px; font-family: 'Plus Jakarta Sans', sans-serif;">
         <div style="font-weight: 800; font-size: 14px; color: #0f172a; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
-          <span>ðŸ“ ${kw}</span>
+          <span>📍 ${kw}</span>
           <span style="font-size: 10px; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 10px; font-weight: 700;">${kec}</span>
         </div>
         <div style="font-size: 12px; color: #475569; margin-bottom: 8px;">
@@ -9575,7 +9562,7 @@ function deleteAddressPin(kw) {
 }
 
 // ==========================================================================
-// ðŸ“ GOOGLE MAPS STYLE ADDRESS AUTOCOMPLETE SUGGESTIONS
+// 📍 GOOGLE MAPS STYLE ADDRESS AUTOCOMPLETE SUGGESTIONS
 // ==========================================================================
 
 let autocompleteDebounceTimer = null;
@@ -9793,241 +9780,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 1000);
 });
-
-// ==========================================================================
-// ðŸš€ ADD-ONS FITUR INTEGRASI (3, 4, 5)
-// ==========================================================================
-
-// --- ADD-ON 3: HEATMAP RISIKO ANEMIA & KESEHATAN KAB. BANDUNG ---
-let isHeatmapModeActive = false;
-let leafletHeatLayer = null;
-
-function toggleMapHeatmapMode() {
-  if (!leafletMap) return;
-
-  isHeatmapModeActive = !isHeatmapModeActive;
-  const btn = document.getElementById('btnToggleHeatmap');
-
-  if (isHeatmapModeActive) {
-    if (btn) {
-      btn.innerHTML = '<i class="bi bi-geo-alt-fill"></i> ðŸ—ºï¸ Mode Pin Peta Standard';
-      btn.style.background = 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
-    }
-
-    if (mapMarkersGroup) {
-      leafletMap.removeLayer(mapMarkersGroup);
-    }
-
-    const learnedMap = getLearnedKampungMap();
-    const allRecords = (typeof records !== 'undefined' ? records : []).concat(typeof simpusRecords !== 'undefined' ? simpusRecords : []);
-
-    const heatPoints = [];
-
-    learnedMap.forEach(item => {
-      const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase() : '';
-      let lat = item.lat ? Number(item.lat) : null;
-      let lng = item.lng ? Number(item.lng) : null;
-
-      if ((!lat || !lng) && kw && KAB_BANDUNG_COORDS_MAP[kw]) {
-        lat = KAB_BANDUNG_COORDS_MAP[kw][0];
-        lng = KAB_BANDUNG_COORDS_MAP[kw][1];
-      }
-
-      if (lat && lng) {
-        const matched = allRecords.filter(r => {
-          const addr = String(r.alamat || '').toUpperCase();
-          return addr.includes(kw) || (item.keywords && item.keywords.some(k => addr.includes(k)));
-        });
-
-        const anemiaCount = matched.filter(r => {
-          const hb = parseFloat(r.hb || r.hasil_hb || 0);
-          return (hb > 0 && hb < 12) || String(r.anemia || '').toLowerCase().includes('ya');
-        }).length;
-
-        const intensity = Math.min(1.0, 0.25 + (matched.length * 0.1) + (anemiaCount * 0.35));
-        heatPoints.push([lat, lng, intensity]);
-      }
-    });
-
-    Object.keys(KAB_BANDUNG_COORDS_MAP).forEach(k => {
-      const coords = KAB_BANDUNG_COORDS_MAP[k];
-      const matched = allRecords.filter(r => String(r.alamat || '').toUpperCase().includes(k)).length;
-      if (matched > 0) {
-        heatPoints.push([coords[0], coords[1], Math.min(1.0, 0.3 + matched * 0.12)]);
-      }
-    });
-
-    if (leafletHeatLayer) {
-      leafletMap.removeLayer(leafletHeatLayer);
-    }
-
-    if (typeof L !== 'undefined' && typeof L.heatLayer === 'function') {
-      leafletHeatLayer = L.heatLayer(heatPoints, {
-        radius: 38,
-        blur: 22,
-        maxZoom: 16,
-        gradient: { 0.3: '#3b82f6', 0.6: '#eab308', 0.85: '#f97316', 1.0: '#ef4444' }
-      }).addTo(leafletMap);
-      showToast('Mode Heatmap Risiko Anemia & Kesehatan Aktif ðŸ”¥', 'info');
-    } else {
-      showToast('Heatmap diaktifkan dengan radius sampel...', 'info');
-    }
-  } else {
-    if (btn) {
-      btn.innerHTML = '<i class="bi bi-fire"></i> ðŸ”¥ Mode Heatmap Risiko Anemia';
-      btn.style.background = 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)';
-    }
-
-    if (leafletHeatLayer) {
-      leafletMap.removeLayer(leafletHeatLayer);
-      leafletHeatLayer = null;
-    }
-
-    if (mapMarkersGroup) {
-      mapMarkersGroup.addTo(leafletMap);
-    }
-
-    showToast('Kembali ke Mode Pin Peta Standard ðŸ—ºï¸', 'success');
-  }
-}
-
-// --- ADD-ON 4: EXPORT LAPORAN RESMI FORMAT DINAS KESEHATAN ---
-function exportLaporanResmiDinkes() {
-  const allRecords = (typeof records !== 'undefined' ? records : []).concat(typeof simpusRecords !== 'undefined' ? simpusRecords : []);
-
-  if (allRecords.length === 0) {
-    Swal.fire('Data Kosong', 'Tidak ada data CKG yang dapat diekspor ke laporan resmi.', 'warning');
-    return;
-  }
-
-  const currentDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-
-  if (typeof XLSX !== 'undefined') {
-    const wsData = [
-      ['PEMERINTAH KABUPATEN BANDUNG'],
-      ['DINAS KESEHATAN - PUSKESMAS BANJARAN KOTA'],
-      ['REKAPITULASI PELAPORAN RESMI CEK KESEHATAN GRATIS (CKG) / BNBA'],
-      [`Tanggal Ekspor: ${currentDate}`],
-      [''],
-      ['NO', 'TANGGAL SKRINING', 'NIK', 'NAMA PASIEN', 'JK', 'USIA', 'ALAMAT (KAMPUNG/DESA)', 'SISTOLE/DIASTOLE', 'GULA DARAH (MG/DL)', 'STATUS IMT', 'RISIKO ANEMIA', 'PETUGAS ENTRY', 'STATUS VALIDASI']
-    ];
-
-    let totalAnemia = 0;
-    let totalHipertensi = 0;
-
-    allRecords.forEach((r, idx) => {
-      const sys = parseInt(r.sistole || r.tekanan_darah_sistole || 0);
-      const dia = parseInt(r.diastole || r.tekanan_darah_diastole || 0);
-      const hb = parseFloat(r.hb || r.hasil_hb || 0);
-      const isAnemia = (hb > 0 && hb < 12) || String(r.anemia || '').toLowerCase().includes('ya');
-      if (isAnemia) totalAnemia++;
-      if (sys >= 140 || dia >= 90) totalHipertensi++;
-
-      wsData.push([
-        idx + 1,
-        r.tgl_skrining || r.created_at || '-',
-        `'${r.nik || '-'}`,
-        r.nama_pasien || r.nama || '-',
-        r.jenis_kelamin || r.jk || '-',
-        r.umur || r.usia || '-',
-        r.alamat || '-',
-        (sys && dia) ? `${sys}/${dia}` : '-',
-        r.gula_darah || r.gda || '-',
-        r.imt_status || r.status_gizi || '-',
-        isAnemia ? 'YA (RISIKO)' : 'NORMAL',
-        r.petugas_entry || r.user_input || '-',
-        r.status_validasi || 'Terverifikasi'
-      ]);
-    });
-
-    wsData.push(['']);
-    wsData.push(['REKAPITULASI RINGKASAN:']);
-    wsData.push(['Total Pasien Skrining:', allRecords.length]);
-    wsData.push(['Total Pasien Risiko Anemia:', totalAnemia]);
-    wsData.push(['Total Pasien Hipertensi:', totalHipertensi]);
-    wsData.push(['']);
-    wsData.push(['', '', '', '', '', '', '', '', '', 'Mengetahui,', '', 'Koordinator Program CKG']);
-    wsData.push(['', '', '', '', '', '', '', '', '', 'Kepala Puskesmas Banjaran Kota', '', 'Puskesmas Banjaran Kota']);
-    wsData.push(['']);
-    wsData.push(['']);
-    wsData.push(['', '', '', '', '', '', '', '', '', '___________________________', '', '___________________________']);
-
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Laporan Resmi CKG');
-    XLSX.writeFile(wb, `Laporan_Resmi_Dinkes_CKG_Banjaran_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }
-
-  Swal.fire({
-    title: 'ðŸ“„ Laporan Resmi Dinas Kesehatan',
-    html: `
-      <div style="text-align: left; font-size: 13px;">
-        <p style="color: #475569; margin-bottom: 14px;">
-          Laporan format resmi Dinas Kesehatan telah berhasil digenerate ke dalam format <strong>Excel (.xlsx)</strong> dan siap dicetak ke <strong>PDF Document</strong>.
-        </p>
-        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
-          <div style="font-weight: 800; color: #166534; margin-bottom: 6px;">ðŸ“Š Ringkasan Laporan Resmi CKG:</div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #15803d;">
-            <div>â€¢ Total Pasien: <strong>${allRecords.length} Pasien</strong></div>
-            <div>â€¢ Tanggal Cetak: <strong>${currentDate}</strong></div>
-          </div>
-        </div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: '<i class="bi bi-printer-fill"></i> Cetak Laporan PDF (Ctrl+P)',
-    cancelButtonText: 'Tutup',
-    confirmButtonColor: '#0284c7'
-  }).then((res) => {
-    if (res.isConfirmed) {
-      window.print();
-    }
-  });
-}
-
-function openExtensionIntegrationModal() {
-  const activeRole = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
-  if (activeRole !== 'admin') {
-    Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat membuka & mengonfigurasi Integrasi Extension SIMPUS.', 'error');
-    return;
-  }
-
-  Swal.fire({
-    title: '<i class="bi bi-puzzle-fill" style="color: #f97316;"></i> Extension SIMPUS CKG Bridge',
-    html: `
-      <div style="text-align: left; font-size: 13px; margin-top: 10px;">
-        <div style="background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 1px solid #fdba74; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-weight: 800; color: #c2410c; font-size: 14px;">
-              <i class="bi bi-check-circle-fill" style="color: #ea580c;"></i> Status Bridge Extension
-            </span>
-            <span class="badge badge-emerald" style="font-size: 11px; font-weight: 800;">AKTIF & TERSAMBUNG</span>
-          </div>
-          <p style="font-size: 12px; color: #9a3412; margin-top: 6px; line-height: 1.4;">
-            Chrome Extension <strong>"Tukang Input CKG"</strong> terhubung secara live ke web portal ini untuk mengotomatiskan entri pasien dari SIMPUS.
-          </p>
-        </div>
-
-        <div style="margin-bottom: 14px;">
-          <label style="font-weight: 700; color: #334155; font-size: 12px;">ðŸ”— Endpoint URL Web App Portal (Untuk Setting Extension):</label>
-          <div style="display: flex; gap: 8px; margin-top: 4px;">
-            <input type="text" id="swalExtUrl" class="swal2-input" value="${window.location.origin}/api/simpus" readonly style="margin:0; font-size:12px; flex:1; font-weight:700; color:#0284c7;">
-            <button class="btn btn-secondary" onclick="navigator.clipboard.writeText(document.getElementById('swalExtUrl').value); showToast('Link Endpoint Berhasil Disalin!', 'success');" style="margin:0; font-size:12px; font-weight:700;">
-              <i class="bi bi-clipboard-check"></i> Salin
-            </button>
-          </div>
-        </div>
-
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
-          <div style="font-weight: 800; color: #0f172a; font-size: 12px; margin-bottom: 6px;">ðŸ’¡ Cara Penggunaan Extension SIMPUS:</div>
-          <ol style="padding-left: 18px; margin: 0; font-size: 11.5px; color: #475569; line-height: 1.6;">
-            <li>Buka halaman SIMPUS / e-Puskesmas di browser Chrome.</li>
-            <li>Klik icon Extension <strong>"Tukang Input CKG"</strong> pada baris toolbar Chrome.</li>
-            <li>Klik <strong>"Tarik Data SIMPUS & Auto Input CKG"</strong>.</li>
-            <li>Data pasien akan otomatis terisi ke form CKG tanpa perlu entri manual.</li>
-          </ol>
-        </div>
-      </div>
-    `,
-}
 

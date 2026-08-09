@@ -29,20 +29,9 @@ export default {
         });
       }
 
-      // Auto-create users table if not existing
-      try {
-        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS users (
-          nama_user TEXT PRIMARY KEY,
-          password TEXT,
-          role TEXT DEFAULT 'Petugas',
-          is_banned INTEGER DEFAULT 0,
-          banned_duration_label TEXT
-        )`).run();
-      } catch (_) {}
-
       if (request.method === 'GET') {
         try {
-          const { results } = await env.DB.prepare('SELECT nama_user, password, role FROM users ORDER BY rowid ASC').all();
+          const { results } = await env.DB.prepare('SELECT nama_user, password, role FROM users ORDER BY id ASC').all();
           return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
