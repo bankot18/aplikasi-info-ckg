@@ -9407,6 +9407,16 @@ function openAddPinModalFromMap(lat = null, lng = null) {
     confirmButtonText: '<i class="bi bi-check-lg"></i> Simpan Titik Alamat',
     cancelButtonText: 'Batal',
     confirmButtonColor: '#0284c7',
+    didOpen: () => {
+      const kwEl = document.getElementById('swalMapKw');
+      const kelEl = document.getElementById('swalMapKel');
+      const kecEl = document.getElementById('swalMapKec');
+      const latEl = document.getElementById('swalMapLat');
+      const lngEl = document.getElementById('swalMapLng');
+      if (kwEl) {
+        attachGoogleMapsAddressAutocomplete(kwEl, kelEl, kecEl, latEl, lngEl);
+      }
+    },
     preConfirm: () => {
       const kw = document.getElementById('swalMapKw').value.trim();
       const kel = document.getElementById('swalMapKel').value.trim();
@@ -9469,4 +9479,191 @@ function deleteAddressPin(kw) {
     }
   });
 }
+
+// ==========================================================================
+// 📍 GOOGLE MAPS STYLE ADDRESS AUTOCOMPLETE SUGGESTIONS
+// ==========================================================================
+
+let autocompleteDebounceTimer = null;
+
+function attachGoogleMapsAddressAutocomplete(kwInput, kelInput, kecSelect, latInput, lngInput) {
+  if (!kwInput) return;
+
+  let wrapper = kwInput.parentElement;
+  if (!wrapper.classList.contains('address-autocomplete-wrapper')) {
+    const parent = kwInput.parentNode;
+    wrapper = document.createElement('div');
+    wrapper.className = 'address-autocomplete-wrapper';
+    parent.insertBefore(wrapper, kwInput);
+    wrapper.appendChild(kwInput);
+  }
+
+  let dropdown = wrapper.querySelector('.address-autocomplete-dropdown');
+  if (!dropdown) {
+    dropdown = document.createElement('div');
+    dropdown.className = 'address-autocomplete-dropdown';
+    dropdown.style.display = 'none';
+    wrapper.appendChild(dropdown);
+  }
+
+  const closeDropdown = () => {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+  };
+
+  document.addEventListener('click', (e) => {
+    if (!wrapper.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+
+  kwInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim().toUpperCase();
+    if (query.length < 2) {
+      closeDropdown();
+      return;
+    }
+
+    clearTimeout(autocompleteDebounceTimer);
+    autocompleteDebounceTimer = setTimeout(async () => {
+      const suggestions = [];
+      const addedSet = new Set();
+
+      // 1. Local & D1 Learned Kampung Map
+      const learnedMap = getLearnedKampungMap();
+      learnedMap.forEach(item => {
+        const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase() : '';
+        if (kw && kw.includes(query) && !addedSet.has(kw)) {
+          addedSet.add(kw);
+          suggestions.push({
+            title: `Kp. ${kw}`,
+            kw: kw,
+            kel: item.kel || 'Banjaran Kota',
+            kec: item.kec || 'Banjaran',
+            lat: item.lat ? Number(item.lat) : null,
+            lng: item.lng ? Number(item.lng) : null,
+            source: 'Kamus D1 / Peta'
+          });
+        }
+      });
+
+      // 2. Kab. Bandung Coordinates Map
+      Object.keys(KAB_BANDUNG_COORDS_MAP).forEach(k => {
+        if (k.includes(query) && !addedSet.has(k)) {
+          addedSet.add(k);
+          const coords = KAB_BANDUNG_COORDS_MAP[k];
+          suggestions.push({
+            title: `Kp. ${k}`,
+            kw: k,
+            kel: k.includes('BANJARAN') ? 'Banjaran Kota' : (k.includes('CANGKUANG') ? 'Cangkuang' : k),
+            kec: 'Banjaran',
+            lat: coords[0],
+            lng: coords[1],
+            source: 'Kabupaten Bandung'
+          });
+        }
+      });
+
+      // 3. OpenStreetMap Nominatim Geocoding API
+      if (suggestions.length < 5) {
+        try {
+          const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' Kabupaten Bandung Jawa Barat')}&format=json&addressdetails=1&limit=5`;
+          const res = await fetch(osmUrl);
+          if (res.ok) {
+            const data = await res.json();
+            data.forEach(place => {
+              const addr = place.address || {};
+              const village = addr.village || addr.quarter || addr.hamlet || addr.suburb || place.display_name.split(',')[0];
+              const kwClean = village.toUpperCase().replace(/^(KP\.|KAMPUNG|DESA|KELURAHAN)\s*/gi, '').trim();
+              if (kwClean && !addedSet.has(kwClean)) {
+                addedSet.add(kwClean);
+                suggestions.push({
+                  title: `Kp. ${kwClean}`,
+                  kw: kwClean,
+                  kel: addr.village || addr.quarter || kwClean,
+                  kec: addr.town || addr.district || 'Banjaran',
+                  lat: parseFloat(place.lat),
+                  lng: parseFloat(place.lon),
+                  source: 'Peta OpenStreetMap'
+                });
+              }
+            });
+          }
+        } catch (err) {
+          console.warn('OSM Autocomplete error:', err);
+        }
+      }
+
+      if (suggestions.length === 0) {
+        closeDropdown();
+        return;
+      }
+
+      dropdown.innerHTML = suggestions.slice(0, 6).map((s, idx) => `
+        <div class="address-autocomplete-item" data-idx="${idx}">
+          <div class="icon-box">
+            <i class="bi bi-geo-alt-fill"></i>
+          </div>
+          <div style="flex: 1; overflow: hidden;">
+            <div style="font-size: 13px; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ${s.title}
+            </div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 1px;">
+              Desa ${s.kel}, Kec. ${s.kec}, Kab. Bandung
+            </div>
+          </div>
+          <span style="font-size: 10px; background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 10px; font-weight: 700; flex-shrink: 0;">
+            ${s.source}
+          </span>
+        </div>
+      `).join('');
+
+      dropdown.style.display = 'block';
+
+      dropdown.querySelectorAll('.address-autocomplete-item').forEach(el => {
+        el.onclick = (event) => {
+          event.stopPropagation();
+          const idx = parseInt(el.getAttribute('data-idx'));
+          const selected = suggestions[idx];
+
+          if (selected) {
+            kwInput.value = selected.title;
+            if (kelInput) kelInput.value = selected.kel;
+
+            if (kecSelect) {
+              const options = Array.from(kecSelect.options);
+              const match = options.find(opt => opt.text.toLowerCase().includes(selected.kec.toLowerCase()) || opt.value.toLowerCase().includes(selected.kec.toLowerCase()));
+              if (match) kecSelect.value = match.value;
+            }
+
+            if (latInput && selected.lat) latInput.value = selected.lat.toFixed(6);
+            if (lngInput && selected.lng) lngInput.value = selected.lng.toFixed(6);
+
+            // Update pin marker on map if active
+            if (typeof leafletMap !== 'undefined' && leafletMap && selected.lat && selected.lng) {
+              leafletMap.setView([selected.lat, selected.lng], 16);
+              if (typeof currentAddingPinMarker !== 'undefined' && currentAddingPinMarker) {
+                currentAddingPinMarker.setLatLng([selected.lat, selected.lng]);
+              }
+            }
+          }
+
+          closeDropdown();
+        };
+      });
+    }, 250);
+  });
+}
+
+// Attach autocomplete to CKG Record Form Alamat field on page load
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const mainAlamatEl = document.getElementById('alamat');
+    const mainKelEl = document.getElementById('kelurahan');
+    const mainKecEl = document.getElementById('kecamatan');
+    if (mainAlamatEl) {
+      attachGoogleMapsAddressAutocomplete(mainAlamatEl, mainKelEl, mainKecEl, null, null);
+    }
+  }, 1000);
+});
 
