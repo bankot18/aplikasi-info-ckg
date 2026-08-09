@@ -1165,9 +1165,12 @@
                 <button class="btn btn-secondary btn-sm" onclick="syncKamusFromCloudServer().then(renderKamusAlamatTable)" style="font-size: 11.5px;">
                   <i class="bi bi-cloud-download-fill"></i> Sync Dari Cloud
                 </button>
+                <button class="btn btn-rose btn-sm" onclick="clearLearnedKampungMap()" style="font-size: 11.5px; background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; border: none; font-weight: 700; border-radius: 6px; padding: 4px 12px;">
+                  <i class="bi bi-trash3-fill"></i> Hapus Semua Data Alamat
+                </button>
               </div>
             </div>
-            <div style="max-height: 240px; overflow-y: auto; border: 1px solid #f1f5f9; border-radius: 6px;">
+            <div style="max-height: 280px; overflow-y: auto; border: 1px solid #f1f5f9; border-radius: 6px;">
               <table style="width: 100%; border-collapse: collapse; font-size: 12px;" id="tableKamusAlamat">
                 <thead>
                   <tr style="background: #f8fafc; text-align: left; color: #475569; position: sticky; top: 0; z-index: 1;">
@@ -1176,11 +1179,12 @@
                     <th style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0;">Kecamatan</th>
                     <th style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0;">Kabupaten / Kota</th>
                     <th style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0;">Provinsi</th>
+                    <th style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; text-align: center; width: 90px;">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="tbodyKamusAlamat">
                   <tr>
-                    <td colspan="5" style="text-align: center; padding: 14px; color: #94a3b8;">Belum ada data kamus pembelajaran tersimpan.</td>
+                    <td colspan="6" style="text-align: center; padding: 14px; color: #94a3b8;">Belum ada data kamus pembelajaran tersimpan.</td>
                   </tr>
                 </tbody>
               </table>

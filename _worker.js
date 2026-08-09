@@ -1001,8 +1001,15 @@ export default {
 
       if (request.method === 'DELETE') {
         try {
-          await env.DB.prepare('DELETE FROM kamus_alamat').run();
-          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          const keywordParam = url.searchParams.get('keyword');
+          if (keywordParam) {
+            const cleanKw = String(keywordParam).toUpperCase().trim();
+            await env.DB.prepare('DELETE FROM kamus_alamat WHERE keyword = ?').bind(cleanKw).run();
+            return new Response(JSON.stringify({ success: true, message: `Keyword ${cleanKw} deleted` }), { headers: corsHeaders });
+          } else {
+            await env.DB.prepare('DELETE FROM kamus_alamat').run();
+            return new Response(JSON.stringify({ success: true, message: 'All kamus data deleted' }), { headers: corsHeaders });
+          }
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }

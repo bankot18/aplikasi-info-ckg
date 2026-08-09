@@ -1687,7 +1687,7 @@ function renderKamusAlamatTable() {
   if (!learnedMap || learnedMap.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align: center; padding: 16px; color: #94a3b8;">
+        <td colspan="6" style="text-align: center; padding: 16px; color: #94a3b8;">
           ☁️ Belum ada kata kunci tersimpan di Kamus Cloud D1. Silakan impor file Excel atau jalankan Scan Existing.
         </td>
       </tr>`;
@@ -1698,24 +1698,30 @@ function renderKamusAlamatTable() {
   let matchCount = 0;
 
   learnedMap.forEach(item => {
-    const kw = Array.isArray(item.keywords) ? item.keywords.join(', ') : String(item.keywords || '');
+    const kw = Array.isArray(item.keywords) ? item.keywords[0] : String(item.keywords || '');
+    const fullKw = Array.isArray(item.keywords) ? item.keywords.join(', ') : String(item.keywords || '');
     const kel = item.kel || '-';
     const kec = item.kec || 'Banjaran';
     const kab = item.kab || 'Kabupaten Bandung';
     const prov = item.prov || 'Jawa Barat';
 
-    if (query && !kw.toLowerCase().includes(query) && !kel.toLowerCase().includes(query) && !kec.toLowerCase().includes(query)) {
+    if (query && !fullKw.toLowerCase().includes(query) && !kel.toLowerCase().includes(query) && !kec.toLowerCase().includes(query)) {
       return;
     }
 
     matchCount++;
     rowsHtml += `
       <tr style="border-bottom: 1px solid #f1f5f9;">
-        <td style="padding: 7px 12px; font-weight: 700; color: #0f172a;"><i class="bi bi-tag-fill" style="color: #0284c7;"></i> ${kw}</td>
+        <td style="padding: 7px 12px; font-weight: 700; color: #0f172a;"><i class="bi bi-tag-fill" style="color: #0284c7;"></i> ${fullKw}</td>
         <td style="padding: 7px 12px; color: #334155;"><span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px;">${kel}</span></td>
         <td style="padding: 7px 12px; color: #475569;">${kec}</td>
         <td style="padding: 7px 12px; color: #475569;">${kab}</td>
         <td style="padding: 7px 12px; color: #475569;">${prov}</td>
+        <td style="padding: 7px 12px; text-align: center;">
+          <button class="btn btn-secondary btn-sm" onclick="deleteSingleKamusKeyword('${kw}')" title="Hapus kata kunci ini" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; padding: 2px 8px; font-size: 11px; border-radius: 6px;">
+            <i class="bi bi-trash"></i> Hapus
+          </button>
+        </td>
       </tr>
     `;
   });
@@ -1723,7 +1729,7 @@ function renderKamusAlamatTable() {
   if (matchCount === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align: center; padding: 14px; color: #94a3b8;">
+        <td colspan="6" style="text-align: center; padding: 14px; color: #94a3b8;">
           Tidak ada kata kunci kamus yang cocok dengan pencarian "${query}".
         </td>
       </tr>`;
@@ -1732,27 +1738,94 @@ function renderKamusAlamatTable() {
   }
 }
 
-function clearLearnedKampungMap() {
+async function clearLearnedKampungMap() {
   const activeRole = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
   if (activeRole !== 'admin') {
     Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat mereset Kamus Pembelajaran.', 'error');
     return;
   }
+
+  const learnedMap = getLearnedKampungMap();
+  const totalCount = learnedMap ? learnedMap.length : 0;
+
   Swal.fire({
-    title: 'Reset Kamus Pembelajaran?',
-    text: 'Tindakan ini akan menghapus kata kunci kampung dari Cloud Database D1 & Local Storage. Kamus dasar bawaan Banjaran akan tetap ada.',
+    title: 'Hapus SEMUA Data Alamat?',
+    html: `
+      <div style="font-size: 13px; color: #64748b; text-align: left;">
+        <p style="margin-bottom: 10px;">
+          Tindakan ini akan <strong>MENGHAPUS PERMANEN</strong> seluruh <strong>${totalCount} data kata kunci alamat/kampung</strong> dari:
+        </p>
+        <ul style="padding-left: 20px; color: #0f172a; margin-bottom: 12px;">
+          <li>☁️ Cloud Database D1 Cloudflare</li>
+          <li>💾 LocalStorage Penyimpanan Browser</li>
+          <li>🗺️ Penanda Titik Peta Alamat Kab. Bandung</li>
+        </ul>
+        <div style="padding: 10px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; color: #be123c; font-weight: 700; font-size: 12px;">
+          ⚠️ PERINGATAN: Tindakan ini tidak dapat dibatalkan!
+        </div>
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: '<i class="bi bi-trash3-fill"></i> Ya, Hapus Semua Data Alamat!',
+    cancelButtonText: 'Batal'
+  }).then(async (res) => {
+    if (res.isConfirmed) {
+      try {
+        localStorage.removeItem('ckg_learned_kampung_map');
+        const apiRes = await fetch('/api/kamus', { method: 'DELETE' });
+        const json = await apiRes.json();
+        console.log('☁️ [D1 Kamus Delete] Result:', json);
+      } catch (err) {
+        console.warn('D1 kamus delete failed:', err);
+      }
+
+      refreshAdminKamusStats();
+      if (typeof renderMapMarkers === 'function') renderMapMarkers();
+      Swal.fire('Berhasil Dihapus!', 'Seluruh data alamat telah berhasil dihapus dari Cloud Database D1 & Local Storage.', 'success');
+    }
+  });
+}
+
+async function deleteSingleKamusKeyword(keyword) {
+  if (!keyword) return;
+  const activeRole = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (activeRole !== 'admin') {
+    Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat menghapus kata kunci Kamus.', 'error');
+    return;
+  }
+
+  Swal.fire({
+    title: 'Hapus Kata Kunci Alamat?',
+    text: `Kata kunci "${keyword}" akan dihapus dari Cloud Database D1 & Local Storage.`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#e11d48',
     cancelButtonColor: '#64748b',
-    confirmButtonText: 'Ya, Reset Kamus!',
+    confirmButtonText: 'Hapus',
     cancelButtonText: 'Batal'
-  }).then((res) => {
+  }).then(async (res) => {
     if (res.isConfirmed) {
-      localStorage.removeItem('ckg_learned_kampung_map');
-      fetch('/api/kamus', { method: 'DELETE' }).catch(err => console.warn('D1 kamus delete failed:', err));
+      const current = getLearnedKampungMap();
+      const filtered = current.filter(item => {
+        if (Array.isArray(item.keywords)) {
+          return !item.keywords.includes(keyword);
+        }
+        return String(item.keywords) !== String(keyword);
+      });
+      localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(filtered));
+
+      try {
+        await fetch(`/api/kamus?keyword=${encodeURIComponent(keyword)}`, { method: 'DELETE' });
+      } catch (err) {
+        console.warn('Single kamus delete error:', err);
+      }
+
       refreshAdminKamusStats();
-      showToast('Kamus Pembelajaran berhasil di-reset!', 'success');
+      if (typeof renderMapMarkers === 'function') renderMapMarkers();
+      showToast(`Kata kunci "${keyword}" berhasil dihapus.`, 'success');
     }
   });
 }
