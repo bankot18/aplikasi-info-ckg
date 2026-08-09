@@ -91,12 +91,12 @@ function toggleTablePasswordVisibility(index, realPass) {
   const codeEl = document.getElementById(`passCode_${index}`);
   const iconEl = document.getElementById(`eyeIcon_${index}`);
   if (!codeEl || !iconEl) return;
-  if (codeEl.textContent === '••••••••') {
+  if (codeEl.textContent === 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢') {
     codeEl.textContent = realPass;
     iconEl.className = 'bi bi-eye-fill';
     iconEl.style.color = '#2563eb';
   } else {
-    codeEl.textContent = '••••••••';
+    codeEl.textContent = 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢';
     iconEl.className = 'bi bi-eye-slash-fill';
     iconEl.style.color = '#64748b';
   }
@@ -714,7 +714,7 @@ function setupAuthFormEvents() {
 }
 
 function updatePasswordVisibility() {
-  // Removed — password is now handled via SweetAlert2 popup
+  // Removed â€” password is now handled via SweetAlert2 popup
 }
 
 function selectPegawaiQuick(namaPegawai) {
@@ -730,7 +730,7 @@ function selectPegawaiQuick(namaPegawai) {
 }
 
 /* ==========================================================================
-   📊 LOADING OVERLAY HELPERS
+   ðŸ“Š LOADING OVERLAY HELPERS
    ========================================================================== */
 
 function showLoadingOverlay(text = 'Memuat Data...', subtext = 'Menghubungkan ke Database Cloudflare D1') {
@@ -748,7 +748,7 @@ function hideLoadingOverlay() {
 }
 
 /* ==========================================================================
-   🔐 LOGIN HANDLER WITH SWEETALERT2 PASSWORD POPUP
+   ðŸ” LOGIN HANDLER WITH SWEETALERT2 PASSWORD POPUP
    ========================================================================== */
 
 function handleLogin(e) {
@@ -807,13 +807,13 @@ function handleLogin(e) {
 
   const dbPassword = (user.password || '').trim();
 
-  // If user has NO password → login directly
+  // If user has NO password â†’ login directly
   if (dbPassword === '') {
     performLoginSuccess(user);
     return;
   }
 
-  // If user HAS a password → show SweetAlert2 password popup
+  // If user HAS a password â†’ show SweetAlert2 password popup
   Swal.fire({
     title: 'Masukkan Kata Sandi',
     html: `<div style="text-align:center; margin-bottom: 8px;">
@@ -1143,8 +1143,6 @@ function switchView(viewId) {
     setTimeout(() => initDashboardCharts(officersData), 50);
   } else if (viewId === 'simpus') {
     renderSimpusView();
-  } else if (viewId === 'tukang-input') {
-    renderTukangInputView();
   } else if (viewId === 'laporan') {
     renderLaporanView();
   } else if (viewId === 'sekolah') {
@@ -1172,15 +1170,9 @@ function updateRoleUI() {
     roleBadgeEl.className = 'badge-role-pill role-' + role;
   }
 
-  // 🔒 RESTRICT EXTENSION SIMPUS PILL TO ADMIN ONLY
-  const extSyncPill = document.getElementById('extensionSyncPill');
-  if (extSyncPill) {
-    if (role === 'admin') {
-      extSyncPill.style.setProperty('display', 'inline-flex', 'important');
-    } else {
-      extSyncPill.style.setProperty('display', 'none', 'important');
-    }
-  }
+  // ðŸ”’ RESTRICT EXTENSION SIMPUS PILL TO ADMIN ONLY
+
+
 
   applyPetugasFilterLock();
   initAddressAutoDetector();
@@ -1400,19 +1392,19 @@ function getLearnedKampungMap() {
 
 async function syncKamusFromCloudServer() {
   try {
-    console.log('☁️ [Kamus Sync] Fetching /api/kamus (GET)...');
+    console.log('â˜ï¸ [Kamus Sync] Fetching /api/kamus (GET)...');
     const res = await fetch('/api/kamus');
-    console.log('☁️ [Kamus Sync] Response status:', res.status);
+    console.log('â˜ï¸ [Kamus Sync] Response status:', res.status);
     if (res.ok) {
       const json = await res.json();
-      console.log('☁️ [Kamus Sync] D1 returned:', json.success, 'items:', (json.data || []).length);
+      console.log('â˜ï¸ [Kamus Sync] D1 returned:', json.success, 'items:', (json.data || []).length);
       if (json.success && Array.isArray(json.data)) {
         const deletedList = getDeletedKampungList();
         // Replace local with D1 cloud data as authoritative source
         const cloudMap = [];
         json.data.forEach(item => {
           const kw = String(item.keyword).toUpperCase().trim();
-          if (!kw || deletedList.includes(kw)) return; // 🚫 Skip deleted keywords!
+          if (!kw || deletedList.includes(kw)) return; // ðŸš« Skip deleted keywords!
 
           const existing = cloudMap.find(m => m.keywords.includes(kw));
           if (existing) {
@@ -1441,7 +1433,7 @@ async function syncKamusFromCloudServer() {
           if (!localItem.keywords || !Array.isArray(localItem.keywords)) return;
           localItem.keywords.forEach(lkw => {
             const cleanLkw = String(lkw).toUpperCase().trim();
-            if (deletedList.includes(cleanLkw)) return; // 🚫 Skip deleted keywords!
+            if (deletedList.includes(cleanLkw)) return; // ðŸš« Skip deleted keywords!
             const inCloud = cloudMap.find(m => m.keywords.includes(cleanLkw));
             if (!inCloud) {
               cloudMap.push(localItem);
@@ -1450,15 +1442,15 @@ async function syncKamusFromCloudServer() {
         });
 
         localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(cloudMap));
-        console.log('☁️ [Kamus Sync] Local storage updated, total entries:', cloudMap.length);
+        console.log('â˜ï¸ [Kamus Sync] Local storage updated, total entries:', cloudMap.length);
         refreshAdminKamusStats();
         if (typeof renderMapMarkers === 'function') renderMapMarkers();
       }
     } else {
-      console.warn('☁️ [Kamus Sync] Non-OK response:', res.status);
+      console.warn('â˜ï¸ [Kamus Sync] Non-OK response:', res.status);
     }
   } catch (err) {
-    console.warn('☁️ [Kamus Sync] Error:', err);
+    console.warn('â˜ï¸ [Kamus Sync] Error:', err);
   }
 }
 
@@ -1542,10 +1534,10 @@ async function handleExcelAddressUpload(event) {
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
 
-    console.log('📊 [Kamus Import] Sheet parsed, total rows:', rows.length);
+    console.log('ðŸ“Š [Kamus Import] Sheet parsed, total rows:', rows.length);
     if (rows.length > 0) {
-      console.log('📊 [Kamus Import] Column headers:', Object.keys(rows[0]));
-      console.log('📊 [Kamus Import] Sample row 1:', JSON.stringify(rows[0]));
+      console.log('ðŸ“Š [Kamus Import] Column headers:', Object.keys(rows[0]));
+      console.log('ðŸ“Š [Kamus Import] Sample row 1:', JSON.stringify(rows[0]));
     }
 
     if (!rows || rows.length === 0) {
@@ -1632,9 +1624,9 @@ async function handleExcelAddressUpload(event) {
     }
 
     const batchPayload = Array.from(batchMap.values());
-    console.log('📊 [Kamus Import] Batch payload size:', batchPayload.length, 'Skipped rows:', skippedCount);
+    console.log('ðŸ“Š [Kamus Import] Batch payload size:', batchPayload.length, 'Skipped rows:', skippedCount);
     if (batchPayload.length > 0) {
-      console.log('📊 [Kamus Import] Sample keywords:', batchPayload.slice(0, 5).map(b => b.keyword + ' → ' + b.kel).join(', '));
+      console.log('ðŸ“Š [Kamus Import] Sample keywords:', batchPayload.slice(0, 5).map(b => b.keyword + ' â†’ ' + b.kel).join(', '));
     }
 
     // Push batch to D1 Cloud Server
@@ -1648,15 +1640,15 @@ async function handleExcelAddressUpload(event) {
           body: JSON.stringify(batchPayload)
         });
         const resJson = await res.json();
-        console.log('⚡ [Kamus Import] D1 Response status:', res.status, 'Body:', JSON.stringify(resJson));
+        console.log('âš¡ [Kamus Import] D1 Response status:', res.status, 'Body:', JSON.stringify(resJson));
         d1Success = res.ok && resJson.success;
         d1Message = d1Success
-          ? `✅ Cloud D1: ${resJson.count || batchPayload.length} kata kunci tersimpan.`
-          : `⚠️ Cloud D1 Error: ${resJson.error || 'Unknown error'} (Status: ${res.status})`;
+          ? `âœ… Cloud D1: ${resJson.count || batchPayload.length} kata kunci tersimpan.`
+          : `âš ï¸ Cloud D1 Error: ${resJson.error || 'Unknown error'} (Status: ${res.status})`;
       } catch (e) {
-        console.error('❌ [Kamus Import] Fetch /api/kamus failed:', e);
+        console.error('âŒ [Kamus Import] Fetch /api/kamus failed:', e);
         d1Success = false;
-        d1Message = `❌ Network Error: ${e.message}`;
+        d1Message = `âŒ Network Error: ${e.message}`;
       }
     } else {
       d1Message = 'Tidak ada data baru untuk dikirim ke Cloud.';
@@ -1674,9 +1666,9 @@ async function handleExcelAddressUpload(event) {
         html: `<div style="font-size:13px; line-height:1.7;">
           Data dari file Excel telah dibaca (<strong>${rows.length}</strong> baris), namun <strong>0 kata kunci baru</strong> ditambahkan.<br><br>
           <strong>Kemungkinan penyebab:</strong><br>
-          • Kata kunci kampung sudah tersimpan di Kamus<br>
-          • Teks alamat terlalu pendek (< 3 karakter)<br>
-          • Kolom alamat tidak terdeteksi<br><br>
+          â€¢ Kata kunci kampung sudah tersimpan di Kamus<br>
+          â€¢ Teks alamat terlalu pendek (< 3 karakter)<br>
+          â€¢ Kolom alamat tidak terdeteksi<br><br>
           <span style="color:#64748b; font-size:12px;">Baris dilewati: ${skippedCount} | Headers: ${Object.keys(rows[0] || {}).join(', ')}</span>
         </div>`,
         confirmButtonText: 'Mengerti'
@@ -1695,7 +1687,7 @@ async function handleExcelAddressUpload(event) {
       });
     }
   } catch (err) {
-    console.error('❌ [Kamus Import] Fatal error:', err);
+    console.error('âŒ [Kamus Import] Fatal error:', err);
     Swal.fire('Gagal Impor', 'Terjadi kesalahan saat membaca file Excel: ' + err.message, 'error');
   }
 }
@@ -1712,9 +1704,9 @@ function refreshAdminKamusStats() {
   learnedMap.forEach(m => totalKeywords += m.keywords.length);
 
   statEl.innerHTML = `
-    🟢 <strong>Kamus Bawaan (Banjaran):</strong> ${staticCount} Wilayah Kelurahan (${totalKeywords - learnedCount} Kata Kunci)<br>
-    ☁️ <strong>Kamus Cloud Database (D1 Cloud Sync & Excel Import):</strong> ${learnedCount} Kata Kunci Tersinkronisasi Seluruh Device<br>
-    ✨ <strong>Total Bank Data Wilayah Siap Pakai:</strong> <strong>${staticCount + learnedCount} Wilayah / Entry</strong>
+    ðŸŸ¢ <strong>Kamus Bawaan (Banjaran):</strong> ${staticCount} Wilayah Kelurahan (${totalKeywords - learnedCount} Kata Kunci)<br>
+    â˜ï¸ <strong>Kamus Cloud Database (D1 Cloud Sync & Excel Import):</strong> ${learnedCount} Kata Kunci Tersinkronisasi Seluruh Device<br>
+    âœ¨ <strong>Total Bank Data Wilayah Siap Pakai:</strong> <strong>${staticCount + learnedCount} Wilayah / Entry</strong>
   `;
 
   renderKamusAlamatTable();
@@ -1732,7 +1724,7 @@ function renderKamusAlamatTable() {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; padding: 16px; color: #94a3b8;">
-          ☁️ Belum ada kata kunci tersimpan di Kamus Cloud D1. Silakan impor file Excel atau jalankan Scan Existing.
+          â˜ï¸ Belum ada kata kunci tersimpan di Kamus Cloud D1. Silakan impor file Excel atau jalankan Scan Existing.
         </td>
       </tr>`;
     return;
@@ -1800,12 +1792,12 @@ async function clearLearnedKampungMap() {
           Tindakan ini akan <strong>MENGHAPUS PERMANEN</strong> seluruh <strong>${totalCount} data kata kunci alamat/kampung</strong> dari:
         </p>
         <ul style="padding-left: 20px; color: #0f172a; margin-bottom: 12px;">
-          <li>☁️ Cloud Database D1 Cloudflare</li>
-          <li>💾 LocalStorage Penyimpanan Browser</li>
-          <li>🗺️ Penanda Titik Peta Alamat Kab. Bandung</li>
+          <li>â˜ï¸ Cloud Database D1 Cloudflare</li>
+          <li>ðŸ’¾ LocalStorage Penyimpanan Browser</li>
+          <li>ðŸ—ºï¸ Penanda Titik Peta Alamat Kab. Bandung</li>
         </ul>
         <div style="padding: 10px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; color: #be123c; font-weight: 700; font-size: 12px;">
-          ⚠️ PERINGATAN: Tindakan ini tidak dapat dibatalkan!
+          âš ï¸ PERINGATAN: Tindakan ini tidak dapat dibatalkan!
         </div>
       </div>
     `,
@@ -1822,7 +1814,7 @@ async function clearLearnedKampungMap() {
         localStorage.removeItem('ckg_deleted_kampung_list');
         const apiRes = await fetch('/api/kamus', { method: 'DELETE' });
         const json = await apiRes.json();
-        console.log('☁️ [D1 Kamus Delete] Result:', json);
+        console.log('â˜ï¸ [D1 Kamus Delete] Result:', json);
       } catch (err) {
         console.warn('D1 kamus delete failed:', err);
       }
@@ -1893,7 +1885,7 @@ async function scanExistingRecordsForAddressDictionary() {
           Sesuai standar validasi data, perekaman Kamus Alamat <strong>TIDAK LAGI diambil dari entrian data pasien CKG</strong> untuk menghindari salah ketik/alamat tidak valid.
         </p>
         <p style="margin-bottom: 10px; color: #0f172a; font-weight: 700;">
-          📍 Untuk menambah titik alamat baru ke Kamus Alamat & Peta:
+          ðŸ“ Untuk menambah titik alamat baru ke Kamus Alamat & Peta:
         </p>
         <ol style="padding-left: 20px; color: #0369a1; font-weight: 600;">
           <li>Buka menu <strong>"Peta Alamat Kab. Bandung"</strong>.</li>
@@ -2203,7 +2195,7 @@ function calculateIMT() {
     if (rounded < 18.5) { badgeText = 'Kurus (<18.5)'; badgeClass = 'badge-amber'; }
     else if (rounded <= 24.9) { badgeText = 'Normal (18.5-24.9)'; badgeClass = 'badge-emerald'; }
     else if (rounded <= 29.9) { badgeText = 'Gemuk (25-29.9)'; badgeClass = 'badge-amber'; }
-    else { badgeText = 'Obesitas (≥30)'; badgeClass = 'badge-rose'; }
+    else { badgeText = 'Obesitas (â‰¥30)'; badgeClass = 'badge-rose'; }
 
     if (imtBadge) {
       imtBadge.className = `badge ${badgeClass}`;
@@ -2585,7 +2577,7 @@ function copyToClipboard(text, label = 'Data') {
 
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(cleanText).then(() => {
-      showToast(`✓ ${label} ("${cleanText}") Berhasil Disalin!`, 'success');
+      showToast(`âœ“ ${label} ("${cleanText}") Berhasil Disalin!`, 'success');
     }).catch(() => {
       fallbackCopyToClipboard(cleanText, label);
     });
@@ -2603,7 +2595,7 @@ function fallbackCopyToClipboard(text, label) {
   ta.select();
   try {
     document.execCommand('copy');
-    showToast(`✓ ${label} ("${text}") Berhasil Disalin!`, 'success');
+    showToast(`âœ“ ${label} ("${text}") Berhasil Disalin!`, 'success');
   } catch (err) {
     showToast(`Gagal menyalin ${label}`, 'error');
   }
@@ -2941,8 +2933,8 @@ async function handleSimpusActionBerhasil(id) {
             <i class="bi bi-geo-alt-fill" style="color: #2563eb;"></i> Pilih Kategori / Lokasi Entry CKG:
           </label>
           <select id="swalTargetKategori" class="custom-input" style="width: 100%; padding: 9px 12px; border-radius: 6px; font-weight: 600; font-size: 13.5px;">
-            <option value="Luar Gedung" selected>📍 CKG Luar Gedung</option>
-            <option value="Dalam Gedung">🏥 CKG Dalam Gedung</option>
+            <option value="Luar Gedung" selected>ðŸ“ CKG Luar Gedung</option>
+            <option value="Dalam Gedung">ðŸ¥ CKG Dalam Gedung</option>
           </select>
         </div>
 
@@ -4785,7 +4777,7 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
 
     const theme = isRank1 ? {
       pillBg: 'linear-gradient(135deg, #d97706, #b45309)',
-      pillText: '🏆 JUARA 1 (RANK 1)',
+      pillText: 'ðŸ† JUARA 1 (RANK 1)',
       medalBadge: '1',
       medalBg: '#fef3c7',
       medalBorder: '#f59e0b',
@@ -4806,7 +4798,7 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
       offset: '-16px'
     } : isRank2 ? {
       pillBg: 'linear-gradient(135deg, #64748b, #475569)',
-      pillText: '🥈 JUARA 2 (RANK 2)',
+      pillText: 'ðŸ¥ˆ JUARA 2 (RANK 2)',
       medalBadge: '2',
       medalBg: '#f1f5f9',
       medalBorder: '#94a3b8',
@@ -4827,7 +4819,7 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
       offset: '0px'
     } : {
       pillBg: 'linear-gradient(135deg, #ea580c, #c2410c)',
-      pillText: '🥉 JUARA 3 (RANK 3)',
+      pillText: 'ðŸ¥‰ JUARA 3 (RANK 3)',
       medalBadge: '3',
       medalBg: '#ffedd5',
       medalBorder: '#fdba74',
@@ -4907,8 +4899,8 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
             </div>
 
             <div style="font-size: 11px; color: #475569; display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
-              <span>📍 Luar: <strong>${item.luarCount}</strong></span>
-              <span>🏢 Dalam: <strong>${item.dalamCount}</strong></span>
+              <span>ðŸ“ Luar: <strong>${item.luarCount}</strong></span>
+              <span>ðŸ¢ Dalam: <strong>${item.dalamCount}</strong></span>
             </div>
           </div>
 
@@ -5078,7 +5070,7 @@ function renderUserDatabaseTable() {
 
     const passwordDisplayHtml = hasPassword ? `
       <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-        <code id="passCode_${i}" style="color: #dc2626; font-weight: 800; font-family: monospace; font-size: 13px; letter-spacing: 2px;">••••••••</code>
+        <code id="passCode_${i}" style="color: #dc2626; font-weight: 800; font-family: monospace; font-size: 13px; letter-spacing: 2px;">â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</code>
         <button type="button" onclick="toggleTablePasswordVisibility('${i}', '${safePassword}')" style="border: none; background: transparent; cursor: pointer; color: #64748b; padding: 0 2px; font-size: 13px; display: inline-flex; align-items: center;" title="Lihat/Sembunyikan Password">
           <i id="eyeIcon_${i}" class="bi bi-eye-slash-fill"></i>
         </button>
@@ -5482,7 +5474,7 @@ function buildTableRowsHtml(data) {
 }
 
 /* ==========================================================================
-   📅 DATE UPDATE ENGINE (SINGLE RECORD & BULK MONTHLY FOR ADMIN)
+   ðŸ“… DATE UPDATE ENGINE (SINGLE RECORD & BULK MONTHLY FOR ADMIN)
    ========================================================================== */
 
 function promptChangeSingleRecordDate(recordId) {
@@ -5531,7 +5523,7 @@ function promptChangeSingleRecordDate(recordId) {
 
       saveRecordsToStorage();
       renderTableRecords();
-      showToast(`✓ Tanggal entry untuk ${item.nama} berhasil diubah ke ${formatDisplayDate(newDateVal)}!`, 'success');
+      showToast(`âœ“ Tanggal entry untuk ${item.nama} berhasil diubah ke ${formatDisplayDate(newDateVal)}!`, 'success');
     }
   });
 }
@@ -6163,10 +6155,10 @@ function restoreFilteredRecycle() {
         <p style="color: #475569; margin-bottom: 12px; line-height: 1.5;">Apakah Anda yakin ingin memulihkan <strong>${itemsToRestore.length} data</strong> yang saat ini muncul sesuai filter?</p>
         
         <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #065f46; line-height: 1.6;">
-          <div>• Jenis Kegiatan: <strong>${filterKegiatanVal || 'Semua Kegiatan'}</strong></div>
-          <div>• Sumber Data: <strong>${filterSourceVal || 'Semua Sumber'}</strong></div>
-          <div>• Petugas: <strong>${filterPetugasVal || 'Semua Petugas'}</strong></div>
-          ${searchQuery ? `<div>• Kata Kunci Cari: <strong>"${searchQuery}"</strong></div>` : ''}
+          <div>â€¢ Jenis Kegiatan: <strong>${filterKegiatanVal || 'Semua Kegiatan'}</strong></div>
+          <div>â€¢ Sumber Data: <strong>${filterSourceVal || 'Semua Sumber'}</strong></div>
+          <div>â€¢ Petugas: <strong>${filterPetugasVal || 'Semua Petugas'}</strong></div>
+          ${searchQuery ? `<div>â€¢ Kata Kunci Cari: <strong>"${searchQuery}"</strong></div>` : ''}
           <div style="margin-top: 6px; font-weight: 700; color: #047857;">Semua data terfilter di atas akan dikembalikan dari Tempat Sampah ke Database Aktif.</div>
         </div>
       </div>
@@ -6414,7 +6406,7 @@ function editRecord(id) {
 
 
 /* ==========================================================================
-   📊 EXPORT & IMPORT XLSX ENGINE (SheetJS)
+   ðŸ“Š EXPORT & IMPORT XLSX ENGINE (SheetJS)
    ========================================================================== */
 
 function exportToXLSX() {
@@ -6609,7 +6601,7 @@ function processExportXLSX(bulanVal, tahunVal, petugasVal) {
       XLSX.writeFile(wb, filename);
 
       hideLoadingOverlay();
-      showToast(`✓ Berhasil Mengunduh ${targetRecords.length} Data CKG!`, 'success');
+      showToast(`âœ“ Berhasil Mengunduh ${targetRecords.length} Data CKG!`, 'success');
     } catch (err) {
       hideLoadingOverlay();
       console.error('Export XLSX error:', err);
@@ -6819,7 +6811,7 @@ function handleImportFileSelect(event) {
         const hasNik = keys.some(k => /nik/i.test(k) && String(r[k]).trim());
         return hasNama || hasNik;
       });
-      if (fileNameEl) fileNameEl.innerHTML = `<strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) — <span style="color:#059669;font-weight:700;">${validRows.length} Data Pasien Terdeteksi</span>`;
+      if (fileNameEl) fileNameEl.innerHTML = `<strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) â€” <span style="color:#059669;font-weight:700;">${validRows.length} Data Pasien Terdeteksi</span>`;
     } catch(_) {
       if (fileNameEl) fileNameEl.textContent = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
     }
@@ -6831,7 +6823,7 @@ function handleImportFileSelect(event) {
 }
 
 /* ==========================================================================
-   👑 FITUR IMPORT DATA KHUSUS ADMIN (MULTI-PETUGAS)
+   ðŸ‘‘ FITUR IMPORT DATA KHUSUS ADMIN (MULTI-PETUGAS)
    ========================================================================== */
 
 let selectedAdminImportFile = null;
@@ -7059,7 +7051,7 @@ function handleAdminImportFileSelect(event) {
                 <i class="bi bi-eye-fill"></i> PREVIEW REKAPITULASI MULTI-PETUGAS
               </div>
               <div style="font-size:12px; color:#6b21a8; margin-top:2px;">
-                File: <strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) — Total <strong>${parsedAdminRecords.length} Data Pasien</strong> untuk <strong>${officerCount} Petugas Entry</strong>
+                File: <strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) â€” Total <strong>${parsedAdminRecords.length} Data Pasien</strong> untuk <strong>${officerCount} Petugas Entry</strong>
               </div>
             </div>
             <span class="badge badge-emerald" style="font-size:12px; padding:6px 12px;"><i class="bi bi-check-circle-fill"></i> Ready Import</span>
@@ -7186,7 +7178,7 @@ async function executeAdminXLSXImport() {
 }
 
 /* ==========================================================================
-   👑 FITUR IMPORT DATA SIMPUS MULTI-PETUGAS KHUSUS ADMIN (SUDAH DI-BAGI)
+   ðŸ‘‘ FITUR IMPORT DATA SIMPUS MULTI-PETUGAS KHUSUS ADMIN (SUDAH DI-BAGI)
    ========================================================================== */
 
 let selectedSimpusAdminImportFile = null;
@@ -7398,7 +7390,7 @@ function handleSimpusAdminImportFileSelect(event) {
                 <i class="bi bi-eye-fill"></i> PREVIEW SIMPUS MULTI-PETUGAS (SUDAH DI-BAGI)
               </div>
               <div style="font-size:12px; color:#6b21a8; margin-top:2px;">
-                File: <strong>${file.name}</strong> — Total <strong>${parsedSimpusAdminRecords.length} Data Pasien</strong> untuk <strong>${officerCount} Petugas</strong>
+                File: <strong>${file.name}</strong> â€” Total <strong>${parsedSimpusAdminRecords.length} Data Pasien</strong> untuk <strong>${officerCount} Petugas</strong>
               </div>
             </div>
             <span class="badge badge-emerald" style="font-size:12px; padding:6px 12px;"><i class="bi bi-check-circle-fill"></i> Ready Sync D1</span>
@@ -7775,7 +7767,7 @@ function showToast(message, type = 'info') {
 }
 
 /* ==========================================================================
-   🏛️ DUKCAPIL KTP VERIFICATION SERVICE MODULE
+   ðŸ›ï¸ DUKCAPIL KTP VERIFICATION SERVICE MODULE
    ========================================================================== */
 
 const DUKCAPIL_API_BASE = '/api/dukcapil';
@@ -7796,7 +7788,7 @@ async function checkDukcapilHealth(showToastMsg = false) {
     if (resp.ok) {
       isDukcapilServiceOnline = true;
       if (statusIndicator) statusIndicator.style.background = '#22c55e';
-      if (statusText) statusText.innerHTML = '🟢 Layanan Dukcapil Aktif (Cloudflare Edge Engine)';
+      if (statusText) statusText.innerHTML = 'ðŸŸ¢ Layanan Dukcapil Aktif (Cloudflare Edge Engine)';
       if (statusBanner) {
         statusBanner.style.background = '#f0fdf4';
         statusBanner.style.borderColor = '#86efac';
@@ -7811,7 +7803,7 @@ async function checkDukcapilHealth(showToastMsg = false) {
 
   isDukcapilServiceOnline = false;
   if (statusIndicator) statusIndicator.style.background = '#f59e0b';
-  if (statusText) statusText.innerHTML = '🟡 Mode Lokal: Validator & Parser NIK (Server Offline)';
+  if (statusText) statusText.innerHTML = 'ðŸŸ¡ Mode Lokal: Validator & Parser NIK (Server Offline)';
   if (statusBanner) {
     statusBanner.style.background = '#fffbeb';
     statusBanner.style.borderColor = '#fde68a';
@@ -7915,7 +7907,7 @@ const NIK_PROVINSI_MAP = {
   '91': 'PAPUA', '92': 'PAPUA BARAT'
 };
 
-// Kab/Kota code for Jawa Barat (32xx) — most relevant for Puskesmas Banjaran Kota
+// Kab/Kota code for Jawa Barat (32xx) â€” most relevant for Puskesmas Banjaran Kota
 const NIK_KAB_JABAR_MAP = {
   '01': 'KAB. BOGOR', '02': 'KAB. SUKABUMI', '03': 'KAB. CIANJUR',
   '04': 'KAB. BANDUNG', '05': 'KAB. GARUT', '06': 'KAB. TASIKMALAYA',
@@ -8075,7 +8067,7 @@ function renderDukcapilResultCard(data, isOfficial = false, isValid = true) {
 }
 
 /* ==========================================================================
-   🔍 DUKCAPIL AUTO-FILL FOR CKG INPUT FORM
+   ðŸ” DUKCAPIL AUTO-FILL FOR CKG INPUT FORM
    Triggers when user enters 16-digit NIK or clicks "Cek Dukcapil" button
    ========================================================================== */
 
@@ -8132,9 +8124,9 @@ async function triggerNikDukcapilLookup() {
           statusEl.style.background = '#f0fdf4';
           statusEl.style.border = '1px solid #86efac';
           statusEl.style.color = '#166534';
-          statusEl.innerHTML = `<i class="bi bi-check-circle-fill"></i> Data Dukcapil Ditemukan! <strong>${result.data.namaLengkap}</strong> — ${result.data.jenisKelamin}, ${result.data.usia} Thn (${result.data.provinsi})`;
+          statusEl.innerHTML = `<i class="bi bi-check-circle-fill"></i> Data Dukcapil Ditemukan! <strong>${result.data.namaLengkap}</strong> â€” ${result.data.jenisKelamin}, ${result.data.usia} Thn (${result.data.provinsi})`;
         }
-        showToast(`✓ Data Dukcapil berhasil diisi otomatis untuk NIK ${nik}`, 'success');
+        showToast(`âœ“ Data Dukcapil berhasil diisi otomatis untuk NIK ${nik}`, 'success');
         return;
       }
     }
@@ -8152,7 +8144,7 @@ async function triggerNikDukcapilLookup() {
       statusEl.style.background = '#fffbeb';
       statusEl.style.border = '1px solid #fde68a';
       statusEl.style.color = '#92400e';
-      statusEl.innerHTML = `<i class="bi bi-cpu-fill"></i> Data Terisi via Parser NIK Lokal — ${localResult.jenisKelamin}, ${localResult.usia} Thn (${localResult.provinsi})`;
+      statusEl.innerHTML = `<i class="bi bi-cpu-fill"></i> Data Terisi via Parser NIK Lokal â€” ${localResult.jenisKelamin}, ${localResult.usia} Thn (${localResult.provinsi})`;
     }
     showToast(`Data terisi otomatis via Parser NIK Lokal`, 'info');
   } else {
@@ -8458,6 +8450,7 @@ async function fetchCloudUsers() {
           banned_duration_label: u.banned_duration_label || ''
         }));
         saveUserDatabaseToStorage();
+        populateUserDropdowns();
         if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
         return;
       }
@@ -8519,7 +8512,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ==========================================================================
-   🖼️ CUSTOM PNG LOGO MANAGER
+   ðŸ–¼ï¸ CUSTOM PNG LOGO MANAGER
    ========================================================================== */
 
 function applyCustomLogo() {
@@ -8608,7 +8601,7 @@ function openCustomLogoModal() {
 }
 
 /* ==========================================================================
-   🔧 MAINTENANCE MODE SYSTEM (Web & Menu Lock)
+   ðŸ”§ MAINTENANCE MODE SYSTEM (Web & Menu Lock)
    ========================================================================== */
 
 let maintenanceState = {
@@ -8814,7 +8807,7 @@ function showMaintenanceScreen(message) {
       <div class="maintenance-icon-box">
         <i class="bi bi-tools"></i>
       </div>
-      <h1>🔧 Sistem Dalam Maintenance</h1>
+      <h1>ðŸ”§ Sistem Dalam Maintenance</h1>
       <p>${message || 'Sistem sedang dalam pemeliharaan oleh Administrator. Silakan coba beberapa saat lagi.'}</p>
       <div class="maint-badge">
         <i class="bi bi-clock-history"></i>
@@ -8831,7 +8824,7 @@ function showMaintenanceScreen(message) {
 }
 
 /* ==========================================================================
-   👤 USER PROFILE DROPDOWN MENU POPOVER
+   ðŸ‘¤ USER PROFILE DROPDOWN MENU POPOVER
    ========================================================================== */
 
 function toggleUserProfileDropdown(e) {
@@ -8857,7 +8850,7 @@ document.addEventListener('click', (e) => {
 });
 
 /* ==========================================================================
-   🔍 UNIVERSAL SEARCH & RENDERING LOGIC FOR LAPORAN & CKG SEKOLAH
+   ðŸ” UNIVERSAL SEARCH & RENDERING LOGIC FOR LAPORAN & CKG SEKOLAH
    ========================================================================== */
 
 function renderLaporanView() {
@@ -9123,7 +9116,7 @@ function resetSekolahFilters() {
 }
 
 // ==========================================================================
-// 🗺️ INTERACTIVE MAP & ADDRESS LEARNING (KABUPATEN BANDUNG, JAWA BARAT)
+// ðŸ—ºï¸ INTERACTIVE MAP & ADDRESS LEARNING (KABUPATEN BANDUNG, JAWA BARAT)
 // ==========================================================================
 
 let leafletMap = null;
@@ -9220,9 +9213,9 @@ function initInteractiveMap() {
 
     // Layer switcher control for Google Maps views
     L.control.layers({
-      '🗺️ Google Maps Standard': googleRoadmap,
-      '🛰️ Google Maps Satelit & Jalan': googleSatellite,
-      '⛰️ Google Maps Terrain': googleTerrain
+      'ðŸ—ºï¸ Google Maps Standard': googleRoadmap,
+      'ðŸ›°ï¸ Google Maps Satelit & Jalan': googleSatellite,
+      'â›°ï¸ Google Maps Terrain': googleTerrain
     }, null, { position: 'topright' }).addTo(leafletMap);
 
     mapMarkersGroup = L.layerGroup().addTo(leafletMap);
@@ -9354,7 +9347,7 @@ function renderMapMarkers() {
     const popupContent = `
       <div style="min-width: 220px; font-family: 'Plus Jakarta Sans', sans-serif;">
         <div style="font-weight: 800; font-size: 14px; color: #0f172a; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
-          <span>📍 ${kw}</span>
+          <span>ðŸ“ ${kw}</span>
           <span style="font-size: 10px; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 10px; font-weight: 700;">${kec}</span>
         </div>
         <div style="font-size: 12px; color: #475569; margin-bottom: 8px;">
@@ -9582,7 +9575,7 @@ function deleteAddressPin(kw) {
 }
 
 // ==========================================================================
-// 📍 GOOGLE MAPS STYLE ADDRESS AUTOCOMPLETE SUGGESTIONS
+// ðŸ“ GOOGLE MAPS STYLE ADDRESS AUTOCOMPLETE SUGGESTIONS
 // ==========================================================================
 
 let autocompleteDebounceTimer = null;
@@ -9802,7 +9795,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================================================
-// 🚀 ADD-ONS FITUR INTEGRASI (3, 4, 5)
+// ðŸš€ ADD-ONS FITUR INTEGRASI (3, 4, 5)
 // ==========================================================================
 
 // --- ADD-ON 3: HEATMAP RISIKO ANEMIA & KESEHATAN KAB. BANDUNG ---
@@ -9817,7 +9810,7 @@ function toggleMapHeatmapMode() {
 
   if (isHeatmapModeActive) {
     if (btn) {
-      btn.innerHTML = '<i class="bi bi-geo-alt-fill"></i> 🗺️ Mode Pin Peta Standard';
+      btn.innerHTML = '<i class="bi bi-geo-alt-fill"></i> ðŸ—ºï¸ Mode Pin Peta Standard';
       btn.style.background = 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
     }
 
@@ -9875,13 +9868,13 @@ function toggleMapHeatmapMode() {
         maxZoom: 16,
         gradient: { 0.3: '#3b82f6', 0.6: '#eab308', 0.85: '#f97316', 1.0: '#ef4444' }
       }).addTo(leafletMap);
-      showToast('Mode Heatmap Risiko Anemia & Kesehatan Aktif 🔥', 'info');
+      showToast('Mode Heatmap Risiko Anemia & Kesehatan Aktif ðŸ”¥', 'info');
     } else {
       showToast('Heatmap diaktifkan dengan radius sampel...', 'info');
     }
   } else {
     if (btn) {
-      btn.innerHTML = '<i class="bi bi-fire"></i> 🔥 Mode Heatmap Risiko Anemia';
+      btn.innerHTML = '<i class="bi bi-fire"></i> ðŸ”¥ Mode Heatmap Risiko Anemia';
       btn.style.background = 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)';
     }
 
@@ -9894,7 +9887,7 @@ function toggleMapHeatmapMode() {
       mapMarkersGroup.addTo(leafletMap);
     }
 
-    showToast('Kembali ke Mode Pin Peta Standard 🗺️', 'success');
+    showToast('Kembali ke Mode Pin Peta Standard ðŸ—ºï¸', 'success');
   }
 }
 
@@ -9966,17 +9959,17 @@ function exportLaporanResmiDinkes() {
   }
 
   Swal.fire({
-    title: '📄 Laporan Resmi Dinas Kesehatan',
+    title: 'ðŸ“„ Laporan Resmi Dinas Kesehatan',
     html: `
       <div style="text-align: left; font-size: 13px;">
         <p style="color: #475569; margin-bottom: 14px;">
           Laporan format resmi Dinas Kesehatan telah berhasil digenerate ke dalam format <strong>Excel (.xlsx)</strong> dan siap dicetak ke <strong>PDF Document</strong>.
         </p>
         <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
-          <div style="font-weight: 800; color: #166534; margin-bottom: 6px;">📊 Ringkasan Laporan Resmi CKG:</div>
+          <div style="font-weight: 800; color: #166534; margin-bottom: 6px;">ðŸ“Š Ringkasan Laporan Resmi CKG:</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #15803d;">
-            <div>• Total Pasien: <strong>${allRecords.length} Pasien</strong></div>
-            <div>• Tanggal Cetak: <strong>${currentDate}</strong></div>
+            <div>â€¢ Total Pasien: <strong>${allRecords.length} Pasien</strong></div>
+            <div>â€¢ Tanggal Cetak: <strong>${currentDate}</strong></div>
           </div>
         </div>
       </div>
@@ -10016,7 +10009,7 @@ function openExtensionIntegrationModal() {
         </div>
 
         <div style="margin-bottom: 14px;">
-          <label style="font-weight: 700; color: #334155; font-size: 12px;">🔗 Endpoint URL Web App Portal (Untuk Setting Extension):</label>
+          <label style="font-weight: 700; color: #334155; font-size: 12px;">ðŸ”— Endpoint URL Web App Portal (Untuk Setting Extension):</label>
           <div style="display: flex; gap: 8px; margin-top: 4px;">
             <input type="text" id="swalExtUrl" class="swal2-input" value="${window.location.origin}/api/simpus" readonly style="margin:0; font-size:12px; flex:1; font-weight:700; color:#0284c7;">
             <button class="btn btn-secondary" onclick="navigator.clipboard.writeText(document.getElementById('swalExtUrl').value); showToast('Link Endpoint Berhasil Disalin!', 'success');" style="margin:0; font-size:12px; font-weight:700;">
@@ -10026,7 +10019,7 @@ function openExtensionIntegrationModal() {
         </div>
 
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
-          <div style="font-weight: 800; color: #0f172a; font-size: 12px; margin-bottom: 6px;">💡 Cara Penggunaan Extension SIMPUS:</div>
+          <div style="font-weight: 800; color: #0f172a; font-size: 12px; margin-bottom: 6px;">ðŸ’¡ Cara Penggunaan Extension SIMPUS:</div>
           <ol style="padding-left: 18px; margin: 0; font-size: 11.5px; color: #475569; line-height: 1.6;">
             <li>Buka halaman SIMPUS / e-Puskesmas di browser Chrome.</li>
             <li>Klik icon Extension <strong>"Tukang Input CKG"</strong> pada baris toolbar Chrome.</li>
@@ -10037,332 +10030,4 @@ function openExtensionIntegrationModal() {
       </div>
     `,
 }
-
-// ----------------------------------------------------
-// TUKANG INPUT CKG EXTENSION LOGGING & HUB LOGIC
-// ----------------------------------------------------
-let tukangInputLogs = [];
-
-async function fetchTukangInputLogsFromCloud() {
-  try {
-    const res = await fetch('/api/extension-logs');
-    if (res.ok) {
-      const result = await res.json();
-      if (result && result.success && Array.isArray(result.data)) {
-        tukangInputLogs = result.data;
-        saveTukangInputLogsToLocal();
-        return;
-      }
-    }
-  } catch (e) {
-    console.warn("Failed to fetch extension logs from cloud:", e);
-  }
-
-  // Local Storage Fallback
-  const saved = localStorage.getItem('ckg_extension_logs');
-  if (saved) {
-    try { tukangInputLogs = JSON.parse(saved); } catch (_) { tukangInputLogs = []; }
-  }
-}
-
-function saveTukangInputLogsToLocal() {
-  try {
-    localStorage.setItem('ckg_extension_logs', JSON.stringify(tukangInputLogs));
-  } catch (_) {}
-}
-
-async function renderTukangInputView() {
-  await fetchTukangInputLogsFromCloud();
-  filterTukangInputTable();
-}
-
-function filterTukangInputTable() {
-  const searchVal = (document.getElementById('tukangInputSearchInput')?.value || '').toLowerCase().trim();
-  const filterMatch = document.getElementById('tukangInputMatchFilter')?.value || 'ALL';
-  const tbody = document.getElementById('tukangInputTableBody');
-  if (!tbody) return;
-
-  let totalCount = tukangInputLogs.length;
-  let matchedCount = 0;
-  let newCount = 0;
-
-  // Cross-reference logs with SIMPUS records
-  const processedLogs = tukangInputLogs.map((log, idx) => {
-    const cleanNik = String(log.nik || log.nisn_nik || '').replace(/\D/g, '');
-    const cleanNama = String(log.nama || log.nama_pasien || '').toLowerCase().trim();
-
-    // Check match in simpusRecords
-    let matchedSimpus = null;
-    if (cleanNik.length >= 8) {
-      matchedSimpus = simpusRecords.find(s => String(s.nik || '').replace(/\D/g, '') === cleanNik);
-    }
-    if (!matchedSimpus && cleanNama) {
-      matchedSimpus = simpusRecords.find(s => String(s.nama || '').toLowerCase().trim() === cleanNama);
-    }
-
-    const isMatch = Boolean(matchedSimpus);
-    if (isMatch) matchedCount++;
-    else newCount++;
-
-    return {
-      ...log,
-      origIdx: idx,
-      cleanNik,
-      cleanNama,
-      isMatch,
-      matchedSimpus
-    };
-  });
-
-  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
-  const loggedUser = (sessionStorage.getItem('ckg_user_name') || '').trim().toLowerCase();
-  const isPrivileged = (role === 'admin' || role === 'koordinator');
-
-  // Apply filters
-  let filtered = processedLogs.filter(item => {
-    if (role === 'petugas' && loggedUser) {
-      const logPetugas = String(item.petugas || '').toLowerCase().trim();
-      if (logPetugas && !logPetugas.includes(loggedUser) && !loggedUser.includes(logPetugas)) {
-        return false;
-      }
-    }
-
-    if (filterMatch === 'MATCHED' && !item.isMatch) return false;
-    if (filterMatch === 'NEW' && item.isMatch) return false;
-
-    if (searchVal) {
-      const matchSearch =
-        item.cleanNik.includes(searchVal) ||
-        item.cleanNama.includes(searchVal) ||
-        String(item.petugas || '').toLowerCase().includes(searchVal) ||
-        String(item.activity_type || '').toLowerCase().includes(searchVal);
-      if (!matchSearch) return false;
-    }
-    return true;
-  });
-
-  // Update Summary Metrics
-  const statTotal = document.getElementById('statTukangInputTotal');
-  const statMatched = document.getElementById('statTukangInputMatched');
-  const statNew = document.getElementById('statTukangInputNew');
-  const countDisp = document.getElementById('tukangInputDisplayedCount');
-
-  if (statTotal) statTotal.textContent = totalCount;
-  if (statMatched) statMatched.textContent = matchedCount;
-  if (statNew) statNew.textContent = newCount;
-  if (countDisp) countDisp.textContent = filtered.length;
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align: center; padding: 30px; color: #64748b;">
-          <i class="bi bi-robot" style="font-size: 32px; color: #94a3b8; display: block; margin-bottom: 8px;"></i>
-          <strong>Belum Ada Aktivitas Extension Tukang Input CKG</strong>
-          <p style="font-size: 12px; margin-top: 4px; color: #94a3b8;">Gunakan Extension "Tukang Input CKG" di browser untuk mengotomatiskan pendaftaran atau pemeriksaan pasien.</p>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  let html = '';
-  filtered.forEach((item, index) => {
-    const timeStr = item.timestamp || item.created_at || 'Baru Saja';
-    const petugasName = item.petugas || 'Petugas Extension';
-    const activityName = item.activity_type || 'Pendaftaran CKG';
-
-    const namaPasien = item.nama || item.nama_pasien || '-';
-    const nik = item.nik || '-';
-    const usia = item.usia ? `${item.usia} Thn` : (item.dob ? `${calculateAgeFromDOBString(item.dob)} Thn` : '-');
-    const alamat = item.alamat || 'Banjaran';
-
-    // Physical & Lab summary string
-    let physicalLabStr = [];
-    if (item.sistol && item.diastol) physicalLabStr.push(`TD: <strong>${item.sistol}/${item.diastol} mmHg</strong>`);
-    if (item.bb && item.tb) physicalLabStr.push(`BB/TB: <strong>${item.bb}kg / ${item.tb}cm</strong>`);
-    if (item.gula && item.gula !== '-') physicalLabStr.push(`Gula: <strong>${item.gula} mg/dL</strong>`);
-    if (item.hb && item.hb !== '-') physicalLabStr.push(`HB: <strong>${item.hb} g/dL</strong>`);
-    const physicalLabHtml = physicalLabStr.length > 0 ? physicalLabStr.join('<br>') : '<span style="color:#94a3b8;">- Data Fisik/Lab Belum Diprofil -</span>';
-
-    // Match status badge
-    let matchBadgeHtml = '';
-    let actionBtnHtml = '';
-
-    if (item.isMatch && item.matchedSimpus) {
-      matchBadgeHtml = `
-        <span class="badge badge-emerald" style="font-size: 11px; font-weight: 700; padding: 4px 8px;">
-          <i class="bi bi-check-circle-fill"></i> NIK Terdaftar
-        </span>
-        <div style="font-size: 10px; color: #059669; margin-top: 3px; font-weight: 600;">Otomatis Terhubung SIMPUS</div>
-      `;
-
-      actionBtnHtml = `
-        <button class="btn btn-emerald btn-sm" onclick="lanjutkanPemeriksaanFromExtension('${item.id}', '${item.matchedSimpus.id}')" style="font-weight: 700; font-size: 11.5px; padding: 5px 10px; width: 100%; justify-content: center; border-radius: 8px;">
-          <i class="bi bi-stethoscope"></i> Lanjutkan Pemeriksaan CKG
-        </button>
-      `;
-    } else {
-      matchBadgeHtml = `
-        <span class="badge badge-amber" style="font-size: 11px; font-weight: 700; padding: 4px 8px;">
-          <i class="bi bi-person-plus-fill"></i> Pasien Baru
-        </span>
-        <div style="font-size: 10px; color: #d97706; margin-top: 3px; font-weight: 600;">Belum Ada di SIMPUS</div>
-      `;
-
-      actionBtnHtml = `
-        <button class="btn btn-secondary btn-sm" onclick="salinDataPasienExtension('${item.id}')" style="font-size: 11.5px; padding: 5px 10px; width: 100%; justify-content: center; border-radius: 8px;">
-          <i class="bi bi-clipboard-check"></i> Salin Data Pasien
-        </button>
-      `;
-    }
-
-    html += `
-      <tr>
-        <td style="text-align: center; font-weight: 700; color: #64748b;">${index + 1}</td>
-        <td>
-          <div style="font-weight: 700; font-size: 12.5px; color: #0f172a;">${petugasName}</div>
-          <div style="font-size: 11px; color: #64748b;"><i class="bi bi-clock-history"></i> ${timeStr}</div>
-        </td>
-        <td>
-          <div style="font-weight: 800; font-size: 13px; color: #0284c7;">${namaPasien}</div>
-          <div style="font-size: 11.5px; color: #334155;">NIK: <strong>${nik}</strong> | Usia: <strong>${usia}</strong></div>
-          <div style="font-size: 11px; color: #64748b;">📍 ${alamat}</div>
-        </td>
-        <td>
-          <span class="badge badge-cyan" style="font-size: 11px; font-weight: 700; padding: 4px 8px;">
-            <i class="bi bi-puzzle-fill"></i> ${activityName}
-          </span>
-        </td>
-        <td style="font-size: 11.5px; line-height: 1.4;">
-          ${physicalLabHtml}
-        </td>
-        <td style="text-align: center;">
-          ${matchBadgeHtml}
-        </td>
-        <td style="text-align: center;">
-          ${actionBtnHtml}
-        </td>
-      </tr>
-    `;
-  });
-
-  tbody.innerHTML = html;
-}
-
-function calculateAgeFromDOBString(dobStr) {
-  if (!dobStr) return 30;
-  try {
-    const birthDate = new Date(dobStr);
-    const ageDifMs = Date.now() - birthDate.getTime();
-    const ageDate = new Date(ageDifMs);
-    return Math.abs(ageDate.getUTCFullYear() - 1970);
-  } catch (_) {
-    return 30;
-  }
-}
-
-function melanjutkanPemeriksaanFromExtension(logId, simpusId) {
-  const logItem = tukangInputLogs.find(l => String(l.id) === String(logId));
-  const simpusItem = simpusRecords.find(s => String(s.id) === String(simpusId));
-
-  if (!simpusItem) {
-    showToast('Data SIMPUS pasien tidak ditemukan!', 'error');
-    return;
-  }
-
-  // Pre-fill screening data from extension physical measurements if present
-  if (logItem) {
-    if (logItem.bb) simpusItem.bb = logItem.bb;
-    if (logItem.tb) simpusItem.tb = logItem.tb;
-    if (logItem.sistol) simpusItem.sistol = logItem.sistol;
-    if (logItem.diastol) simpusItem.diastol = logItem.diastol;
-    if (logItem.gula) simpusItem.gula = logItem.gula;
-    if (logItem.kolesterol) simpusItem.kolesterol = logItem.kolesterol;
-  }
-
-  // Open SIMPUS view & detail modal
-  switchView('simpus');
-  setTimeout(() => {
-    if (typeof editSimpusRecord === 'function') {
-      editSimpusRecord(simpusItem.id);
-    } else if (typeof openSimpusDetailModal === 'function') {
-      openSimpusDetailModal(simpusItem.id);
-    }
-    showToast(`Data Pendaftaran Extension untuk ${simpusItem.nama} berhasil dimuat! Silakan lanjutkan pemeriksaan CKG.`, 'success');
-  }, 200);
-}
-
-function salinDataPasienExtension(logId) {
-  const logItem = tukangInputLogs.find(l => String(l.id) === String(logId));
-  if (!logItem) return;
-  const text = `NAMA: ${logItem.nama || '-'}\nNIK: ${logItem.nik || '-'}\nALAMAT: ${logItem.alamat || '-'}\nTANGGAL: ${logItem.timestamp || '-'}`;
-  navigator.clipboard.writeText(text);
-  showToast('Data Pasien Berhasil Disalin ke Clipboard!', 'success');
-}
-
-async function clearTukangInputLogs() {
-  const res = await Swal.fire({
-    title: 'Kosongkan Log Aktivitas Extension?',
-    text: 'Seluruh riwayat log aktivitas pendaftaran extension akan dihapus.',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Ya, Hapus Semua',
-    cancelButtonText: 'Batal',
-    confirmButtonColor: '#dc2626'
-  });
-
-  if (res.isConfirmed) {
-    tukangInputLogs = [];
-    saveTukangInputLogsToLocal();
-    try { await fetch('/api/extension-logs', { method: 'DELETE' }); } catch (_) {}
-    renderTukangInputView();
-    showToast('Log Aktivitas Extension Berhasil Dikosongkan!', 'success');
-  }
-}
-
-// Live PostMessage Listener from Extension or Content Script
-window.addEventListener('message', (event) => {
-  if (event.data && (event.data.type === 'CKG_EXTENSION_LOG' || event.data.action === 'log_extension_activity')) {
-    const payload = event.data.payload || event.data;
-    if (payload && (payload.nik || payload.nama || payload.nama_pasien)) {
-      tukangInputLogs.unshift({
-        id: `ext_${Date.now()}_${Math.random().toString(36).substring(2,7)}`,
-        timestamp: new Date().toLocaleString('id-ID'),
-        petugas: payload.petugas || sessionStorage.getItem('ckg_user_name') || 'Petugas Extension',
-        activity_type: payload.activity_type || 'Pendaftaran CKG',
-        nik: payload.nik || '',
-        nama: payload.nama || payload.nama_pasien || '',
-        dob: payload.dob || '',
-        usia: payload.usia || 0,
-        alamat: payload.alamat || '',
-        bb: payload.bb || 0,
-        tb: payload.tb || 0,
-        sistol: payload.sistol || 0,
-        diastol: payload.diastol || 0,
-        gula: payload.gula || '-',
-        kolesterol: payload.kolesterol || '-',
-        hb: payload.hb || '-',
-        status_match: 'PENDING'
-      });
-      saveTukangInputLogsToLocal();
-
-      // Send to Cloud D1 Database in background
-      fetch('/api/extension-logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch(_ => {});
-
-      // Refresh view if currently viewing tukang-input tab
-      const currentViewPanel = document.querySelector('.view-panel.active');
-      if (currentViewPanel && currentViewPanel.id === 'view-tukang-input') {
-        filterTukangInputTable();
-      }
-
-      showToast(`⚡ Aktivitas Extension Baru: Pendaftaran Pasien ${payload.nama || payload.nama_pasien || ''}`, 'info');
-    }
-  }
-});
-
-
 
