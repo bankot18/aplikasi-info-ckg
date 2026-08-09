@@ -22,7 +22,7 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const { results } = await env.DB.prepare('SELECT nama_user, password, role FROM users ORDER BY id ASC').all();
+    const { results } = await env.DB.prepare('SELECT nama_user, password, role FROM users ORDER BY rowid ASC').all();
     return new Response(JSON.stringify({ success: true, data: results || [] }), {
       headers: corsHeaders
     });
