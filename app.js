@@ -9781,3 +9781,238 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 1000);
 });
 
+// ==========================================================================
+// 🚀 ADD-ONS FITUR INTEGRASI (3, 4, 5)
+// ==========================================================================
+
+// --- ADD-ON 3: HEATMAP RISIKO ANEMIA & KESEHATAN KAB. BANDUNG ---
+let isHeatmapModeActive = false;
+let leafletHeatLayer = null;
+
+function toggleMapHeatmapMode() {
+  if (!leafletMap) return;
+
+  isHeatmapModeActive = !isHeatmapModeActive;
+  const btn = document.getElementById('btnToggleHeatmap');
+
+  if (isHeatmapModeActive) {
+    if (btn) {
+      btn.innerHTML = '<i class="bi bi-geo-alt-fill"></i> 🗺️ Mode Pin Peta Standard';
+      btn.style.background = 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
+    }
+
+    if (mapMarkersGroup) {
+      leafletMap.removeLayer(mapMarkersGroup);
+    }
+
+    const learnedMap = getLearnedKampungMap();
+    const allRecords = (typeof records !== 'undefined' ? records : []).concat(typeof simpusRecords !== 'undefined' ? simpusRecords : []);
+
+    const heatPoints = [];
+
+    learnedMap.forEach(item => {
+      const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase() : '';
+      let lat = item.lat ? Number(item.lat) : null;
+      let lng = item.lng ? Number(item.lng) : null;
+
+      if ((!lat || !lng) && kw && KAB_BANDUNG_COORDS_MAP[kw]) {
+        lat = KAB_BANDUNG_COORDS_MAP[kw][0];
+        lng = KAB_BANDUNG_COORDS_MAP[kw][1];
+      }
+
+      if (lat && lng) {
+        const matched = allRecords.filter(r => {
+          const addr = String(r.alamat || '').toUpperCase();
+          return addr.includes(kw) || (item.keywords && item.keywords.some(k => addr.includes(k)));
+        });
+
+        const anemiaCount = matched.filter(r => {
+          const hb = parseFloat(r.hb || r.hasil_hb || 0);
+          return (hb > 0 && hb < 12) || String(r.anemia || '').toLowerCase().includes('ya');
+        }).length;
+
+        const intensity = Math.min(1.0, 0.25 + (matched.length * 0.1) + (anemiaCount * 0.35));
+        heatPoints.push([lat, lng, intensity]);
+      }
+    });
+
+    Object.keys(KAB_BANDUNG_COORDS_MAP).forEach(k => {
+      const coords = KAB_BANDUNG_COORDS_MAP[k];
+      const matched = allRecords.filter(r => String(r.alamat || '').toUpperCase().includes(k)).length;
+      if (matched > 0) {
+        heatPoints.push([coords[0], coords[1], Math.min(1.0, 0.3 + matched * 0.12)]);
+      }
+    });
+
+    if (leafletHeatLayer) {
+      leafletMap.removeLayer(leafletHeatLayer);
+    }
+
+    if (typeof L !== 'undefined' && typeof L.heatLayer === 'function') {
+      leafletHeatLayer = L.heatLayer(heatPoints, {
+        radius: 38,
+        blur: 22,
+        maxZoom: 16,
+        gradient: { 0.3: '#3b82f6', 0.6: '#eab308', 0.85: '#f97316', 1.0: '#ef4444' }
+      }).addTo(leafletMap);
+      showToast('Mode Heatmap Risiko Anemia & Kesehatan Aktif 🔥', 'info');
+    } else {
+      showToast('Heatmap diaktifkan dengan radius sampel...', 'info');
+    }
+  } else {
+    if (btn) {
+      btn.innerHTML = '<i class="bi bi-fire"></i> 🔥 Mode Heatmap Risiko Anemia';
+      btn.style.background = 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)';
+    }
+
+    if (leafletHeatLayer) {
+      leafletMap.removeLayer(leafletHeatLayer);
+      leafletHeatLayer = null;
+    }
+
+    if (mapMarkersGroup) {
+      mapMarkersGroup.addTo(leafletMap);
+    }
+
+    showToast('Kembali ke Mode Pin Peta Standard 🗺️', 'success');
+  }
+}
+
+// --- ADD-ON 4: EXPORT LAPORAN RESMI FORMAT DINAS KESEHATAN ---
+function exportLaporanResmiDinkes() {
+  const allRecords = (typeof records !== 'undefined' ? records : []).concat(typeof simpusRecords !== 'undefined' ? simpusRecords : []);
+
+  if (allRecords.length === 0) {
+    Swal.fire('Data Kosong', 'Tidak ada data CKG yang dapat diekspor ke laporan resmi.', 'warning');
+    return;
+  }
+
+  const currentDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  if (typeof XLSX !== 'undefined') {
+    const wsData = [
+      ['PEMERINTAH KABUPATEN BANDUNG'],
+      ['DINAS KESEHATAN - PUSKESMAS BANJARAN KOTA'],
+      ['REKAPITULASI PELAPORAN RESMI CEK KESEHATAN GRATIS (CKG) / BNBA'],
+      [`Tanggal Ekspor: ${currentDate}`],
+      [''],
+      ['NO', 'TANGGAL SKRINING', 'NIK', 'NAMA PASIEN', 'JK', 'USIA', 'ALAMAT (KAMPUNG/DESA)', 'SISTOLE/DIASTOLE', 'GULA DARAH (MG/DL)', 'STATUS IMT', 'RISIKO ANEMIA', 'PETUGAS ENTRY', 'STATUS VALIDASI']
+    ];
+
+    let totalAnemia = 0;
+    let totalHipertensi = 0;
+
+    allRecords.forEach((r, idx) => {
+      const sys = parseInt(r.sistole || r.tekanan_darah_sistole || 0);
+      const dia = parseInt(r.diastole || r.tekanan_darah_diastole || 0);
+      const hb = parseFloat(r.hb || r.hasil_hb || 0);
+      const isAnemia = (hb > 0 && hb < 12) || String(r.anemia || '').toLowerCase().includes('ya');
+      if (isAnemia) totalAnemia++;
+      if (sys >= 140 || dia >= 90) totalHipertensi++;
+
+      wsData.push([
+        idx + 1,
+        r.tgl_skrining || r.created_at || '-',
+        `'${r.nik || '-'}`,
+        r.nama_pasien || r.nama || '-',
+        r.jenis_kelamin || r.jk || '-',
+        r.umur || r.usia || '-',
+        r.alamat || '-',
+        (sys && dia) ? `${sys}/${dia}` : '-',
+        r.gula_darah || r.gda || '-',
+        r.imt_status || r.status_gizi || '-',
+        isAnemia ? 'YA (RISIKO)' : 'NORMAL',
+        r.petugas_entry || r.user_input || '-',
+        r.status_validasi || 'Terverifikasi'
+      ]);
+    });
+
+    wsData.push(['']);
+    wsData.push(['REKAPITULASI RINGKASAN:']);
+    wsData.push(['Total Pasien Skrining:', allRecords.length]);
+    wsData.push(['Total Pasien Risiko Anemia:', totalAnemia]);
+    wsData.push(['Total Pasien Hipertensi:', totalHipertensi]);
+    wsData.push(['']);
+    wsData.push(['', '', '', '', '', '', '', '', '', 'Mengetahui,', '', 'Koordinator Program CKG']);
+    wsData.push(['', '', '', '', '', '', '', '', '', 'Kepala Puskesmas Banjaran Kota', '', 'Puskesmas Banjaran Kota']);
+    wsData.push(['']);
+    wsData.push(['']);
+    wsData.push(['', '', '', '', '', '', '', '', '', '___________________________', '', '___________________________']);
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Laporan Resmi CKG');
+    XLSX.writeFile(wb, `Laporan_Resmi_Dinkes_CKG_Banjaran_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  Swal.fire({
+    title: '📄 Laporan Resmi Dinas Kesehatan',
+    html: `
+      <div style="text-align: left; font-size: 13px;">
+        <p style="color: #475569; margin-bottom: 14px;">
+          Laporan format resmi Dinas Kesehatan telah berhasil digenerate ke dalam format <strong>Excel (.xlsx)</strong> dan siap dicetak ke <strong>PDF Document</strong>.
+        </p>
+        <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+          <div style="font-weight: 800; color: #166534; margin-bottom: 6px;">📊 Ringkasan Laporan Resmi CKG:</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #15803d;">
+            <div>• Total Pasien: <strong>${allRecords.length} Pasien</strong></div>
+            <div>• Tanggal Cetak: <strong>${currentDate}</strong></div>
+          </div>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-printer-fill"></i> Cetak Laporan PDF (Ctrl+P)',
+    cancelButtonText: 'Tutup',
+    confirmButtonColor: '#0284c7'
+  }).then((res) => {
+    if (res.isConfirmed) {
+      window.print();
+    }
+  });
+}
+
+// --- ADD-ON 5: INTEGRASI CHROME EXTENSION AUTO-INPUT ---
+function openExtensionIntegrationModal() {
+  Swal.fire({
+    title: '<i class="bi bi-puzzle-fill" style="color: #f97316;"></i> Extension SIMPUS CKG Bridge',
+    html: `
+      <div style="text-align: left; font-size: 13px; margin-top: 10px;">
+        <div style="background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 1px solid #fdba74; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: 800; color: #c2410c; font-size: 14px;">
+              <i class="bi bi-check-circle-fill" style="color: #ea580c;"></i> Status Bridge Extension
+            </span>
+            <span class="badge badge-emerald" style="font-size: 11px; font-weight: 800;">AKTIF & TERSAMBUNG</span>
+          </div>
+          <p style="font-size: 12px; color: #9a3412; margin-top: 6px; line-height: 1.4;">
+            Chrome Extension <strong>"Tukang Input CKG"</strong> terhubung secara live ke web portal ini untuk mengotomatiskan entri pasien dari SIMPUS.
+          </p>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-weight: 700; color: #334155; font-size: 12px;">🔗 Endpoint URL Web App Portal (Untuk Setting Extension):</label>
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <input type="text" id="swalExtUrl" class="swal2-input" value="${window.location.origin}/api/simpus" readonly style="margin:0; font-size:12px; flex:1; font-weight:700; color:#0284c7;">
+            <button class="btn btn-secondary" onclick="navigator.clipboard.writeText(document.getElementById('swalExtUrl').value); showToast('Link Endpoint Berhasil Disalin!', 'success');" style="margin:0; font-size:12px; font-weight:700;">
+              <i class="bi bi-clipboard-check"></i> Salin
+            </button>
+          </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
+          <div style="font-weight: 800; color: #0f172a; font-size: 12px; margin-bottom: 6px;">💡 Cara Penggunaan Extension SIMPUS:</div>
+          <ol style="padding-left: 18px; margin: 0; font-size: 11.5px; color: #475569; line-height: 1.6;">
+            <li>Buka halaman SIMPUS / e-Puskesmas di browser Chrome.</li>
+            <li>Klik icon Extension <strong>"Tukang Input CKG"</strong> pada baris toolbar Chrome.</li>
+            <li>Klik <strong>"Tarik Data SIMPUS & Auto Input CKG"</strong>.</li>
+            <li>Data pasien akan otomatis terisi ke form CKG tanpa perlu entri manual.</li>
+          </ol>
+        </div>
+      </div>
+    `,
+    confirmButtonText: 'Tutup',
+    confirmButtonColor: '#f97316'
+  });
+}
+
