@@ -1170,6 +1170,16 @@ function updateRoleUI() {
     roleBadgeEl.className = 'badge-role-pill role-' + role;
   }
 
+  // 🔒 RESTRICT EXTENSION SIMPUS PILL TO ADMIN ONLY
+  const extSyncPill = document.getElementById('extensionSyncPill');
+  if (extSyncPill) {
+    if (role === 'admin') {
+      extSyncPill.style.setProperty('display', 'inline-flex', 'important');
+    } else {
+      extSyncPill.style.setProperty('display', 'none', 'important');
+    }
+  }
+
   applyPetugasFilterLock();
   initAddressAutoDetector();
 }
@@ -9972,8 +9982,13 @@ function exportLaporanResmiDinkes() {
   });
 }
 
-// --- ADD-ON 5: INTEGRASI CHROME EXTENSION AUTO-INPUT ---
 function openExtensionIntegrationModal() {
+  const activeRole = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (activeRole !== 'admin') {
+    Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat membuka & mengonfigurasi Integrasi Extension SIMPUS.', 'error');
+    return;
+  }
+
   Swal.fire({
     title: '<i class="bi bi-puzzle-fill" style="color: #f97316;"></i> Extension SIMPUS CKG Bridge',
     html: `

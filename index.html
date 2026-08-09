@@ -119,11 +119,14 @@
           <form id="loginForm" class="login-form">
             
             <div class="form-group">
-              <label class="form-label" for="loginPegawaiSelect">Pilih Nama Pegawai <span class="required">*</span></label>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                <label class="form-label" for="loginPegawaiSelect" style="margin: 0;">Pilih Nama Pegawai <span class="required">*</span></label>
+                <span class="badge badge-blue" style="font-size: 10px; font-weight: 800; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 2px 8px; border-radius: 12px;"><i class="bi bi-database-check"></i> Database BNBA User</span>
+              </div>
               <div class="input-with-icon">
                 <i class="bi bi-person-badge-fill"></i>
                 <select id="loginPegawaiSelect" class="form-control" style="height: 48px; font-weight: 700; font-size: 13.5px;" required>
-                  <option value="">-- Pilih Nama Pegawai --</option>
+                  <option value="">-- Pilih Nama Pegawai Terdaftar BNBA --</option>
                 </select>
               </div>
             </div>
@@ -179,7 +182,7 @@
         <div id="cloudPingPill" class="stat-pill" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" title="Koneksi Latensi Real-Time ke Server Cloudflare D1">
           <i id="cloudPingIcon" class="bi bi-wifi" style="color: #10b981;"></i>
           <span>Ping: <strong id="cloudPingMs">-- ms</strong></span>
-        <div id="extensionSyncPill" class="stat-pill" style="background: #fff7ed; border: 1px solid #fdba74; color: #c2410c; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" onclick="openExtensionIntegrationModal()" title="Klik untuk membuka Status & Integrasi Chrome Extension SIMPUS CKG">
+        <div id="extensionSyncPill" class="stat-pill" style="background: #fff7ed; border: 1px solid #fdba74; color: #c2410c; font-weight: 700; cursor: pointer; display: none; align-items: center; gap: 6px;" onclick="openExtensionIntegrationModal()" title="Klik untuk membuka Status & Integrasi Chrome Extension SIMPUS CKG">
           <i class="bi bi-puzzle-fill" style="color: #f97316;"></i>
           <span>Extension SIMPUS: <strong id="extSyncStatusText" style="color: #ea580c;">Tersambung</strong></span>
         </div>
@@ -229,8 +232,8 @@
       <button class="nav-tab-btn" data-view="data-records">
         <i class="bi bi-folder-symlink-fill"></i> Data Records CKG
       </button>
-      <button class="nav-tab-btn" data-view="simpus">
-        <i class="bi bi-hdd-network"></i> Data Entry CKG Dari SIMPUS
+      <button class="nav-tab-btn" data-view="simpus" style="font-weight: 700; color: #7c3aed;">
+        <i class="bi bi-cpu-fill" style="color: #7c3aed;"></i> ⚡ Integrasi & Data SIMPUS
       </button>
       <button class="nav-tab-btn" data-view="sekolah">
         <i class="bi bi-mortarboard-fill"></i> CKG Sekolah
@@ -711,11 +714,39 @@
       <section id="view-simpus" class="view-panel">
         <div class="card-panel">
           
+          <!-- Dedicated SIMPUS Hub Banner & Live Bridge Banner -->
+          <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 1px solid #d8b4fe; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 14px rgba(147, 51, 234, 0.08);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
+                  <i class="bi bi-cpu-fill"></i>
+                </div>
+                <div>
+                  <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #581c87;">
+                    Modul Khusus Integrasi SIMPUS & e-Puskesmas
+                  </h3>
+                  <p style="margin: 3px 0 0 0; font-size: 12.5px; color: #7e22ce;">
+                    Pusat otomatisasi data entry CKG yang terhubung dengan Chrome Extension <strong>"Tukang Input CKG"</strong> & Database Cloud D1.
+                  </p>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge" style="background: #f3e8ff; border: 1px solid #c084fc; color: #6b21a8; font-weight: 800; padding: 6px 12px; font-size: 11.5px; border-radius: 20px;">
+                  <i class="bi bi-broadcast" style="color: #9333ea;"></i> Live Sync SIMPUS
+                </span>
+                <button class="btn btn-sm admin-only" onclick="openExtensionIntegrationModal()" style="background: #7c3aed; color: white; border: none; font-weight: 700; border-radius: 8px; padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                  <i class="bi bi-puzzle-fill"></i> Setting Extension Tukang Input
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Header Title & Action Buttons -->
           <div class="card-header-bar" style="margin-bottom: 16px;">
             <div>
               <div class="card-header-title" style="font-size: 18px;">
-                <i class="bi bi-database-fill-down" style="color: var(--primary);"></i> Data Entry CKG Dari SIMPUS
+                <i class="bi bi-database-fill-down" style="color: #7c3aed;"></i> Data Entry CKG Dari SIMPUS
               </div>
             </div>
 
