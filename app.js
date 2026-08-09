@@ -1088,21 +1088,21 @@ function switchView(viewId) {
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
 
   if (role === 'petugas') {
-    if (viewId === 'laporan' || viewId === 'recycle-data' || viewId === 'admin-panel') {
+    if (viewId === 'laporan' || viewId === 'recycle-data' || viewId === 'admin-panel' || viewId === 'tukang-input') {
       Swal.fire({
         icon: 'warning',
         title: 'Akses Ditolak',
-        text: 'Menu ini hanya dapat diakses oleh Role Admin dan Koordinator.',
+        text: 'Menu ini hanya dapat diakses oleh Admin.',
         confirmButtonColor: '#2563eb'
       });
       return;
     }
   } else if (role === 'koordinator') {
-    if (viewId === 'admin-panel') {
+    if (viewId === 'admin-panel' || viewId === 'tukang-input') {
       Swal.fire({
         icon: 'warning',
         title: 'Akses Ditolak',
-        text: 'Admin Panel hanya dapat diakses oleh Admin.',
+        text: 'Menu Tukang Input CKG hanya dapat diakses oleh Admin.',
         confirmButtonColor: '#2563eb'
       });
       return;
@@ -1143,6 +1143,8 @@ function switchView(viewId) {
     setTimeout(() => initDashboardCharts(officersData), 50);
   } else if (viewId === 'simpus') {
     renderSimpusView();
+  } else if (viewId === 'tukang-input') {
+    renderTukangInputView();
   } else if (viewId === 'laporan') {
     renderLaporanView();
   } else if (viewId === 'sekolah') {
@@ -10026,8 +10028,320 @@ function openExtensionIntegrationModal() {
         </div>
       </div>
     `,
-    confirmButtonText: 'Tutup',
-    confirmButtonColor: '#f97316'
-  });
 }
+
+// ----------------------------------------------------
+// TUKANG INPUT CKG EXTENSION LOGGING & HUB LOGIC
+// ----------------------------------------------------
+let tukangInputLogs = [];
+
+async function fetchTukangInputLogsFromCloud() {
+  try {
+    const res = await fetch('/api/extension-logs');
+    if (res.ok) {
+      const result = await res.json();
+      if (result && result.success && Array.isArray(result.data)) {
+        tukangInputLogs = result.data;
+        saveTukangInputLogsToLocal();
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to fetch extension logs from cloud:", e);
+  }
+
+  // Local Storage Fallback
+  const saved = localStorage.getItem('ckg_extension_logs');
+  if (saved) {
+    try { tukangInputLogs = JSON.parse(saved); } catch (_) { tukangInputLogs = []; }
+  }
+}
+
+function saveTukangInputLogsToLocal() {
+  try {
+    localStorage.setItem('ckg_extension_logs', JSON.stringify(tukangInputLogs));
+  } catch (_) {}
+}
+
+async function renderTukangInputView() {
+  await fetchTukangInputLogsFromCloud();
+  filterTukangInputTable();
+}
+
+function filterTukangInputTable() {
+  const searchVal = (document.getElementById('tukangInputSearchInput')?.value || '').toLowerCase().trim();
+  const filterMatch = document.getElementById('tukangInputMatchFilter')?.value || 'ALL';
+  const tbody = document.getElementById('tukangInputTableBody');
+  if (!tbody) return;
+
+  let totalCount = tukangInputLogs.length;
+  let matchedCount = 0;
+  let newCount = 0;
+
+  // Cross-reference logs with SIMPUS records
+  const processedLogs = tukangInputLogs.map((log, idx) => {
+    const cleanNik = String(log.nik || log.nisn_nik || '').replace(/\D/g, '');
+    const cleanNama = String(log.nama || log.nama_pasien || '').toLowerCase().trim();
+
+    // Check match in simpusRecords
+    let matchedSimpus = null;
+    if (cleanNik.length >= 8) {
+      matchedSimpus = simpusRecords.find(s => String(s.nik || '').replace(/\D/g, '') === cleanNik);
+    }
+    if (!matchedSimpus && cleanNama) {
+      matchedSimpus = simpusRecords.find(s => String(s.nama || '').toLowerCase().trim() === cleanNama);
+    }
+
+    const isMatch = Boolean(matchedSimpus);
+    if (isMatch) matchedCount++;
+    else newCount++;
+
+    return {
+      ...log,
+      origIdx: idx,
+      cleanNik,
+      cleanNama,
+      isMatch,
+      matchedSimpus
+    };
+  });
+
+  // Apply filters
+  let filtered = processedLogs.filter(item => {
+    if (filterMatch === 'MATCHED' && !item.isMatch) return false;
+    if (filterMatch === 'NEW' && item.isMatch) return false;
+
+    if (searchVal) {
+      const matchSearch =
+        item.cleanNik.includes(searchVal) ||
+        item.cleanNama.includes(searchVal) ||
+        String(item.petugas || '').toLowerCase().includes(searchVal) ||
+        String(item.activity_type || '').toLowerCase().includes(searchVal);
+      if (!matchSearch) return false;
+    }
+    return true;
+  });
+
+  // Update Summary Metrics
+  const statTotal = document.getElementById('statTukangInputTotal');
+  const statMatched = document.getElementById('statTukangInputMatched');
+  const statNew = document.getElementById('statTukangInputNew');
+  const countDisp = document.getElementById('tukangInputDisplayedCount');
+
+  if (statTotal) statTotal.textContent = totalCount;
+  if (statMatched) statMatched.textContent = matchedCount;
+  if (statNew) statNew.textContent = newCount;
+  if (countDisp) countDisp.textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 30px; color: #64748b;">
+          <i class="bi bi-robot" style="font-size: 32px; color: #94a3b8; display: block; margin-bottom: 8px;"></i>
+          <strong>Belum Ada Aktivitas Extension Tukang Input CKG</strong>
+          <p style="font-size: 12px; margin-top: 4px; color: #94a3b8;">Gunakan Extension "Tukang Input CKG" di browser untuk mengotomatiskan pendaftaran atau pemeriksaan pasien.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  let html = '';
+  filtered.forEach((item, index) => {
+    const timeStr = item.timestamp || item.created_at || 'Baru Saja';
+    const petugasName = item.petugas || 'Petugas Extension';
+    const activityName = item.activity_type || 'Pendaftaran CKG';
+
+    const namaPasien = item.nama || item.nama_pasien || '-';
+    const nik = item.nik || '-';
+    const usia = item.usia ? `${item.usia} Thn` : (item.dob ? `${calculateAgeFromDOBString(item.dob)} Thn` : '-');
+    const alamat = item.alamat || 'Banjaran';
+
+    // Physical & Lab summary string
+    let physicalLabStr = [];
+    if (item.sistol && item.diastol) physicalLabStr.push(`TD: <strong>${item.sistol}/${item.diastol} mmHg</strong>`);
+    if (item.bb && item.tb) physicalLabStr.push(`BB/TB: <strong>${item.bb}kg / ${item.tb}cm</strong>`);
+    if (item.gula && item.gula !== '-') physicalLabStr.push(`Gula: <strong>${item.gula} mg/dL</strong>`);
+    if (item.hb && item.hb !== '-') physicalLabStr.push(`HB: <strong>${item.hb} g/dL</strong>`);
+    const physicalLabHtml = physicalLabStr.length > 0 ? physicalLabStr.join('<br>') : '<span style="color:#94a3b8;">- Data Fisik/Lab Belum Diprofil -</span>';
+
+    // Match status badge
+    let matchBadgeHtml = '';
+    let actionBtnHtml = '';
+
+    if (item.isMatch && item.matchedSimpus) {
+      matchBadgeHtml = `
+        <span class="badge badge-emerald" style="font-size: 11px; font-weight: 700; padding: 4px 8px;">
+          <i class="bi bi-check-circle-fill"></i> NIK Terdaftar
+        </span>
+        <div style="font-size: 10px; color: #059669; margin-top: 3px; font-weight: 600;">Otomatis Terhubung SIMPUS</div>
+      `;
+
+      actionBtnHtml = `
+        <button class="btn btn-emerald btn-sm" onclick="lanjutkanPemeriksaanFromExtension('${item.id}', '${item.matchedSimpus.id}')" style="font-weight: 700; font-size: 11.5px; padding: 5px 10px; width: 100%; justify-content: center; border-radius: 8px;">
+          <i class="bi bi-stethoscope"></i> Lanjutkan Pemeriksaan CKG
+        </button>
+      `;
+    } else {
+      matchBadgeHtml = `
+        <span class="badge badge-amber" style="font-size: 11px; font-weight: 700; padding: 4px 8px;">
+          <i class="bi bi-person-plus-fill"></i> Pasien Baru
+        </span>
+        <div style="font-size: 10px; color: #d97706; margin-top: 3px; font-weight: 600;">Belum Ada di SIMPUS</div>
+      `;
+
+      actionBtnHtml = `
+        <button class="btn btn-secondary btn-sm" onclick="salinDataPasienExtension('${item.id}')" style="font-size: 11.5px; padding: 5px 10px; width: 100%; justify-content: center; border-radius: 8px;">
+          <i class="bi bi-clipboard-check"></i> Salin Data Pasien
+        </button>
+      `;
+    }
+
+    html += `
+      <tr>
+        <td style="text-align: center; font-weight: 700; color: #64748b;">${index + 1}</td>
+        <td>
+          <div style="font-weight: 700; font-size: 12.5px; color: #0f172a;">${petugasName}</div>
+          <div style="font-size: 11px; color: #64748b;"><i class="bi bi-clock-history"></i> ${timeStr}</div>
+        </td>
+        <td>
+          <div style="font-weight: 800; font-size: 13px; color: #0284c7;">${namaPasien}</div>
+          <div style="font-size: 11.5px; color: #334155;">NIK: <strong>${nik}</strong> | Usia: <strong>${usia}</strong></div>
+          <div style="font-size: 11px; color: #64748b;">📍 ${alamat}</div>
+        </td>
+        <td>
+          <span class="badge badge-cyan" style="font-size: 11px; font-weight: 700; padding: 4px 8px;">
+            <i class="bi bi-puzzle-fill"></i> ${activityName}
+          </span>
+        </td>
+        <td style="font-size: 11.5px; line-height: 1.4;">
+          ${physicalLabHtml}
+        </td>
+        <td style="text-align: center;">
+          ${matchBadgeHtml}
+        </td>
+        <td style="text-align: center;">
+          ${actionBtnHtml}
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+}
+
+function calculateAgeFromDOBString(dobStr) {
+  if (!dobStr) return 30;
+  try {
+    const birthDate = new Date(dobStr);
+    const ageDifMs = Date.now() - birthDate.getTime();
+    const ageDate = new Date(ageDifMs);
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  } catch (_) {
+    return 30;
+  }
+}
+
+function melanjutkanPemeriksaanFromExtension(logId, simpusId) {
+  const logItem = tukangInputLogs.find(l => String(l.id) === String(logId));
+  const simpusItem = simpusRecords.find(s => String(s.id) === String(simpusId));
+
+  if (!simpusItem) {
+    showToast('Data SIMPUS pasien tidak ditemukan!', 'error');
+    return;
+  }
+
+  // Pre-fill screening data from extension physical measurements if present
+  if (logItem) {
+    if (logItem.bb) simpusItem.bb = logItem.bb;
+    if (logItem.tb) simpusItem.tb = logItem.tb;
+    if (logItem.sistol) simpusItem.sistol = logItem.sistol;
+    if (logItem.diastol) simpusItem.diastol = logItem.diastol;
+    if (logItem.gula) simpusItem.gula = logItem.gula;
+    if (logItem.kolesterol) simpusItem.kolesterol = logItem.kolesterol;
+  }
+
+  // Open SIMPUS view & detail modal
+  switchView('simpus');
+  setTimeout(() => {
+    if (typeof editSimpusRecord === 'function') {
+      editSimpusRecord(simpusItem.id);
+    } else if (typeof openSimpusDetailModal === 'function') {
+      openSimpusDetailModal(simpusItem.id);
+    }
+    showToast(`Data Pendaftaran Extension untuk ${simpusItem.nama} berhasil dimuat! Silakan lanjutkan pemeriksaan CKG.`, 'success');
+  }, 200);
+}
+
+function salinDataPasienExtension(logId) {
+  const logItem = tukangInputLogs.find(l => String(l.id) === String(logId));
+  if (!logItem) return;
+  const text = `NAMA: ${logItem.nama || '-'}\nNIK: ${logItem.nik || '-'}\nALAMAT: ${logItem.alamat || '-'}\nTANGGAL: ${logItem.timestamp || '-'}`;
+  navigator.clipboard.writeText(text);
+  showToast('Data Pasien Berhasil Disalin ke Clipboard!', 'success');
+}
+
+async function clearTukangInputLogs() {
+  const res = await Swal.fire({
+    title: 'Kosongkan Log Aktivitas Extension?',
+    text: 'Seluruh riwayat log aktivitas pendaftaran extension akan dihapus.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus Semua',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#dc2626'
+  });
+
+  if (res.isConfirmed) {
+    tukangInputLogs = [];
+    saveTukangInputLogsToLocal();
+    try { await fetch('/api/extension-logs', { method: 'DELETE' }); } catch (_) {}
+    renderTukangInputView();
+    showToast('Log Aktivitas Extension Berhasil Dikosongkan!', 'success');
+  }
+}
+
+// Live PostMessage Listener from Extension or Content Script
+window.addEventListener('message', (event) => {
+  if (event.data && (event.data.type === 'CKG_EXTENSION_LOG' || event.data.action === 'log_extension_activity')) {
+    const payload = event.data.payload || event.data;
+    if (payload && (payload.nik || payload.nama || payload.nama_pasien)) {
+      tukangInputLogs.unshift({
+        id: `ext_${Date.now()}_${Math.random().toString(36).substring(2,7)}`,
+        timestamp: new Date().toLocaleString('id-ID'),
+        petugas: payload.petugas || sessionStorage.getItem('ckg_user_name') || 'Petugas Extension',
+        activity_type: payload.activity_type || 'Pendaftaran CKG',
+        nik: payload.nik || '',
+        nama: payload.nama || payload.nama_pasien || '',
+        dob: payload.dob || '',
+        usia: payload.usia || 0,
+        alamat: payload.alamat || '',
+        bb: payload.bb || 0,
+        tb: payload.tb || 0,
+        sistol: payload.sistol || 0,
+        diastol: payload.diastol || 0,
+        gula: payload.gula || '-',
+        kolesterol: payload.kolesterol || '-',
+        hb: payload.hb || '-',
+        status_match: 'PENDING'
+      });
+      saveTukangInputLogsToLocal();
+
+      // Send to Cloud D1 Database in background
+      fetch('/api/extension-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(_ => {});
+
+      // Refresh view if currently viewing tukang-input tab
+      const currentViewPanel = document.querySelector('.view-panel.active');
+      if (currentViewPanel && currentViewPanel.id === 'view-tukang-input') {
+        filterTukangInputTable();
+      }
+
+      showToast(`⚡ Aktivitas Extension Baru: Pendaftaran Pasien ${payload.nama || payload.nama_pasien || ''}`, 'info');
+    }
+  }
+});
 
