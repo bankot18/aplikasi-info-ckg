@@ -99,6 +99,12 @@
 
       <!-- RIGHT COLUMN: Auth Form Fields Panel -->
       <div class="split-form-panel">
+        <div style="position: absolute; top: 20px; right: 24px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDarkMode()" style="border-radius: 20px; padding: 6px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+            <i id="loginThemeIcon" class="bi bi-moon-stars-fill" style="color: #f59e0b;"></i>
+            <span id="loginThemeText">Mode Gelap</span>
+          </button>
+        </div>
         <div class="form-panel-content">
           
           <div class="auth-form-logo" style="text-align: center; margin-bottom: 18px;">
@@ -180,6 +186,11 @@
           <span>Ping: <strong id="cloudPingMs">-- ms</strong></span>
         </div>
 
+        <div id="darkModeHeaderPill" class="stat-pill" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" onclick="toggleDarkMode()" title="Ganti Mode Gelap / Terang">
+          <i id="themeToggleHeaderIcon" class="bi bi-moon-stars-fill" style="color: #f59e0b;"></i>
+          <span id="themeToggleHeaderText">Mode Gelap</span>
+        </div>
+
         <!-- TOP-RIGHT USER PROFILE DROPDOWN MENU (Click Icon User -> Popover Menu) -->
         <div id="userProfileDropdownContainer" class="user-profile-dropdown-container">
           <button id="btnUserProfileMenu" class="btn-profile-trigger" onclick="toggleUserProfileDropdown(event)" title="Menu Profil & Akun User">
@@ -197,6 +208,10 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 8px;">
+              <button class="btn btn-secondary btn-sm" onclick="toggleDarkMode(); closeUserProfileDropdown();" style="width: 100%; justify-content: flex-start; padding: 8px 12px; font-size: 12.5px;">
+                <i id="userMenuThemeIcon" class="bi bi-moon-stars-fill" style="color: #f59e0b;"></i>
+                <span id="userMenuThemeText">Mode Gelap</span>
+              </button>
               <button class="btn btn-amber btn-sm admin-koordinator-only" onclick="openEditAnnouncementModal(); closeUserProfileDropdown();" style="width: 100%; justify-content: flex-start; padding: 8px 12px; font-size: 12.5px;">
                 <i class="bi bi-megaphone-fill"></i> Pengumuman
               </button>
@@ -1623,7 +1638,7 @@
 
               <div class="form-group full-width">
                 <label class="form-label" for="alamat">Alamat Lengkap <span class="required">*</span></label>
-                <textarea id="alamat" class="form-control" rows="2" placeholder="Jalan, RT/RW" required></textarea>
+                <textarea id="alamat" class="form-control" rows="4" placeholder="Jalan, RT/RW" required style="resize: none;"></textarea>
               </div>
 
               <div class="form-group">

@@ -2571,3 +2571,442 @@ body.swal2-toast-shown .swal2-container {
   color: #ffffff;
   transform: scale(1.08);
 }
+
+/* ==========================================================================
+   🌙 DARK MODE THEME SYSTEM (FULL APPLICATION & NOTIFICATIONS DARK MODE)
+   ========================================================================== */
+
+body.dark-mode {
+  --bg-page: #0f172a;
+  --bg-card: #1e293b;
+  --bg-subtle: #0f172a;
+  --border-color: #334155;
+  --border-focus: #38bdf8;
+
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-light: rgba(59, 130, 246, 0.2);
+
+  --cyan: #38bdf8;
+  --cyan-light: rgba(56, 189, 248, 0.2);
+
+  --emerald: #10b981;
+  --emerald-hover: #34d399;
+  --emerald-light: rgba(16, 185, 129, 0.2);
+
+  --amber: #f59e0b;
+  --amber-light: rgba(245, 158, 11, 0.2);
+
+  --rose: #f43f5e;
+  --rose-light: rgba(244, 63, 94, 0.2);
+
+  --purple: #a855f7;
+  --purple-light: rgba(168, 85, 247, 0.2);
+
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+/* Custom Scrollbar in Dark Mode */
+body.dark-mode ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+body.dark-mode ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+/* Split-screen Login Panel in Dark Mode */
+body.dark-mode .split-auth-card {
+  background: #0f172a !important;
+}
+body.dark-mode .split-form-panel {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .auth-header-text h2 {
+  color: #f8fafc !important;
+}
+body.dark-mode .auth-header-text p {
+  color: #94a3b8 !important;
+}
+body.dark-mode .auth-form-logo > div {
+  background: #1e293b !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* App Header & Navigation Bar in Dark Mode */
+body.dark-mode .app-header {
+  background: #1e293b !important;
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode .brand-title h1 {
+  color: #60a5fa !important;
+}
+body.dark-mode .brand-title p {
+  color: #94a3b8 !important;
+}
+body.dark-mode .stat-pill {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+body.dark-mode .stat-pill strong {
+  color: #60a5fa !important;
+}
+body.dark-mode #cloudSyncPill {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #34d399 !important;
+}
+body.dark-mode #cloudPingPill {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+body.dark-mode #darkModeHeaderPill {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f59e0b !important;
+}
+
+body.dark-mode .nav-tabs-bar {
+  background: #1e293b !important;
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode .nav-tab-btn {
+  color: #94a3b8 !important;
+}
+body.dark-mode .nav-tab-btn:hover {
+  background: #0f172a !important;
+  color: #38bdf8 !important;
+}
+body.dark-mode .nav-tab-btn.active {
+  background: rgba(59, 130, 246, 0.2) !important;
+  color: #60a5fa !important;
+  border-color: #334155 !important;
+  border-bottom-color: #3b82f6 !important;
+}
+
+/* Cards & Containers in Dark Mode */
+body.dark-mode .card-panel {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .card-header-title {
+  color: #f8fafc !important;
+}
+body.dark-mode .filter-bar-box {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+body.dark-mode .filter-item {
+  color: #94a3b8 !important;
+}
+
+/* Form Controls, Inputs, Selects & Textareas in Dark Mode */
+body.dark-mode .form-control,
+body.dark-mode .filter-control,
+body.dark-mode input[type="text"],
+body.dark-mode input[type="number"],
+body.dark-mode input[type="date"],
+body.dark-mode input[type="password"],
+body.dark-mode input[type="tel"],
+body.dark-mode select,
+body.dark-mode textarea {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .form-control::placeholder,
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+  color: #64748b !important;
+}
+body.dark-mode .form-control:focus,
+body.dark-mode input:focus,
+body.dark-mode select:focus,
+body.dark-mode textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+body.dark-mode select option {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .form-label {
+  color: #e2e8f0 !important;
+}
+
+/* Autocomplete Dropdown in Dark Mode */
+body.dark-mode .address-autocomplete-dropdown {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+body.dark-mode .address-autocomplete-item {
+  border-bottom-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .address-autocomplete-item:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+}
+body.dark-mode .address-autocomplete-item .icon-box {
+  background: rgba(56, 189, 248, 0.2) !important;
+  color: #38bdf8 !important;
+}
+
+/* Buttons in Dark Mode */
+body.dark-mode .btn-secondary {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .btn-secondary:hover {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+}
+body.dark-mode .btn-quick-login {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+body.dark-mode .btn-quick-login:hover {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border-color: #3b82f6 !important;
+  color: #60a5fa !important;
+}
+body.dark-mode .btn-profile-trigger {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .btn-profile-trigger i {
+  color: #cbd5e1 !important;
+}
+body.dark-mode .btn-profile-trigger:hover {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border-color: #3b82f6 !important;
+}
+
+/* Popover & User Menu Dropdowns in Dark Mode */
+body.dark-mode .user-profile-popover {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
+}
+body.dark-mode .user-name-text {
+  color: #f8fafc !important;
+}
+body.dark-mode .user-badge {
+  border-bottom-color: #334155 !important;
+}
+
+/* Tables in Dark Mode */
+body.dark-mode table {
+  color: #f8fafc !important;
+}
+body.dark-mode th {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important;
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode td {
+  border-bottom-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+body.dark-mode tr:hover td {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}
+body.dark-mode .simpus-table-wrapper {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* Stepper Wizard in Dark Mode */
+body.dark-mode .wizard-stepper-bar {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+body.dark-mode .stepper-circle {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+body.dark-mode .stepper-item.active .stepper-circle {
+  background: #2563eb !important;
+  color: #ffffff !important;
+}
+body.dark-mode .stepper-line {
+  background: #334155 !important;
+}
+
+/* Dropzone in Dark Mode */
+body.dark-mode .import-dropzone {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+body.dark-mode .import-dropzone:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-color: #3b82f6 !important;
+}
+body.dark-mode .import-dropzone-text {
+  color: #f8fafc !important;
+}
+
+/* Leaflet Map in Dark Mode */
+body.dark-mode .leaflet-container {
+  background: #0f172a !important;
+}
+body.dark-mode .leaflet-popup-content-wrapper,
+body.dark-mode .leaflet-popup-tip {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+body.dark-mode .leaflet-bar a {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* Modals & Dialog Overlays in Dark Mode */
+body.dark-mode .modal-container,
+body.dark-mode .modal-content {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .modal-header {
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode .modal-title {
+  color: #f8fafc !important;
+}
+body.dark-mode .modal-footer {
+  border-top-color: #334155 !important;
+}
+
+/* Announcement Modal in Dark Mode */
+body.dark-mode #announcementModal .modal-content {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+body.dark-mode #announcementPopupTitle {
+  color: #34d399 !important;
+}
+body.dark-mode #announcementModal div[style*="background: #f0fdf4"] {
+  background: rgba(6, 78, 59, 0.3) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+body.dark-mode #announcementPopupContent {
+  color: #a7f3d0 !important;
+}
+
+/* ==========================================================================
+   🔔 DARK MODE FOR NOTIFICATIONS (SWEETALERT2 & TOASTS)
+   ========================================================================== */
+
+/* SweetAlert2 Popup Dialog Box in Dark Mode */
+body.dark-mode .swal2-popup {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(51, 65, 85, 0.8) !important;
+}
+
+body.dark-mode .swal2-title {
+  color: #f8fafc !important;
+}
+
+body.dark-mode .swal2-html-container {
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode .swal2-content {
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode .swal2-footer {
+  border-top-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .swal2-close {
+  color: #94a3b8 !important;
+}
+body.dark-mode .swal2-close:hover {
+  color: #f8fafc !important;
+}
+
+/* Inputs / Selects / Textareas inside Swal Modals in Dark Mode */
+body.dark-mode .swal2-input,
+body.dark-mode .swal2-select,
+body.dark-mode .swal2-textarea {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .swal2-input:focus,
+body.dark-mode .swal2-select:focus,
+body.dark-mode .swal2-textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+body.dark-mode .swal2-validation-message {
+  background: #7f1d1d !important;
+  color: #fecdd3 !important;
+  border-color: #991b1b !important;
+}
+
+/* SweetAlert2 Action Buttons in Dark Mode */
+body.dark-mode .swal2-styled.swal2-cancel,
+body.dark-mode .custom-swal-cancel {
+  background: #0f172a !important;
+  color: #cbd5e1 !important;
+  border: 1px solid #334155 !important;
+}
+body.dark-mode .swal2-styled.swal2-cancel:hover,
+body.dark-mode .custom-swal-cancel:hover {
+  background: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* SweetAlert2 Toast Notifications in Dark Mode */
+body.dark-mode .swal2-toast {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
+}
+
+body.dark-mode .swal2-toast .swal2-title {
+  color: #f8fafc !important;
+}
+
+body.dark-mode .swal2-toast .swal2-html-container {
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode .swal2-timer-progress-bar {
+  background: #3b82f6 !important;
+}
+
+/* Custom Standard Toasts in Dark Mode */
+body.dark-mode .toast {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+

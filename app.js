@@ -120,6 +120,7 @@ window.addEventListener('pagehide', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  initDarkMode();
   applyCustomLogo();
   loadStoredUserDatabase();
   loadStoredRecords();
@@ -1304,9 +1305,13 @@ async function initWilayahDropdowns() {
         villagesCache[distId] = await fetchEmsifa(`villages/${distId}.json`);
       }
       const vilList = villagesCache[distId];
+      // Override map: API returns official names that need local renaming
+      const kelNameOverrides = { 'Banjaran': 'Banjaran Kulon' };
       if (vilList && vilList.length > 0) {
         vilList.forEach(v => {
-          kelSelect.innerHTML += `<option value="${toTitleCase(v.name)}" data-id="${v.id}">${toTitleCase(v.name)}</option>`;
+          let displayName = toTitleCase(v.name);
+          if (kelNameOverrides[displayName]) displayName = kelNameOverrides[displayName];
+          kelSelect.innerHTML += `<option value="${displayName}" data-id="${v.id}">${displayName}</option>`;
         });
         return;
       }
@@ -9780,4 +9785,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 1000);
 });
+
+/* ==========================================================================
+   🌙 DARK MODE THEME CONTROLLER & NOTIFICATION SYNC
+   ========================================================================== */
+
+function initDarkMode() {
+  const savedTheme = localStorage.getItem('ckg_theme_mode');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = savedTheme ? (savedTheme === 'dark') : prefersDark;
+  
+  if (isDark) {
+    document.body.classList.add('dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+  }
+  updateThemeToggleUI(isDark);
+}
+
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle('dark-mode');
+  localStorage.setItem('ckg_theme_mode', isDark ? 'dark' : 'light');
+  updateThemeToggleUI(isDark);
+  showToast(isDark ? '🌙 Mode Gelap Diaktifkan' : '☀️ Mode Terang Diaktifkan', 'info');
+}
+
+function updateThemeToggleUI(isDark) {
+  // Header toggle button
+  const headerBtnIcon = document.getElementById('themeToggleHeaderIcon');
+  const headerBtnText = document.getElementById('themeToggleHeaderText');
+  if (headerBtnIcon) headerBtnIcon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+  if (headerBtnIcon) headerBtnIcon.style.color = isDark ? '#f59e0b' : '#f59e0b';
+  if (headerBtnText) headerBtnText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
+
+  // User Profile Menu item
+  const userMenuIcon = document.getElementById('userMenuThemeIcon');
+  const userMenuText = document.getElementById('userMenuThemeText');
+  if (userMenuIcon) userMenuIcon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+  if (userMenuText) userMenuText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
+
+  // Login page button
+  const loginThemeIcon = document.getElementById('loginThemeIcon');
+  const loginThemeText = document.getElementById('loginThemeText');
+  if (loginThemeIcon) loginThemeIcon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+  if (loginThemeText) loginThemeText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
+}
+
 
