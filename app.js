@@ -450,11 +450,21 @@ async function loadStoredRecycleBin() {
   }
 }
 
-async function saveRecycleBinToStorage(deletedItem = null, deleteId = null) {
+async function saveRecycleBinToStorage(deletedItem = null, deleteId = null, deleteOptions = null) {
   localStorage.setItem('ckg_recycle_bin', JSON.stringify(recycleBin));
   try {
     if (deleteId) {
       await fetch(`/api/recycle?id=${encodeURIComponent(deleteId)}`, { method: 'DELETE' });
+    } else if (deleteOptions && deleteOptions.source) {
+      await fetch(`/api/recycle?source=${encodeURIComponent(deleteOptions.source)}`, { method: 'DELETE' });
+    } else if (deleteOptions && deleteOptions.ids) {
+      await fetch('/api/recycle', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: deleteOptions.ids })
+      });
+    } else if (deleteOptions && deleteOptions.clearAll) {
+      await fetch('/api/recycle', { method: 'DELETE' });
     } else if (deletedItem) {
       await fetch('/api/recycle', {
         method: 'POST',
@@ -6689,40 +6699,61 @@ function emptyRecycleBin() {
       const selectedOption = document.querySelector('input[name="emptyRecycleSource"]:checked')?.value || 'ALL';
       return selectedOption;
     }
-  }).then((result) => {
+  }).then(async (result) => {
     if (result.isConfirmed) {
       const targetSource = result.value;
       let countRemoved = 0;
       let targetLabel = '';
+      let deleteOptions = null;
 
       if (targetSource === 'ALL') {
         countRemoved = recycleBin.length;
         recycleBin = [];
         targetLabel = 'Semua Data';
+        deleteOptions = { clearAll: true };
       } else if (targetSource === 'FILTERED') {
-        const idsToRemove = new Set(filteredItems.map(item => String(item.id || item.nik)));
-        countRemoved = idsToRemove.size;
-        recycleBin = recycleBin.filter(r => !idsToRemove.has(String(r.id || r.nik)));
+        const idsToRemove = Array.from(new Set(filteredItems.map(item => String(item.id || item.nik))));
+        countRemoved = idsToRemove.length;
+        const idsSet = new Set(idsToRemove);
+        recycleBin = recycleBin.filter(r => !idsSet.has(String(r.id || r.nik)));
         targetLabel = 'Data Terfilter';
+        deleteOptions = { ids: idsToRemove };
       } else if (targetSource === 'SIMPUS') {
         const initialLen = recycleBin.length;
         recycleBin = recycleBin.filter(r => !(r.original_source || '').toUpperCase().includes('SIMPUS'));
         countRemoved = initialLen - recycleBin.length;
         targetLabel = 'Hanya Data SIMPUS';
+        deleteOptions = { source: 'SIMPUS' };
       } else if (targetSource === 'BNBA') {
         const initialLen = recycleBin.length;
         recycleBin = recycleBin.filter(r => (r.original_source || '').toUpperCase().includes('SIMPUS'));
         countRemoved = initialLen - recycleBin.length;
         targetLabel = 'Hanya Data BNBA CKG';
+        deleteOptions = { source: 'BNBA' };
       }
 
-      saveRecycleBinToStorage();
+      // Show loading progress overlay for cloud deletion
+      Swal.fire({
+        title: 'Menghapus Data dari Cloud Database...',
+        html: `<div style="font-size: 13px; color: #475569; margin-top: 6px;">
+                <i class="bi bi-cloud-arrow-up-fill" style="color: #dc2626;"></i> Mengirim perintah HAPUS PERMANEN (${targetLabel}) ke Cloudflare D1 Database...
+              </div>`,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      await saveRecycleBinToStorage(null, null, deleteOptions);
       renderRecycleTable();
-      Swal.fire(
-        'Terhapus Permanen!',
-        `Sebanyak <strong>${countRemoved} Data</strong> (${targetLabel}) telah berhasil dihapus permanen dari tempat sampah.`,
-        'success'
-      );
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Terhapus Permanen dari Cloud Database!',
+        html: `Sebanyak <strong>${countRemoved} Data</strong> (${targetLabel}) telah <strong>berhasil dihapus secara permanen dari Cloudflare D1 Database</strong> & Tempat Sampah.`,
+        confirmButtonColor: '#059669'
+      });
     }
   });
 }

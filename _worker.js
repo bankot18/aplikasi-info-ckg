@@ -640,8 +640,29 @@ export default {
       if (request.method === 'DELETE') {
         try {
           const id = url.searchParams.get('id');
+          const source = url.searchParams.get('source');
+
+          let reqBody = null;
+          try { reqBody = await request.json(); } catch (_) {}
+
           if (id) {
             await env.DB.prepare('DELETE FROM recycle_bin WHERE id = ?').bind(id).run();
+          } else if (source) {
+            const srcUpper = source.toUpperCase();
+            if (srcUpper === 'SIMPUS') {
+              await env.DB.prepare("DELETE FROM recycle_bin WHERE UPPER(original_source) LIKE '%SIMPUS%'").run();
+            } else if (srcUpper === 'BNBA') {
+              await env.DB.prepare("DELETE FROM recycle_bin WHERE UPPER(original_source) NOT LIKE '%SIMPUS%' OR original_source IS NULL").run();
+            } else {
+              await env.DB.prepare('DELETE FROM recycle_bin').run();
+            }
+          } else if (reqBody && Array.isArray(reqBody.ids) && reqBody.ids.length > 0) {
+            const stmts = reqBody.ids.map(itemId => env.DB.prepare('DELETE FROM recycle_bin WHERE id = ?').bind(String(itemId)));
+            const chunkSize = 20;
+            for (let i = 0; i < stmts.length; i += chunkSize) {
+              const chunk = stmts.slice(i, i + chunkSize);
+              await env.DB.batch(chunk);
+            }
           } else {
             await env.DB.prepare('DELETE FROM recycle_bin').run();
           }
