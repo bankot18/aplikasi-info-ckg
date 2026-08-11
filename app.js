@@ -9252,6 +9252,59 @@ function resetSekolahFilters() {
   showToast('Filter CKG Sekolah telah di-reset.', 'info');
 }
 
+function populateSekolahDatalists() {
+  const sekolahList = document.getElementById('listSekolahOptions');
+  const kelurahanList = document.getElementById('listKelurahanSekolahOptions');
+  
+  if (sekolahList) {
+    const existingSchools = new Set([
+      'SMPN 1 BANJARAN', 'SMPN 2 BANJARAN', 'SMPN 3 BANJARAN',
+      'SMAN 1 BANJARAN', 'SMKN 1 BANJARAN', 'MTS BANJARAN', 'MA BANJARAN',
+      'SDN BANJARAN 01', 'SDN BANJARAN 02', 'SDN BANJARAN 03'
+    ]);
+    sekolahRecords.forEach(r => {
+      if (r.sekolah) existingSchools.add(r.sekolah.toUpperCase());
+    });
+    sekolahList.innerHTML = Array.from(existingSchools).sort().map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
+  }
+
+  if (kelurahanList) {
+    const desaBanjaran = (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA['Jawa Barat'] && WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung'] && WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung']['Banjaran'])
+      ? WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung']['Banjaran']
+      : ['Banjaran', 'Banjaran Wetan', 'Ciapus', 'Kamasan', 'Kiangroke', 'Margahayu', 'Neglasari', 'Pasirhuni', 'Sindangpanon', 'Tarajusari'];
+    kelurahanList.innerHTML = desaBanjaran.map(d => `<option value="${d.toUpperCase()}"></option>`).join('');
+  }
+}
+
+function handleSekolahNikInput(e) {
+  const nik = (e.target.value || '').trim();
+  if (nik.length === 16 && /^\d+$/.test(nik)) {
+    let day = parseInt(nik.substring(6, 8), 10);
+    const monthStr = nik.substring(8, 10);
+    const yearStr = nik.substring(10, 12);
+
+    let jk = 'L';
+    if (day > 40) {
+      jk = 'P';
+      day -= 40;
+    }
+
+    const month = parseInt(monthStr, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const yearNum = parseInt(yearStr, 10);
+      const fullYear = yearNum <= 30 ? (2000 + yearNum) : (1900 + yearNum);
+      const formattedDay = String(day).padStart(2, '0');
+      const formattedMonth = String(month).padStart(2, '0');
+      const dobStr = `${fullYear}-${formattedMonth}-${formattedDay}`;
+
+      const jkSelect = document.getElementById('schJk');
+      const dobInput = document.getElementById('schTanggalLahir');
+      if (jkSelect) jkSelect.value = jk;
+      if (dobInput && !dobInput.value) dobInput.value = dobStr;
+    }
+  }
+}
+
 function openInputSekolahModal(id = null) {
   const modal = document.getElementById('modalInputSekolah');
   const title = document.getElementById('modalInputSekolahTitle');
@@ -9267,23 +9320,25 @@ function openInputSekolahModal(id = null) {
   document.getElementById('schPetugasEntry').value = currentUserName || 'Admin';
   document.getElementById('schTanggalEntry').value = new Date().toISOString().substring(0, 10);
 
+  populateSekolahDatalists();
+
   if (id) {
     const rec = sekolahRecords.find(r => r.id === id);
     if (rec) {
       if (title) title.innerHTML = `<i class="bi bi-pencil-square"></i> Edit Skrining CKG Sekolah`;
       document.getElementById('sekolahRecordId').value = rec.id;
-      document.getElementById('schNama').value = rec.nama || '';
-      document.getElementById('schKelas').value = rec.kelas || '';
-      document.getElementById('schSekolah').value = rec.sekolah || '';
+      document.getElementById('schNama').value = (rec.nama || '').toUpperCase();
+      document.getElementById('schKelas').value = (rec.kelas || '').toUpperCase();
+      document.getElementById('schSekolah').value = (rec.sekolah || '').toUpperCase();
       document.getElementById('schJk').value = rec.jk || 'L';
       document.getElementById('schNik').value = rec.nik || '';
       document.getElementById('schTanggalLahir').value = rec.tanggal_lahir || '';
       document.getElementById('schNoWhatsapp').value = rec.no_whatsapp || '';
-      document.getElementById('schProvinsi').value = rec.provinsi || 'Jawa Barat';
-      document.getElementById('schKabKota').value = rec.kab_kota || 'Kab. Bandung';
-      document.getElementById('schKecamatan').value = rec.kecamatan || 'Banjaran';
-      document.getElementById('schKelurahan').value = rec.kelurahan || 'Tarajusari';
-      document.getElementById('schAlamat').value = rec.alamat || '';
+      document.getElementById('schProvinsi').value = (rec.provinsi || 'Jawa Barat').toUpperCase();
+      document.getElementById('schKabKota').value = (rec.kab_kota || 'Kab. Bandung').toUpperCase();
+      document.getElementById('schKecamatan').value = (rec.kecamatan || 'Banjaran').toUpperCase();
+      document.getElementById('schKelurahan').value = (rec.kelurahan || 'Tarajusari').toUpperCase();
+      document.getElementById('schAlamat').value = (rec.alamat || '').toUpperCase();
       document.getElementById('schBb').value = rec.bb || '';
       document.getElementById('schTb').value = rec.tb || '';
       document.getElementById('schLp').value = rec.lp || '';
@@ -9318,18 +9373,18 @@ async function saveSekolahRecordFromForm(event) {
   const recordObj = {
     id: idVal || `SCH-${Date.now()}`,
     no: existingIdx >= 0 ? sekolahRecords[existingIdx].no : (sekolahRecords.length + 1),
-    nama: document.getElementById('schNama').value.trim(),
-    kelas: document.getElementById('schKelas').value.trim(),
-    sekolah: document.getElementById('schSekolah').value.trim(),
+    nama: document.getElementById('schNama').value.trim().toUpperCase(),
+    kelas: document.getElementById('schKelas').value.trim().toUpperCase(),
+    sekolah: document.getElementById('schSekolah').value.trim().toUpperCase(),
     jk: document.getElementById('schJk').value,
     nik: document.getElementById('schNik').value.trim(),
     tanggal_lahir: document.getElementById('schTanggalLahir').value,
     no_whatsapp: document.getElementById('schNoWhatsapp').value.trim(),
-    provinsi: document.getElementById('schProvinsi').value.trim() || 'Jawa Barat',
-    kab_kota: document.getElementById('schKabKota').value.trim() || 'Kab. Bandung',
-    kecamatan: document.getElementById('schKecamatan').value.trim() || 'Banjaran',
-    kelurahan: document.getElementById('schKelurahan').value.trim() || 'Tarajusari',
-    alamat: document.getElementById('schAlamat').value.trim(),
+    provinsi: document.getElementById('schProvinsi').value.trim().toUpperCase() || 'JAWA BARAT',
+    kab_kota: document.getElementById('schKabKota').value.trim().toUpperCase() || 'KAB. BANDUNG',
+    kecamatan: document.getElementById('schKecamatan').value.trim().toUpperCase() || 'BANJARAN',
+    kelurahan: document.getElementById('schKelurahan').value.trim().toUpperCase() || 'TARAJUSARI',
+    alamat: document.getElementById('schAlamat').value.trim().toUpperCase(),
     bb: parseFloat(document.getElementById('schBb').value) || 0,
     tb: parseFloat(document.getElementById('schTb').value) || 0,
     lp: parseFloat(document.getElementById('schLp').value) || 0,

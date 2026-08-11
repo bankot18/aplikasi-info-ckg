@@ -2269,7 +2269,7 @@
 
   <!-- Modal Input / Edit Data CKG Sekolah -->
   <div id="modalInputSekolah" class="modal-overlay">
-    <div class="modal-container" style="max-width: 840px;">
+    <div class="modal-container" style="max-width: 860px;">
       <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff;">
         <div class="modal-title" id="modalInputSekolahTitle" style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
           <i class="bi bi-mortarboard-fill"></i> Form Input Skrining CKG Sekolah
@@ -2286,15 +2286,16 @@
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px;">
             <div class="form-group">
               <label class="form-label">Nama Siswa <span class="required">*</span></label>
-              <input type="text" id="schNama" class="form-control" required placeholder="Nama Lengkap Siswa">
+              <input type="text" id="schNama" class="form-control" required placeholder="Nama Lengkap Siswa" style="text-transform: uppercase;">
             </div>
             <div class="form-group">
               <label class="form-label">Kelas <span class="required">*</span></label>
-              <input type="text" id="schKelas" class="form-control" required placeholder="Contoh: 7A / 8B / 10 MIPA 1">
+              <input type="text" id="schKelas" class="form-control" required placeholder="Contoh: 7A / 8B / 10 MIPA 1" style="text-transform: uppercase;">
             </div>
             <div class="form-group">
               <label class="form-label">Nama Sekolah <span class="required">*</span></label>
-              <input type="text" id="schSekolah" class="form-control" required placeholder="Contoh: SMPN 1 Banjaran">
+              <input type="text" id="schSekolah" class="form-control" list="listSekolahOptions" required placeholder="Contoh: SMPN 1 BANJARAN" style="text-transform: uppercase;">
+              <datalist id="listSekolahOptions"></datalist>
             </div>
             <div class="form-group">
               <label class="form-label">Jenis Kelamin <span class="required">*</span></label>
@@ -2305,7 +2306,8 @@
             </div>
             <div class="form-group">
               <label class="form-label">NIK / NISN</label>
-              <input type="text" id="schNik" class="form-control" placeholder="16 Digit NIK / NISN">
+              <input type="text" id="schNik" class="form-control" placeholder="16 Digit NIK / NISN" maxlength="16" oninput="handleSekolahNikInput(event)" style="font-family: monospace;">
+              <span style="font-size: 10.5px; color: #64748b; margin-top: 2px; display: block;">*Ketik 16 Digit NIK untuk auto-fill Lahir & JK</span>
             </div>
             <div class="form-group">
               <label class="form-label">Tanggal Lahir</label>
@@ -2323,24 +2325,25 @@
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px;">
             <div class="form-group">
               <label class="form-label">Provinsi</label>
-              <input type="text" id="schProvinsi" class="form-control" value="Jawa Barat">
+              <input type="text" id="schProvinsi" class="form-control" value="Jawa Barat" style="text-transform: uppercase;">
             </div>
             <div class="form-group">
               <label class="form-label">Kab / Kota</label>
-              <input type="text" id="schKabKota" class="form-control" value="Kab. Bandung">
+              <input type="text" id="schKabKota" class="form-control" value="Kab. Bandung" style="text-transform: uppercase;">
             </div>
             <div class="form-group">
               <label class="form-label">Kecamatan</label>
-              <input type="text" id="schKecamatan" class="form-control" value="Banjaran">
+              <input type="text" id="schKecamatan" class="form-control" value="Banjaran" style="text-transform: uppercase;">
             </div>
             <div class="form-group">
               <label class="form-label">Kelurahan / Desa</label>
-              <input type="text" id="schKelurahan" class="form-control" value="Tarajusari">
+              <input type="text" id="schKelurahan" class="form-control" list="listKelurahanSekolahOptions" value="Tarajusari" style="text-transform: uppercase;">
+              <datalist id="listKelurahanSekolahOptions"></datalist>
             </div>
           </div>
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label">Alamat Lengkap / Kp / RT / RW</label>
-            <input type="text" id="schAlamat" class="form-control" placeholder="Kp. Pajagalan RT 02 RW 05">
+            <input type="text" id="schAlamat" class="form-control" placeholder="Kp. Pajagalan RT 02 RW 05" style="text-transform: uppercase;">
           </div>
 
           <div style="font-size: 13px; font-weight: 800; color: #7c3aed; margin-bottom: 12px; border-bottom: 1.5px solid #ede9fe; padding-bottom: 4px;">
