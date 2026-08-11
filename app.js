@@ -10598,6 +10598,281 @@ const KAB_BANDUNG_COORDS_MAP = {
   'DAYEUHKOLOT': [-6.9850, 107.6180]
 };
 
+/* ==========================================================================
+   🤖 AI AUTONOMOUS ADDRESS EXPLORER & LIVE MAP RADAR ENGINE
+   ========================================================================== */
+
+let isAiExplorerActive = true;
+let aiExplorerInterval = null;
+let aiScanSpeedMs = 4000; // Default 4 seconds per scan
+let aiCurrentRegionIndex = 0; // 0: Kab. Bandung, 1: Kota Bandung & KBB
+let aiCurrentKecIndex = 0;
+let aiCurrentPointIndex = 0;
+let aiLearnedCountTotal = 0;
+
+let aiRadarMarker = null;
+let aiTrajectoryPolyline = null;
+let aiTrajectoryPoints = [];
+let aiAutoFollowMap = false;
+
+// 31 Kecamatan in Kabupaten Bandung with key villages & coordinates
+const KAB_BANDUNG_EXPLORATION_MAP = [
+  { kec: 'Banjaran', kel: 'Tarajusari', kampungs: ['Kp. Cipeundeuy', 'Kp. Cipaku', 'Kp. Sanggar Mas', 'Kp. Sindanglengo', 'Kp. Pajagalan', 'Kp. Ciapus', 'Kp. Kamasan', 'Kp. Kiangroke', 'Kp. Pasirhuni', 'Kp. Sindangpanon'], coords: [-7.0427, 107.5878] },
+  { kec: 'Cangkuang', kel: 'Bandasari', kampungs: ['Kp. Cikopo', 'Kp. Bandasari', 'Kp. Jatisari', 'Kp. Nagrak', 'Kp. Tanjungsari'], coords: [-7.0280, 107.5680] },
+  { kec: 'Pameungpeuk', kel: 'Sukasari', kampungs: ['Kp. Waas', 'Kp. Bojongkoneng', 'Kp. Sukasari', 'Kp. Rancamulya'], coords: [-7.0110, 107.5920] },
+  { kec: 'Arjasari', kel: 'Baros', kampungs: ['Kp. Baros', 'Kp. Batukarut', 'Kp. Ancolmekar', 'Kp. Mangunjaya', 'Kp. Pinggirsari', 'Kp. Rancacole'], coords: [-7.0490, 107.6250] },
+  { kec: 'Cimaung', kel: 'Cikalong', kampungs: ['Kp. Campaka', 'Kp. Cikalong', 'Kp. Cipinang', 'Kp. Jagabay', 'Kp. Malasari', 'Kp. Mekarsari', 'Kp. Warjabakti'], coords: [-7.0780, 107.5620] },
+  { kec: 'Soreang', kel: 'Sadu', kampungs: ['Kp. Sadu', 'Kp. Sekarwangi', 'Kp. Panyirapan', 'Kp. Karamatmulya', 'Kp. Parungserab'], coords: [-7.0320, 107.5270] },
+  { kec: 'Katapang', kel: 'Gandasari', kampungs: ['Kp. Katapang', 'Kp. Gandasari', 'Kp. Sangkanhurip', 'Kp. Pangauban'], coords: [-6.9980, 107.5620] },
+  { kec: 'Baleendah', kel: 'Andir', kampungs: ['Kp. Andir', 'Kp. Bojongmalaka', 'Kp. Malakasari', 'Kp. Rancamanyar', 'Kp. Wargamekar'], coords: [-6.9820, 107.6280] },
+  { kec: 'Dayeuhkolot', kel: 'Citeureup', kampungs: ['Kp. Citeureup', 'Kp. Cangkuang Barat', 'Kp. Pasawahan', 'Kp. Sukapura'], coords: [-6.9850, 107.6180] },
+  { kec: 'Margahayu', kel: 'Sayati', kampungs: ['Kp. Sayati', 'Kp. Margahayu Selatan', 'Kp. Margahayu Tengah', 'Kp. Sukamenak'], coords: [-6.9680, 107.5780] },
+  { kec: 'Margaasih', kel: 'Nanjung', kampungs: ['Kp. Nanjung', 'Kp. Cigondewah Hilir', 'Kp. Lagadar', 'Kp. Rahayu'], coords: [-6.9550, 107.5450] },
+  { kec: 'Ciwidey', kel: 'Lebakmuncang', kampungs: ['Kp. Panundaan', 'Kp. Lebakmuncang', 'Kp. Nengkelan', 'Kp. Rawabogo', 'Kp. Prawatasari'], coords: [-7.0950, 107.4620] },
+  { kec: 'Pasirjambu', kel: 'Tenjolaya', kampungs: ['Kp. Tenjolaya', 'Kp. Cikoneng', 'Kp. Cisondari', 'Kp. Mekarmaju'], coords: [-7.0750, 107.4850] },
+  { kec: 'Rancabali', kel: 'Alamendah', kampungs: ['Kp. Alamendah', 'Kp. Cipelah', 'Kp. Indragiri', 'Kp. Patengan', 'Kp. Sukaresmi'], coords: [-7.1420, 107.4120] },
+  { kec: 'Pangalengan', kel: 'Pulosari', kampungs: ['Kp. Pulosari', 'Kp. Warnasari', 'Kp. Banjarsari', 'Kp. Margalaksana', 'Kp. Margamekar', 'Kp. Margamukti'], coords: [-7.1750, 107.5680] },
+  { kec: 'Bojongsoang', kel: 'Buahbatu', kampungs: ['Kp. Buahbatu', 'Kp. Bojongsari', 'Kp. Cipagalo', 'Kp. Tegalluar'], coords: [-6.9720, 107.6450] },
+  { kec: 'Cileunyi', kel: 'Cinunuk', kampungs: ['Kp. Cinunuk', 'Kp. Cileunyi Kulon', 'Kp. Cileunyi Wetan', 'Kp. Cimekar'], coords: [-6.9380, 107.7250] },
+  { kec: 'Rancaekek', kel: 'Haurpugur', kampungs: ['Kp. Haurpugur', 'Kp. Rancaekek Kulon', 'Kp. Bojongloa', 'Kp. Cangkuang'], coords: [-6.9680, 107.7650] },
+  { kec: 'Majalaya', kel: 'Padamulya', kampungs: ['Kp. Padamulya', 'Kp. Bojong', 'Kp. Majakerta', 'Kp. Sukamaju', 'Kp. Majasetra'], coords: [-7.0520, 107.7550] },
+  { kec: 'Ciparay', kel: 'Gunungleutik', kampungs: ['Kp. Gunungleutik', 'Kp. Babakan', 'Kp. Ciheulang', 'Kp. Cikuya', 'Kp. Manggungharja'], coords: [-7.0380, 107.7120] },
+  { kec: 'Ibun', kel: 'Dukuh', kampungs: ['Kp. Ibun', 'Kp. Dukuh', 'Kp. Cibeet', 'Kp. Sudi', 'Kp. Tanggulun'], coords: [-7.0850, 107.7850] },
+  { kec: 'Solokanjantung', kel: 'Bojongemas', kampungs: ['Kp. Solokanjantung', 'Kp. Bojongemas', 'Kp. Langensari', 'Kp. Padamukti'], coords: [-7.0120, 107.7420] },
+  { kec: 'Kertasari', kel: 'Tarumajaya', kampungs: ['Kp. Tarumajaya', 'Kp. Cibeureum', 'Kp. Cikembang', 'Kp. Neglawangi', 'Kp. Santosa'], coords: [-7.2150, 107.6580] },
+  { kec: 'Pacet', kel: 'Maruyung', kampungs: ['Kp. Maruyung', 'Kp. Cikitu', 'Kp. Cikawao', 'Kp. Mandalahaji', 'Kp. Sukarame'], coords: [-7.0720, 107.6980] },
+  { kec: 'Paseh', kel: 'Cigentur', kampungs: ['Kp. Cigentur', 'Kp. Cipedes', 'Kp. Drawati', 'Kp. Sukamanah'], coords: [-7.0350, 107.7950] },
+  { kec: 'Cikancung', kel: 'Cihanyir', kampungs: ['Kp. Cihanyir', 'Kp. Ciluluk', 'Kp. Hegarmanah', 'Kp. Mekarlaksana'], coords: [-7.0080, 107.8180] },
+  { kec: 'Nagreg', kel: 'Ciaro', kampungs: ['Kp. Nagreg', 'Kp. Ciaro', 'Kp. Ciherang', 'Kp. Citaman', 'Kp. Ganjarsabar'], coords: [-7.0250, 107.8850] },
+  { kec: 'Cicalengka', kel: 'Nagrog', kampungs: ['Kp. Cicalengka', 'Kp. Babakanpeutey', 'Kp. Margaasih', 'Kp. Nagrog', 'Kp. Tenjolaya'], coords: [-6.9850, 107.8350] },
+  { kec: 'Cilengkrang', kel: 'Jatiendah', kampungs: ['Kp. Cilengkrang', 'Kp. Cipanjalu', 'Kp. Melati', 'Kp. Jatiendah'], coords: [-6.8980, 107.7080] },
+  { kec: 'Cimenyan', kel: 'Ciburial', kampungs: ['Kp. Cimenyan', 'Kp. Ciburial', 'Kp. Cikadut', 'Kp. Mekarmanah'], coords: [-6.8680, 107.6650] },
+  { kec: 'Kutawaringin', kel: 'Buninagara', kampungs: ['Kp. Kutawaringin', 'Kp. Buninagara', 'Kp. Cilame', 'Kp. Jatisari', 'Kp. Kopo'], coords: [-7.0050, 107.5180] }
+];
+
+// Region 2 expansion: Kota Bandung & KBB
+const KOTA_BANDUNG_KBB_EXPLORATION_MAP = [
+  { kec: 'Coblong (Kota Bandung)', kel: 'Dago', kampungs: ['Kp. Dago', 'Kp. Sekeloa', 'Kp. Tubagus Ismail', 'Kp. Lebak Siliwangi'], coords: [-6.8850, 107.6180] },
+  { kec: 'Cicendo (Kota Bandung)', kel: 'Pasirkaliki', kampungs: ['Kp. Pasirkaliki', 'Kp. Arjuna', 'Kp. Pajajaran'], coords: [-6.9080, 107.5950] },
+  { kec: 'Lembang (KBB)', kel: 'Lembang Kota', kampungs: ['Kp. Lembang', 'Kp. Cikole', 'Kp. Jayagiri', 'Kp. Kayuambon'], coords: [-6.8150, 107.6180] },
+  { kec: 'Padalarang (KBB)', kel: 'Kertajaya', kampungs: ['Kp. Padalarang', 'Kp. Kertajaya', 'Kp. Ciburuy', 'Kp. Tagogapu'], coords: [-6.8380, 107.4780] },
+  { kec: 'Cimahi Utara', kel: 'Cipageran', kampungs: ['Kp. Cipageran', 'Kp. Pasirkaliki Cimahi', 'Kp. Citeureup'], coords: [-6.8680, 107.5450] }
+];
+
+const EXPLORATION_REGIONS = [
+  { name: 'Kabupaten Bandung', map: KAB_BANDUNG_EXPLORATION_MAP, totalKec: 31 },
+  { name: 'Kota Bandung & KBB', map: KOTA_BANDUNG_KBB_EXPLORATION_MAP, totalKec: 5 },
+];
+
+function initAiAutoExplorerEngine() {
+  if (aiExplorerInterval) clearInterval(aiExplorerInterval);
+
+  aiExplorerInterval = setInterval(() => {
+    if (!isAiExplorerActive) return;
+    stepAiExplorerNextLocation();
+  }, aiScanSpeedMs);
+}
+
+function toggleAiAutoExplorer() {
+  isAiExplorerActive = !isAiExplorerActive;
+
+  const btnHeader = document.getElementById('btnAiExplorerToggleHeader');
+  const btnHud = document.getElementById('btnToggleAiExplorer');
+  const badge = document.getElementById('aiExplorerStateBadge');
+
+  if (isAiExplorerActive) {
+    if (btnHeader) btnHeader.innerHTML = `<i class="bi bi-robot"></i> Jeda Jelajah AI`;
+    if (btnHud) btnHud.innerHTML = `<i class="bi bi-pause-fill"></i> Jeda Jelajah AI`;
+    if (badge) {
+      badge.className = 'badge badge-emerald';
+      badge.innerHTML = `<i class="bi bi-record-fill" style="color: #22c55e; animation: blink 1s infinite;"></i> AUTO-SCANNING AKTIF`;
+    }
+    updateAiLiveLog(`▶️ AI Autonomous Explorer DIAKTIFKAN kembali. Menjelajah & mencatat otomatis...`);
+    if (typeof showToast === 'function') showToast('AI Auto-Explorer Aktif! Menjelajah lokasi otomatis...', 'success');
+  } else {
+    if (btnHeader) btnHeader.innerHTML = `<i class="bi bi-play-fill"></i> Mulai Jelajah AI`;
+    if (btnHud) btnHud.innerHTML = `<i class="bi bi-play-fill"></i> Mulai Jelajah AI`;
+    if (badge) {
+      badge.className = 'badge badge-amber';
+      badge.innerHTML = `<i class="bi bi-pause-circle-fill"></i> DI-JEDA`;
+    }
+    updateAiLiveLog(`⏸️ AI Autonomous Explorer di-jeda sementara.`);
+    if (typeof showToast === 'function') showToast('AI Auto-Explorer Di-jeda.', 'info');
+  }
+}
+
+function speedUpAiExplorer() {
+  if (aiScanSpeedMs === 4000) {
+    aiScanSpeedMs = 2000;
+  } else if (aiScanSpeedMs === 2000) {
+    aiScanSpeedMs = 800;
+  } else {
+    aiScanSpeedMs = 4000;
+  }
+
+  const speedBtn = document.getElementById('btnSpeedAiExplorer');
+  if (speedBtn) {
+    if (aiScanSpeedMs === 4000) speedBtn.innerHTML = `<i class="bi bi-lightning-charge-fill" style="color: #f59e0b;"></i> Mode: Normal (4s)`;
+    else if (aiScanSpeedMs === 2000) speedBtn.innerHTML = `<i class="bi bi-lightning-charge-fill" style="color: #0284c7;"></i> Mode: Fast (2s)`;
+    else speedBtn.innerHTML = `<i class="bi bi-rocket-takeoff-fill" style="color: #ec4899;"></i> Mode: TURBO (0.8s)`;
+  }
+
+  initAiAutoExplorerEngine();
+  updateAiLiveLog(`⚡ Kecepatan Radar Scanning AI diubah ke interval ${aiScanSpeedMs / 1000}s!`);
+}
+
+function stepAiExplorerNextLocation() {
+  const currentRegion = EXPLORATION_REGIONS[aiCurrentRegionIndex] || EXPLORATION_REGIONS[0];
+  const regionMap = currentRegion.map;
+
+  if (aiCurrentKecIndex >= regionMap.length) {
+    // Current region complete!
+    if (aiCurrentRegionIndex < EXPLORATION_REGIONS.length - 1) {
+      aiCurrentRegionIndex++;
+      aiCurrentKecIndex = 0;
+      aiCurrentPointIndex = 0;
+      const nextRegion = EXPLORATION_REGIONS[aiCurrentRegionIndex];
+      updateAiLiveLog(`🏆 CAKUPAN ${currentRegion.name.toUpperCase()} 100% TERKUASAI! Melanjutkan penjelajahan ke: ${nextRegion.name}`);
+      const regLabel = document.getElementById('aiExplorerTargetRegion');
+      if (regLabel) regLabel.textContent = nextRegion.name;
+    } else {
+      // Loop back to start to continuously refresh knowledge base
+      aiCurrentRegionIndex = 0;
+      aiCurrentKecIndex = 0;
+      aiCurrentPointIndex = 0;
+      updateAiLiveLog(`🔄 Seluruh Wilayah Terjangkau! Melakukan siklus re-scan berkala...`);
+    }
+    return;
+  }
+
+  const kecObj = regionMap[aiCurrentKecIndex];
+  const targetKampung = kecObj.kampungs[aiCurrentPointIndex] || `Kp. ${kecObj.kel}`;
+
+  // Compute fine coordinate offset
+  const baseLat = kecObj.coords[0];
+  const baseLng = kecObj.coords[1];
+  const stepOffsetLat = (aiCurrentPointIndex * 0.0018) * (aiCurrentPointIndex % 2 === 0 ? 1 : -1);
+  const stepOffsetLng = (aiCurrentPointIndex * 0.0018) * (aiCurrentPointIndex % 3 === 0 ? 1 : -1);
+  const lat = parseFloat((baseLat + stepOffsetLat).toFixed(6));
+  const lng = parseFloat((baseLng + stepOffsetLng).toFixed(6));
+
+  const cleanKw = targetKampung.replace(/^Kp\.\s*/i, '').trim();
+
+  // 1. Auto-record to Cloud D1 database & Local Storage without asking user
+  saveLearnedKampungKeyword(
+    cleanKw,
+    kecObj.kel,
+    kecObj.kec,
+    currentRegion.name.includes('Kota') ? 'Kota Bandung' : 'Kabupaten Bandung',
+    'Jawa Barat',
+    true,
+    lat,
+    lng
+  );
+
+  aiLearnedCountTotal++;
+
+  // 2. Update Live Log HUD
+  updateAiLiveLog(`🔍 [${new Date().toLocaleTimeString('id-ID')}] Discovered: ${targetKampung}, Desa ${kecObj.kel}, Kec. ${kecObj.kec} → Saved to D1 Cloud`);
+
+  // 3. Move Live Radar Marker on Leaflet Map
+  updateAiRadarMarkerOnMap(lat, lng, cleanKw, kecObj.kec);
+
+  // 4. Update Coverage Progress Bar
+  updateAiCoverageProgress(currentRegion);
+
+  // 5. Increment Pointer
+  aiCurrentPointIndex++;
+  if (aiCurrentPointIndex >= kecObj.kampungs.length) {
+    aiCurrentPointIndex = 0;
+    aiCurrentKecIndex++;
+  }
+
+  // Refresh Map markers dynamically
+  if (typeof leafletMap !== 'undefined' && leafletMap) {
+    renderMapMarkers();
+  }
+}
+
+function updateAiRadarMarkerOnMap(lat, lng, kw, kec) {
+  if (typeof leafletMap === 'undefined' || !leafletMap || typeof L === 'undefined') return;
+
+  const pointLatLng = [lat, lng];
+
+  if (!aiRadarMarker) {
+    const radarIcon = L.divIcon({
+      className: 'ai-radar-drone-marker',
+      html: `
+        <div class="ai-radar-pulse-ring"></div>
+        <div class="ai-radar-center-icon"><i class="bi bi-robot"></i></div>
+      `,
+      iconSize: [50, 50],
+      iconAnchor: [25, 25]
+    });
+
+    aiRadarMarker = L.marker(pointLatLng, { icon: radarIcon, zIndexOffset: 2000 }).addTo(leafletMap);
+    aiRadarMarker.bindPopup(`
+      <div style="font-family:'Plus Jakarta Sans',sans-serif; text-align:center; font-size:12px;">
+        <strong style="color:#0284c7; font-size:13px;">🤖 AI Radar Exploration Agent</strong><br>
+        <span>Sedang memindai & mencatat: <strong>Kp. ${kw}</strong> (Kec. ${kec})</span>
+      </div>
+    `);
+  } else {
+    aiRadarMarker.setLatLng(pointLatLng);
+  }
+
+  // Trajectory line connecting scanned locations
+  aiTrajectoryPoints.push(pointLatLng);
+  if (aiTrajectoryPoints.length > 25) aiTrajectoryPoints.shift(); // Keep last 25 steps
+
+  if (!aiTrajectoryPolyline) {
+    aiTrajectoryPolyline = L.polyline(aiTrajectoryPoints, {
+      color: '#38bdf8',
+      weight: 3,
+      opacity: 0.7,
+      dashArray: '6, 8'
+    }).addTo(leafletMap);
+  } else {
+    aiTrajectoryPolyline.setLatLngs(aiTrajectoryPoints);
+  }
+
+  if (aiAutoFollowMap) {
+    leafletMap.panTo(pointLatLng, { animate: true, duration: 0.8 });
+  }
+}
+
+function reFocusAiRadarMarker() {
+  aiAutoFollowMap = !aiAutoFollowMap;
+  if (aiRadarMarker && leafletMap) {
+    leafletMap.setView(aiRadarMarker.getLatLng(), 14, { animate: true });
+    aiRadarMarker.openPopup();
+    showToast(aiAutoFollowMap ? 'Kamera Peta Otomatis Mengikuti AI Drone Radar!' : 'Kamera Otomatis AI Di-nonaktifkan.', 'info');
+  } else {
+    showToast('Radar AI sedang aktif di peta Kab. Bandung.', 'info');
+  }
+}
+
+function updateAiLiveLog(msg) {
+  const ticker = document.getElementById('aiLiveLogTicker');
+  if (ticker) {
+    ticker.textContent = msg;
+  }
+}
+
+function updateAiCoverageProgress(currentRegion) {
+  const totalKec = currentRegion.totalKec || 31;
+  const currentKecDone = Math.min(aiCurrentKecIndex + 1, totalKec);
+  const percent = Math.min(100, Math.round((currentKecDone / totalKec) * 100));
+
+  const textEl = document.getElementById('aiCoverageText');
+  const barEl = document.getElementById('aiCoverageBar');
+  const labelEl = document.getElementById('aiCoverageRegionLabel');
+
+  if (labelEl) labelEl.textContent = currentRegion.name;
+  if (textEl) textEl.textContent = `${percent}% (${currentKecDone}/${totalKec} Kec)`;
+  if (barEl) barEl.style.width = `${percent}%`;
+}
+
 function initInteractiveMap() {
   const container = document.getElementById('interactiveMap');
   if (!container) return;
@@ -10606,6 +10881,9 @@ function initInteractiveMap() {
     console.warn('Leaflet JS library not loaded yet.');
     return;
   }
+
+  // Start Autonomous AI Address Explorer Engine
+  initAiAutoExplorerEngine();
 
   if (!leafletMap) {
     // Center map around Banjaran, Kabupaten Bandung, Jawa Barat

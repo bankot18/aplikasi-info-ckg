@@ -3447,4 +3447,404 @@ body.dark-mode #simpusBulkActionBar span {
   color: #f8fafc !important;
 }
 
+/* ==========================================================================
+   🌙 UNIVERSAL DARK MODE OVERRIDES FOR ALL POPUPS, MODALS & DIALOGS
+   ========================================================================== */
+
+/* 1. Universal Modal Overlay & Modal Window Content */
+body.dark-mode .modal,
+body.dark-mode .modal-backdrop,
+body.dark-mode .modal-dialog,
+body.dark-mode .modal-content,
+body.dark-mode .modal-container,
+body.dark-mode .custom-modal,
+body.dark-mode .modal-body,
+body.dark-mode .modal-header,
+body.dark-mode .modal-footer {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* 2. Modal Titles, Labels, Headers & Text */
+body.dark-mode .modal-title,
+body.dark-mode .modal-content h1,
+body.dark-mode .modal-content h2,
+body.dark-mode .modal-content h3,
+body.dark-mode .modal-content h4,
+body.dark-mode .modal-content h5,
+body.dark-mode .modal-content h6,
+body.dark-mode .modal-content label,
+body.dark-mode .modal-content p,
+body.dark-mode .modal-content span,
+body.dark-mode .modal-content div {
+  color: #f8fafc;
+}
+
+body.dark-mode .modal-content .text-muted,
+body.dark-mode .modal-content small,
+body.dark-mode .modal-content span[style*="color: #64748b"],
+body.dark-mode .modal-content span[style*="color: #475569"],
+body.dark-mode .modal-content div[style*="color: #64748b"],
+body.dark-mode .modal-content div[style*="color: #475569"] {
+  color: #94a3b8 !important;
+}
+
+/* 3. Inline White Background Containers Inside Modals (e.g. Action Bars, Option Cards) */
+body.dark-mode .modal-content [style*="background: #ffffff"],
+body.dark-mode .modal-content [style*="background:#ffffff"],
+body.dark-mode .modal-content [style*="background: #fff"],
+body.dark-mode .modal-content [style*="background:#fff"],
+body.dark-mode .modal-content [style*="background: white"],
+body.dark-mode .modal-content [style*="background:white"],
+body.dark-mode .modal-content [style*="background: #f8fafc"],
+body.dark-mode .modal-content [style*="background:#f8fafc"],
+body.dark-mode .modal-content [style*="background: #f1f5f9"],
+body.dark-mode .modal-content [style*="background:#f1f5f9"] {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+/* 4. Location & Category Selection Option Cards (Dalam Gedung vs Luar Gedung) */
+body.dark-mode .location-option-card,
+body.dark-mode .option-card,
+body.dark-mode .kategori-card,
+body.dark-mode [onclick*="selectLocation"],
+body.dark-mode [onclick*="selectKategori"],
+body.dark-mode [onclick*="setJenisKegiatan"] {
+  background-color: #0f172a !important;
+  border: 2px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .location-option-card:hover,
+body.dark-mode .option-card:hover,
+body.dark-mode .kategori-card:hover,
+body.dark-mode [onclick*="selectLocation"]:hover,
+body.dark-mode [onclick*="selectKategori"]:hover,
+body.dark-mode [onclick*="setJenisKegiatan"]:hover {
+  background-color: #1e293b !important;
+  border-color: #38bdf8 !important;
+}
+
+body.dark-mode .location-option-card.selected,
+body.dark-mode .option-card.selected,
+body.dark-mode .location-option-card.active,
+body.dark-mode .option-card.active {
+  background-color: rgba(56, 189, 248, 0.15) !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
+}
+
+body.dark-mode .location-option-card *,
+body.dark-mode .option-card *,
+body.dark-mode .kategori-card * {
+  color: #f8fafc !important;
+}
+
+body.dark-mode .location-option-card p,
+body.dark-mode .option-card p,
+body.dark-mode .location-option-card div div:last-child {
+  color: #94a3b8 !important;
+}
+
+/* 5. Inputs, Selects, Textareas inside Modals in Dark Mode */
+body.dark-mode .modal-content input,
+body.dark-mode .modal-content select,
+body.dark-mode .modal-content textarea,
+body.dark-mode .modal-container input,
+body.dark-mode .modal-container select,
+body.dark-mode .modal-container textarea {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .modal-content input::placeholder,
+body.dark-mode .modal-content select::placeholder,
+body.dark-mode .modal-content textarea::placeholder,
+body.dark-mode .modal-container input::placeholder {
+  color: #64748b !important;
+}
+
+body.dark-mode .modal-content select option,
+body.dark-mode .modal-container select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .modal-content input:focus,
+body.dark-mode .modal-content select:focus,
+body.dark-mode .modal-content textarea:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+}
+
+/* 6. Form Radio / Checkbox Pills in Dark Mode (e.g. Merokok Ya/Tidak) */
+body.dark-mode .btn-group-toggle .btn,
+body.dark-mode .radio-pill,
+body.dark-mode label.btn-outline-primary,
+body.dark-mode label.btn-outline-secondary {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode .btn-group-toggle .btn.active,
+body.dark-mode .radio-pill.active,
+body.dark-mode label.btn-outline-primary.active {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+/* 7. Action Footer Container & Buttons inside Modals */
+body.dark-mode .modal-footer,
+body.dark-mode .modal-action-bar,
+body.dark-mode div[class*="-footer"] {
+  background-color: #0f172a !important;
+  border-top: 1px solid #334155 !important;
+}
+
+body.dark-mode .modal-content .btn-secondary,
+body.dark-mode .modal-content button[onclick*="close"],
+body.dark-mode .modal-content button[onclick*="Batal"],
+body.dark-mode .modal-content button[data-bs-dismiss] {
+  background-color: #334155 !important;
+  border-color: #475569 !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .modal-content .btn-secondary:hover {
+  background-color: #475569 !important;
+  color: #ffffff !important;
+}
+
+/* 8. Close Button (X) in Modals */
+body.dark-mode .btn-close,
+body.dark-mode .modal-header .close,
+body.dark-mode [data-bs-dismiss="modal"] {
+  filter: invert(1) grayscale(100%) brightness(200%) !important;
+}
+
+/* 9. SweetAlert2 Popups Dark Mode Enhancements */
+body.dark-mode .swal2-popup {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .swal2-popup [style*="background: #f8fafc"],
+body.dark-mode .swal2-popup [style*="background:#f8fafc"],
+body.dark-mode .swal2-popup [style*="background: #ffffff"],
+body.dark-mode .swal2-popup [style*="background:#ffffff"] {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .swal2-popup [style*="color: #475569"],
+body.dark-mode .swal2-popup [style*="color: #64748b"] {
+  color: #cbd5e1 !important;
+}
+
+/* 10. Additional Specific Overrides for Step Banners & Action Bars */
+body.dark-mode .modal-content [style*="background: linear-gradient(135deg, #eff6ff"],
+body.dark-mode .modal-content [style*="background: linear-gradient(135deg, #f0fdf4"],
+body.dark-mode .modal-content [style*="background: linear-gradient(135deg, #f5f3ff"],
+body.dark-mode .modal-container [style*="background: linear-gradient(135deg, #eff6ff"],
+body.dark-mode .modal-container [style*="background: linear-gradient(135deg, #f0fdf4"],
+body.dark-mode .modal-container [style*="background: linear-gradient(135deg, #f5f3ff"] {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .modal-content [style*="color: #1e40af"],
+body.dark-mode .modal-content [style*="color: #065f46"],
+body.dark-mode .modal-content [style*="color: #5b21b6"],
+body.dark-mode .modal-content [style*="color: #166534"],
+body.dark-mode .modal-content [style*="color: #1d4ed8"],
+body.dark-mode .modal-content [style*="color: #4c1d95"] {
+  color: #60a5fa !important;
+}
+
+/* Location option cards in BNBA & Sekolah forms */
+body.dark-mode [onclick*="selectLocation"],
+body.dark-mode [onclick*="setJenisKegiatan"],
+body.dark-mode .location-card,
+body.dark-mode .option-card,
+body.dark-mode div[onclick*="selectLocation"],
+body.dark-mode div[onclick*="setJenisKegiatan"] {
+  background-color: #0f172a !important;
+  border: 2px solid #334155 !important;
+}
+
+body.dark-mode [onclick*="selectLocation"] *,
+body.dark-mode [onclick*="setJenisKegiatan"] *,
+body.dark-mode .location-card *,
+body.dark-mode .option-card * {
+  color: #f8fafc !important;
+}
+
+body.dark-mode [onclick*="selectLocation"] p,
+body.dark-mode [onclick*="setJenisKegiatan"] p,
+body.dark-mode .location-card p,
+body.dark-mode .option-card p,
+body.dark-mode [onclick*="selectLocation"] span,
+body.dark-mode [onclick*="setJenisKegiatan"] span {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode [onclick*="selectLocation"]:hover,
+body.dark-mode [onclick*="setJenisKegiatan"]:hover {
+  background-color: #1e293b !important;
+  border-color: #38bdf8 !important;
+}
+
+/* Bottom Action Footer Bar inside Modals (Removing Bright White Boxes) */
+body.dark-mode .modal-content div[style*="background: #ffffff"],
+body.dark-mode .modal-content div[style*="background:#ffffff"],
+body.dark-mode .modal-content div[style*="background: white"],
+body.dark-mode .modal-content div[style*="background:white"],
+body.dark-mode .modal-container div[style*="background: #ffffff"],
+body.dark-mode .modal-container div[style*="background:#ffffff"],
+body.dark-mode .modal-container div[style*="background: white"],
+body.dark-mode .modal-container div[style*="background:white"] {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .modal-content div[style*="border-top"],
+body.dark-mode .modal-container div[style*="border-top"] {
+  border-top-color: #334155 !important;
+}
+
+/* ==========================================================================
+   🩺 CLINICAL INDICATOR CELLS & BADGES IN DARK MODE (TENSI, GULA, ANEMIA, IMT)
+   ========================================================================== */
+body.dark-mode .tr-alert-hipertensi {
+  background: rgba(239, 68, 68, 0.12) !important;
+}
+
+body.dark-mode .cell-hipertensi,
+body.dark-mode .tr-alert-hipertensi .cell-hipertensi {
+  background: rgba(239, 68, 68, 0.28) !important;
+  color: #fca5a5 !important;
+  border: 1px solid rgba(248, 113, 113, 0.5) !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  font-weight: 800 !important;
+  display: inline-block !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.2) !important;
+}
+
+body.dark-mode .cell-gula-tinggi {
+  background: rgba(245, 158, 11, 0.25) !important;
+  color: #fde047 !important;
+  border: 1px solid rgba(251, 191, 36, 0.5) !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  font-weight: 800 !important;
+  display: inline-block !important;
+}
+
+body.dark-mode .cell-anemia {
+  background: rgba(168, 85, 247, 0.25) !important;
+  color: #d8b4fe !important;
+  border: 1px solid rgba(192, 132, 252, 0.5) !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  font-weight: 800 !important;
+  display: inline-block !important;
+}
+
+/* Badges (IMT, Status Validasi, Luar/Dalam Gedung) in Dark Mode */
+body.dark-mode .badge-emerald {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #6ee7b7 !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+}
+
+body.dark-mode .badge-amber {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fde047 !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+
+body.dark-mode .badge-rose {
+  background: rgba(244, 63, 94, 0.25) !important;
+  color: #fca5a5 !important;
+  border: 1px solid rgba(244, 63, 94, 0.4) !important;
+}
+
+body.dark-mode .badge-cyan {
+  background: rgba(56, 189, 248, 0.2) !important;
+  color: #7dd3fc !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+}
+
+body.dark-mode .badge-purple {
+  background: rgba(168, 85, 247, 0.2) !important;
+  color: #d8b4fe !important;
+  border: 1px solid rgba(168, 85, 247, 0.4) !important;
+}
+
+/* ==========================================================================
+   🤖 AI AUTONOMOUS EXPLORER & LIVE MAP RADAR ANIMATIONS
+   ========================================================================== */
+@keyframes pulse-cyan {
+  0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.6); }
+  70% { box-shadow: 0 0 0 15px rgba(56, 189, 248, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+}
+
+@keyframes radar-ring {
+  0% { transform: scale(0.3); opacity: 0.9; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.ai-radar-drone-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-radar-pulse-ring {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid #38bdf8;
+  background: rgba(56, 189, 248, 0.2);
+  animation: radar-ring 2s infinite ease-out;
+  pointer-events: none;
+}
+
+.ai-radar-center-icon {
+  position: relative;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #0284c7, #0f172a);
+  color: #38bdf8;
+  border: 2.5px solid #38bdf8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.8);
+  animation: pulse-cyan 1.8s infinite;
+}
+
 

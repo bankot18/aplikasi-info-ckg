@@ -1351,6 +1351,9 @@
               </p>
             </div>
             <div class="action-buttons-group">
+              <button id="btnAiExplorerToggleHeader" class="btn btn-purple" onclick="toggleAiAutoExplorer()">
+                <i class="bi bi-robot"></i> Jeda Jelajah AI
+              </button>
               <button class="btn btn-primary" onclick="openAddPinModalFromMap()">
                 <i class="bi bi-geo-fill"></i> Catat Titik Alamat di Peta
               </button>
@@ -1360,6 +1363,65 @@
               <button class="btn btn-secondary" onclick="resetMapFocusToBanjaran()">
                 <i class="bi bi-crosshair"></i> Reset Fokus (Banjaran)
               </button>
+            </div>
+          </div>
+
+          <!-- 🤖 AI AUTONOMOUS EXPLORER LIVE TRACKING HUD PANEL -->
+          <div id="aiExplorerPanel" style="margin-bottom: 16px; background: linear-gradient(135deg, #0f172a, #1e293b); border: 1.5px solid #38bdf8; border-radius: 14px; padding: 14px 18px; color: #ffffff; box-shadow: 0 10px 25px rgba(56, 189, 248, 0.15);">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+              
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(56, 189, 248, 0.2); border: 2px solid #38bdf8; display: flex; align-items: center; justify-content: center; color: #38bdf8; font-size: 20px; animation: pulse-cyan 2s infinite;">
+                  <i class="bi bi-robot"></i>
+                </div>
+                <div>
+                  <div style="font-size: 14px; font-weight: 800; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                    <span>🤖 AI Autonomous Address Explorer</span>
+                    <span id="aiExplorerStateBadge" class="badge badge-emerald" style="font-size: 10.5px; border-radius: 12px; padding: 3px 10px;">
+                      <i class="bi bi-record-fill" style="color: #22c55e; animation: blink 1s infinite;"></i> AUTO-SCANNING AKTIF
+                    </span>
+                  </div>
+                  <div style="font-size: 11.5px; color: #94a3b8; margin-top: 2px;">
+                    Menjelajah otomatis & mencatat titik kampung di <strong style="color: #38bdf8;" id="aiExplorerTargetRegion">Kabupaten Bandung</strong> → Cloud D1 Database.
+                  </div>
+                </div>
+              </div>
+
+              <!-- AI Controls -->
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <button id="btnToggleAiExplorer" class="btn btn-sm btn-cyan" onclick="toggleAiAutoExplorer()" style="font-weight: 700; font-size: 11.5px; padding: 6px 12px;">
+                  <i class="bi bi-pause-fill"></i> Jeda Jelajah AI
+                </button>
+                <button id="btnSpeedAiExplorer" class="btn btn-sm btn-secondary" onclick="speedUpAiExplorer()" style="font-size: 11.5px; font-weight: 700; padding: 6px 12px;" title="Ubah Kecepatan Scanning AI">
+                  <i class="bi bi-lightning-charge-fill" style="color: #f59e0b;"></i> Mode: Normal (4s)
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="reFocusAiRadarMarker()" style="font-size: 11.5px; font-weight: 700; padding: 6px 12px;" title="Ikuti Drone Radar AI">
+                  <i class="bi bi-crosshair" style="color: #38bdf8;"></i> Ikuti Radar AI
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Live Status Ticker & Progress Bar -->
+            <div style="display: grid; grid-template-columns: 2.2fr 1fr; gap: 14px; align-items: center;">
+              
+              <!-- Live Log Ticker Bar -->
+              <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 8px 12px; font-family: monospace; font-size: 11.5px; color: #38bdf8; display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap;">
+                <i class="bi bi-radar" style="font-size: 15px; color: #38bdf8; animation: spin 4s linear infinite;"></i>
+                <span id="aiLiveLogTicker" style="overflow: hidden; text-overflow: ellipsis;">🔍 AI Radar Active: Scanning Kp. Cipeundeuy, Kec. Banjaran (Kabupaten Bandung)...</span>
+              </div>
+
+              <!-- Exploration Coverage Progress -->
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 4px;">
+                  <span>Coverage <span id="aiCoverageRegionLabel">Kab. Bandung</span>:</span>
+                  <span id="aiCoverageText" style="color: #38bdf8;">0% (0/31 Kec)</span>
+                </div>
+                <div style="height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
+                  <div id="aiCoverageBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #0284c7); border-radius: 4px; transition: width 0.5s ease;"></div>
+                </div>
+              </div>
+
             </div>
           </div>
 
