@@ -11307,6 +11307,8 @@ function stopAiExplorerTimerExpired() {
   } else if (typeof showToast === 'function') {
     showToast(`⏱️ Waktu Jelajah Selesai (${aiExplorerInitialDurationMinutes} Menit)!`, 'info');
   }
+}
+
 function checkAdminRoleOnly(actionName = 'fitur ini') {
   const currentUserRole = sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas');
   if (currentUserRole !== 'Admin') {
