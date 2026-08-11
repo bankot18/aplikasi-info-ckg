@@ -9090,6 +9090,9 @@ function renderSekolahView() {
   const filterTahunVal = document.getElementById('filterSekolahTahun')?.value || '';
   const filterPetugasVal = document.getElementById('filterSekolahPetugas')?.value || '';
 
+  const currentUserRole = sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Admin');
+  const currentUserName = sessionStorage.getItem('ckg_user_name') || '';
+
   let dataset = [...sekolahRecords];
 
   // Petugas filtering (RBAC)
@@ -9311,13 +9314,15 @@ function openInputSekolahModal(id = null) {
   const form = document.getElementById('formSekolahInput');
   if (!modal || !form) return;
 
+  const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
+
   form.reset();
   document.getElementById('sekolahRecordId').value = '';
   document.getElementById('schProvinsi').value = 'Jawa Barat';
   document.getElementById('schKabKota').value = 'Kab. Bandung';
   document.getElementById('schKecamatan').value = 'Banjaran';
   document.getElementById('schKelurahan').value = 'Tarajusari';
-  document.getElementById('schPetugasEntry').value = currentUserName || 'Admin';
+  document.getElementById('schPetugasEntry').value = currentUserName;
   document.getElementById('schTanggalEntry').value = new Date().toISOString().substring(0, 10);
 
   populateSekolahDatalists();
@@ -9350,7 +9355,7 @@ function openInputSekolahModal(id = null) {
       document.getElementById('schKebugaran').value = rec.kebugaran || 'Baik';
       document.getElementById('schMenstruasi').value = rec.menstruasi || 'Belum';
       document.getElementById('schKacamata').value = rec.kacamata || 'Tidak';
-      document.getElementById('schPetugasEntry').value = rec.petugas_entry || currentUserName || 'Admin';
+      document.getElementById('schPetugasEntry').value = rec.petugas_entry || currentUserName;
       document.getElementById('schTanggalEntry').value = rec.tanggal_entry || new Date().toISOString().substring(0, 10);
     }
   } else {
@@ -9358,17 +9363,24 @@ function openInputSekolahModal(id = null) {
   }
 
   modal.classList.add('active');
+  modal.classList.add('open');
+  modal.style.display = 'flex';
 }
 
 function closeInputSekolahModal() {
   const modal = document.getElementById('modalInputSekolah');
-  if (modal) modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
 }
 
 async function saveSekolahRecordFromForm(event) {
   event.preventDefault();
   const idVal = document.getElementById('sekolahRecordId').value;
   const existingIdx = idVal ? sekolahRecords.findIndex(r => r.id === idVal) : -1;
+  const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
 
   const recordObj = {
     id: idVal || `SCH-${Date.now()}`,
@@ -9396,7 +9408,7 @@ async function saveSekolahRecordFromForm(event) {
     kebugaran: document.getElementById('schKebugaran').value,
     menstruasi: document.getElementById('schMenstruasi').value,
     kacamata: document.getElementById('schKacamata').value,
-    petugas_entry: document.getElementById('schPetugasEntry').value.trim() || currentUserName || 'Admin',
+    petugas_entry: document.getElementById('schPetugasEntry').value.trim() || currentUserName,
     tanggal_entry: document.getElementById('schTanggalEntry').value || new Date().toISOString().substring(0, 10)
   };
 
@@ -9437,6 +9449,7 @@ async function deleteSekolahRecord(id) {
 }
 
 async function confirmDeleteAllSekolahRecords() {
+  const currentUserRole = sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Admin');
   if (currentUserRole !== 'Admin') {
     showToast('Hanya Admin yang dapat menghapus seluruh database CKG Sekolah.', 'warning');
     return;
@@ -9465,6 +9478,9 @@ function exportSekolahToXLSX() {
   const filterBulanVal = document.getElementById('filterSekolahBulan')?.value || '';
   const filterTahunVal = document.getElementById('filterSekolahTahun')?.value || '';
   const filterPetugasVal = document.getElementById('filterSekolahPetugas')?.value || '';
+
+  const currentUserRole = sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Admin');
+  const currentUserName = sessionStorage.getItem('ckg_user_name') || '';
 
   let dataset = [...sekolahRecords];
 
@@ -9580,11 +9596,17 @@ function openImportSekolahModal() {
   document.getElementById('sekolahImportPreviewArea').style.display = 'none';
   document.getElementById('btnExecuteSekolahImport').disabled = true;
   modal.classList.add('active');
+  modal.classList.add('open');
+  modal.style.display = 'flex';
 }
 
 function closeImportSekolahModal() {
   const modal = document.getElementById('modalImportSekolah');
-  if (modal) modal.classList.remove('active');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
 }
 
 function handleSekolahImportFileSelect(event) {
@@ -9670,6 +9692,7 @@ function handleSekolahImportFileSelect(event) {
         const menstruasiVal = idxMenstruasi >= 0 ? String(row[idxMenstruasi] || 'Belum').trim() : 'Belum';
         const kacamataVal = idxKacamata >= 0 ? String(row[idxKacamata] || 'Tidak').trim() : 'Tidak';
 
+        const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
         parsedItems.push({
           id: `SCH-${Date.now()}-${i}`,
           no: noVal,
@@ -9696,7 +9719,7 @@ function handleSekolahImportFileSelect(event) {
           kebugaran: kebugaranVal,
           menstruasi: menstruasiVal,
           kacamata: kacamataVal,
-          petugas_entry: currentUserName || 'Admin',
+          petugas_entry: currentUserName,
           tanggal_entry: new Date().toISOString().substring(0, 10)
         });
       }
