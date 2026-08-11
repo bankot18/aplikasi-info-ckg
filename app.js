@@ -10999,6 +10999,56 @@ async function saveLearnedKampungKeyword(kw, kel, kec, kab = 'Kabupaten Bandung'
   }
 }
 
+async function syncKamusFromCloudServer() {
+  if (!checkAdminRoleOnly('Sinkronisasi Database Cloud D1')) return;
+
+  try {
+    if (typeof showToast === 'function') showToast('🔄 Mengunduh & men-sinkronkan Kamus Alamat dari Cloud D1...', 'info');
+    const res = await fetch('/api/kamus');
+    if (!res.ok) throw new Error('Gagal mengambil data kamus dari cloud');
+    const result = await res.json();
+    
+    if (result.success && Array.isArray(result.data)) {
+      const cloudList = result.data;
+      if (cloudList.length > 0) {
+        let localList = typeof getLearnedKampungMap === 'function' ? getLearnedKampungMap() : [];
+        cloudList.forEach(item => {
+          const kw = item.keyword || item.keywords;
+          if (kw) {
+            const cleanKw = String(kw).toUpperCase().replace(/^KP\.\s*/i, '').trim();
+            const kel = item.kelurahan || item.kel || 'Banjaran Kulon';
+            const kec = item.kecamatan || item.kec || 'Banjaran';
+            const idx = localList.findIndex(l => {
+              const lKw = (Array.isArray(l.keywords) ? l.keywords[0] : l.keywords) || '';
+              return String(lKw).toUpperCase().trim() === cleanKw &&
+                     String(l.kel || '').toUpperCase().trim() === kel.toUpperCase().trim() &&
+                     String(l.kec || '').toUpperCase().trim() === kec.toUpperCase().trim();
+            });
+            const entry = {
+              keywords: [cleanKw],
+              kel: kel,
+              kec: kec,
+              kab: item.kab_kota || item.kab || 'Kabupaten Bandung',
+              prov: item.provinsi || item.prov || 'Jawa Barat',
+              lat: item.lat || null,
+              lng: item.lng || null
+            };
+            if (idx >= 0) localList[idx] = { ...localList[idx], ...entry };
+            else localList.push(entry);
+          }
+        });
+        localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(localList));
+        if (typeof updateAiDbSavedCounterUI === 'function') updateAiDbSavedCounterUI();
+        if (typeof renderMapMarkers === 'function') renderMapMarkers();
+        if (typeof showToast === 'function') showToast(`✨ Sync Cloud D1 Berhasil! ${cloudList.length} titik kamus tersimpan.`, 'success');
+      }
+    }
+  } catch (err) {
+    console.warn('Sync Cloud D1 Error:', err);
+    if (typeof showToast === 'function') showToast('Info Sync Cloud: Data lokal tetap aktif.', 'info');
+  }
+}
+
 // Pre-defined coordinate lookup dictionary for Kabupaten Bandung kampungs/kelurahans
 const KAB_BANDUNG_COORDS_MAP = {
   // Kecamatan Banjaran
@@ -11057,7 +11107,7 @@ const KAB_BANDUNG_COORDS_MAP = {
    🤖 AI AUTONOMOUS ADDRESS EXPLORER & LIVE MAP RADAR ENGINE
    ========================================================================== */
 
-let isAiExplorerActive = true;
+let isAiExplorerActive = false;
 let aiExplorerInterval = null;
 let aiScanSpeedMs = 4000; // Default 4 seconds per scan
 let aiCurrentRegionIndex = 0; // 0: Kab. Bandung, 1: Kota Bandung & KBB
@@ -11257,9 +11307,27 @@ function stopAiExplorerTimerExpired() {
   } else if (typeof showToast === 'function') {
     showToast(`⏱️ Waktu Jelajah Selesai (${aiExplorerInitialDurationMinutes} Menit)!`, 'info');
   }
+function checkAdminRoleOnly(actionName = 'fitur ini') {
+  const currentUserRole = sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas');
+  if (currentUserRole !== 'Admin') {
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: '🔒 Akses Terbatas (Admin Only)',
+        text: `Maaf, ${actionName} hanya dapat diakses & dijalankan oleh pengguna dengan Peran ADMIN.`,
+        icon: 'warning',
+        confirmButtonText: 'Mengerti',
+        confirmButtonColor: '#f59e0b'
+      });
+    } else {
+      alert(`🔒 Akses Terbatas: ${actionName} hanya dapat diakses oleh Admin.`);
+    }
+    return false;
+  }
+  return true;
 }
 
 function openSetAiTimerModal() {
+  if (!checkAdminRoleOnly('Pengaturan Durasi Waktu Jelajah AI')) return;
   if (typeof Swal === 'undefined') return;
 
   Swal.fire({
@@ -11562,6 +11630,8 @@ function initAiAutoExplorerEngine() {
 }
 
 function toggleAiAutoExplorer() {
+  if (!checkAdminRoleOnly('Fitur Jelajah AI')) return;
+
   if (!isAiExplorerActive && (aiExplorerSecondsLeft <= 0 && !isAiTimerUnlimited)) {
     openSetAiTimerModal();
     return;
@@ -11595,6 +11665,8 @@ function toggleAiAutoExplorer() {
 }
 
 function speedUpAiExplorer() {
+  if (!checkAdminRoleOnly('Pengaturan Kecepatan Scanning AI')) return;
+
   if (aiScanSpeedMs === 4000) {
     aiScanSpeedMs = 2000;
   } else if (aiScanSpeedMs === 2000) {
@@ -12042,6 +12114,8 @@ function filterMapMarkers() {
 }
 
 function openAddPinModalFromMap(lat = null, lng = null) {
+  if (!checkAdminRoleOnly('Penambahan Titik Alamat Manual')) return;
+
   const defaultLat = lat || -7.0427;
   const defaultLng = lng || 107.5878;
 
