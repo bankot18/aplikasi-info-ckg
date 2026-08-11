@@ -9184,7 +9184,7 @@ function renderSekolahView() {
   if (dataset.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="25" style="text-align: center; padding: 40px; color: var(--text-muted);">
+        <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">
           <i class="bi bi-mortarboard" style="font-size: 36px; display: block; margin-bottom: 10px; color: #94a3b8;"></i>
           <strong style="font-size: 14px;">Belum ada data CKG Sekolah yang tersimpan / sesuai filter.</strong>
           <p style="font-size: 12px; margin-top: 4px;">Klik tombol <strong>"Input Skrining Sekolah"</strong> atau <strong>"Import Excel Sekolah"</strong> untuk menambahkan data.</p>
@@ -9195,55 +9195,159 @@ function renderSekolahView() {
   }
 
   tbody.innerHTML = dataset.map((r, i) => {
+    const safeId = escapeHtml(r.id || '');
+    const safeNik = escapeHtml(r.nik || '');
+    const petugasName = escapeHtml(r.petugas_entry || 'Admin');
+    const kel = escapeHtml(r.kelurahan || 'Tarajusari');
+    const kec = escapeHtml(r.kecamatan || 'Banjaran');
+    const kabKota = escapeHtml(r.kab_kota || 'Kab. Bandung');
+    const prov = escapeHtml(r.provinsi || 'Jawa Barat');
+
+    // Calculate age from tanggal_lahir
+    let usia = '-';
+    if (r.tanggal_lahir) {
+      const birthYear = parseInt(r.tanggal_lahir.substring(0, 4), 10);
+      if (!isNaN(birthYear)) usia = (new Date().getFullYear() - birthYear) + ' Th';
+    }
+
+    // JK badge
+    const jkBadge = r.jk === 'P'
+      ? `<span class="badge" style="background: #fce7f3; color: #9d174d; font-weight: 700; padding: 3px 8px; font-size: 11px;"><i class="bi bi-gender-female"></i> Perempuan</span>`
+      : `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; padding: 3px 8px; font-size: 11px;"><i class="bi bi-gender-male"></i> Laki-laki</span>`;
+
+    // HB display
     const hbNum = parseFloat(r.hb);
     const isAnemia = !isNaN(hbNum) && hbNum < 11.0;
-    const hbDisplay = r.hb && r.hb !== '-' ? `<span class="${isAnemia ? 'cell-anemia' : ''}">${escapeHtml(r.hb)}</span>` : '-';
+    const hbColor = isAnemia ? '#dc2626' : '#059669';
+    const hbBg = isAnemia ? '#fef2f2' : '#ecfdf5';
+    const hbBorder = isAnemia ? '#fecaca' : '#d1fae5';
 
-    const jkBadge = r.jk === 'P' 
-      ? `<span class="badge" style="background: #fbcfe8; color: #9d174d; font-weight: 700;">P</span>` 
-      : `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700;">L</span>`;
+    // TD display
+    const tdVal = (r.td_sistolik && r.td_diastolik) ? `${r.td_sistolik}/${r.td_diastolik} mmHg` : '-';
+    const isHipertensi = r.td_sistolik && r.td_sistolik > 120;
+    const tdColor = isHipertensi ? '#dc2626' : '#1e293b';
 
+    // Karies badge
     const kariesBadge = r.karies === 'Ya'
-      ? `<span class="badge badge-rose">Ya</span>`
-      : `<span class="badge badge-emerald">Tidak</span>`;
+      ? `<span style="color: #dc2626; font-weight: 700;">Ya ⚠</span>`
+      : `<span style="color: #059669; font-weight: 700;">Tidak ✓</span>`;
 
+    // Kacamata badge
     const kacamataBadge = r.kacamata === 'Ya'
-      ? `<span class="badge badge-amber">Ya</span>`
-      : `<span class="badge badge-emerald">Tidak</span>`;
+      ? `<span style="color: #d97706; font-weight: 700;">Ya</span>`
+      : `<span style="color: #059669; font-weight: 700;">Tidak</span>`;
+
+    // IMT calculation
+    let imtDisplay = '-';
+    if (r.bb && r.tb) {
+      const tbM = r.tb / 100;
+      if (tbM > 0) imtDisplay = (r.bb / (tbM * tbM)).toFixed(1);
+    }
+
+    // Full address
+    const fullAddr = [r.alamat, kel, kec, kabKota, prov].filter(Boolean).join(', ');
 
     return `
       <tr>
-        <td style="text-align: center; font-weight: 700; color: #64748b;">${r.no || i + 1}</td>
-        <td style="font-weight: 700; color: #6d28d9;">${escapeHtml(r.nama || '-')}</td>
-        <td style="font-weight: 600;">${escapeHtml(r.kelas || '-')}</td>
-        <td style="font-weight: 600; color: #1e293b;">${escapeHtml(r.sekolah || '-')}</td>
-        <td style="text-align: center;">${jkBadge}</td>
-        <td><code style="font-size: 11px; background: #f1f5f9; padding: 2px 5px; border-radius: 4px;">${escapeHtml(r.nik || '-')}</code></td>
-        <td>${formatDisplayDate(r.tanggal_lahir) || '-'}</td>
-        <td>${escapeHtml(r.no_whatsapp || '-')}</td>
-        <td>${escapeHtml(r.provinsi || 'Jawa Barat')}</td>
-        <td>${escapeHtml(r.kab_kota || 'Kab. Bandung')}</td>
-        <td>${escapeHtml(r.kecamatan || 'Banjaran')}</td>
-        <td>${escapeHtml(r.kelurahan || 'Tarajusari')}</td>
-        <td style="max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(r.alamat || '')}">${escapeHtml(r.alamat || '-')}</td>
-        <td style="text-align: center;">${r.bb ? r.bb : '-'}</td>
-        <td style="text-align: center;">${r.tb ? r.tb : '-'}</td>
-        <td style="text-align: center;">${r.lp ? r.lp : '-'}</td>
-        <td style="text-align: center;">${r.td_sistolik ? r.td_sistolik : '-'}</td>
-        <td style="text-align: center;">${r.td_diastolik ? r.td_diastolik : '-'}</td>
-        <td style="text-align: center;">${escapeHtml(r.gula_darah || '-')}</td>
-        <td style="text-align: center; font-weight: 600;">${hbDisplay}</td>
-        <td style="text-align: center;">${kariesBadge}</td>
-        <td style="text-align: center;">${escapeHtml(r.kebugaran || 'Baik')}</td>
-        <td style="text-align: center;">${escapeHtml(r.menstruasi || 'Belum')}</td>
-        <td style="text-align: center;">${kacamataBadge}</td>
-        <td style="text-align: center;">
-          <div style="display: flex; gap: 4px; justify-content: center;">
-            <button class="btn btn-secondary btn-sm" onclick="editSekolahRecord('${r.id}')" title="Edit Data" style="padding: 3px 7px;">
-              <i class="bi bi-pencil-fill" style="color: #7c3aed;"></i>
+        <!-- Column 1: No -->
+        <td style="text-align: center; vertical-align: middle; padding: 14px 10px;">
+          <div style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #ede9fe; color: #6d28d9; font-weight: 800; font-size: 12px; border-radius: 50%; border: 1.5px solid #c4b5fd;">
+            ${r.no || i + 1}
+          </div>
+        </td>
+
+        <!-- Column 2: Nama Siswa & Identitas -->
+        <td style="min-width: 260px; vertical-align: top;">
+          <div style="font-size: 14.5px; font-weight: 800; color: #6d28d9; margin-bottom: 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" onclick="editSekolahRecord('${safeId}')" title="Klik untuk Edit Data">
+            ${escapeHtml(r.nama || '-')} <i class="bi bi-pencil-square" style="font-size: 11px; opacity: 0.7;"></i>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            ${r.nik ? `<div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 11.5px; font-family: monospace; font-weight: 700; color: #1e293b; width: fit-content; cursor: pointer;" onclick="copyToClipboard('${safeNik}', 'NIK Siswa')" title="Salin NIK Siswa">
+              <i class="bi bi-card-text" style="color: #6d28d9;"></i> NIK: ${safeNik} <i class="bi bi-copy" style="font-size: 10px; color: #6d28d9; margin-left: 2px;"></i>
+            </div>` : ''}
+
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+              <span class="badge badge-purple" style="padding: 3px 8px; font-size: 11px; font-weight: 700;">
+                <i class="bi bi-mortarboard-fill"></i> ${escapeHtml(r.kelas || '-')}
+              </span>
+              <span class="badge" style="background: #f0f9ff; color: #0369a1; padding: 3px 8px; font-size: 11px; font-weight: 700; border: 1px solid #bae6fd;">
+                <i class="bi bi-building"></i> ${escapeHtml(r.sekolah || '-')}
+              </span>
+            </div>
+
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+              ${jkBadge}
+              ${r.tanggal_lahir ? `<span class="badge badge-amber" style="padding: 3px 8px; font-size: 11px; font-weight: 700;">
+                <i class="bi bi-calendar-event"></i> ${usia} (${formatDisplayDate(r.tanggal_lahir) || '-'})
+              </span>` : ''}
+              ${r.no_whatsapp ? `<span class="badge" style="background: #ecfdf5; color: #059669; padding: 3px 8px; font-size: 11px; font-weight: 700; border: 1px solid #d1fae5;">
+                <i class="bi bi-whatsapp"></i> ${escapeHtml(r.no_whatsapp)}
+              </span>` : ''}
+            </div>
+          </div>
+        </td>
+
+        <!-- Column 3: Hasil Skrining / Pemeriksaan -->
+        <td style="min-width: 280px; vertical-align: top;">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #fff1f2; border: 1px solid #ffe4e6; padding: 5px 10px; border-radius: 6px; font-size: 11.5px;">
+              <span style="color: #9f1239; font-weight: 700;"><i class="bi bi-activity" style="margin-right: 4px;"></i> Tensi (TD)</span>
+              <strong style="color: ${tdColor}; font-size: 12.5px;">${tdVal}</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #ecfdf5; border: 1px solid #d1fae5; padding: 5px 10px; border-radius: 6px; font-size: 11.5px;">
+              <span style="color: #065f46; font-weight: 700;"><i class="bi bi-person-bounding-box" style="margin-right: 4px;"></i> BB / TB (IMT)</span>
+              <strong style="color: #059669; font-size: 12px;">${r.bb ? r.bb + 'kg' : '-'} / ${r.tb ? r.tb + 'cm' : '-'} (${imtDisplay})</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: ${hbBg}; border: 1px solid ${hbBorder}; padding: 5px 10px; border-radius: 6px; font-size: 11.5px;">
+              <span style="color: ${hbColor}; font-weight: 700;"><i class="bi bi-droplet-fill" style="margin-right: 4px;"></i> HB (g/dL)</span>
+              <strong style="color: ${hbColor}; font-size: 12px;">${r.hb && r.hb !== '-' ? r.hb + ' g/dL' : '-'}${isAnemia ? ' ⚠ Anemia' : ''}</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #f0f9ff; border: 1px solid #e0f2fe; padding: 5px 10px; border-radius: 6px; font-size: 11.5px;">
+              <span style="color: #075985; font-weight: 700;"><i class="bi bi-clipboard2-pulse" style="margin-right: 4px;"></i> LP / Gula</span>
+              <strong style="color: #0284c7; font-size: 12px;">${r.lp ? r.lp + 'cm' : '-'} / ${escapeHtml(r.gula_darah || '-')} mg/dL</strong>
+            </div>
+
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px;">
+              <span style="font-size: 11px; background: #fafafa; border: 1px solid #e5e7eb; padding: 3px 8px; border-radius: 5px;"><strong>Karies:</strong> ${kariesBadge}</span>
+              <span style="font-size: 11px; background: #fafafa; border: 1px solid #e5e7eb; padding: 3px 8px; border-radius: 5px;"><strong>Kacamata:</strong> ${kacamataBadge}</span>
+              <span style="font-size: 11px; background: #fafafa; border: 1px solid #e5e7eb; padding: 3px 8px; border-radius: 5px;"><strong>Kebugaran:</strong> ${escapeHtml(r.kebugaran || 'Baik')}</span>
+              <span style="font-size: 11px; background: #fafafa; border: 1px solid #e5e7eb; padding: 3px 8px; border-radius: 5px;"><strong>Menstruasi:</strong> ${escapeHtml(r.menstruasi || 'Belum')}</span>
+            </div>
+          </div>
+        </td>
+
+        <!-- Column 4: Alamat Siswa -->
+        <td style="min-width: 240px; vertical-align: top;">
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px;">
+            <div style="font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 5px; line-height: 1.4;">
+              <i class="bi bi-geo-alt-fill" style="color: #7c3aed; margin-right: 4px;"></i> ${escapeHtml(r.alamat || '-')} ${prov} ${kabKota} ${kec} ${kel}
+            </div>
+            <div style="display: flex; gap: 8px; font-size: 11px; color: #475569; background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #f1f5f9; flex-wrap: wrap;">
+              <span><strong>Kel:</strong> ${kel}</span>
+              <span style="color: #cbd5e1;">|</span>
+              <span><strong>Kec:</strong> ${kec}</span>
+            </div>
+          </div>
+        </td>
+
+        <!-- Column 5: Petugas & Tindakan -->
+        <td style="width: 175px; text-align: center; vertical-align: middle; padding: 14px 10px;">
+          <div style="margin-bottom: 8px;">
+            <span class="badge badge-purple" style="font-weight: 700; padding: 5px 12px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+              <i class="bi bi-person-fill"></i> ${petugasName}
+            </span>
+          </div>
+          ${r.tanggal_entry ? `<div style="font-size: 10.5px; color: #64748b; margin-bottom: 6px;"><i class="bi bi-calendar3"></i> ${formatDisplayDate(r.tanggal_entry) || r.tanggal_entry}</div>` : ''}
+          <div style="display: flex; flex-direction: column; gap: 6px; align-items: stretch;">
+            <button class="btn btn-primary btn-sm" style="font-size: 11.5px; padding: 6px 12px; border-radius: 6px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none; box-shadow: 0 2px 4px rgba(124,58,237,0.2);" onclick="editSekolahRecord('${safeId}')" title="Edit Data Siswa">
+              <i class="bi bi-pencil-square"></i> Edit Data
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="deleteSekolahRecord('${r.id}')" title="Hapus Data" style="padding: 3px 7px;">
-              <i class="bi bi-trash-fill" style="color: #ef4444;"></i>
+            <button class="btn btn-outline-danger btn-sm" style="font-size: 11px; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 5px;" onclick="deleteSekolahRecord('${safeId}')" title="Hapus Data Siswa">
+              <i class="bi bi-trash-fill"></i> Hapus
             </button>
           </div>
         </td>
