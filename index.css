@@ -3071,6 +3071,44 @@ body.dark-mode .menu-lock-item input[type="checkbox"] {
   accent-color: #a855f7 !important;
 }
 
+/* 🗑 Recycle Data Filter Bar Dark Mode Overrides */
+body.dark-mode .filter-bar-box {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .filter-bar-box div[style*="background: #ffffff"],
+body.dark-mode .filter-bar-box div[style*="background:#ffffff"],
+body.dark-mode .filter-bar-box input,
+body.dark-mode .filter-bar-box select {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .filter-bar-box select option {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .filter-bar-box span {
+  color: #cbd5e1 !important;
+}
+
+/* Recycle Option Cards in Empty Dialog Dark Mode */
+body.dark-mode .recycle-option-card {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .recycle-option-card div {
+  color: #f8fafc !important;
+}
+
+body.dark-mode .recycle-option-card div div:last-child {
+  color: #94a3b8 !important;
+}
+
 /* Stepper Wizard Component */
 .wizard-stepper-bar {
   display: flex;

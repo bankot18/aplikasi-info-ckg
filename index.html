@@ -1085,6 +1085,19 @@
                 </select>
               </div>
 
+              <!-- Filter Tampilkan (Limit Data) -->
+              <div style="display: flex; align-items: center; gap: 6px; background: #ffffff; border: 1px solid #cbd5e1; padding: 0 12px; border-radius: 10px; height: 42px;">
+                <i class="bi bi-list-ol" style="color: #0284c7; font-size: 14px;"></i>
+                <span style="font-size: 12px; font-weight: 700; color: #475569;">Tampilkan:</span>
+                <select id="filterRecycleLimit" onchange="renderRecycleTable()" style="border: none; outline: none; font-size: 12.5px; font-weight: 700; color: #0f172a; background: transparent; cursor: pointer;">
+                  <option value="10" selected>10 Data (Default)</option>
+                  <option value="20">20 Data</option>
+                  <option value="50">50 Data</option>
+                  <option value="100">100 Data</option>
+                  <option value="all">Semua Data</option>
+                </select>
+              </div>
+
               <!-- Reset Filter Button -->
               <button class="btn btn-secondary btn-sm" onclick="resetRecycleFilters()" title="Reset Filter" style="height: 42px; border-radius: 10px; padding: 0 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
                 <i class="bi bi-arrow-counterclockwise"></i> Reset

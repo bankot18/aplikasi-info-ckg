@@ -6403,7 +6403,15 @@ function renderRecycleTable() {
     return;
   }
 
-  tbody.innerHTML = visibleRecycle.map((r, i) => {
+  // Limit Filter Logic (Default: 10)
+  const limitVal = document.getElementById('filterRecycleLimit')?.value || '10';
+  let displayedRecycle = visibleRecycle;
+  if (limitVal !== 'all') {
+    const limitNum = parseInt(limitVal, 10) || 10;
+    displayedRecycle = visibleRecycle.slice(0, limitNum);
+  }
+
+  tbody.innerHTML = displayedRecycle.map((r, i) => {
     const safeId = r.id || r.nik || i;
     const sourceBadge = (r.original_source || 'BNBA').includes('SIMPUS')
       ? `<span class="badge badge-amber"><i class="bi bi-hdd-network"></i> SIMPUS</span>`
@@ -6445,6 +6453,9 @@ function resetRecycleFilters() {
 
   const pet = document.getElementById('filterRecyclePetugas');
   if (pet) pet.value = '';
+
+  const lim = document.getElementById('filterRecycleLimit');
+  if (lim) lim.value = '10';
 
   renderRecycleTable();
   showToast('Filter & Pencarian Recycle Data telah di-reset.', 'info');
@@ -6580,13 +6591,12 @@ function emptyRecycleBin() {
     return;
   }
 
-  const filteredItems = getFilteredRecycleBin();
-
-  if (filteredItems.length === 0) {
-    showToast('Tidak ada data di tempat sampah yang sesuai filter untuk dihapus.', 'info');
+  if (recycleBin.length === 0) {
+    showToast('Tempat sampah saat ini sudah kosong.', 'info');
     return;
   }
 
+  const filteredItems = getFilteredRecycleBin();
   const isFiltered = (
     (document.getElementById('searchRecycle')?.value || '').trim() !== '' ||
     (document.getElementById('filterRecycleKegiatan')?.value || '') !== '' ||
@@ -6594,32 +6604,125 @@ function emptyRecycleBin() {
     (document.getElementById('filterRecyclePetugas')?.value || '') !== ''
   );
 
-  const actionTitle = isFiltered ? `Hapus Permanen ${filteredItems.length} Data Terfilter?` : 'Kosongkan Tempat Sampah?';
-  const actionText = isFiltered 
-    ? `Sebanyak ${filteredItems.length} data yang muncul sesuai filter saat ini akan DIHAPUS PERMANEN dari sistem!`
-    : `Semua (${recycleBin.length}) data di tempat sampah akan dihapus secara permanen!`;
+  const countTotal = recycleBin.length;
+  const countSimpus = recycleBin.filter(r => (r.original_source || '').toUpperCase().includes('SIMPUS')).length;
+  const countBnba = countTotal - countSimpus;
+  const countFiltered = filteredItems.length;
+
+  const htmlContent = `
+    <div style="text-align: left; margin-top: 8px;">
+      <p style="font-size: 13.5px; color: var(--text-muted, #64748b); margin-bottom: 14px; line-height: 1.5;">
+        Pilih sumber data yang ingin Anda hapus secara <strong>permanen</strong> dari Tempat Sampah:
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        
+        <!-- Opsi 1: Semua Data -->
+        <label class="recycle-option-card" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 2px solid #0284c7; border-radius: 12px; cursor: pointer; background: rgba(2, 132, 199, 0.06); transition: all 0.2s;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="radio" name="emptyRecycleSource" value="ALL" checked style="accent-color: #0284c7; width: 18px; height: 18px;">
+            <div>
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">🌐 Kosongkan Semua Data</div>
+              <div style="font-size: 11.5px; color: #64748b;">Hapus seluruh isi tempat sampah secara total</div>
+            </div>
+          </div>
+          <span class="badge badge-cyan" style="font-size: 12px; font-weight: 800; padding: 4px 10px;">${countTotal} Data</span>
+        </label>
+
+        ${isFiltered ? `
+        <!-- Opsi Terfilter (Jika sedang ada filter aktif) -->
+        <label class="recycle-option-card" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 2px solid #8b5cf6; border-radius: 12px; cursor: pointer; background: rgba(139, 92, 246, 0.06); transition: all 0.2s;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="radio" name="emptyRecycleSource" value="FILTERED" style="accent-color: #8b5cf6; width: 18px; height: 18px;">
+            <div>
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">🔍 Hanya Data Terfilter Saat Ini</div>
+              <div style="font-size: 11.5px; color: #64748b;">Hapus data yang sesuai pencarian/filter di tabel</div>
+            </div>
+          </div>
+          <span class="badge badge-purple" style="font-size: 12px; font-weight: 800; padding: 4px 10px;">${countFiltered} Data</span>
+        </label>
+        ` : ''}
+
+        <!-- Opsi 2: Hanya SIMPUS -->
+        <label class="recycle-option-card" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 2px solid #cbd5e1; border-radius: 12px; cursor: pointer; background: var(--bg-card, #ffffff); transition: all 0.2s;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="radio" name="emptyRecycleSource" value="SIMPUS" ${countSimpus === 0 ? 'disabled' : ''} style="accent-color: #f59e0b; width: 18px; height: 18px;">
+            <div>
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">🖥️ Hanya Data Sumber SIMPUS</div>
+              <div style="font-size: 11.5px; color: #64748b;">Hapus data yang berasal dari SIMPUS saja</div>
+            </div>
+          </div>
+          <span class="badge badge-amber" style="font-size: 12px; font-weight: 800; padding: 4px 10px;">${countSimpus} Data</span>
+        </label>
+
+        <!-- Opsi 3: Hanya BNBA CKG -->
+        <label class="recycle-option-card" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 2px solid #cbd5e1; border-radius: 12px; cursor: pointer; background: var(--bg-card, #ffffff); transition: all 0.2s;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="radio" name="emptyRecycleSource" value="BNBA" ${countBnba === 0 ? 'disabled' : ''} style="accent-color: #06b6d4; width: 18px; height: 18px;">
+            <div>
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">📁 Hanya Data Sumber BNBA CKG</div>
+              <div style="font-size: 11.5px; color: #64748b;">Hapus data yang berasal dari BNBA CKG saja</div>
+            </div>
+          </div>
+          <span class="badge badge-emerald" style="font-size: 12px; font-weight: 800; padding: 4px 10px;">${countBnba} Data</span>
+        </label>
+
+      </div>
+
+      <div style="margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: rgba(225, 29, 72, 0.08); border: 1px solid rgba(225, 29, 72, 0.2); font-size: 12px; color: #e11d48; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size: 16px;"></i>
+        <span>Peringatan: Data yang dihapus permanen tidak dapat dipulihkan!</span>
+      </div>
+    </div>
+  `;
 
   Swal.fire({
-    title: actionTitle,
-    text: actionText,
+    title: 'Kosongkan Tempat Sampah',
+    html: htmlContent,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#64748b',
-    confirmButtonText: `Ya, Hapus Permanen (${filteredItems.length} Data)!`,
-    cancelButtonText: 'Batal'
+    confirmButtonText: '<i class="bi bi-trash-fill"></i> Ya, Hapus Permanen Sekarang!',
+    cancelButtonText: 'Batal',
+    preConfirm: () => {
+      const selectedOption = document.querySelector('input[name="emptyRecycleSource"]:checked')?.value || 'ALL';
+      return selectedOption;
+    }
   }).then((result) => {
     if (result.isConfirmed) {
-      if (isFiltered) {
-        const idsToRemove = new Set(filteredItems.map(item => String(item.id || item.nik)));
-        recycleBin = recycleBin.filter(r => !idsToRemove.has(String(r.id || r.nik)));
-      } else {
+      const targetSource = result.value;
+      let countRemoved = 0;
+      let targetLabel = '';
+
+      if (targetSource === 'ALL') {
+        countRemoved = recycleBin.length;
         recycleBin = [];
+        targetLabel = 'Semua Data';
+      } else if (targetSource === 'FILTERED') {
+        const idsToRemove = new Set(filteredItems.map(item => String(item.id || item.nik)));
+        countRemoved = idsToRemove.size;
+        recycleBin = recycleBin.filter(r => !idsToRemove.has(String(r.id || r.nik)));
+        targetLabel = 'Data Terfilter';
+      } else if (targetSource === 'SIMPUS') {
+        const initialLen = recycleBin.length;
+        recycleBin = recycleBin.filter(r => !(r.original_source || '').toUpperCase().includes('SIMPUS'));
+        countRemoved = initialLen - recycleBin.length;
+        targetLabel = 'Hanya Data SIMPUS';
+      } else if (targetSource === 'BNBA') {
+        const initialLen = recycleBin.length;
+        recycleBin = recycleBin.filter(r => (r.original_source || '').toUpperCase().includes('SIMPUS'));
+        countRemoved = initialLen - recycleBin.length;
+        targetLabel = 'Hanya Data BNBA CKG';
       }
 
       saveRecycleBinToStorage();
       renderRecycleTable();
-      Swal.fire('Terhapus Permanen!', `Sebanyak ${filteredItems.length} data telah dihapus permanen dari sistem.`, 'success');
+      Swal.fire(
+        'Terhapus Permanen!',
+        `Sebanyak <strong>${countRemoved} Data</strong> (${targetLabel}) telah berhasil dihapus permanen dari tempat sampah.`,
+        'success'
+      );
     }
   });
 }
