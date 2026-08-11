@@ -425,7 +425,7 @@ export default {
       }
     }
 
-    // 4. ROUTE: /api/sekolah (CKG Sekolah Database)
+    // 4. ROUTE: /api/sekolah (CKG Sekolah Database - Completely Standalone)
     if (url.pathname === '/api/sekolah' || url.pathname.startsWith('/api/sekolah/')) {
       if (!env.DB) {
         return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
@@ -435,23 +435,41 @@ export default {
         await env.DB.prepare(`
           CREATE TABLE IF NOT EXISTS ckg_sekolah_records (
             id TEXT PRIMARY KEY,
-            nama_sekolah TEXT,
-            nama_siswa TEXT,
-            nisn_nik TEXT,
+            no INTEGER,
+            nama TEXT NOT NULL,
             kelas TEXT,
-            jenis_kelamin TEXT DEFAULT 'L',
+            sekolah TEXT,
+            jk TEXT DEFAULT 'L',
+            nik TEXT,
+            tanggal_lahir TEXT,
+            no_whatsapp TEXT,
+            provinsi TEXT DEFAULT 'Jawa Barat',
+            kab_kota TEXT DEFAULT 'Kab. Bandung',
+            kecamatan TEXT DEFAULT 'Banjaran',
+            kelurahan TEXT DEFAULT 'Tarajusari',
+            alamat TEXT,
+            bb REAL DEFAULT 0,
+            tb REAL DEFAULT 0,
+            lp REAL DEFAULT 0,
+            td_sistolik INTEGER DEFAULT 0,
+            td_diastolik INTEGER DEFAULT 0,
+            gula_darah TEXT DEFAULT '-',
             hb TEXT DEFAULT '-',
-            status_gizi TEXT DEFAULT 'Normal',
-            petugas_entry TEXT,
+            karies TEXT DEFAULT 'Tidak',
+            kebugaran TEXT DEFAULT 'Baik',
+            menstruasi TEXT DEFAULT 'Belum',
+            kacamata TEXT DEFAULT 'Tidak',
+            petugas_entry TEXT DEFAULT 'Admin',
             tanggal_entry TEXT,
-            raw_json TEXT
+            raw_json TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )
         `).run();
       } catch (_) {}
 
       if (request.method === 'GET') {
         try {
-          const { results } = await env.DB.prepare('SELECT * FROM ckg_sekolah_records ORDER BY rowid DESC').all();
+          const { results } = await env.DB.prepare('SELECT * FROM ckg_sekolah_records ORDER BY no ASC, rowid DESC').all();
           const parsed = (results || []).map(r => {
             let json = {};
             try { json = JSON.parse(r.raw_json || '{}'); } catch (_) {}
@@ -468,34 +486,78 @@ export default {
           const body = await request.json();
           const items = Array.isArray(body) ? body : [body];
           const stmt = env.DB.prepare(`
-            INSERT INTO ckg_sekolah_records (id, nama_sekolah, nama_siswa, nisn_nik, kelas, jenis_kelamin, hb, status_gizi, petugas_entry, tanggal_entry, raw_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO ckg_sekolah_records (
+              id, no, nama, kelas, sekolah, jk, nik, tanggal_lahir, no_whatsapp,
+              provinsi, kab_kota, kecamatan, kelurahan, alamat, bb, tb, lp,
+              td_sistolik, td_diastolik, gula_darah, hb, karies, kebugaran, menstruasi, kacamata,
+              petugas_entry, tanggal_entry, raw_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
-              nama_sekolah = excluded.nama_sekolah,
-              nama_siswa = excluded.nama_siswa,
-              nisn_nik = excluded.nisn_nik,
+              no = excluded.no,
+              nama = excluded.nama,
               kelas = excluded.kelas,
-              jenis_kelamin = excluded.jenis_kelamin,
+              sekolah = excluded.sekolah,
+              jk = excluded.jk,
+              nik = excluded.nik,
+              tanggal_lahir = excluded.tanggal_lahir,
+              no_whatsapp = excluded.no_whatsapp,
+              provinsi = excluded.provinsi,
+              kab_kota = excluded.kab_kota,
+              kecamatan = excluded.kecamatan,
+              kelurahan = excluded.kelurahan,
+              alamat = excluded.alamat,
+              bb = excluded.bb,
+              tb = excluded.tb,
+              lp = excluded.lp,
+              td_sistolik = excluded.td_sistolik,
+              td_diastolik = excluded.td_diastolik,
+              gula_darah = excluded.gula_darah,
               hb = excluded.hb,
-              status_gizi = excluded.status_gizi,
+              karies = excluded.karies,
+              kebugaran = excluded.kebugaran,
+              menstruasi = excluded.menstruasi,
+              kacamata = excluded.kacamata,
               petugas_entry = excluded.petugas_entry,
               tanggal_entry = excluded.tanggal_entry,
               raw_json = excluded.raw_json
           `);
-          const statements = items.map(item => stmt.bind(
-            String(item.id || item.nisn_nik || Date.now()),
-            item.nama_sekolah || '',
-            item.nama_siswa || item.nama || '',
-            item.nisn_nik || item.nik || '',
-            item.kelas || '',
-            item.jenis_kelamin || 'L',
-            item.hb || '-',
-            item.status_gizi || 'Normal',
-            item.petugas_entry || 'Admin',
-            item.tanggal_entry || new Date().toISOString().substring(0, 10),
+          const statements = items.map((item, idx) => stmt.bind(
+            String(item.id || item.nik || `SCH-${Date.now()}-${idx}`),
+            Number(item.no || idx + 1),
+            String(item.nama || item.nama_siswa || ''),
+            String(item.kelas || ''),
+            String(item.sekolah || item.nama_sekolah || ''),
+            String(item.jk || item.jenis_kelamin || 'L'),
+            String(item.nik || item.nisn_nik || ''),
+            String(item.tanggal_lahir || ''),
+            String(item.no_whatsapp || ''),
+            String(item.provinsi || 'Jawa Barat'),
+            String(item.kab_kota || 'Kab. Bandung'),
+            String(item.kecamatan || 'Banjaran'),
+            String(item.kelurahan || 'Tarajusari'),
+            String(item.alamat || ''),
+            Number(item.bb || 0),
+            Number(item.tb || 0),
+            Number(item.lp || 0),
+            Number(item.td_sistolik || 0),
+            Number(item.td_diastolik || 0),
+            String(item.gula_darah || '-'),
+            String(item.hb || '-'),
+            String(item.karies || 'Tidak'),
+            String(item.kebugaran || 'Baik'),
+            String(item.menstruasi || 'Belum'),
+            String(item.kacamata || 'Tidak'),
+            String(item.petugas_entry || 'Admin'),
+            String(item.tanggal_entry || new Date().toISOString().substring(0, 10)),
             JSON.stringify(item)
           ));
-          await env.DB.batch(statements);
+
+          const chunkSize = 20;
+          for (let i = 0; i < statements.length; i += chunkSize) {
+            const chunk = statements.slice(i, i + chunkSize);
+            await env.DB.batch(chunk);
+          }
+
           return new Response(JSON.stringify({ success: true, count: items.length }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });

@@ -865,17 +865,26 @@
           <div class="card-header-bar">
             <div>
               <div class="card-header-title">
-                <i class="bi bi-mortarboard-fill" style="color: var(--purple);"></i> Pencatatan CKG Anak Sekolah & Remaja
+                <i class="bi bi-mortarboard-fill" style="color: var(--purple);"></i> Database & Pencatatan Skrining CKG Sekolah
               </div>
               <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Pencatatan skrining kesehatan anak sekolah & remaja di wilayah Puskesmas Banjaran Kota.
+                Pencatatan skrining kesehatan anak sekolah & remaja di wilayah Puskesmas Banjaran Kota (Terpisah dari Database Record CKG & SIMPUS).
               </p>
             </div>
             <div class="action-buttons-group">
-              <button class="btn btn-primary" onclick="openInputModal('Luar Gedung')">
+              <button class="btn btn-primary" onclick="openInputSekolahModal()">
                 <i class="bi bi-plus-lg"></i> Input Skrining Sekolah
               </button>
-              <button class="btn btn-secondary" onclick="renderSekolahView()">
+              <button class="btn btn-amber" onclick="openImportSekolahModal()">
+                <i class="bi bi-file-earmark-arrow-up-fill"></i> Import Excel Sekolah
+              </button>
+              <button class="btn btn-emerald" onclick="exportSekolahToXLSX()">
+                <i class="bi bi-file-earmark-arrow-down-fill"></i> Download Excel
+              </button>
+              <button class="btn btn-danger admin-only" id="btnHapusSemuaDataSekolah" onclick="confirmDeleteAllSekolahRecords()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; padding: 8px 14px; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25); display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-trash3-fill"></i> Hapus Semua Data
+              </button>
+              <button class="btn btn-secondary" onclick="fetchSekolahRecordsFromCloud()">
                 <i class="bi bi-arrow-clockwise"></i> Refresh Sekolah
               </button>
             </div>
@@ -920,7 +929,7 @@
           <div class="filter-bar-box">
             <div class="filter-item" style="flex: 1; min-width: 220px;">
               <i class="bi bi-search" style="color: var(--primary);"></i> Pencarian CKG Sekolah:
-              <input type="text" id="searchSekolahRecords" class="filter-control" placeholder="Cari Nama Siswa / NIK / Sekolah / Petugas..." style="width: 100%; font-weight: 600;" oninput="renderSekolahView()">
+              <input type="text" id="searchSekolahRecords" class="filter-control" placeholder="Cari Nama Siswa / NIK / Sekolah / Kelas / Petugas..." style="width: 100%; font-weight: 600;" oninput="renderSekolahView()">
             </div>
 
             <div class="filter-item">
@@ -964,22 +973,36 @@
             </button>
           </div>
 
-          <!-- CKG Sekolah Table View -->
-          <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-            <table class="custom-table">
+          <!-- CKG Sekolah Table View (24 Columns Match Image Reference) -->
+          <div class="table-responsive" style="max-height: 650px; overflow-y: auto;">
+            <table class="custom-table" id="sekolahDataTable">
               <thead>
-                <tr style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
-                  <th style="width: 50px; text-align: center;">NO</th>
-                  <th>TGL SKRINING</th>
-                  <th>NAMA SISWA & NIK</th>
-                  <th>USIA & JK</th>
-                  <th>SEKOLAH / ALAMAT</th>
-                  <th>BB (KG)</th>
-                  <th>TB (CM)</th>
-                  <th>IMT & STATUS</th>
-                  <th>FISIK / ANEMIA</th>
-                  <th>PETUGAS ENTRY</th>
-                  <th>STATUS VALIDASI</th>
+                <tr style="position: sticky; top: 0; background: #f8fafc; z-index: 2; font-size: 11px;">
+                  <th style="width: 40px; text-align: center;">NO</th>
+                  <th>NAMA</th>
+                  <th>KELAS</th>
+                  <th>SEKOLAH</th>
+                  <th style="text-align: center;">JK</th>
+                  <th>NIK</th>
+                  <th>TANGGAL LAHIR</th>
+                  <th>NO WHATSAPP</th>
+                  <th>PROVINSI</th>
+                  <th>KAB/KOTA</th>
+                  <th>KECAMATAN</th>
+                  <th>KELURAHAN</th>
+                  <th>ALAMAT</th>
+                  <th style="text-align: center;">BB</th>
+                  <th style="text-align: center;">TB</th>
+                  <th style="text-align: center;">LP</th>
+                  <th style="text-align: center;">TD SISTOLIK</th>
+                  <th style="text-align: center;">TD DIASTOLIK</th>
+                  <th style="text-align: center;">GULA DARAH</th>
+                  <th style="text-align: center;">HB</th>
+                  <th style="text-align: center;">KARIES</th>
+                  <th style="text-align: center;">KEBUGARAN</th>
+                  <th style="text-align: center;">MENSTRUASI</th>
+                  <th style="text-align: center;">KACAMATA</th>
+                  <th style="width: 90px; text-align: center;">AKSI</th>
                 </tr>
               </thead>
               <tbody id="tableBodySekolah">
@@ -2238,6 +2261,223 @@
       <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
         <button class="btn btn-secondary" onclick="closeSimpusAdminMultiImportModal()" style="border-radius: 10px; padding: 9px 20px; font-weight: 700;">Batal</button>
         <button class="btn btn-purple" id="btnExecuteSimpusAdminImport" onclick="executeSimpusAdminXLSXImport()" disabled style="border-radius: 10px; padding: 9px 24px; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none; box-shadow: 0 4px 14px rgba(109, 40, 217, 0.3);">
+          <i class="bi bi-cloud-upload-fill"></i> Simpan & Direct Sync ke Cloud D1
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Input / Edit Data CKG Sekolah -->
+  <div id="modalInputSekolah" class="modal-overlay">
+    <div class="modal-container" style="max-width: 840px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff;">
+        <div class="modal-title" id="modalInputSekolahTitle" style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-mortarboard-fill"></i> Form Input Skrining CKG Sekolah
+        </div>
+        <button class="modal-close" onclick="closeInputSekolahModal()" style="color: #fff;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; max-height: 75vh; overflow-y: auto;">
+        <form id="formSekolahInput" onsubmit="saveSekolahRecordFromForm(event)">
+          <input type="hidden" id="sekolahRecordId" value="">
+          
+          <div style="font-size: 13px; font-weight: 800; color: #7c3aed; margin-bottom: 12px; border-bottom: 1.5px solid #ede9fe; padding-bottom: 4px;">
+            <i class="bi bi-person-lines-fill"></i> 1. Identitas Siswa & Sekolah
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label">Nama Siswa <span class="required">*</span></label>
+              <input type="text" id="schNama" class="form-control" required placeholder="Nama Lengkap Siswa">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kelas <span class="required">*</span></label>
+              <input type="text" id="schKelas" class="form-control" required placeholder="Contoh: 7A / 8B / 10 MIPA 1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nama Sekolah <span class="required">*</span></label>
+              <input type="text" id="schSekolah" class="form-control" required placeholder="Contoh: SMPN 1 Banjaran">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Jenis Kelamin <span class="required">*</span></label>
+              <select id="schJk" class="form-control" required>
+                <option value="L">Laki-laki (L)</option>
+                <option value="P">Perempuan (P)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">NIK / NISN</label>
+              <input type="text" id="schNik" class="form-control" placeholder="16 Digit NIK / NISN">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tanggal Lahir</label>
+              <input type="date" id="schTanggalLahir" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">No WhatsApp / Telepon</label>
+              <input type="text" id="schNoWhatsapp" class="form-control" placeholder="08xxxxxxxxxx">
+            </div>
+          </div>
+
+          <div style="font-size: 13px; font-weight: 800; color: #7c3aed; margin-bottom: 12px; border-bottom: 1.5px solid #ede9fe; padding-bottom: 4px;">
+            <i class="bi bi-geo-alt-fill"></i> 2. Alamat Domisili Siswa
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label">Provinsi</label>
+              <input type="text" id="schProvinsi" class="form-control" value="Jawa Barat">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kab / Kota</label>
+              <input type="text" id="schKabKota" class="form-control" value="Kab. Bandung">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kecamatan</label>
+              <input type="text" id="schKecamatan" class="form-control" value="Banjaran">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kelurahan / Desa</label>
+              <input type="text" id="schKelurahan" class="form-control" value="Tarajusari">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label">Alamat Lengkap / Kp / RT / RW</label>
+            <input type="text" id="schAlamat" class="form-control" placeholder="Kp. Pajagalan RT 02 RW 05">
+          </div>
+
+          <div style="font-size: 13px; font-weight: 800; color: #7c3aed; margin-bottom: 12px; border-bottom: 1.5px solid #ede9fe; padding-bottom: 4px;">
+            <i class="bi bi-heart-pulse-fill"></i> 3. Hasil Pemeriksaan Fisik & Skrining Medis
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label">BB (kg)</label>
+              <input type="number" step="0.1" id="schBb" class="form-control" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">TB (cm)</label>
+              <input type="number" step="0.1" id="schTb" class="form-control" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">LP (cm)</label>
+              <input type="number" step="0.1" id="schLp" class="form-control" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">TD Sistolik</label>
+              <input type="number" id="schTdSistolik" class="form-control" placeholder="110">
+            </div>
+            <div class="form-group">
+              <label class="form-label">TD Diastolik</label>
+              <input type="number" id="schTdDiastolik" class="form-control" placeholder="70">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label">Gula Darah</label>
+              <input type="text" id="schGulaDarah" class="form-control" placeholder="100">
+            </div>
+            <div class="form-group">
+              <label class="form-label">HB (g/dL)</label>
+              <input type="text" id="schHb" class="form-control" placeholder="13.5">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Karies Gigi</label>
+              <select id="schKaries" class="form-control">
+                <option value="Tidak">Tidak</option>
+                <option value="Ya">Ya (Berlubang)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kebugaran</label>
+              <select id="schKebugaran" class="form-control">
+                <option value="Baik">Baik</option>
+                <option value="Cukup">Cukup</option>
+                <option value="Kurang">Kurang</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Menstruasi</label>
+              <select id="schMenstruasi" class="form-control">
+                <option value="Belum">Belum</option>
+                <option value="Teratur">Teratur</option>
+                <option value="Tidak Teratur">Tidak Teratur</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kacamata</label>
+              <select id="schKacamata" class="form-control">
+                <option value="Tidak">Tidak</option>
+                <option value="Ya">Ya</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="font-size: 13px; font-weight: 800; color: #7c3aed; margin-bottom: 12px; border-bottom: 1.5px solid #ede9fe; padding-bottom: 4px;">
+            <i class="bi bi-person-badge-fill"></i> 4. Informasi Petugas & Tanggal Entry
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+            <div class="form-group">
+              <label class="form-label">Petugas Entry</label>
+              <input type="text" id="schPetugasEntry" class="form-control" value="Admin">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tanggal Entry / Skrining</label>
+              <input type="date" id="schTanggalEntry" class="form-control">
+            </div>
+          </div>
+
+          <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 14px; border-top: 1px solid #e2e8f0;">
+            <button type="button" class="btn btn-secondary" onclick="closeInputSekolahModal()">Batal</button>
+            <button type="submit" class="btn btn-purple" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; font-weight: 700;">
+              <i class="bi bi-save-fill"></i> Simpan Data CKG Sekolah
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Import Data CKG Sekolah (Excel XLSX / CSV) -->
+  <div id="modalImportSekolah" class="modal-overlay">
+    <div class="modal-container" style="max-width: 620px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white;">
+        <h3 class="modal-title" style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-file-earmark-arrow-up-fill" style="font-size: 22px;"></i> Import Data CKG Sekolah (.xlsx / .csv)
+        </h3>
+        <button class="modal-close" onclick="closeImportSekolahModal()" style="color: #ffffff;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px; max-height: 75vh; overflow-y: auto;">
+        
+        <div style="background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1.5px dashed #a78bfa; border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+          <div style="font-weight: 800; color: #5b21b6; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-info-circle-fill" style="color: #7c3aed; font-size: 20px;"></i> Petunjuk Import Data CKG Sekolah
+          </div>
+          <ul style="font-size: 12.5px; color: #4c1d95; margin: 0; padding-left: 20px; line-height: 1.6; font-weight: 600;">
+            <li>Gunakan format 24 kolom standar CKG Sekolah.</li>
+            <li>Kolom: <strong>NO, NAMA, KELAS, SEKOLAH, JK, NIK, TANGGAL LAHIR, NO WHATSAPP, PROVINSI, KAB/KOTA, KECAMATAN, KELURAHAN, ALAMAT, BB, TB, LP, TD SISTOLIK, TD DIASTOLIK, GULA DARAH, HB, KARIES, KEBUGARAN, MENSTRUASI, KACAMATA</strong>.</li>
+            <li>Data yang diimport terpisah sepenuhnya dari record CKG & SIMPUS (tidak menambah hitungan entri CKG utama).</li>
+          </ul>
+          
+          <button class="btn btn-purple btn-sm" onclick="downloadSekolahXLSXTemplate()" style="margin-top: 14px; font-weight: 700; width: 100%; justify-content: center; padding: 10px 18px; border-radius: 10px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none;">
+            <i class="bi bi-file-earmark-arrow-down-fill" style="font-size: 16px;"></i> Download Template Excel CKG Sekolah (.xlsx)
+          </button>
+        </div>
+
+        <div class="import-dropzone" id="sekolahImportDropzone" onclick="document.getElementById('sekolahImportFileInput').click()" style="border: 2px dashed #a78bfa; border-radius: 16px; background: #faf5ff; padding: 26px 20px; text-align: center; cursor: pointer; transition: all 0.25s ease;">
+          <i class="bi bi-cloud-arrow-up-fill import-dropzone-icon" style="font-size: 42px; color: #7c3aed; margin-bottom: 10px; display: inline-block;"></i>
+          <div class="import-dropzone-text" id="sekolahImportDropzoneText" style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
+            Pilih atau Tarik File Excel CKG Sekolah (.xlsx / .csv)
+          </div>
+          <div class="import-dropzone-hint" style="font-size: 12px; color: #64748b; font-weight: 500;">Format yang didukung: .xlsx, .xls, .csv</div>
+          <input type="file" id="sekolahImportFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleSekolahImportFileSelect(event)">
+        </div>
+
+        <div id="sekolahImportPreviewArea" style="display: none; margin-top: 20px;">
+          <!-- Dynamically populated via JS -->
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+        <button class="btn btn-secondary" onclick="closeImportSekolahModal()" style="border-radius: 10px; padding: 9px 20px; font-weight: 700;">Batal</button>
+        <button class="btn btn-purple" id="btnExecuteSekolahImport" onclick="executeSekolahXLSXImport()" disabled style="border-radius: 10px; padding: 9px 24px; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none;">
           <i class="bi bi-cloud-upload-fill"></i> Simpan & Direct Sync ke Cloud D1
         </button>
       </div>

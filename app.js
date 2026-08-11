@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadStoredSimpusRecords();
   loadStoredRecycleBin();
   loadStoredAnnouncement();
+  loadStoredSekolahRecords();
   setupImportDropzone();
   startLiveClock();
   initWilayahDropdowns();
@@ -8977,6 +8978,107 @@ function resetLaporanFilters() {
   showToast('Filter Laporan telah di-reset.', 'info');
 }
 
+// ==========================================================================
+// 🎓 MODUL TERPISAH: CKG SEKOLAH (ISOLATED CLOUD D1 DATABASE)
+// ==========================================================================
+
+let sekolahRecords = [];
+let pendingSekolahImportData = null;
+
+function loadStoredSekolahRecords() {
+  const saved = localStorage.getItem('ckg_sekolah_records_v1');
+  if (saved) {
+    try {
+      sekolahRecords = JSON.parse(saved);
+    } catch (e) {
+      sekolahRecords = [];
+    }
+  } else {
+    sekolahRecords = [];
+  }
+  fetchSekolahRecordsFromCloud();
+}
+
+function saveSekolahRecordsToStorage() {
+  localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+  syncSekolahRecordsToCloud(sekolahRecords);
+}
+
+async function fetchSekolahRecordsFromCloud() {
+  try {
+    const res = await fetch('/api/sekolah');
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success && Array.isArray(result.data)) {
+        sekolahRecords = result.data.map((r, idx) => ({
+          id: r.id ? String(r.id) : `SCH-${Date.now()}-${idx}`,
+          no: r.no || idx + 1,
+          nama: r.nama || r.nama_siswa || '',
+          kelas: r.kelas || '',
+          sekolah: r.sekolah || r.nama_sekolah || '',
+          jk: r.jk || r.jenis_kelamin || 'L',
+          nik: r.nik || r.nisn_nik || '',
+          tanggal_lahir: r.tanggal_lahir || '',
+          no_whatsapp: r.no_whatsapp || '',
+          provinsi: r.provinsi || 'Jawa Barat',
+          kab_kota: r.kab_kota || 'Kab. Bandung',
+          kecamatan: r.kecamatan || 'Banjaran',
+          kelurahan: r.kelurahan || 'Tarajusari',
+          alamat: r.alamat || '',
+          bb: r.bb !== undefined ? Number(r.bb) : 0,
+          tb: r.tb !== undefined ? Number(r.tb) : 0,
+          lp: r.lp !== undefined ? Number(r.lp) : 0,
+          td_sistolik: r.td_sistolik !== undefined ? Number(r.td_sistolik) : 0,
+          td_diastolik: r.td_diastolik !== undefined ? Number(r.td_diastolik) : 0,
+          gula_darah: r.gula_darah || '-',
+          hb: r.hb || '-',
+          karies: r.karies || 'Tidak',
+          kebugaran: r.kebugaran || 'Baik',
+          menstruasi: r.menstruasi || 'Belum',
+          kacamata: r.kacamata || 'Tidak',
+          petugas_entry: r.petugas_entry || 'Admin',
+          tanggal_entry: r.tanggal_entry || new Date().toISOString().substring(0, 10)
+        }));
+        localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+        populateSekolahPetugasFilter();
+        renderSekolahView();
+      }
+    }
+  } catch (err) {
+    console.warn('⚡ Fetch /api/sekolah notice (Offline/Fallback):', err);
+    populateSekolahPetugasFilter();
+    renderSekolahView();
+  }
+}
+
+async function syncSekolahRecordsToCloud(dataList) {
+  if (!Array.isArray(dataList)) return;
+  try {
+    await fetch('/api/sekolah', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dataList)
+    });
+  } catch (err) {
+    console.warn('⚡ Sync /api/sekolah notice:', err);
+  }
+}
+
+function populateSekolahPetugasFilter() {
+  const select = document.getElementById('filterSekolahPetugas');
+  if (!select) return;
+  const currentVal = select.value;
+  const petugasSet = new Set();
+  sekolahRecords.forEach(r => {
+    if (r.petugas_entry) petugasSet.add(r.petugas_entry);
+  });
+  select.innerHTML = '<option value="">-- Semua Petugas --</option>' + 
+    Array.from(petugasSet).sort().map(p => `<option value="${p}">${p}</option>`).join('');
+  if (currentVal && petugasSet.has(currentVal)) {
+    select.value = currentVal;
+  }
+}
+
 function renderSekolahView() {
   const tbody = document.getElementById('tableBodySekolah');
   if (!tbody) return;
@@ -8988,42 +9090,40 @@ function renderSekolahView() {
   const filterTahunVal = document.getElementById('filterSekolahTahun')?.value || '';
   const filterPetugasVal = document.getElementById('filterSekolahPetugas')?.value || '';
 
-  // RBAC Data Visibility
-  let dataset = getVisibleRecords(records);
+  let dataset = [...sekolahRecords];
 
-  // Filter for School / Children Screening Records
-  dataset = dataset.filter(r => {
-    const isUnder18 = r.usia && r.usia < 18;
-    const isSekolahKegiatan = (r.jenis_kegiatan || '').toLowerCase().includes('sekolah') || (r.pos_lokasi || '').toLowerCase().includes('sekolah');
-    return isUnder18 || isSekolahKegiatan;
-  });
+  // Petugas filtering (RBAC)
+  if (currentUserRole !== 'Admin' && currentUserRole !== 'Koordinator' && currentUserName) {
+    dataset = dataset.filter(r => (r.petugas_entry || '').toLowerCase() === currentUserName.toLowerCase());
+  } else if (filterPetugasVal) {
+    dataset = dataset.filter(r => r.petugas_entry === filterPetugasVal);
+  }
 
   if (filterBulanVal) {
     dataset = dataset.filter(r => {
-      const recDate = getRecordEntryDate(r);
-      return recDate ? recDate.month === filterBulanVal : false;
+      const d = r.tanggal_entry || r.tanggal_lahir;
+      if (!d) return false;
+      return d.substring(5, 7) === filterBulanVal;
     });
   }
 
   if (filterTahunVal) {
     dataset = dataset.filter(r => {
-      const recDate = getRecordEntryDate(r);
-      return recDate ? recDate.year === filterTahunVal : false;
+      const d = r.tanggal_entry || r.tanggal_lahir;
+      if (!d) return false;
+      return d.substring(0, 4) === filterTahunVal;
     });
-  }
-
-  if (filterPetugasVal) {
-    dataset = dataset.filter(r => r.created_by === filterPetugasVal || r.petugas_entry === filterPetugasVal);
   }
 
   if (searchQuery) {
     dataset = dataset.filter(r => {
       const nama = (r.nama || '').toLowerCase();
+      const kelas = (r.kelas || '').toLowerCase();
+      const sekolah = (r.sekolah || '').toLowerCase();
       const nik = String(r.nik || '').toLowerCase();
       const alamat = (r.alamat || '').toLowerCase();
-      const pos = (r.pos_lokasi || '').toLowerCase();
-      const petugas = (r.petugas_entry || r.created_by || '').toLowerCase();
-      return nama.includes(searchQuery) || nik.includes(searchQuery) || alamat.includes(searchQuery) || pos.includes(searchQuery) || petugas.includes(searchQuery);
+      const petugas = (r.petugas_entry || '').toLowerCase();
+      return nama.includes(searchQuery) || kelas.includes(searchQuery) || sekolah.includes(searchQuery) || nik.includes(searchQuery) || alamat.includes(searchQuery) || petugas.includes(searchQuery);
     });
   }
 
@@ -9033,11 +9133,36 @@ function renderSekolahView() {
   const metricNormal = document.getElementById('metricSekolahNormal');
   const metricRujukan = document.getElementById('metricSekolahRujukan');
 
-  const countAnak = dataset.filter(r => r.usia < 18).length;
-  const countNormal = dataset.filter(r => (!r.imt || (r.imt >= 18.5 && r.imt <= 24.9)) && (!r.hb || r.hb >= 11.0)).length;
-  const countRujukan = dataset.filter(r => (r.hb && r.hb < 11.0) || (r.imt && (r.imt < 18.5 || r.imt >= 25.0))).length;
+  const countTotal = dataset.length;
+  // Calculate students < 18 years old or total if DOB unavailable
+  const countAnak = dataset.filter(r => {
+    if (!r.tanggal_lahir) return true;
+    const birthYear = parseInt(r.tanggal_lahir.substring(0, 4), 10);
+    if (isNaN(birthYear)) return true;
+    const age = new Date().getFullYear() - birthYear;
+    return age < 18;
+  }).length;
 
-  if (metricTotal) metricTotal.textContent = dataset.length.toLocaleString('id-ID');
+  // Normal: HB >= 11 or '-' & TD <= 120 & Karies == 'Tidak' & Kacamata == 'Tidak'
+  const countNormal = dataset.filter(r => {
+    const hbVal = parseFloat(r.hb);
+    const hbOk = isNaN(hbVal) || hbVal >= 11.0;
+    const tdOk = !r.td_sistolik || r.td_sistolik <= 120;
+    const kariesOk = (r.karies || 'Tidak') !== 'Ya';
+    const kacamataOk = (r.kacamata || 'Tidak') !== 'Ya';
+    return hbOk && tdOk && kariesOk && kacamataOk;
+  }).length;
+
+  const countRujukan = dataset.filter(r => {
+    const hbVal = parseFloat(r.hb);
+    const isAnemia = !isNaN(hbVal) && hbVal < 11.0;
+    const isHipertensi = r.td_sistolik && r.td_sistolik > 120;
+    const isKaries = r.karies === 'Ya';
+    const isKacamata = r.kacamata === 'Ya';
+    return isAnemia || isHipertensi || isKaries || isKacamata;
+  }).length;
+
+  if (metricTotal) metricTotal.textContent = countTotal.toLocaleString('id-ID');
   if (metricAnak) metricAnak.textContent = countAnak.toLocaleString('id-ID');
   if (metricNormal) metricNormal.textContent = countNormal.toLocaleString('id-ID');
   if (metricRujukan) metricRujukan.textContent = countRujukan.toLocaleString('id-ID');
@@ -9045,10 +9170,10 @@ function renderSekolahView() {
   if (dataset.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="11" style="text-align: center; padding: 36px; color: var(--text-muted);">
-          <i class="bi bi-mortarboard" style="font-size: 32px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
-          <strong>Tidak ada data CKG Anak Sekolah & Remaja yang sesuai pencarian / filter.</strong>
-          <p style="font-size: 12px; margin-top: 4px;">Gunakan tombol "Input Skrining Sekolah" untuk menambahkan data baru.</p>
+        <td colspan="25" style="text-align: center; padding: 40px; color: var(--text-muted);">
+          <i class="bi bi-mortarboard" style="font-size: 36px; display: block; margin-bottom: 10px; color: #94a3b8;"></i>
+          <strong style="font-size: 14px;">Belum ada data CKG Sekolah yang tersimpan / sesuai filter.</strong>
+          <p style="font-size: 12px; margin-top: 4px;">Klik tombol <strong>"Input Skrining Sekolah"</strong> atau <strong>"Import Excel Sekolah"</strong> untuk menambahkan data.</p>
         </td>
       </tr>
     `;
@@ -9056,38 +9181,58 @@ function renderSekolahView() {
   }
 
   tbody.innerHTML = dataset.map((r, i) => {
-    const isAnemia = r.hb > 0 && r.hb < 11.0;
-    const hbClass = isAnemia ? 'cell-anemia' : '';
+    const hbNum = parseFloat(r.hb);
+    const isAnemia = !isNaN(hbNum) && hbNum < 11.0;
+    const hbDisplay = r.hb && r.hb !== '-' ? `<span class="${isAnemia ? 'cell-anemia' : ''}">${escapeHtml(r.hb)}</span>` : '-';
 
-    let imtBadge = `<span class="badge badge-emerald">${r.imt || '-'}</span>`;
-    if (r.imt < 18.5) imtBadge = `<span class="badge badge-amber">${r.imt} (Kurus)</span>`;
-    else if (r.imt >= 25.0 && r.imt <= 29.9) imtBadge = `<span class="badge badge-amber">${r.imt} (Gemuk)</span>`;
-    else if (r.imt >= 30.0) imtBadge = `<span class="badge badge-rose">${r.imt} (Obesitas)</span>`;
+    const jkBadge = r.jk === 'P' 
+      ? `<span class="badge" style="background: #fbcfe8; color: #9d174d; font-weight: 700;">P</span>` 
+      : `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700;">L</span>`;
+
+    const kariesBadge = r.karies === 'Ya'
+      ? `<span class="badge badge-rose">Ya</span>`
+      : `<span class="badge badge-emerald">Tidak</span>`;
+
+    const kacamataBadge = r.kacamata === 'Ya'
+      ? `<span class="badge badge-amber">Ya</span>`
+      : `<span class="badge badge-emerald">Tidak</span>`;
 
     return `
       <tr>
-        <td style="text-align: center; font-weight: 700; color: var(--text-muted);">${i + 1}</td>
-        <td>${formatDisplayDate(r.created_at || r.tanggal_entry || r.tanggal)}</td>
-        <td>
-          <div style="font-weight: 700; color: var(--purple);">${r.nama || '-'}</div>
-          <div style="font-size: 11px; color: var(--text-muted);">NIK: ${r.nik || '-'}</div>
+        <td style="text-align: center; font-weight: 700; color: #64748b;">${r.no || i + 1}</td>
+        <td style="font-weight: 700; color: #6d28d9;">${escapeHtml(r.nama || '-')}</td>
+        <td style="font-weight: 600;">${escapeHtml(r.kelas || '-')}</td>
+        <td style="font-weight: 600; color: #1e293b;">${escapeHtml(r.sekolah || '-')}</td>
+        <td style="text-align: center;">${jkBadge}</td>
+        <td><code style="font-size: 11px; background: #f1f5f9; padding: 2px 5px; border-radius: 4px;">${escapeHtml(r.nik || '-')}</code></td>
+        <td>${formatDisplayDate(r.tanggal_lahir) || '-'}</td>
+        <td>${escapeHtml(r.no_whatsapp || '-')}</td>
+        <td>${escapeHtml(r.provinsi || 'Jawa Barat')}</td>
+        <td>${escapeHtml(r.kab_kota || 'Kab. Bandung')}</td>
+        <td>${escapeHtml(r.kecamatan || 'Banjaran')}</td>
+        <td>${escapeHtml(r.kelurahan || 'Tarajusari')}</td>
+        <td style="max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(r.alamat || '')}">${escapeHtml(r.alamat || '-')}</td>
+        <td style="text-align: center;">${r.bb ? r.bb : '-'}</td>
+        <td style="text-align: center;">${r.tb ? r.tb : '-'}</td>
+        <td style="text-align: center;">${r.lp ? r.lp : '-'}</td>
+        <td style="text-align: center;">${r.td_sistolik ? r.td_sistolik : '-'}</td>
+        <td style="text-align: center;">${r.td_diastolik ? r.td_diastolik : '-'}</td>
+        <td style="text-align: center;">${escapeHtml(r.gula_darah || '-')}</td>
+        <td style="text-align: center; font-weight: 600;">${hbDisplay}</td>
+        <td style="text-align: center;">${kariesBadge}</td>
+        <td style="text-align: center;">${escapeHtml(r.kebugaran || 'Baik')}</td>
+        <td style="text-align: center;">${escapeHtml(r.menstruasi || 'Belum')}</td>
+        <td style="text-align: center;">${kacamataBadge}</td>
+        <td style="text-align: center;">
+          <div style="display: flex; gap: 4px; justify-content: center;">
+            <button class="btn btn-secondary btn-sm" onclick="editSekolahRecord('${r.id}')" title="Edit Data" style="padding: 3px 7px;">
+              <i class="bi bi-pencil-fill" style="color: #7c3aed;"></i>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="deleteSekolahRecord('${r.id}')" title="Hapus Data" style="padding: 3px 7px;">
+              <i class="bi bi-trash-fill" style="color: #ef4444;"></i>
+            </button>
+          </div>
         </td>
-        <td>
-          <div>${r.usia ? r.usia + ' Tahun' : '-'}</div>
-          <div style="font-size: 11px; color: var(--text-muted);">${r.jenis_kelamin || '-'}</div>
-        </td>
-        <td>
-          <div style="font-weight: 600;">${r.pos_lokasi || 'Sekolah'}</div>
-          <div style="font-size: 11px; color: var(--text-muted);">${r.alamat || '-'}</div>
-        </td>
-        <td>${r.bb ? r.bb + ' kg' : '-'}</td>
-        <td>${r.tb ? r.tb + ' cm' : '-'}</td>
-        <td>${imtBadge}</td>
-        <td>
-          ${r.hb ? `<span class="${hbClass}">Hb: ${r.hb} g/dL</span>` : '<span style="color: var(--text-muted);">-</span>'}
-        </td>
-        <td><span class="badge badge-purple">${r.petugas_entry || r.created_by || '-'}</span></td>
-        <td><span class="badge badge-emerald"><i class="bi bi-check-all"></i> Terverifikasi</span></td>
       </tr>
     `;
   }).join('');
@@ -9105,6 +9250,435 @@ function resetSekolahFilters() {
   applyPetugasFilterLock();
   renderSekolahView();
   showToast('Filter CKG Sekolah telah di-reset.', 'info');
+}
+
+function openInputSekolahModal(id = null) {
+  const modal = document.getElementById('modalInputSekolah');
+  const title = document.getElementById('modalInputSekolahTitle');
+  const form = document.getElementById('formSekolahInput');
+  if (!modal || !form) return;
+
+  form.reset();
+  document.getElementById('sekolahRecordId').value = '';
+  document.getElementById('schProvinsi').value = 'Jawa Barat';
+  document.getElementById('schKabKota').value = 'Kab. Bandung';
+  document.getElementById('schKecamatan').value = 'Banjaran';
+  document.getElementById('schKelurahan').value = 'Tarajusari';
+  document.getElementById('schPetugasEntry').value = currentUserName || 'Admin';
+  document.getElementById('schTanggalEntry').value = new Date().toISOString().substring(0, 10);
+
+  if (id) {
+    const rec = sekolahRecords.find(r => r.id === id);
+    if (rec) {
+      if (title) title.innerHTML = `<i class="bi bi-pencil-square"></i> Edit Skrining CKG Sekolah`;
+      document.getElementById('sekolahRecordId').value = rec.id;
+      document.getElementById('schNama').value = rec.nama || '';
+      document.getElementById('schKelas').value = rec.kelas || '';
+      document.getElementById('schSekolah').value = rec.sekolah || '';
+      document.getElementById('schJk').value = rec.jk || 'L';
+      document.getElementById('schNik').value = rec.nik || '';
+      document.getElementById('schTanggalLahir').value = rec.tanggal_lahir || '';
+      document.getElementById('schNoWhatsapp').value = rec.no_whatsapp || '';
+      document.getElementById('schProvinsi').value = rec.provinsi || 'Jawa Barat';
+      document.getElementById('schKabKota').value = rec.kab_kota || 'Kab. Bandung';
+      document.getElementById('schKecamatan').value = rec.kecamatan || 'Banjaran';
+      document.getElementById('schKelurahan').value = rec.kelurahan || 'Tarajusari';
+      document.getElementById('schAlamat').value = rec.alamat || '';
+      document.getElementById('schBb').value = rec.bb || '';
+      document.getElementById('schTb').value = rec.tb || '';
+      document.getElementById('schLp').value = rec.lp || '';
+      document.getElementById('schTdSistolik').value = rec.td_sistolik || '';
+      document.getElementById('schTdDiastolik').value = rec.td_diastolik || '';
+      document.getElementById('schGulaDarah').value = rec.gula_darah || '-';
+      document.getElementById('schHb').value = rec.hb || '-';
+      document.getElementById('schKaries').value = rec.karies || 'Tidak';
+      document.getElementById('schKebugaran').value = rec.kebugaran || 'Baik';
+      document.getElementById('schMenstruasi').value = rec.menstruasi || 'Belum';
+      document.getElementById('schKacamata').value = rec.kacamata || 'Tidak';
+      document.getElementById('schPetugasEntry').value = rec.petugas_entry || currentUserName || 'Admin';
+      document.getElementById('schTanggalEntry').value = rec.tanggal_entry || new Date().toISOString().substring(0, 10);
+    }
+  } else {
+    if (title) title.innerHTML = `<i class="bi bi-mortarboard-fill"></i> Form Input Skrining CKG Sekolah`;
+  }
+
+  modal.classList.add('active');
+}
+
+function closeInputSekolahModal() {
+  const modal = document.getElementById('modalInputSekolah');
+  if (modal) modal.classList.remove('active');
+}
+
+async function saveSekolahRecordFromForm(event) {
+  event.preventDefault();
+  const idVal = document.getElementById('sekolahRecordId').value;
+  const existingIdx = idVal ? sekolahRecords.findIndex(r => r.id === idVal) : -1;
+
+  const recordObj = {
+    id: idVal || `SCH-${Date.now()}`,
+    no: existingIdx >= 0 ? sekolahRecords[existingIdx].no : (sekolahRecords.length + 1),
+    nama: document.getElementById('schNama').value.trim(),
+    kelas: document.getElementById('schKelas').value.trim(),
+    sekolah: document.getElementById('schSekolah').value.trim(),
+    jk: document.getElementById('schJk').value,
+    nik: document.getElementById('schNik').value.trim(),
+    tanggal_lahir: document.getElementById('schTanggalLahir').value,
+    no_whatsapp: document.getElementById('schNoWhatsapp').value.trim(),
+    provinsi: document.getElementById('schProvinsi').value.trim() || 'Jawa Barat',
+    kab_kota: document.getElementById('schKabKota').value.trim() || 'Kab. Bandung',
+    kecamatan: document.getElementById('schKecamatan').value.trim() || 'Banjaran',
+    kelurahan: document.getElementById('schKelurahan').value.trim() || 'Tarajusari',
+    alamat: document.getElementById('schAlamat').value.trim(),
+    bb: parseFloat(document.getElementById('schBb').value) || 0,
+    tb: parseFloat(document.getElementById('schTb').value) || 0,
+    lp: parseFloat(document.getElementById('schLp').value) || 0,
+    td_sistolik: parseInt(document.getElementById('schTdSistolik').value, 10) || 0,
+    td_diastolik: parseInt(document.getElementById('schTdDiastolik').value, 10) || 0,
+    gula_darah: document.getElementById('schGulaDarah').value.trim() || '-',
+    hb: document.getElementById('schHb').value.trim() || '-',
+    karies: document.getElementById('schKaries').value,
+    kebugaran: document.getElementById('schKebugaran').value,
+    menstruasi: document.getElementById('schMenstruasi').value,
+    kacamata: document.getElementById('schKacamata').value,
+    petugas_entry: document.getElementById('schPetugasEntry').value.trim() || currentUserName || 'Admin',
+    tanggal_entry: document.getElementById('schTanggalEntry').value || new Date().toISOString().substring(0, 10)
+  };
+
+  if (existingIdx >= 0) {
+    sekolahRecords[existingIdx] = recordObj;
+  } else {
+    sekolahRecords.unshift(recordObj);
+  }
+
+  saveSekolahRecordsToStorage();
+  closeInputSekolahModal();
+  populateSekolahPetugasFilter();
+  renderSekolahView();
+  showToast(existingIdx >= 0 ? 'Data CKG Sekolah berhasil diperbarui!' : 'Data CKG Sekolah baru berhasil disimpan!', 'success');
+}
+
+function editSekolahRecord(id) {
+  openInputSekolahModal(id);
+}
+
+async function deleteSekolahRecord(id) {
+  if (!confirm('Apakah Anda yakin ingin menghapus data CKG Sekolah ini?')) return;
+
+  const targetIdx = sekolahRecords.findIndex(r => r.id === id);
+  if (targetIdx >= 0) {
+    sekolahRecords.splice(targetIdx, 1);
+    sekolahRecords.forEach((r, idx) => { r.no = idx + 1; });
+    saveSekolahRecordsToStorage();
+
+    try {
+      await fetch(`/api/sekolah?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    } catch (_) {}
+
+    populateSekolahPetugasFilter();
+    renderSekolahView();
+    showToast('Data CKG Sekolah berhasil dihapus.', 'info');
+  }
+}
+
+async function confirmDeleteAllSekolahRecords() {
+  if (currentUserRole !== 'Admin') {
+    showToast('Hanya Admin yang dapat menghapus seluruh database CKG Sekolah.', 'warning');
+    return;
+  }
+  if (!confirm('PERHATIAN: Apakah Anda yakin ingin menghapus SELURUH database CKG Sekolah? Data tidak dapat dikembalikan!')) return;
+
+  sekolahRecords = [];
+  localStorage.removeItem('ckg_sekolah_records_v1');
+
+  try {
+    await fetch('/api/sekolah', { method: 'DELETE' });
+  } catch (_) {}
+
+  populateSekolahPetugasFilter();
+  renderSekolahView();
+  showToast('Seluruh database CKG Sekolah berhasil dihapus.', 'info');
+}
+
+function exportSekolahToXLSX() {
+  if (typeof XLSX === 'undefined') {
+    showToast('Library SheetJS XLSX belum dimuat.', 'danger');
+    return;
+  }
+
+  const searchQuery = document.getElementById('searchSekolahRecords')?.value.trim().toLowerCase() || '';
+  const filterBulanVal = document.getElementById('filterSekolahBulan')?.value || '';
+  const filterTahunVal = document.getElementById('filterSekolahTahun')?.value || '';
+  const filterPetugasVal = document.getElementById('filterSekolahPetugas')?.value || '';
+
+  let dataset = [...sekolahRecords];
+
+  if (currentUserRole !== 'Admin' && currentUserRole !== 'Koordinator' && currentUserName) {
+    dataset = dataset.filter(r => (r.petugas_entry || '').toLowerCase() === currentUserName.toLowerCase());
+  } else if (filterPetugasVal) {
+    dataset = dataset.filter(r => r.petugas_entry === filterPetugasVal);
+  }
+
+  if (filterBulanVal) {
+    dataset = dataset.filter(r => {
+      const d = r.tanggal_entry || r.tanggal_lahir;
+      return d && d.substring(5, 7) === filterBulanVal;
+    });
+  }
+
+  if (filterTahunVal) {
+    dataset = dataset.filter(r => {
+      const d = r.tanggal_entry || r.tanggal_lahir;
+      return d && d.substring(0, 4) === filterTahunVal;
+    });
+  }
+
+  if (searchQuery) {
+    dataset = dataset.filter(r => {
+      const nama = (r.nama || '').toLowerCase();
+      const kelas = (r.kelas || '').toLowerCase();
+      const sekolah = (r.sekolah || '').toLowerCase();
+      const nik = String(r.nik || '').toLowerCase();
+      return nama.includes(searchQuery) || kelas.includes(searchQuery) || sekolah.includes(searchQuery) || nik.includes(searchQuery);
+    });
+  }
+
+  if (dataset.length === 0) {
+    showToast('Tidak ada data CKG Sekolah yang siap diekspor.', 'warning');
+    return;
+  }
+
+  const headers = [
+    'NO', 'NAMA', 'KELAS', 'SEKOLAH', 'JK', 'NIK', 'TANGGAL LAHIR', 'NO WHATSAPP',
+    'PROVINSI', 'KAB/KOTA', 'KECAMATAN', 'KELURAHAN', 'ALAMAT', 'BB', 'TB', 'LP',
+    'TD SISTOLIK', 'TD DIASTOLIK', 'GULA DARAH', 'HB', 'KARIES', 'KEBUGARAN', 'MENSTRUASI', 'KACAMATA'
+  ];
+
+  const rows = dataset.map((r, idx) => [
+    r.no || idx + 1,
+    r.nama || '',
+    r.kelas || '',
+    r.sekolah || '',
+    r.jk || 'L',
+    r.nik || '',
+    r.tanggal_lahir || '',
+    r.no_whatsapp || '',
+    r.provinsi || 'Jawa Barat',
+    r.kab_kota || 'Kab. Bandung',
+    r.kecamatan || 'Banjaran',
+    r.kelurahan || 'Tarajusari',
+    r.alamat || '',
+    r.bb || '',
+    r.tb || '',
+    r.lp || '',
+    r.td_sistolik || '',
+    r.td_diastolik || '',
+    r.gula_darah || '-',
+    r.hb || '-',
+    r.karies || 'Tidak',
+    r.kebugaran || 'Baik',
+    r.menstruasi || 'Belum',
+    r.kacamata || 'Tidak'
+  ]);
+
+  const wsData = [headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'CKG_SEKOLAH');
+
+  const fileName = `CKG_SEKOLAH_BANJARAN_${new Date().toISOString().substring(0, 10)}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+  showToast(`Berhasil mendownload Excel CKG Sekolah (${dataset.length} data).`, 'success');
+}
+
+function downloadSekolahXLSXTemplate() {
+  if (typeof XLSX === 'undefined') {
+    showToast('Library SheetJS XLSX belum dimuat.', 'danger');
+    return;
+  }
+
+  const headers = [
+    'NO', 'NAMA', 'KELAS', 'SEKOLAH', 'JK', 'NIK', 'TANGGAL LAHIR', 'NO WHATSAPP',
+    'PROVINSI', 'KAB/KOTA', 'KECAMATAN', 'KELURAHAN', 'ALAMAT', 'BB', 'TB', 'LP',
+    'TD SISTOLIK', 'TD DIASTOLIK', 'GULA DARAH', 'HB', 'KARIES', 'KEBUGARAN', 'MENSTRUASI', 'KACAMATA'
+  ];
+
+  const sampleRows = [
+    [1, 'Ahmad Fauzi', '7A', 'SMPN 1 Banjaran', 'L', '3204011504100001', '2010-04-15', '081234567890', 'Jawa Barat', 'Kab. Bandung', 'Banjaran', 'Tarajusari', 'Kp. Pajagalan RT 01 RW 02', 45, 152, 65, 110, 70, '100', '13.5', 'Tidak', 'Baik', 'Belum', 'Tidak'],
+    [2, 'Siti Nurhaliza', '8B', 'SMPN 1 Banjaran', 'P', '3204015508110002', '2011-08-15', '089876543210', 'Jawa Barat', 'Kab. Bandung', 'Banjaran', 'Tarajusari', 'Kp. Ciapus RT 03 RW 01', 42, 148, 60, 105, 65, '95', '11.8', 'Tidak', 'Baik', 'Teratur', 'Ya']
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'TEMPLATE_CKG_SEKOLAH');
+
+  XLSX.writeFile(wb, 'TEMPLATE_CKG_SEKOLAH_BANJARAN.xlsx');
+  showToast('Template Excel CKG Sekolah berhasil didownload.', 'info');
+}
+
+function openImportSekolahModal() {
+  const modal = document.getElementById('modalImportSekolah');
+  if (!modal) return;
+  pendingSekolahImportData = null;
+  document.getElementById('sekolahImportFileInput').value = '';
+  document.getElementById('sekolahImportDropzoneText').textContent = 'Pilih atau Tarik File Excel CKG Sekolah (.xlsx / .csv)';
+  document.getElementById('sekolahImportPreviewArea').style.display = 'none';
+  document.getElementById('btnExecuteSekolahImport').disabled = true;
+  modal.classList.add('active');
+}
+
+function closeImportSekolahModal() {
+  const modal = document.getElementById('modalImportSekolah');
+  if (modal) modal.classList.remove('active');
+}
+
+function handleSekolahImportFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (json.length < 2) {
+        showToast('File Excel kosong atau tidak memiliki data.', 'warning');
+        return;
+      }
+
+      const rawHeaderRow = json[0] || [];
+      const headers = rawHeaderRow.map(h => String(h || '').trim().toUpperCase());
+
+      const getColIdx = (aliases) => {
+        return headers.findIndex(h => aliases.some(a => h.includes(a)));
+      };
+
+      const idxNo = getColIdx(['NO']);
+      const idxNama = getColIdx(['NAMA', 'SISWA']);
+      const idxKelas = getColIdx(['KELAS']);
+      const idxSekolah = getColIdx(['SEKOLAH']);
+      const idxJk = getColIdx(['JK', 'JENIS KELAMIN']);
+      const idxNik = getColIdx(['NIK', 'NISN']);
+      const idxTglLahir = getColIdx(['TANGGAL LAHIR', 'TGL LAHIR', 'DOB']);
+      const idxWa = getColIdx(['NO WHATSAPP', 'WA', 'HP', 'TELEPON']);
+      const idxProv = getColIdx(['PROVINSI']);
+      const idxKab = getColIdx(['KAB', 'KOTA']);
+      const idxKec = getColIdx(['KECAMATAN']);
+      const idxKel = getColIdx(['KELURAHAN', 'DESA']);
+      const idxAlamat = getColIdx(['ALAMAT']);
+      const idxBb = getColIdx(['BB']);
+      const idxTb = getColIdx(['TB']);
+      const idxLp = getColIdx(['LP']);
+      const idxTdSistol = getColIdx(['TD SISTOLIK', 'SISTOL']);
+      const idxTdDiastol = getColIdx(['TD DIASTOLIK', 'DIASTOL']);
+      const idxGula = getColIdx(['GULA']);
+      const idxHb = getColIdx(['HB']);
+      const idxKaries = getColIdx(['KARIES', 'GIGI']);
+      const idxKebugaran = getColIdx(['KEBUGARAN']);
+      const idxMenstruasi = getColIdx(['MENSTRUASI']);
+      const idxKacamata = getColIdx(['KACAMATA', 'MATA']);
+
+      const parsedItems = [];
+
+      for (let i = 1; i < json.length; i++) {
+        const row = json[i];
+        if (!row || row.length === 0) continue;
+
+        const namaVal = idxNama >= 0 ? String(row[idxNama] || '').trim() : '';
+        if (!namaVal) continue;
+
+        const noVal = idxNo >= 0 ? parseInt(row[idxNo], 10) || i : i;
+        const kelasVal = idxKelas >= 0 ? String(row[idxKelas] || '').trim() : '';
+        const sekolahVal = idxSekolah >= 0 ? String(row[idxSekolah] || '').trim() : '';
+        const jkVal = idxJk >= 0 ? (String(row[idxJk] || '').toUpperCase().includes('P') ? 'P' : 'L') : 'L';
+        const nikVal = idxNik >= 0 ? String(row[idxNik] || '').trim() : '';
+        const tglLahirVal = idxTglLahir >= 0 ? formatDateToYYYYMMDD(row[idxTglLahir]) : '';
+        const waVal = idxWa >= 0 ? String(row[idxWa] || '').trim() : '';
+        const provVal = idxProv >= 0 ? String(row[idxProv] || '').trim() : 'Jawa Barat';
+        const kabVal = idxKab >= 0 ? String(row[idxKab] || '').trim() : 'Kab. Bandung';
+        const kecVal = idxKec >= 0 ? String(row[idxKec] || '').trim() : 'Banjaran';
+        const kelVal = idxKel >= 0 ? String(row[idxKel] || '').trim() : 'Tarajusari';
+        const alamatVal = idxAlamat >= 0 ? String(row[idxAlamat] || '').trim() : '';
+        const bbVal = idxBb >= 0 ? parseFloat(row[idxBb]) || 0 : 0;
+        const tbVal = idxTb >= 0 ? parseFloat(row[idxTb]) || 0 : 0;
+        const lpVal = idxLp >= 0 ? parseFloat(row[idxLp]) || 0 : 0;
+        const tdSistolVal = idxTdSistol >= 0 ? parseInt(row[idxTdSistol], 10) || 0 : 0;
+        const tdDiastolVal = idxTdDiastol >= 0 ? parseInt(row[idxTdDiastol], 10) || 0 : 0;
+        const gulaVal = idxGula >= 0 ? String(row[idxGula] || '-').trim() : '-';
+        const hbVal = idxHb >= 0 ? String(row[idxHb] || '-').trim() : '-';
+        const kariesVal = idxKaries >= 0 ? String(row[idxKaries] || 'Tidak').trim() : 'Tidak';
+        const kebugaranVal = idxKebugaran >= 0 ? String(row[idxKebugaran] || 'Baik').trim() : 'Baik';
+        const menstruasiVal = idxMenstruasi >= 0 ? String(row[idxMenstruasi] || 'Belum').trim() : 'Belum';
+        const kacamataVal = idxKacamata >= 0 ? String(row[idxKacamata] || 'Tidak').trim() : 'Tidak';
+
+        parsedItems.push({
+          id: `SCH-${Date.now()}-${i}`,
+          no: noVal,
+          nama: namaVal,
+          kelas: kelasVal,
+          sekolah: sekolahVal,
+          jk: jkVal,
+          nik: nikVal,
+          tanggal_lahir: tglLahirVal,
+          no_whatsapp: waVal,
+          provinsi: provVal,
+          kab_kota: kabVal,
+          kecamatan: kecVal,
+          kelurahan: kelVal,
+          alamat: alamatVal,
+          bb: bbVal,
+          tb: tbVal,
+          lp: lpVal,
+          td_sistolik: tdSistolVal,
+          td_diastolik: tdDiastolVal,
+          gula_darah: gulaVal,
+          hb: hbVal,
+          karies: kariesVal,
+          kebugaran: kebugaranVal,
+          menstruasi: menstruasiVal,
+          kacamata: kacamataVal,
+          petugas_entry: currentUserName || 'Admin',
+          tanggal_entry: new Date().toISOString().substring(0, 10)
+        });
+      }
+
+      pendingSekolahImportData = parsedItems;
+      document.getElementById('sekolahImportDropzoneText').textContent = `File Selected: ${file.name} (${parsedItems.length} Siswa Terdeteksi)`;
+
+      const previewArea = document.getElementById('sekolahImportPreviewArea');
+      previewArea.style.display = 'block';
+      previewArea.innerHTML = `
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; color: #166534; font-size: 13px; font-weight: 700;">
+          <i class="bi bi-check-circle-fill" style="color: #22c55e;"></i> Berhasil membaca ${parsedItems.length} baris data CKG Sekolah dari file Excel.
+        </div>
+      `;
+      document.getElementById('btnExecuteSekolahImport').disabled = false;
+
+    } catch (err) {
+      console.error('Error parsing Excel CKG Sekolah:', err);
+      showToast('Gagal memproses file Excel. Format file mungkin rusak.', 'danger');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function executeSekolahXLSXImport() {
+  if (!pendingSekolahImportData || pendingSekolahImportData.length === 0) return;
+
+  const newItems = pendingSekolahImportData;
+  sekolahRecords = [...newItems, ...sekolahRecords];
+  sekolahRecords.forEach((r, idx) => { r.no = idx + 1; });
+
+  saveSekolahRecordsToStorage();
+  closeImportSekolahModal();
+  populateSekolahPetugasFilter();
+  renderSekolahView();
+
+  showToast(`Berhasil mengimport ${newItems.length} data CKG Sekolah ke database Cloud!`, 'success');
 }
 
 // ==========================================================================

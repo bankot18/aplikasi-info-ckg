@@ -89,18 +89,35 @@ CREATE INDEX IF NOT EXISTS idx_ckg_tanggal ON ckg_full_records(tanggal_entry);
 
 -- --------------------------------------------------------------------
 -- 5. MENU: CKG SEKOLAH
--- Tabel: ckg_sekolah_records (Skrining Kesehatan Siswa Sekolah)
+-- Tabel: ckg_sekolah_records (Skrining Kesehatan Siswa Sekolah - Terpisah Dari Record CKG Utama & SIMPUS)
 -- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ckg_sekolah_records (
     id TEXT PRIMARY KEY,
-    nama_sekolah TEXT NOT NULL,
-    nama_siswa TEXT NOT NULL,
-    nisn_nik TEXT,
+    no INTEGER,
+    nama TEXT NOT NULL,
     kelas TEXT,
-    jenis_kelamin TEXT DEFAULT 'L',
+    sekolah TEXT,
+    jk TEXT DEFAULT 'L',
+    nik TEXT,
+    tanggal_lahir TEXT,
+    no_whatsapp TEXT,
+    provinsi TEXT DEFAULT 'Jawa Barat',
+    kab_kota TEXT DEFAULT 'Kab. Bandung',
+    kecamatan TEXT DEFAULT 'Banjaran',
+    kelurahan TEXT DEFAULT 'Tarajusari',
+    alamat TEXT,
+    bb REAL DEFAULT 0,
+    tb REAL DEFAULT 0,
+    lp REAL DEFAULT 0,
+    td_sistolik INTEGER DEFAULT 0,
+    td_diastolik INTEGER DEFAULT 0,
+    gula_darah TEXT DEFAULT '-',
     hb TEXT DEFAULT '-',
-    status_gizi TEXT DEFAULT 'Normal',
-    petugas_entry TEXT,
+    karies TEXT DEFAULT 'Tidak',
+    kebugaran TEXT DEFAULT 'Baik',
+    menstruasi TEXT DEFAULT 'Belum',
+    kacamata TEXT DEFAULT 'Tidak',
+    petugas_entry TEXT DEFAULT 'Admin',
     tanggal_entry TEXT,
     raw_json TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
