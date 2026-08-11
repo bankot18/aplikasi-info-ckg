@@ -10545,6 +10545,263 @@ let leafletMap = null;
 let mapMarkersGroup = null;
 let currentAddingPinMarker = null;
 
+/* ==========================================================================
+   🎯 ACCURATE KAMPUNG & ADMINISTRATIVE DIRECTORY LOOKUP (KAB. BANDUNG)
+   ========================================================================== */
+
+const ACCURATE_KAMPUNG_DIRECTORY = {
+  // --- KECAMATAN BANJARAN (11 DESA) ---
+  'PAJAGALAN': { kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIPEUNDEUY': { kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BANJARAN KOTA': { kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'ALUN-ALUN BANJARAN': { kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BAROS BANJARAN': { kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  
+  'BANJARAN WETAN': { kel: 'Banjaran Wetan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'MUARA': { kel: 'Banjaran Wetan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SINDANGLENGO': { kel: 'Banjaran Wetan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'PASIRHALANG': { kel: 'Banjaran Wetan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  'TARAJUSARI': { kel: 'Tarajusari', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIPAKU': { kel: 'Tarajusari', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SANGGAR MAS': { kel: 'Tarajusari', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SANGGAR MAS LESTARI': { kel: 'Tarajusari', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'KEBON SAWO': { kel: 'Tarajusari', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  'KAMASAN': { kel: 'Kamasan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'KEBON HUI': { kel: 'Kamasan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CITALIKTIK': { kel: 'Kamasan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'PATROL': { kel: 'Kamasan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  'KIANGROKE': { kel: 'Kiangroke', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'PAMOYANAN': { kel: 'Kiangroke', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BOJONG': { kel: 'Kiangroke', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  'PASIRHUNI': { kel: 'Pasirhuni', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SUKASARI PASIRHUNI': { kel: 'Pasirhuni', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  'SINDANGPANON': { kel: 'Sindangpanon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SINDANGPARANG': { kel: 'Sindangpanon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIBATOK': { kel: 'Sindangpanon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  'CIAPUS': { kel: 'Ciapus', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'LEGOK': { kel: 'Ciapus', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIAPUS HILIR': { kel: 'Ciapus', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIAPUS GIRANG': { kel: 'Ciapus', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  'NEGLASARI': { kel: 'Neglasari', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SUKATANI': { kel: 'Neglasari', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  'MARGAHAYU': { kel: 'Margahayu', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIKUPA': { kel: 'Margahayu', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  'CIPINANG': { kel: 'Cipinang', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIPEUJEUH': { kel: 'Cipinang', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN CANGKUANG ---
+  'BANDASARI': { kel: 'Bandasari', kec: 'Cangkuang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIKOPO': { kel: 'Bandasari', kec: 'Cangkuang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CANGKUANG': { kel: 'Cangkuang', kec: 'Cangkuang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CILUNCAT': { kel: 'Ciluncat', kec: 'Cangkuang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'JATISARI': { kel: 'Jatisari', kec: 'Cangkuang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'NAGRAK': { kel: 'Nagrak', kec: 'Cangkuang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'TANJUNGSARI': { kel: 'Tanjungsari', kec: 'Cangkuang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN ARJASARI ---
+  'ARJASARI': { kel: 'Arjasari', kec: 'Arjasari', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'ANCOLMEKAR': { kel: 'Ancolmekar', kec: 'Arjasari', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BAROS': { kel: 'Baros', kec: 'Arjasari', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BATUKARUT': { kel: 'Batukarut', kec: 'Arjasari', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'MANGGUNHJAYA': { kel: 'Mangunjaya', kec: 'Arjasari', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'PINGGIRSARI': { kel: 'Pinggirsari', kec: 'Arjasari', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'RANCAKOLE': { kel: 'Rancacole', kec: 'Arjasari', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN CIMAUNG ---
+  'CIMAUNG': { kel: 'Cimaung', kec: 'Cimaung', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIKALONG': { kel: 'Cikalong', kec: 'Cimaung', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CAMPAKA': { kel: 'Cikalong', kec: 'Cimaung', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'JAGABAY': { kel: 'Jagabay', kec: 'Cimaung', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'MALASARI': { kel: 'Malasari', kec: 'Cimaung', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'MEKARSARI': { kel: 'Mekarsari', kec: 'Cimaung', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'WARJABAKTI': { kel: 'Warjabakti', kec: 'Cimaung', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN PAMEUNGPEUK ---
+  'PAMEUNGPEUK': { kel: 'Sukasari', kec: 'Pameungpeuk', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SUKASARI': { kel: 'Sukasari', kec: 'Pameungpeuk', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'LANGONSARI': { kel: 'Langonsari', kec: 'Pameungpeuk', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'WAAS': { kel: 'Langonsari', kec: 'Pameungpeuk', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'RANCAMULYA': { kel: 'Rancamulya', kec: 'Pameungpeuk', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BOJONGKONENG': { kel: 'Rancamulya', kec: 'Pameungpeuk', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'RANCATUNGKU': { kel: 'Rancatungku', kec: 'Pameungpeuk', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN SOREANG ---
+  'SOREANG': { kel: 'Soreang', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SADU': { kel: 'Sadu', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SEKARWANGI': { kel: 'Sekarwangi', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'PANYIRAPAN': { kel: 'Panyirapan', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'KARAMATMULYA': { kel: 'Karamatmulya', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'PARUNGSERAB': { kel: 'Parungserab', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' }
+};
+
+function getOfficialAddressLookup(kw) {
+  if (!kw) return null;
+  const cleanKw = String(kw).toUpperCase().replace(/^KP\.\s*/i, '').trim();
+  if (ACCURATE_KAMPUNG_DIRECTORY[cleanKw]) {
+    return ACCURATE_KAMPUNG_DIRECTORY[cleanKw];
+  }
+  for (let k in ACCURATE_KAMPUNG_DIRECTORY) {
+    if (cleanKw.includes(k) || k.includes(cleanKw)) {
+      return ACCURATE_KAMPUNG_DIRECTORY[k];
+    }
+  }
+  return null;
+}
+
+function realignLearnedAddressAccuracy() {
+  const raw = localStorage.getItem('ckg_learned_kampung_map');
+  if (!raw) return;
+  try {
+    let list = JSON.parse(raw);
+    let modified = false;
+
+    list.forEach(item => {
+      const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase() : '';
+      if (!kw) return;
+
+      const verified = getOfficialAddressLookup(kw);
+      if (verified) {
+        if (item.kel !== verified.kel || item.kec !== verified.kec) {
+          console.log(`[ADDRESS REALIGN] Corrected "${kw}": ${item.kel} -> ${verified.kel}, ${item.kec} -> ${verified.kec}`);
+          item.kel = verified.kel;
+          item.kec = verified.kec;
+          item.kab = verified.kab;
+          item.prov = verified.prov;
+          modified = true;
+        }
+      }
+    });
+
+    if (modified) {
+      localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(list));
+    }
+  } catch (e) {
+    console.warn('Error realigning address knowledge:', e);
+  }
+}
+
+function addToDeletedBlacklist(kw) {
+  if (!kw) return;
+  const cleanKw = String(kw).toUpperCase().trim();
+  const raw = localStorage.getItem('ckg_deleted_kampungs_blacklist');
+  let setArr = [];
+  if (raw) {
+    try { setArr = JSON.parse(raw); } catch (e) { setArr = []; }
+  }
+  if (!setArr.includes(cleanKw)) {
+    setArr.push(cleanKw);
+    localStorage.setItem('ckg_deleted_kampungs_blacklist', JSON.stringify(setArr));
+  }
+}
+
+function getLearnedKampungMap() {
+  const raw = localStorage.getItem('ckg_learned_kampung_map');
+  let list = [];
+  if (raw) {
+    try { list = JSON.parse(raw); } catch (e) { list = []; }
+  }
+
+  // Filter out blacklisted/deleted keywords
+  const blacklistRaw = localStorage.getItem('ckg_deleted_kampungs_blacklist');
+  if (blacklistRaw) {
+    try {
+      const blacklist = JSON.parse(blacklistRaw);
+      list = list.filter(item => {
+        const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase().trim() : '';
+        return !blacklist.includes(kw);
+      });
+    } catch (e) {}
+  }
+
+  // Pre-seed with accurate exploration map if list is empty
+  if (list.length === 0 && typeof KAB_BANDUNG_EXPLORATION_MAP !== 'undefined') {
+    KAB_BANDUNG_EXPLORATION_MAP.forEach(item => {
+      item.kampungs.forEach(kName => {
+        const cleanKw = kName.replace(/^Kp\.\s*/i, '').trim();
+        const verified = getOfficialAddressLookup(cleanKw);
+        list.push({
+          keywords: [cleanKw],
+          kel: verified ? verified.kel : item.kel,
+          kec: verified ? verified.kec : item.kec,
+          kab: verified ? verified.kab : 'Kabupaten Bandung',
+          prov: verified ? verified.prov : 'Jawa Barat',
+          lat: item.coords[0],
+          lng: item.coords[1]
+        });
+      });
+    });
+    localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(list));
+  }
+  return list;
+}
+
+async function saveLearnedKampungKeyword(kw, kel, kec, kab = 'Kabupaten Bandung', prov = 'Jawa Barat', syncToCloud = true, lat = null, lng = null) {
+  if (!kw) return;
+  const cleanKw = String(kw).toUpperCase().replace(/^KP\.\s*/i, '').trim();
+
+  // Cross-reference official lookup table to force accurate administrative attribution!
+  const verified = getOfficialAddressLookup(cleanKw);
+  const finalKel = verified ? verified.kel : (kel || 'Banjaran Kota');
+  const finalKec = verified ? verified.kec : (kec || 'Banjaran');
+  const finalKab = verified ? verified.kab : (kab || 'Kabupaten Bandung');
+  const finalProv = verified ? verified.prov : (prov || 'Jawa Barat');
+
+  const list = getLearnedKampungMap();
+  const existingIndex = list.findIndex(item => {
+    if (Array.isArray(item.keywords)) {
+      return item.keywords.some(k => String(k).toUpperCase().trim() === cleanKw);
+    }
+    return String(item.keywords).toUpperCase().trim() === cleanKw;
+  });
+
+  const entry = {
+    keywords: [cleanKw],
+    kel: finalKel,
+    kec: finalKec,
+    kab: finalKab,
+    prov: finalProv,
+    lat: lat,
+    lng: lng
+  };
+
+  if (existingIndex >= 0) {
+    list[existingIndex] = { ...list[existingIndex], ...entry };
+  } else {
+    list.push(entry);
+  }
+
+  localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(list));
+
+  if (syncToCloud) {
+    try {
+      await fetch('/api/kamus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keyword: cleanKw,
+          kelurahan: finalKel,
+          kecamatan: finalKec,
+          kab_kota: finalKab,
+          provinsi: finalProv,
+          lat: lat,
+          lng: lng
+        })
+      });
+    } catch (err) {
+      console.warn('Sync to D1 Kamus Error:', err);
+    }
+  }
+}
+
 // Pre-defined coordinate lookup dictionary for Kabupaten Bandung kampungs/kelurahans
 const KAB_BANDUNG_COORDS_MAP = {
   // Kecamatan Banjaran
@@ -10617,36 +10874,101 @@ let aiAutoFollowMap = false;
 
 // 31 Kecamatan in Kabupaten Bandung with key villages & coordinates
 const KAB_BANDUNG_EXPLORATION_MAP = [
-  { kec: 'Banjaran', kel: 'Tarajusari', kampungs: ['Kp. Cipeundeuy', 'Kp. Cipaku', 'Kp. Sanggar Mas', 'Kp. Sindanglengo', 'Kp. Pajagalan', 'Kp. Ciapus', 'Kp. Kamasan', 'Kp. Kiangroke', 'Kp. Pasirhuni', 'Kp. Sindangpanon'], coords: [-7.0427, 107.5878] },
-  { kec: 'Cangkuang', kel: 'Bandasari', kampungs: ['Kp. Cikopo', 'Kp. Bandasari', 'Kp. Jatisari', 'Kp. Nagrak', 'Kp. Tanjungsari'], coords: [-7.0280, 107.5680] },
-  { kec: 'Pameungpeuk', kel: 'Sukasari', kampungs: ['Kp. Waas', 'Kp. Bojongkoneng', 'Kp. Sukasari', 'Kp. Rancamulya'], coords: [-7.0110, 107.5920] },
-  { kec: 'Arjasari', kel: 'Baros', kampungs: ['Kp. Baros', 'Kp. Batukarut', 'Kp. Ancolmekar', 'Kp. Mangunjaya', 'Kp. Pinggirsari', 'Kp. Rancacole'], coords: [-7.0490, 107.6250] },
-  { kec: 'Cimaung', kel: 'Cikalong', kampungs: ['Kp. Campaka', 'Kp. Cikalong', 'Kp. Cipinang', 'Kp. Jagabay', 'Kp. Malasari', 'Kp. Mekarsari', 'Kp. Warjabakti'], coords: [-7.0780, 107.5620] },
-  { kec: 'Soreang', kel: 'Sadu', kampungs: ['Kp. Sadu', 'Kp. Sekarwangi', 'Kp. Panyirapan', 'Kp. Karamatmulya', 'Kp. Parungserab'], coords: [-7.0320, 107.5270] },
+  // Kecamatan Banjaran (11 Desa Masing-Masing)
+  { kec: 'Banjaran', kel: 'Banjaran Kota', kampungs: ['Kp. Pajagalan', 'Kp. Cipeundeuy', 'Kp. Banjaran Kota', 'Kp. Alun-Alun Banjaran', 'Kp. Baros Banjaran'], coords: [-7.0427, 107.5878] },
+  { kec: 'Banjaran', kel: 'Banjaran Wetan', kampungs: ['Kp. Banjaran Wetan', 'Kp. Muara', 'Kp. Sindanglengo', 'Kp. Pasirhalang'], coords: [-7.0485, 107.5920] },
+  { kec: 'Banjaran', kel: 'Tarajusari', kampungs: ['Kp. Tarajusari', 'Kp. Cipaku', 'Kp. Sanggar Mas', 'Kp. Sanggar Mas Lestari', 'Kp. Kebon Sawo'], coords: [-7.0310, 107.6010] },
+  { kec: 'Banjaran', kel: 'Kamasan', kampungs: ['Kp. Kamasan', 'Kp. Kebon Hui', 'Kp. Citaliktik', 'Kp. Patrol'], coords: [-7.0380, 107.5950] },
+  { kec: 'Banjaran', kel: 'Kiangroke', kampungs: ['Kp. Kiangroke', 'Kp. Pamoyanan', 'Kp. Bojong'], coords: [-7.0250, 107.5890] },
+  { kec: 'Banjaran', kel: 'Pasirhuni', kampungs: ['Kp. Pasirhuni', 'Kp. Sukasari Pasirhuni'], coords: [-7.0650, 107.5750] },
+  { kec: 'Banjaran', kel: 'Sindangpanon', kampungs: ['Kp. Sindangpanon', 'Kp. Sindangparang', 'Kp. Cibatok'], coords: [-7.0550, 107.6050] },
+  { kec: 'Banjaran', kel: 'Ciapus', kampungs: ['Kp. Ciapus', 'Kp. Legok', 'Kp. Ciapus Hilir', 'Kp. Ciapus Girang'], coords: [-7.0350, 107.5810] },
+  { kec: 'Banjaran', kel: 'Neglasari', kampungs: ['Kp. Neglasari', 'Kp. Sukatani'], coords: [-7.0600, 107.5980] },
+  { kec: 'Banjaran', kel: 'Margahayu', kampungs: ['Kp. Margahayu', 'Kp. Cikupa'], coords: [-7.0510, 107.5820] },
+  { kec: 'Banjaran', kel: 'Cipinang', kampungs: ['Kp. Cipinang', 'Kp. Cipeujeuh'], coords: [-7.0620, 107.5720] },
+  // Kecamatan Cangkuang
+  { kec: 'Cangkuang', kel: 'Bandasari', kampungs: ['Kp. Bandasari', 'Kp. Cikopo'], coords: [-7.0210, 107.5620] },
+  { kec: 'Cangkuang', kel: 'Cangkuang', kampungs: ['Kp. Cangkuang'], coords: [-7.0150, 107.5580] },
+  { kec: 'Cangkuang', kel: 'Ciluncat', kampungs: ['Kp. Ciluncat'], coords: [-7.0180, 107.5690] },
+  { kec: 'Cangkuang', kel: 'Jatisari', kampungs: ['Kp. Jatisari'], coords: [-7.0230, 107.5740] },
+  { kec: 'Cangkuang', kel: 'Nagrak', kampungs: ['Kp. Nagrak'], coords: [-7.0090, 107.5610] },
+  { kec: 'Cangkuang', kel: 'Tanjungsari', kampungs: ['Kp. Tanjungsari'], coords: [-7.0120, 107.5510] },
+  // Kecamatan Pameungpeuk
+  { kec: 'Pameungpeuk', kel: 'Sukasari', kampungs: ['Kp. Sukasari'], coords: [-7.0080, 107.6010] },
+  { kec: 'Pameungpeuk', kel: 'Langonsari', kampungs: ['Kp. Langonsari', 'Kp. Waas'], coords: [-7.0120, 107.6120] },
+  { kec: 'Pameungpeuk', kel: 'Rancamulya', kampungs: ['Kp. Rancamulya', 'Kp. Bojongkoneng'], coords: [-7.0050, 107.6050] },
+  { kec: 'Pameungpeuk', kel: 'Rancatungku', kampungs: ['Kp. Rancatungku'], coords: [-7.0010, 107.5980] },
+  // Kecamatan Arjasari
+  { kec: 'Arjasari', kel: 'Arjasari', kampungs: ['Kp. Arjasari'], coords: [-7.0450, 107.6250] },
+  { kec: 'Arjasari', kel: 'Ancolmekar', kampungs: ['Kp. Ancolmekar'], coords: [-7.0520, 107.6350] },
+  { kec: 'Arjasari', kel: 'Baros', kampungs: ['Kp. Baros'], coords: [-7.0380, 107.6150] },
+  { kec: 'Arjasari', kel: 'Batukarut', kampungs: ['Kp. Batukarut'], coords: [-7.0050, 107.6050] },
+  { kec: 'Arjasari', kel: 'Mangunjaya', kampungs: ['Kp. Mangunjaya'], coords: [-7.0410, 107.6290] },
+  { kec: 'Arjasari', kel: 'Pinggirsari', kampungs: ['Kp. Pinggirsari'], coords: [-7.0580, 107.6320] },
+  { kec: 'Arjasari', kel: 'Rancacole', kampungs: ['Kp. Rancacole'], coords: [-7.0650, 107.6250] },
+  // Kecamatan Cimaung
+  { kec: 'Cimaung', kel: 'Cimaung', kampungs: ['Kp. Cimaung'], coords: [-7.0750, 107.5650] },
+  { kec: 'Cimaung', kel: 'Cikalong', kampungs: ['Kp. Cikalong', 'Kp. Campaka'], coords: [-7.0780, 107.5620] },
+  { kec: 'Cimaung', kel: 'Jagabay', kampungs: ['Kp. Jagabay'], coords: [-7.0850, 107.5650] },
+  { kec: 'Cimaung', kel: 'Malasari', kampungs: ['Kp. Malasari'], coords: [-7.0880, 107.5610] },
+  { kec: 'Cimaung', kel: 'Mekarsari', kampungs: ['Kp. Mekarsari'], coords: [-7.0910, 107.5580] },
+  { kec: 'Cimaung', kel: 'Warjabakti', kampungs: ['Kp. Warjabakti'], coords: [-7.0950, 107.5580] },
+  // Kecamatan Soreang
+  { kec: 'Soreang', kel: 'Soreang', kampungs: ['Kp. Soreang'], coords: [-7.0320, 107.5270] },
+  { kec: 'Soreang', kel: 'Sadu', kampungs: ['Kp. Sadu'], coords: [-7.0350, 107.5210] },
+  { kec: 'Soreang', kel: 'Sekarwangi', kampungs: ['Kp. Sekarwangi'], coords: [-7.0280, 107.5310] },
+  { kec: 'Soreang', kel: 'Panyirapan', kampungs: ['Kp. Panyirapan'], coords: [-7.0380, 107.5350] },
+  { kec: 'Soreang', kel: 'Karamatmulya', kampungs: ['Kp. Karamatmulya'], coords: [-7.0250, 107.5380] },
+  { kec: 'Soreang', kel: 'Parungserab', kampungs: ['Kp. Parungserab'], coords: [-7.0210, 107.5410] },
+  // Kecamatan Katapang
   { kec: 'Katapang', kel: 'Gandasari', kampungs: ['Kp. Katapang', 'Kp. Gandasari', 'Kp. Sangkanhurip', 'Kp. Pangauban'], coords: [-6.9980, 107.5620] },
+  // Kecamatan Baleendah
   { kec: 'Baleendah', kel: 'Andir', kampungs: ['Kp. Andir', 'Kp. Bojongmalaka', 'Kp. Malakasari', 'Kp. Rancamanyar', 'Kp. Wargamekar'], coords: [-6.9820, 107.6280] },
+  // Kecamatan Dayeuhkolot
   { kec: 'Dayeuhkolot', kel: 'Citeureup', kampungs: ['Kp. Citeureup', 'Kp. Cangkuang Barat', 'Kp. Pasawahan', 'Kp. Sukapura'], coords: [-6.9850, 107.6180] },
+  // Kecamatan Margahayu
   { kec: 'Margahayu', kel: 'Sayati', kampungs: ['Kp. Sayati', 'Kp. Margahayu Selatan', 'Kp. Margahayu Tengah', 'Kp. Sukamenak'], coords: [-6.9680, 107.5780] },
+  // Kecamatan Margaasih
   { kec: 'Margaasih', kel: 'Nanjung', kampungs: ['Kp. Nanjung', 'Kp. Cigondewah Hilir', 'Kp. Lagadar', 'Kp. Rahayu'], coords: [-6.9550, 107.5450] },
+  // Kecamatan Ciwidey
   { kec: 'Ciwidey', kel: 'Lebakmuncang', kampungs: ['Kp. Panundaan', 'Kp. Lebakmuncang', 'Kp. Nengkelan', 'Kp. Rawabogo', 'Kp. Prawatasari'], coords: [-7.0950, 107.4620] },
+  // Kecamatan Pasirjambu
   { kec: 'Pasirjambu', kel: 'Tenjolaya', kampungs: ['Kp. Tenjolaya', 'Kp. Cikoneng', 'Kp. Cisondari', 'Kp. Mekarmaju'], coords: [-7.0750, 107.4850] },
+  // Kecamatan Rancabali
   { kec: 'Rancabali', kel: 'Alamendah', kampungs: ['Kp. Alamendah', 'Kp. Cipelah', 'Kp. Indragiri', 'Kp. Patengan', 'Kp. Sukaresmi'], coords: [-7.1420, 107.4120] },
+  // Kecamatan Pangalengan
   { kec: 'Pangalengan', kel: 'Pulosari', kampungs: ['Kp. Pulosari', 'Kp. Warnasari', 'Kp. Banjarsari', 'Kp. Margalaksana', 'Kp. Margamekar', 'Kp. Margamukti'], coords: [-7.1750, 107.5680] },
+  // Kecamatan Bojongsoang
   { kec: 'Bojongsoang', kel: 'Buahbatu', kampungs: ['Kp. Buahbatu', 'Kp. Bojongsari', 'Kp. Cipagalo', 'Kp. Tegalluar'], coords: [-6.9720, 107.6450] },
+  // Kecamatan Cileunyi
   { kec: 'Cileunyi', kel: 'Cinunuk', kampungs: ['Kp. Cinunuk', 'Kp. Cileunyi Kulon', 'Kp. Cileunyi Wetan', 'Kp. Cimekar'], coords: [-6.9380, 107.7250] },
+  // Kecamatan Rancaekek
   { kec: 'Rancaekek', kel: 'Haurpugur', kampungs: ['Kp. Haurpugur', 'Kp. Rancaekek Kulon', 'Kp. Bojongloa', 'Kp. Cangkuang'], coords: [-6.9680, 107.7650] },
+  // Kecamatan Majalaya
   { kec: 'Majalaya', kel: 'Padamulya', kampungs: ['Kp. Padamulya', 'Kp. Bojong', 'Kp. Majakerta', 'Kp. Sukamaju', 'Kp. Majasetra'], coords: [-7.0520, 107.7550] },
+  // Kecamatan Ciparay
   { kec: 'Ciparay', kel: 'Gunungleutik', kampungs: ['Kp. Gunungleutik', 'Kp. Babakan', 'Kp. Ciheulang', 'Kp. Cikuya', 'Kp. Manggungharja'], coords: [-7.0380, 107.7120] },
+  // Kecamatan Ibun
   { kec: 'Ibun', kel: 'Dukuh', kampungs: ['Kp. Ibun', 'Kp. Dukuh', 'Kp. Cibeet', 'Kp. Sudi', 'Kp. Tanggulun'], coords: [-7.0850, 107.7850] },
+  // Kecamatan Solokanjantung
   { kec: 'Solokanjantung', kel: 'Bojongemas', kampungs: ['Kp. Solokanjantung', 'Kp. Bojongemas', 'Kp. Langensari', 'Kp. Padamukti'], coords: [-7.0120, 107.7420] },
+  // Kecamatan Kertasari
   { kec: 'Kertasari', kel: 'Tarumajaya', kampungs: ['Kp. Tarumajaya', 'Kp. Cibeureum', 'Kp. Cikembang', 'Kp. Neglawangi', 'Kp. Santosa'], coords: [-7.2150, 107.6580] },
+  // Kecamatan Pacet
   { kec: 'Pacet', kel: 'Maruyung', kampungs: ['Kp. Maruyung', 'Kp. Cikitu', 'Kp. Cikawao', 'Kp. Mandalahaji', 'Kp. Sukarame'], coords: [-7.0720, 107.6980] },
+  // Kecamatan Paseh
   { kec: 'Paseh', kel: 'Cigentur', kampungs: ['Kp. Cigentur', 'Kp. Cipedes', 'Kp. Drawati', 'Kp. Sukamanah'], coords: [-7.0350, 107.7950] },
+  // Kecamatan Cikancung
   { kec: 'Cikancung', kel: 'Cihanyir', kampungs: ['Kp. Cihanyir', 'Kp. Ciluluk', 'Kp. Hegarmanah', 'Kp. Mekarlaksana'], coords: [-7.0080, 107.8180] },
+  // Kecamatan Nagreg
   { kec: 'Nagreg', kel: 'Ciaro', kampungs: ['Kp. Nagreg', 'Kp. Ciaro', 'Kp. Ciherang', 'Kp. Citaman', 'Kp. Ganjarsabar'], coords: [-7.0250, 107.8850] },
+  // Kecamatan Cicalengka
   { kec: 'Cicalengka', kel: 'Nagrog', kampungs: ['Kp. Cicalengka', 'Kp. Babakanpeutey', 'Kp. Margaasih', 'Kp. Nagrog', 'Kp. Tenjolaya'], coords: [-6.9850, 107.8350] },
+  // Kecamatan Cilengkrang
   { kec: 'Cilengkrang', kel: 'Jatiendah', kampungs: ['Kp. Cilengkrang', 'Kp. Cipanjalu', 'Kp. Melati', 'Kp. Jatiendah'], coords: [-6.8980, 107.7080] },
+  // Kecamatan Cimenyan
   { kec: 'Cimenyan', kel: 'Ciburial', kampungs: ['Kp. Cimenyan', 'Kp. Ciburial', 'Kp. Cikadut', 'Kp. Mekarmanah'], coords: [-6.8680, 107.6650] },
+  // Kecamatan Kutawaringin
   { kec: 'Kutawaringin', kel: 'Buninagara', kampungs: ['Kp. Kutawaringin', 'Kp. Buninagara', 'Kp. Cilame', 'Kp. Jatisari', 'Kp. Kopo'], coords: [-7.0050, 107.5180] }
 ];
 
@@ -10758,13 +11080,20 @@ function stepAiExplorerNextLocation() {
 
   const cleanKw = targetKampung.replace(/^Kp\.\s*/i, '').trim();
 
+  // Validate hierarchy against official lookup table
+  const verified = getOfficialAddressLookup(cleanKw);
+  const targetKel = verified ? verified.kel : kecObj.kel;
+  const targetKec = verified ? verified.kec : kecObj.kec;
+  const targetKab = verified ? verified.kab : (currentRegion.name.includes('Kota') ? 'Kota Bandung' : 'Kabupaten Bandung');
+  const targetProv = verified ? verified.prov : 'Jawa Barat';
+
   // 1. Auto-record to Cloud D1 database & Local Storage without asking user
   saveLearnedKampungKeyword(
     cleanKw,
-    kecObj.kel,
-    kecObj.kec,
-    currentRegion.name.includes('Kota') ? 'Kota Bandung' : 'Kabupaten Bandung',
-    'Jawa Barat',
+    targetKel,
+    targetKec,
+    targetKab,
+    targetProv,
     true,
     lat,
     lng
@@ -10773,7 +11102,7 @@ function stepAiExplorerNextLocation() {
   aiLearnedCountTotal++;
 
   // 2. Update Live Log HUD
-  updateAiLiveLog(`🔍 [${new Date().toLocaleTimeString('id-ID')}] Discovered: ${targetKampung}, Desa ${kecObj.kel}, Kec. ${kecObj.kec} → Saved to D1 Cloud`);
+  updateAiLiveLog(`🔍 [${new Date().toLocaleTimeString('id-ID')}] Discovered: Kp. ${cleanKw}, Desa ${targetKel}, Kec. ${targetKec} → Saved to D1 Cloud`);
 
   // 3. Move Live Radar Marker on Leaflet Map
   updateAiRadarMarkerOnMap(lat, lng, cleanKw, kecObj.kec);
