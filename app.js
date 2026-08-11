@@ -1917,7 +1917,7 @@ async function scanExistingRecordsForAddressDictionary() {
 }
 
 const BANJARAN_KAMPUNG_MAP = [
-  { keywords: ['PAJAGALAN', 'PEJAGALAN', 'JAGALAN', 'BANJARAN KOTA', 'ALUN-ALUN BANJARAN', 'PASAR BANJARAN', 'STASIUN', 'BARULAKSANA', 'KAUM', 'BUNTRIS', 'PANGKAT'], kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['PAJAGALAN', 'PEJAGALAN', 'JAGALAN', 'BANJARAN KULON', 'BANJARAN KOTA', 'ALUN-ALUN BANJARAN', 'PASAR BANJARAN', 'STASIUN', 'BARULAKSANA', 'KAUM', 'BUNTRIS', 'PANGKAT'], kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['KAMASAN', 'SEKECANDANG', 'SITUANGANG', 'BANTARPANJANG', 'CIGENTUR', 'SANGKAN', 'LEBAKSARI'], kel: 'Kamasan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['CIAPUS', 'CITARIM', 'CIPEUNEUY', 'LEUWIWUNGGU', 'PALASARI', 'PASIRPANJANG'], kel: 'Ciapus', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['TARAJUSARI', 'TARAJU', 'SAMPORA', 'WARUNGLEBAK', 'SUKAMUKTI', 'BABAKAN TARAJU'], kel: 'Tarajusari', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
@@ -10551,11 +10551,12 @@ let currentAddingPinMarker = null;
 
 const ACCURATE_KAMPUNG_DIRECTORY = {
   // --- KECAMATAN BANJARAN (11 DESA) ---
-  'PAJAGALAN': { kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
-  'CIPEUNDEUY': { kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
-  'BANJARAN KOTA': { kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
-  'ALUN-ALUN BANJARAN': { kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
-  'BAROS BANJARAN': { kel: 'Banjaran Kota', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'PAJAGALAN': { kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIPEUNDEUY': { kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BANJARAN KULON': { kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BANJARAN KOTA': { kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'ALUN-ALUN BANJARAN': { kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BAROS BANJARAN': { kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   
   'BANJARAN WETAN': { kel: 'Banjaran Wetan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   'MUARA': { kel: 'Banjaran Wetan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
@@ -10665,6 +10666,12 @@ function realignLearnedAddressAccuracy() {
     let modified = false;
 
     list.forEach(item => {
+      // Auto-migrate legacy 'Banjaran Kota' kelurahan label to official 'Banjaran Kulon'
+      if (item.kel === 'Banjaran Kota') {
+        item.kel = 'Banjaran Kulon';
+        modified = true;
+      }
+
       const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase() : '';
       if (!kw) return;
 
@@ -10750,7 +10757,7 @@ async function saveLearnedKampungKeyword(kw, kel, kec, kab = 'Kabupaten Bandung'
 
   // Cross-reference official lookup table to force accurate administrative attribution!
   const verified = getOfficialAddressLookup(cleanKw);
-  const finalKel = verified ? verified.kel : (kel || 'Banjaran Kota');
+  const finalKel = verified ? verified.kel : (kel || 'Banjaran Kulon');
   const finalKec = verified ? verified.kec : (kec || 'Banjaran');
   const finalKab = verified ? verified.kab : (kab || 'Kabupaten Bandung');
   const finalProv = verified ? verified.prov : (prov || 'Jawa Barat');
@@ -10805,6 +10812,7 @@ async function saveLearnedKampungKeyword(kw, kel, kec, kab = 'Kabupaten Bandung'
 // Pre-defined coordinate lookup dictionary for Kabupaten Bandung kampungs/kelurahans
 const KAB_BANDUNG_COORDS_MAP = {
   // Kecamatan Banjaran
+  'BANJARAN KULON': [-7.0427, 107.5878],
   'BANJARAN KOTA': [-7.0427, 107.5878],
   'BANJARAN WETAN': [-7.0485, 107.5920],
   'BANJARAN': [-7.0427, 107.5878],
@@ -10875,7 +10883,7 @@ let aiAutoFollowMap = false;
 // 31 Kecamatan in Kabupaten Bandung with key villages & coordinates
 const KAB_BANDUNG_EXPLORATION_MAP = [
   // Kecamatan Banjaran (11 Desa Masing-Masing)
-  { kec: 'Banjaran', kel: 'Banjaran Kota', kampungs: ['Kp. Pajagalan', 'Kp. Cipeundeuy', 'Kp. Banjaran Kota', 'Kp. Alun-Alun Banjaran', 'Kp. Baros Banjaran'], coords: [-7.0427, 107.5878] },
+  { kec: 'Banjaran', kel: 'Banjaran Kulon', kampungs: ['Kp. Pajagalan', 'Kp. Cipeundeuy', 'Kp. Banjaran Kulon', 'Kp. Alun-Alun Banjaran', 'Kp. Baros Banjaran'], coords: [-7.0427, 107.5878] },
   { kec: 'Banjaran', kel: 'Banjaran Wetan', kampungs: ['Kp. Banjaran Wetan', 'Kp. Muara', 'Kp. Sindanglengo', 'Kp. Pasirhalang'], coords: [-7.0485, 107.5920] },
   { kec: 'Banjaran', kel: 'Tarajusari', kampungs: ['Kp. Tarajusari', 'Kp. Cipaku', 'Kp. Sanggar Mas', 'Kp. Sanggar Mas Lestari', 'Kp. Kebon Sawo'], coords: [-7.0310, 107.6010] },
   { kec: 'Banjaran', kel: 'Kamasan', kampungs: ['Kp. Kamasan', 'Kp. Kebon Hui', 'Kp. Citaliktik', 'Kp. Patrol'], coords: [-7.0380, 107.5950] },
@@ -11305,7 +11313,7 @@ function renderMapMarkers() {
 
   learnedMap.forEach((item, index) => {
     const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase() : 'KAMPUNG';
-    const kel = item.kel || 'Banjaran Kota';
+    const kel = item.kel || 'Banjaran Kulon';
     const kec = item.kec || 'Banjaran';
     const kab = item.kab || 'Kabupaten Bandung';
 
@@ -11484,7 +11492,7 @@ function openAddPinModalFromMap(lat = null, lng = null) {
           </div>
           <div class="form-group">
             <label class="form-label">Kelurahan / Desa <span class="required">*</span></label>
-            <input type="text" id="swalMapKel" class="swal2-input" placeholder="Contoh: Banjaran Kota" style="width: 100%; margin: 4px 0 0 0;" value="Banjaran Kota" required>
+            <input type="text" id="swalMapKel" class="swal2-input" placeholder="Contoh: Banjaran Kulon" style="width: 100%; margin: 4px 0 0 0;" value="Banjaran Kulon" required>
           </div>
         </div>
 

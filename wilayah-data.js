@@ -5,7 +5,7 @@ const WILAYAH_DATA = {
   "Jawa Barat": {
     "Kabupaten Bandung": {
       "Banjaran": [
-        "Banjaran",
+        "Banjaran Kulon",
         "Banjaran Wetan",
         "Ciapus",
         "Kamasan",
