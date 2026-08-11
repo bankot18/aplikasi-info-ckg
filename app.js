@@ -1,13 +1,7 @@
 // Main Application Logic for Pencatatan CKG Puskesmas Banjaran Kota
 
-// Initial User Database matching user specifications
-const INITIAL_USERS_DB = [
-  { nama_user: "Mochamad Fauzie, S.Gz", password: "213", role: "Admin" },
-  { nama_user: "Nurul Hidayah, Amd.Kes", password: "213", role: "Koordinator" },
-  { nama_user: "Anisa Rohmatunisa, AM.Keb", password: "", role: "Petugas" },
-  { nama_user: "Neng Yulia Trisnawati, AM.Keb", password: "", role: "Petugas" },
-  { nama_user: "Teti Nuryati, S.Keb, Bdn", password: "", role: "Petugas" }
-];
+// Initial User Database (Purely dynamic from Cloud D1 Database)
+const INITIAL_USERS_DB = [];
 
 // Officers List (Populated dynamically from database)
 const OFFICERS_DATA = [];
@@ -141,33 +135,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadStoredUserDatabase() {
-  // Force clean stale local storage keys from previous test sessions
-  const isV2Synced = localStorage.getItem('ckg_user_db_v2_synced');
+  const saved = localStorage.getItem('ckg_user_db');
+  let loaded = null;
+  if (saved) {
+    try { loaded = JSON.parse(saved); } catch (e) { loaded = null; }
+  }
 
-  if (!isV2Synced) {
-    localStorage.removeItem('ckg_user_db');
-    localStorage.setItem('ckg_user_db_v2_synced', 'true');
-    usersDb = [...INITIAL_USERS_DB];
+  const legacyBlacklist = ['babeh', 'babcri', 'testuser', 'demo'];
+
+  if (Array.isArray(loaded) && loaded.length > 0) {
+    usersDb = loaded.filter(u => u && u.nama_user && !legacyBlacklist.includes(String(u.nama_user).toLowerCase().trim()));
   } else {
-    const saved = localStorage.getItem('ckg_user_db');
-    let loaded = null;
-    if (saved) {
-      try { loaded = JSON.parse(saved); } catch (e) { loaded = null; }
-    }
-
-    const legacyBlacklist = ['babeh', 'babcri', 'testuser', 'demo'];
-
-    if (Array.isArray(loaded) && loaded.length > 0) {
-      usersDb = loaded.filter(u => u && u.nama_user && !legacyBlacklist.includes(String(u.nama_user).toLowerCase().trim()));
-
-      INITIAL_USERS_DB.forEach(initUser => {
-        if (!usersDb.some(u => u.nama_user === initUser.nama_user)) {
-          usersDb.push(initUser);
-        }
-      });
-    } else {
-      usersDb = [...INITIAL_USERS_DB];
-    }
+    usersDb = [];
   }
 
   saveUserDatabaseToStorage();
@@ -194,10 +173,9 @@ function sortUsersDbByRoleHierarchy() {
   });
 }
 
-function resetUserDatabaseToDefault() {
-  usersDb = JSON.parse(JSON.stringify(INITIAL_USERS_DB));
-  saveUserDatabaseToStorage();
-  if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
+async function resetUserDatabaseToDefault() {
+  await fetchCloudUsers();
+  showToast('Database User berhasil dimuat ulang murni dari Cloud D1!', 'info');
 }
 
 function saveUserDatabaseToStorage() {
@@ -825,6 +803,9 @@ function handleLogin(e) {
              </div>
              <div style="font-size:13px; color:#64748b; font-weight:600;">
                Verifikasi akses <strong style="color:#0f172a;">${user.nama_user}</strong> (${user.role})
+             </div>
+             <div style="font-size:11.5px; color:#94a3b8; margin-top:4px;">
+               Kata sandi default: <strong style="color:#2563eb;">213</strong>
              </div>
            </div>`,
     input: 'password',
