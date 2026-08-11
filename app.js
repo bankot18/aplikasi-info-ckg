@@ -8982,6 +8982,17 @@ function resetLaporanFilters() {
 // 🎓 MODUL TERPISAH: CKG SEKOLAH (ISOLATED CLOUD D1 DATABASE)
 // ==========================================================================
 
+// Utility: Escape HTML special characters to prevent XSS
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 let sekolahRecords = [];
 let pendingSekolahImportData = null;
 
@@ -9312,7 +9323,7 @@ function openInputSekolahModal(id = null) {
   const modal = document.getElementById('modalInputSekolah');
   const title = document.getElementById('modalInputSekolahTitle');
   const form = document.getElementById('formSekolahInput');
-  if (!modal || !form) return;
+  if (!modal || !form) { console.error('modalInputSekolah or formSekolahInput not found'); return; }
 
   const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
 
@@ -9324,8 +9335,6 @@ function openInputSekolahModal(id = null) {
   document.getElementById('schKelurahan').value = 'Tarajusari';
   document.getElementById('schPetugasEntry').value = currentUserName;
   document.getElementById('schTanggalEntry').value = new Date().toISOString().substring(0, 10);
-
-  populateSekolahDatalists();
 
   if (id) {
     const rec = sekolahRecords.find(r => r.id === id);
@@ -9362,9 +9371,12 @@ function openInputSekolahModal(id = null) {
     if (title) title.innerHTML = `<i class="bi bi-mortarboard-fill"></i> Form Input Skrining CKG Sekolah`;
   }
 
+  // Show modal FIRST so user gets immediate visual feedback
   modal.classList.add('active');
   modal.classList.add('open');
-  modal.style.display = 'flex';
+
+  // Populate datalists safely (non-blocking)
+  try { populateSekolahDatalists(); } catch (e) { console.warn('populateSekolahDatalists error:', e); }
 }
 
 function closeInputSekolahModal() {
@@ -9372,7 +9384,6 @@ function closeInputSekolahModal() {
   if (modal) {
     modal.classList.remove('active');
     modal.classList.remove('open');
-    modal.style.display = 'none';
   }
 }
 
