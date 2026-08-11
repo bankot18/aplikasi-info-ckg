@@ -10880,10 +10880,17 @@ function addToDeletedBlacklist(kw) {
 }
 
 function getLearnedKampungMap() {
+  const isReset = localStorage.getItem('ckg_dictionary_is_reset') === 'true';
   const raw = localStorage.getItem('ckg_learned_kampung_map');
   let list = [];
   if (raw) {
     try { list = JSON.parse(raw); } catch (e) { list = []; }
+  }
+
+  // If dictionary was intentionally reset by Admin, do not auto-preseed!
+  if (isReset) {
+    updateAiDbSavedCounterUI();
+    return list;
   }
 
   // Filter out blacklisted/deleted keywords
@@ -10898,7 +10905,7 @@ function getLearnedKampungMap() {
     } catch (e) {}
   }
 
-  // Pre-seed with accurate exploration map if list is empty
+  // Pre-seed with accurate exploration map if list is empty and NOT reset
   if (list.length === 0 && typeof KAB_BANDUNG_EXPLORATION_MAP !== 'undefined') {
     KAB_BANDUNG_EXPLORATION_MAP.forEach(item => {
       item.kampungs.forEach((kName, kIdx) => {
@@ -10976,6 +10983,8 @@ async function saveLearnedKampungKeyword(kw, kel, kec, kab = 'Kabupaten Bandung'
   }
 
   localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(list));
+  // Clear the reset flag since new data is being saved — auto-preseed can resume if ever needed
+  localStorage.removeItem('ckg_dictionary_is_reset');
   updateAiDbSavedCounterUI();
 
   if (syncToCloud) {
@@ -11038,6 +11047,7 @@ async function syncKamusFromCloudServer() {
           }
         });
         localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(localList));
+        localStorage.removeItem('ckg_dictionary_is_reset');
         if (typeof updateAiDbSavedCounterUI === 'function') updateAiDbSavedCounterUI();
         if (typeof renderMapMarkers === 'function') renderMapMarkers();
         if (typeof showToast === 'function') showToast(`✨ Sync Cloud D1 Berhasil! ${cloudList.length} titik kamus tersimpan.`, 'success');
@@ -12157,6 +12167,11 @@ async function resetAllAddressPinsWithAi() {
 
   if (typeof Swal === 'undefined') return;
 
+  // Count current local data for progress reference
+  const currentLocal = (() => {
+    try { return JSON.parse(localStorage.getItem('ckg_learned_kampung_map') || '[]'); } catch (e) { return []; }
+  })();
+
   const result = await Swal.fire({
     title: '⚠️ Reset & Hapus Seluruh Titik Alamat?',
     html: `
@@ -12165,8 +12180,8 @@ async function resetAllAddressPinsWithAi() {
           PERHATIAN: Tindakan ini akan menghapus SELURUH titik kamus alamat tersimpan di:
         </p>
         <ul style="line-height: 1.6; padding-left: 20px; color: #64748b; margin-bottom: 10px; font-weight: 600;">
-          <li>💾 Storage Lokal Browser (LocalStorage)</li>
-          <li>☁️ Cloud D1 Database Server (Tabel kamus_alamat)</li>
+          <li>💾 Storage Lokal Browser — <strong style="color: #e11d48;">${currentLocal.length} Titik</strong></li>
+          <li>☁️ Cloud D1 Database Server — <strong style="color: #e11d48;">Tabel kamus_alamat</strong></li>
         </ul>
         <p style="font-size: 12px; color: #475569;">
           Setelah di-reset, status penjelajahan AI Autonomous Explorer akan dikembalikan ke awal (0 Titik) sehingga pemindaian dapat dimulai dari nol.
@@ -12183,18 +12198,136 @@ async function resetAllAddressPinsWithAi() {
 
   if (!result.isConfirmed) return;
 
-  try {
-    // 1. Hapus data di LocalStorage
-    localStorage.removeItem('ckg_learned_kampung_map');
+  // ====== SHOW REAL-TIME PROGRESS POPUP ======
+  const progressSteps = [
+    { label: '🔍 Menghitung data Cloud D1...', pct: 5 },
+    { label: '☁️ Menghapus data Cloud D1 Database...', pct: 25 },
+    { label: '✅ Memverifikasi penghapusan Cloud D1...', pct: 50 },
+    { label: '💾 Membersihkan Storage Lokal Browser...', pct: 65 },
+    { label: '🤖 Mereset AI Autonomous Explorer...', pct: 80 },
+    { label: '🗺️ Memperbarui Peta & UI...', pct: 92 },
+    { label: '✨ Reset Selesai!', pct: 100 }
+  ];
 
-    // 2. Hapus data di Cloud D1 Database
-    try {
-      await fetch('/api/kamus', { method: 'DELETE' });
-    } catch (err) {
-      console.warn('Reset D1 Kamus Error:', err);
+  Swal.fire({
+    title: '🔄 Reset Titik Alamat Sedang Berlangsung...',
+    html: `
+      <div id="resetProgressContainer" style="text-align: left; font-size: 13px; padding-top: 6px;">
+        <div id="resetProgressStep" style="font-weight: 700; color: #0284c7; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+          <span class="spinner-border spinner-border-sm" style="width: 16px; height: 16px; border-width: 2px; color: #0284c7;"></span>
+          <span>Memulai proses reset...</span>
+        </div>
+        <div style="height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 12px;">
+          <div id="resetProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #0284c7); border-radius: 6px; transition: width 0.4s ease;"></div>
+        </div>
+        <div id="resetProgressLog" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 11.5px; color: #475569; max-height: 160px; overflow-y: auto; line-height: 1.7;">
+          <div>⏳ Menginisialisasi proses reset...</div>
+        </div>
+        <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; font-weight: 600;">
+          <span>Lokal: <strong id="resetLocalCount" style="color: #e11d48;">${currentLocal.length} Titik</strong></span>
+          <span>Cloud D1: <strong id="resetCloudCount" style="color: #e11d48;">Menghitung...</strong></span>
+        </div>
+      </div>
+    `,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  const updateProgress = (step, extraLog = '') => {
+    const barEl = document.getElementById('resetProgressBar');
+    const stepEl = document.getElementById('resetProgressStep');
+    const logEl = document.getElementById('resetProgressLog');
+    if (barEl) barEl.style.width = step.pct + '%';
+    if (stepEl) stepEl.querySelector('span:last-child').textContent = step.label;
+    if (logEl && extraLog) {
+      logEl.innerHTML += `<div>${extraLog}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
     }
+  };
 
-    // 3. Reset status & pointer AI Autonomous Explorer
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+  try {
+    // --- STEP 1: Count Cloud D1 Records ---
+    updateProgress(progressSteps[0], '🔍 Mengecek jumlah record di Cloud D1 Database...');
+    await delay(500);
+
+    let cloudCount = '?';
+    try {
+      const countRes = await fetch('/api/kamus');
+      if (countRes.ok) {
+        const countData = await countRes.json();
+        cloudCount = (countData.data && Array.isArray(countData.data)) ? countData.data.length : 0;
+      }
+    } catch (e) { cloudCount = 'Error'; }
+
+    const cloudCountEl = document.getElementById('resetCloudCount');
+    if (cloudCountEl) cloudCountEl.textContent = cloudCount + ' Titik';
+
+    updateProgress(progressSteps[0], `✅ Cloud D1: Ditemukan <strong style="color: #e11d48;">${cloudCount} record</strong> yang akan dihapus.`);
+    await delay(400);
+
+    // --- STEP 2: Delete all from Cloud D1 ---
+    updateProgress(progressSteps[1], '☁️ Mengirim perintah DELETE ke Cloud D1 Server...');
+    await delay(300);
+
+    let deleteSuccess = false;
+    try {
+      const delRes = await fetch('/api/kamus', { method: 'DELETE' });
+      if (delRes.ok) {
+        const delData = await delRes.json();
+        deleteSuccess = delData.success === true;
+        updateProgress(progressSteps[1], `☁️ Server merespon: ${delData.message || 'OK'} (success: ${deleteSuccess})`);
+      } else {
+        updateProgress(progressSteps[1], `⚠️ Server merespon HTTP ${delRes.status}. Mencoba lanjut...`);
+      }
+    } catch (err) {
+      updateProgress(progressSteps[1], `❌ Gagal koneksi ke Cloud D1: ${err.message}`);
+    }
+    await delay(500);
+
+    // --- STEP 3: Verify cloud deletion ---
+    updateProgress(progressSteps[2], '🔍 Memverifikasi penghapusan di Cloud D1...');
+    await delay(400);
+
+    let verifiedCount = '?';
+    try {
+      const verifyRes = await fetch('/api/kamus');
+      if (verifyRes.ok) {
+        const verifyData = await verifyRes.json();
+        verifiedCount = (verifyData.data && Array.isArray(verifyData.data)) ? verifyData.data.length : 0;
+      }
+    } catch (e) { verifiedCount = 'Error'; }
+
+    if (cloudCountEl) cloudCountEl.textContent = verifiedCount + ' Titik';
+
+    if (verifiedCount === 0) {
+      updateProgress(progressSteps[2], `✅ Verifikasi berhasil: Cloud D1 sekarang kosong (0 record).`);
+    } else {
+      updateProgress(progressSteps[2], `⚠️ Verifikasi: Cloud D1 masih memiliki ${verifiedCount} record. Mungkin membutuhkan waktu propagasi.`);
+    }
+    await delay(400);
+
+    // --- STEP 4: Clear LocalStorage ---
+    updateProgress(progressSteps[3], '💾 Menghapus data lokal browser...');
+    await delay(300);
+
+    localStorage.removeItem('ckg_learned_kampung_map');
+    localStorage.removeItem('ckg_deleted_kampungs_blacklist');
+    localStorage.setItem('ckg_dictionary_is_reset', 'true');
+
+    const localCountEl = document.getElementById('resetLocalCount');
+    if (localCountEl) localCountEl.textContent = '0 Titik';
+
+    updateProgress(progressSteps[3], `✅ LocalStorage dibersihkan: ckg_learned_kampung_map, blacklist, dan flag reset ditetapkan.`);
+    await delay(400);
+
+    // --- STEP 5: Reset AI Autonomous Explorer State ---
+    updateProgress(progressSteps[4], '🤖 Mereset state AI Autonomous Explorer...');
+    await delay(300);
+
     isAiExplorerActive = false;
     if (aiExplorerInterval) clearInterval(aiExplorerInterval);
     aiCurrentRegionIndex = 0;
@@ -12211,7 +12344,13 @@ async function resetAllAddressPinsWithAi() {
       aiRadarMarker = null;
     }
 
-    // 4. Update UI Badges & Markers
+    updateProgress(progressSteps[4], `✅ AI Explorer: Region/Kec/Point index di-reset ke 0, trajectory & radar dihapus.`);
+    await delay(400);
+
+    // --- STEP 6: Refresh UI ---
+    updateProgress(progressSteps[5], '🗺️ Memperbarui tampilan peta dan badge...');
+    await delay(300);
+
     if (typeof updateAiDbSavedCounterUI === 'function') updateAiDbSavedCounterUI();
     if (typeof renderMapMarkers === 'function') renderMapMarkers();
 
@@ -12226,18 +12365,49 @@ async function resetAllAddressPinsWithAi() {
       badge.innerHTML = `<i class="bi bi-pause-circle-fill"></i> DI-JEDA`;
     }
 
-    updateAiLiveLog(`🔄 Seluruh titik kamus alamat berhasil di-reset ke 0. Siap untuk scan dari nol.`);
+    if (typeof updateAiLiveLog === 'function') {
+      updateAiLiveLog(`🔄 Seluruh titik kamus alamat berhasil di-reset ke 0. Siap untuk scan dari nol.`);
+    }
 
+    updateProgress(progressSteps[5], `✅ Peta, sidebar, dan badge UI berhasil diperbarui.`);
+    await delay(500);
+
+    // --- STEP 7: Done! ---
+    updateProgress(progressSteps[6], `🎉 Proses reset selesai! Lokal: 0 titik | Cloud D1: ${verifiedCount} record.`);
+    await delay(600);
+
+    // Close progress and show success
     Swal.fire({
       title: '✨ Reset Berhasil!',
-      text: 'Seluruh titik kamus alamat di lokal & Cloud D1 Database telah dihapus. Penjelajahan AI siap dimulai dari nol.',
+      html: `
+        <div style="text-align: left; font-size: 13px; color: #334155;">
+          <div style="background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px;">
+            <div style="font-weight: 800; color: #059669; margin-bottom: 6px;">📊 Laporan Reset:</div>
+            <div style="font-size: 12px; line-height: 1.8; color: #047857;">
+              💾 Lokal: <strong>${currentLocal.length} → 0 titik</strong> (dihapus)<br>
+              ☁️ Cloud D1: <strong>${cloudCount} → ${verifiedCount} record</strong> (${verifiedCount === 0 ? 'berhasil dikosongkan' : 'dalam proses propagasi'})<br>
+              🤖 AI Explorer: <strong>Status di-reset ke awal</strong>
+            </div>
+          </div>
+          <p style="font-size: 12px; color: #64748b;">
+            Penjelajahan AI siap dimulai dari nol. Klik <strong>"Mulai Jelajah AI"</strong> untuk memulai scan baru.
+          </p>
+        </div>
+      `,
       icon: 'success',
-      confirmButtonText: 'OK',
+      confirmButtonText: 'OK, Selesai',
       confirmButtonColor: '#10b981'
     });
+
   } catch (e) {
     console.error('Error reset all pins:', e);
-    if (typeof showToast === 'function') showToast('Gagal memproses reset titik.', 'danger');
+    Swal.fire({
+      title: '❌ Reset Gagal',
+      text: `Terjadi kesalahan: ${e.message}`,
+      icon: 'error',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#e11d48'
+    });
   }
 }
 
