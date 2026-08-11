@@ -1099,6 +1099,151 @@ export default {
       }
     }
 
+    // 10. ROUTE: /api/ai (Cloudflare Workers AI - Address Auto-Learning & Health Analytics)
+    if (url.pathname === '/api/ai' || url.pathname.startsWith('/api/ai/')) {
+      // Endpoint 1: /api/ai/parse-address
+      if (url.pathname === '/api/ai/parse-address' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const rawAddress = String(body.address || body.alamat || '').trim();
+
+          if (!rawAddress) {
+            return new Response(JSON.stringify({ success: false, error: 'Teks alamat tidak boleh kosong' }), { status: 400, headers: corsHeaders });
+          }
+
+          let parsedResult = null;
+
+          // Attempt 1: Cloudflare Workers AI execution if env.AI is bound
+          if (env.AI) {
+            try {
+              const systemPrompt = `Anda adalah AI Geocoding Spesialis Alamat Indonesia untuk Puskesmas.
+Tugas Anda: Deteksi dan pisahkan teks alamat bebas menjadi 4 Tingkat Wilayah Administrasi Indonesia berikut (Gunakan JSON murni tanpa kata/tanda baca lain):
+{
+  "kampung": "Nama Kampung/Dusun/Jalan",
+  "rt": "Nomor RT jika ada (contoh: 01)",
+  "rw": "Nomor RW 2 digit jika ada (contoh: 04)",
+  "kelurahan": "Tentukan Desa/Kelurahan (Contoh di Kec. Banjaran: Tarajusari, Banjaran, Banjaran Kulon, Ciapus, Kamasan, Kiangroke, Margahayu, Mekarjaya, Pasirmulya, Sindangpanon)",
+  "kecamatan": "Nama Kecamatan (Default: Banjaran jika di wilayah Banjaran, atau sebutkan nama kecamatan lain)",
+  "kabupaten": "Nama Kabupaten/Kota (Default: Kab. Bandung)",
+  "provinsi": "Nama Provinsi (Default: Jawa Barat)"
+}`;
+
+              const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: `Analisis alamat ini: "${rawAddress}"` }
+                ],
+                max_tokens: 300,
+                temperature: 0.1
+              });
+
+              if (aiResponse && aiResponse.response) {
+                const textResp = aiResponse.response.trim();
+                const jsonMatch = textResp.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                  parsedResult = JSON.parse(jsonMatch[0]);
+                  parsedResult.source = 'Cloudflare Workers AI (Llama 3.1 Edge)';
+                }
+              }
+            } catch (aiErr) {
+              console.log('Workers AI execution fallback to rule parser:', aiErr.message);
+            }
+          }
+
+          // Fallback parser if Workers AI unavailable or didn't return valid JSON
+          if (!parsedResult) {
+            const lower = rawAddress.toLowerCase();
+            let kel = 'Tarajusari';
+            if (lower.includes('kulon')) kel = 'Banjaran Kulon';
+            else if (lower.includes('banjaran')) kel = 'Banjaran';
+            else if (lower.includes('ciapus')) kel = 'Ciapus';
+            else if (lower.includes('kamasan')) kel = 'Kamasan';
+            else if (lower.includes('kiangroke')) kel = 'Kiangroke';
+            else if (lower.includes('sindangpanon')) kel = 'Sindangpanon';
+            else if (lower.includes('pasirmulya')) kel = 'Pasirmulya';
+            else if (lower.includes('mekarjaya')) kel = 'Mekarjaya';
+            else if (lower.includes('margahayu')) kel = 'Margahayu';
+
+            const rwMatch = rawAddress.match(/rw\s*[\.:]?\s*(\d+)/i) || rawAddress.match(/\b0?([1-9]|1[0-9])\b/);
+            const rtMatch = rawAddress.match(/rt\s*[\.:]?\s*(\d+)/i);
+
+            parsedResult = {
+              kampung: rawAddress.replace(/rw\s*\d+/gi, '').replace(/rt\s*\d+/gi, '').trim(),
+              rt: rtMatch ? rtMatch[1] : '',
+              rw: rwMatch ? rwMatch[1].padStart(2, '0') : '',
+              kelurahan: kel,
+              kecamatan: 'Banjaran',
+              kabupaten: 'Kab. Bandung',
+              provinsi: 'Jawa Barat',
+              source: 'Smart Rule Engine (Fallback)'
+            };
+          }
+
+          // Auto-learn: Save parsed address directly to D1 kamus_alamat
+          if (env.DB && parsedResult.kampung) {
+            try {
+              const kw = parsedResult.kampung.toUpperCase();
+              await env.DB.prepare(`
+                INSERT INTO kamus_alamat (keyword, kel, kec, kab, prov)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(keyword) DO UPDATE SET
+                  kel = excluded.kel, kec = excluded.kec, updated_at = CURRENT_TIMESTAMP
+              `).bind(kw, parsedResult.kelurahan, parsedResult.kecamatan, parsedResult.kabupaten, parsedResult.provinsi).run();
+            } catch (dbErr) {
+              console.log('Auto-learn D1 save error:', dbErr.message);
+            }
+          }
+
+          return new Response(JSON.stringify({ success: true, data: parsedResult }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // Endpoint 2: /api/ai/analyze-health
+      if (url.pathname === '/api/ai/analyze-health' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          let recommendation = '';
+
+          if (env.AI) {
+            try {
+              const prompt = `Anda adalah Dokter Puskesmas. Buat ringkasan saran medis singkat (maksimal 2 kalimat Bahasa Indonesia) untuk data kesehatan pasien ini:
+Nama/Usia: ${body.nama || 'Pasien'}, ${body.usia || 0} Thn (${body.jk || 'L'})
+TD: ${body.td_sistolik || 0}/${body.td_diastolik || 0} mmHg | Gula: ${body.gula_darah || '-'} | Kolesterol: ${body.kolesterol || '-'} | HB: ${body.hb || '-'} | IMT: ${body.imt || 0}
+Saran Medis:`;
+
+              const aiResp = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens: 150
+              });
+              if (aiResp && aiResp.response) {
+                recommendation = aiResp.response.trim();
+              }
+            } catch (_) {}
+          }
+
+          if (!recommendation) {
+            const hbNum = parseFloat(body.hb);
+            const sysNum = parseInt(body.td_sistolik);
+            const gluNum = parseFloat(body.gula_darah);
+            const notes = [];
+            if (!isNaN(hbNum) && hbNum < 12.0) notes.push('Terindikasi Anemia (HB < 12.0 g/dL)');
+            if (!isNaN(sysNum) && sysNum >= 140) notes.push('Terindikasi Hipertensi (Sistolik ≥ 140 mmHg)');
+            if (!isNaN(gluNum) && gluNum >= 200) notes.push('Terindikasi Diabetes / Gula Darah Tinggi');
+
+            recommendation = notes.length > 0 
+              ? `Perhatian Medis: ${notes.join('. ')}. Disarankan tindak lanjut di Poliklinik Puskesmas.`
+              : 'Hasil skrining secara umum dalam kisaran normal. Tetap pertahankan pola hidup sehat.';
+          }
+
+          return new Response(JSON.stringify({ success: true, recommendation }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
     // Serve static assets via Cloudflare Assets
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);

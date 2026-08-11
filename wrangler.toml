@@ -11,3 +11,7 @@ directory = "."
 binding = "DB"
 database_name = "ckg_database"
 database_id = "9eaf93fb-1afc-4928-84da-53ee9c93b9c8"
+
+# Cloudflare Workers AI Binding (Edge AI Models)
+[ai]
+binding = "AI"

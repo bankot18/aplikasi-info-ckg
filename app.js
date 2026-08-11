@@ -11261,4 +11261,55 @@ function updateThemeToggleUI(isDark) {
   if (loginThemeText) loginThemeText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
 }
 
+/* ==========================================================================
+   🤖 CLOUDFLARE WORKERS AI INTEGRATION (ADDRESS AUTO-LEARNING & HEALTH AI)
+   ========================================================================== */
+
+async function parseAddressWithAI(rawText) {
+  if (!rawText || !rawText.trim()) {
+    showToast('Silakan masukkan teks alamat terlebih dahulu.', 'warning');
+    return null;
+  }
+
+  showToast('🤖 AI sedang menganalisis & mempelajari alamat...', 'info');
+
+  try {
+    const res = await fetch('/api/ai/parse-address', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: rawText })
+    });
+
+    const result = await res.json();
+
+    if (result.success && result.data) {
+      const data = result.data;
+      showToast(`✨ AI Berhasil (${data.source || 'Cloudflare AI'}): Kel. ${data.kelurahan}, Kec. ${data.kecamatan}`, 'success');
+      return data;
+    } else {
+      throw new Error(result.error || 'Gagal memproses alamat');
+    }
+  } catch (err) {
+    console.error('AI Address Parser Error:', err);
+    showToast('Gagal memproses alamat via AI: ' + err.message, 'error');
+    return null;
+  }
+}
+
+async function analyzePatientHealthWithAI(patientData) {
+  try {
+    const res = await fetch('/api/ai/analyze-health', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patientData)
+    });
+
+    const result = await res.json();
+    return result.recommendation || 'Pemeriksaan umum normal.';
+  } catch (err) {
+    console.error('AI Health Analyzer Error:', err);
+    return 'Gagal memuat saran AI.';
+  }
+}
+
 
