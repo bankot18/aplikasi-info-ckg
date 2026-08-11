@@ -2879,15 +2879,15 @@ body.dark-mode .simpus-table-wrapper {
 }
 
 .stepper-item.active .stepper-circle {
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
-  border-color: #7c3aed;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #2563eb;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
   transform: scale(1.08);
 }
 
 .stepper-item.active .stepper-title {
-  color: #6d28d9;
+  color: #2563eb;
   font-weight: 800;
 }
 
@@ -2912,7 +2912,7 @@ body.dark-mode .simpus-table-wrapper {
 }
 
 .stepper-line.active {
-  background: linear-gradient(90deg, #10b981, #7c3aed);
+  background: linear-gradient(90deg, #10b981, #2563eb);
 }
 
 .wizard-step-panel {
@@ -2943,14 +2943,20 @@ body.dark-mode .stepper-title {
   color: #94a3b8 !important;
 }
 body.dark-mode .stepper-item.active .stepper-circle {
-  background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
   color: #ffffff !important;
 }
 body.dark-mode .stepper-item.active .stepper-title {
-  color: #c4b5fd !important;
+  color: #60a5fa !important;
 }
 body.dark-mode .stepper-line {
   background: #334155 !important;
+}
+
+body.dark-mode #sekolahDataTable th {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-bottom-color: #334155 !important;
 }
 
 /* Dropzone in Dark Mode */
@@ -3113,4 +3119,31 @@ body.dark-mode .toast {
   color: #f8fafc !important;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
 }
+
+/* ==========================================================================
+   📌 SIMPUS BULK ACTION & MULTI-SELECT STYLES
+   ========================================================================== */
+.simpus-row-selected {
+  background-color: #eff6ff !important;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.simpus-row-selected td {
+  border-bottom-color: #bfdbfe !important;
+}
+
+body.dark-mode .simpus-row-selected {
+  background-color: #1e293b !important;
+}
+
+body.dark-mode #simpusBulkActionBar {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-mode #simpusBulkActionBar span {
+  color: #f8fafc !important;
+}
+
 

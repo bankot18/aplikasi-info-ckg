@@ -851,6 +851,31 @@
             </span>
           </div>
 
+          <!-- SIMPUS Bulk Action Bar (Khusus Data Sudah Di-Bagi Multi-Select) -->
+          <div id="simpusBulkActionBar" style="display: none; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: var(--radius-md); padding: 12px 16px; margin-top: 14px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="background: #e0f2fe; color: #0284c7; font-weight: 800; padding: 6px 14px; border-radius: 20px; font-size: 13px; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-check2-square" style="font-size: 16px;"></i> <span id="simpusSelectedCount">0</span> Data Terpilih
+              </span>
+              <button class="btn btn-secondary btn-sm" onclick="clearSimpusSelection()" style="font-size: 11.5px; padding: 5px 10px; border-radius: 6px;">
+                <i class="bi bi-x-circle"></i> Batal Pilih
+              </button>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 12px; font-weight: 700; color: #64748b; margin-right: 4px;">Aksi Massal SIMPUS:</span>
+              <button class="btn btn-emerald btn-sm" onclick="executeSimpusBulkAction('berhasil')" style="font-weight: 700; padding: 7px 14px; font-size: 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(16,185,129,0.25); display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-check-circle-fill"></i> Berhasil Entry (<span class="selected-count-inline">0</span>)
+              </button>
+              <button class="btn btn-amber btn-sm" onclick="executeSimpusBulkAction('sudah')" style="font-weight: 700; padding: 7px 14px; font-size: 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(245,158,11,0.25); display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-bookmark-check-fill"></i> Sudah di Entry (<span class="selected-count-inline">0</span>)
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="executeSimpusBulkAction('gagal')" style="font-weight: 700; padding: 7px 14px; font-size: 12px; border-radius: 6px; box-shadow: 0 2px 6px rgba(239,68,68,0.25); display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-x-circle-fill"></i> Gagal Entry (<span class="selected-count-inline">0</span>)
+              </button>
+            </div>
+          </div>
+
           <!-- SIMPUS Cards List View (Khusus Data Sudah Di-Bagi) -->
           <div id="simpusSudahBagiCardsView" class="simpus-cards-list" style="display: none; margin-top: 14px; max-height: 680px; overflow-y: auto; padding-right: 4px;">
             <!-- Rendered dynamically via JS -->
@@ -978,11 +1003,11 @@
             <table class="simpus-registration-table" id="sekolahDataTable" style="border-collapse: collapse;">
               <thead>
                 <tr style="position: sticky; top: 0; z-index: 2;">
-                  <th style="width: 50px; text-align: center; background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;">NO</th>
-                  <th style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;">NAMA SISWA & IDENTITAS</th>
-                  <th style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;">HASIL SKRINING / PEMERIKSAAN</th>
-                  <th style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;">ALAMAT SISWA</th>
-                  <th style="width: 175px; text-align: center; background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;">PETUGAS & TINDAKAN</th>
+                  <th style="width: 50px; text-align: center; background: #ffffff !important; color: #0f172a !important; border-bottom: 2px solid #e2e8f0; font-weight: 800;">NO</th>
+                  <th style="background: #ffffff !important; color: #0f172a !important; border-bottom: 2px solid #e2e8f0; font-weight: 800;">NAMA SISWA & IDENTITAS</th>
+                  <th style="background: #ffffff !important; color: #0f172a !important; border-bottom: 2px solid #e2e8f0; font-weight: 800;">HASIL SKRINING / PEMERIKSAAN</th>
+                  <th style="background: #ffffff !important; color: #0f172a !important; border-bottom: 2px solid #e2e8f0; font-weight: 800;">ALAMAT SISWA</th>
+                  <th style="width: 175px; text-align: center; background: #ffffff !important; color: #0f172a !important; border-bottom: 2px solid #e2e8f0; font-weight: 800;">PETUGAS & TINDAKAN</th>
                 </tr>
               </thead>
               <tbody id="tableBodySekolah">
@@ -2249,12 +2274,12 @@
 
   <!-- Modal Input / Edit Data CKG Sekolah -->
   <div id="modalInputSekolah" class="modal-overlay">
-    <div class="modal-container" style="max-width: 860px; border-radius: 20px; overflow: hidden;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; padding: 18px 24px;">
-        <div class="modal-title" id="modalInputSekolahTitle" style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-          <i class="bi bi-mortarboard-fill"></i> Form Input Skrining CKG Sekolah
+    <div class="modal-container" style="max-width: 860px; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1px solid #cbd5e1;">
+      <div class="modal-header" style="background: #ffffff; border-bottom: 1px solid #e2e8f0; color: #0f172a; padding: 18px 24px;">
+        <div class="modal-title" id="modalInputSekolahTitle" style="font-size: 16px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-mortarboard-fill" style="color: #2563eb;"></i> Form Input Skrining CKG Sekolah
         </div>
-        <button class="modal-close" onclick="closeInputSekolahModal()" style="color: #fff;">&times;</button>
+        <button class="modal-close" onclick="closeInputSekolahModal()" style="color: #64748b;">&times;</button>
       </div>
       
       <div class="modal-body" style="padding: 24px; max-height: 75vh; overflow-y: auto;">
@@ -2286,13 +2311,13 @@
 
           <!-- STEP 1: SEKOLAH -->
           <div class="wizard-step-panel active" id="stepSekolah1">
-            <div style="background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1px solid #ddd6fe; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.06);">
-              <div style="width: 44px; height: 44px; border-radius: 12px; background: #7c3aed; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
                 <i class="bi bi-mortarboard-fill"></i>
               </div>
               <div>
-                <h4 style="font-size: 14.5px; font-weight: 800; color: #5b21b6; margin: 0;">Tahap 1: Data Sekolah & Kelas</h4>
-                <p style="font-size: 12px; color: #6d28d9; margin: 2px 0 0 0; font-weight: 500;">Pilih nama sekolah asal siswa dan masukkan tingkat kelas.</p>
+                <h4 style="font-size: 14.5px; font-weight: 800; color: #0f172a; margin: 0;">Tahap 1: Data Sekolah & Kelas</h4>
+                <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0; font-weight: 500;">Pilih nama sekolah asal siswa dan masukkan tingkat kelas.</p>
               </div>
             </div>
 
@@ -2431,7 +2456,22 @@
 
               <div class="form-group">
                 <label class="form-label" style="font-weight: 700; font-size: 13px;">Kelas <span class="required" style="color: #dc2626;">*</span></label>
-                <input type="text" id="schKelas" class="form-control" required placeholder="Contoh: 7A / 8B / 10 MIPA 1" style="text-transform: uppercase; height: 46px; font-size: 13px; font-weight: 700; border-radius: 10px;">
+                <select id="schKelas" class="form-control" required style="font-weight: 700; height: 46px; font-size: 13px; border-radius: 10px;">
+                  <option value="">-- PILIH KELAS --</option>
+                  <option value="KELAS 0">KELAS 0 (TK / PAUD)</option>
+                  <option value="KELAS 1">KELAS 1</option>
+                  <option value="KELAS 2">KELAS 2</option>
+                  <option value="KELAS 3">KELAS 3</option>
+                  <option value="KELAS 4">KELAS 4</option>
+                  <option value="KELAS 5">KELAS 5</option>
+                  <option value="KELAS 6">KELAS 6</option>
+                  <option value="KELAS 7">KELAS 7</option>
+                  <option value="KELAS 8">KELAS 8</option>
+                  <option value="KELAS 9">KELAS 9</option>
+                  <option value="KELAS 10">KELAS 10</option>
+                  <option value="KELAS 11">KELAS 11</option>
+                  <option value="KELAS 12">KELAS 12</option>
+                </select>
               </div>
             </div>
           </div>
@@ -2592,7 +2632,7 @@
               <button type="button" class="btn btn-secondary" id="btnSekolahPrev" onclick="changeSekolahStep(-1)" style="display: none; border-radius: 10px; padding: 9px 20px; font-weight: 700;">
                 <i class="bi bi-arrow-left"></i> Kembali
               </button>
-              <button type="button" class="btn btn-purple" id="btnSekolahNext" onclick="changeSekolahStep(1)" style="border-radius: 10px; padding: 9px 22px; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);">
+              <button type="button" class="btn btn-primary" id="btnSekolahNext" onclick="changeSekolahStep(1)" style="border-radius: 10px; padding: 9px 22px; font-weight: 700; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border: none; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);">
                 Lanjut Tahap 2 <i class="bi bi-arrow-right"></i>
               </button>
               <button type="submit" class="btn btn-emerald" id="btnSekolahSubmit" style="display: none; border-radius: 10px; padding: 9px 24px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #fff; border: none; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);">

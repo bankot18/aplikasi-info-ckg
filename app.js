@@ -2215,6 +2215,8 @@ function calculateIMT() {
 // ----------------------------------------------------
 // SIMPUS VIEW LOGIC (EXACT REPLICA OF USER REFERENCE SCREENSHOTS)
 // ----------------------------------------------------
+let selectedSimpusIds = new Set();
+
 function renderSimpusView() {
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
   const loggedUser = (sessionStorage.getItem('ckg_user_name') || '').trim().toLowerCase();
@@ -2272,6 +2274,7 @@ function switchSimpusTab(tab) {
   const tableViewContainer = document.getElementById('simpusTableViewContainer');
   const cardsViewContainer = document.getElementById('simpusSudahBagiCardsView');
   const infoBar = document.getElementById('simpusTableInfoBar');
+  const bulkBar = document.getElementById('simpusBulkActionBar');
 
   if (tab === 'belum_bagi') {
     if (btnBelum) { btnBelum.className = 'simpus-pill-btn active-purple admin-koordinator-only'; }
@@ -2283,6 +2286,7 @@ function switchSimpusTab(tab) {
     if (tableViewContainer) tableViewContainer.style.display = 'block';
     if (cardsViewContainer) cardsViewContainer.style.display = 'none';
     if (infoBar) infoBar.style.display = 'flex';
+    if (bulkBar) bulkBar.style.display = 'none';
   } else {
     if (btnBelum) { btnBelum.className = 'simpus-pill-btn admin-koordinator-only'; }
     if (btnSudah) { btnSudah.className = 'simpus-pill-btn active-emerald'; }
@@ -2296,6 +2300,310 @@ function switchSimpusTab(tab) {
   }
 
   renderSimpusTableRecords();
+}
+
+function updateSimpusBulkActionState() {
+  const checkboxes = document.querySelectorAll('.simpus-row-check');
+  selectedSimpusIds.clear();
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      selectedSimpusIds.add(cb.value);
+      const tr = cb.closest('tr');
+      if (tr) tr.classList.add('simpus-row-selected');
+    } else {
+      const tr = cb.closest('tr');
+      if (tr) tr.classList.remove('simpus-row-selected');
+    }
+  });
+
+  const count = selectedSimpusIds.size;
+  const countEl = document.getElementById('simpusSelectedCount');
+  if (countEl) countEl.textContent = count;
+
+  document.querySelectorAll('.selected-count-inline').forEach(el => {
+    el.textContent = count;
+  });
+
+  const bar = document.getElementById('simpusBulkActionBar');
+  if (bar) {
+    if (count > 0 && activeSimpusTab === 'sudah_bagi') {
+      bar.style.display = 'flex';
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+
+  const checkAll = document.getElementById('checkAllSimpusSudahBagi');
+  if (checkAll && checkboxes.length > 0) {
+    checkAll.checked = count === checkboxes.length;
+    checkAll.indeterminate = count > 0 && count < checkboxes.length;
+  }
+}
+
+function toggleSelectAllSimpus(checked) {
+  const checkboxes = document.querySelectorAll('.simpus-row-check');
+  checkboxes.forEach(cb => {
+    cb.checked = checked;
+  });
+  updateSimpusBulkActionState();
+}
+
+function clearSimpusSelection() {
+  selectedSimpusIds.clear();
+  const checkAll = document.getElementById('checkAllSimpusSudahBagi');
+  if (checkAll) {
+    checkAll.checked = false;
+    checkAll.indeterminate = false;
+  }
+  const checkboxes = document.querySelectorAll('.simpus-row-check');
+  checkboxes.forEach(cb => {
+    cb.checked = false;
+    const tr = cb.closest('tr');
+    if (tr) tr.classList.remove('simpus-row-selected');
+  });
+  updateSimpusBulkActionState();
+}
+
+async function executeSimpusBulkAction(actionType) {
+  if (selectedSimpusIds.size === 0) {
+    showToast('Pilih setidaknya satu data pasien SIMPUS!', 'warning');
+    return;
+  }
+
+  const selectedArray = Array.from(selectedSimpusIds);
+  const targetRecords = simpusRecords.filter(r => selectedArray.includes(String(r.id || r.nik)));
+
+  if (targetRecords.length === 0) {
+    showToast('Data terpilih tidak ditemukan!', 'error');
+    return;
+  }
+
+  if (actionType === 'berhasil') {
+    const defaultTgl = getTodayIsoString();
+
+    const result = await Swal.fire({
+      title: `<i class="bi bi-check-circle-fill" style="color: #059669;"></i> Bulk Action: Berhasil Entry (${targetRecords.length} Pasien)`,
+      html: `
+        <div style="text-align: left; font-size: 13.5px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px 14px; border-radius: 8px; color: #065f46;">
+            <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">
+              <i class="bi bi-people-fill"></i> Sebanyak ${targetRecords.length} Data Pasien Terpilih
+            </div>
+            <div style="font-size: 12px; opacity: 0.9;">Seluruh data pasien terpilih ini akan dipindahkan secara masif dari SIMPUS ke Database Rekam Medis CKG (BNBA).</div>
+          </div>
+
+          <div>
+            <label style="font-weight: 700; color: #1e293b; display: block; margin-bottom: 6px;">
+              <i class="bi bi-geo-alt-fill" style="color: #2563eb;"></i> Pilih Kategori / Lokasi Entry CKG:
+            </label>
+            <select id="swalBulkTargetKategori" class="custom-input" style="width: 100%; padding: 9px 12px; border-radius: 6px; font-weight: 600; font-size: 13.5px;">
+              <option value="Luar Gedung" selected>📍 CKG Luar Gedung</option>
+              <option value="Dalam Gedung">🏥 CKG Dalam Gedung</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-weight: 700; color: #1e293b; display: block; margin-bottom: 6px;">
+              <i class="bi bi-calendar-event-fill" style="color: #2563eb;"></i> Pilih Tanggal Entry Massal:
+            </label>
+            <input type="date" id="swalBulkTanggalEntry" class="custom-input" style="width: 100%; padding: 9px 12px; border-radius: 6px; font-size: 13.5px;" value="${defaultTgl}">
+          </div>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#059669',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: `<i class="bi bi-check-circle-fill"></i> Selesai & Pindahkan ${targetRecords.length} Data`,
+      cancelButtonText: 'Batal',
+      preConfirm: () => {
+        const kat = document.getElementById('swalBulkTargetKategori')?.value || 'Luar Gedung';
+        const tgl = document.getElementById('swalBulkTanggalEntry')?.value || defaultTgl;
+        return { kategori: kat, tanggal_entry: tgl };
+      }
+    });
+
+    if (!result.isConfirmed || !result.value) return;
+
+    const { kategori, tanggal_entry } = result.value;
+
+    Swal.fire({
+      title: `Memindahkan ${targetRecords.length} Data ke CKG BNBA...`,
+      html: `<div style="font-size: 13px; color: #475569; margin-top: 6px;">
+              <i class="bi bi-cloud-arrow-up-fill" style="color: #059669;"></i> Menyimpan rekam medis ke <strong>${kategori}</strong> dan menghapus dari SIMPUS...
+            </div>`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const newCkgRecords = targetRecords.map((item, idx) => ({
+        id: `CKG-${new Date().getFullYear()}-${String(records.length + idx + 1).padStart(4, '0')}`,
+        jenis_kegiatan: kategori,
+        pos_lokasi: item.alamat || 'Puskesmas Banjaran Kota',
+        nik: item.nik,
+        nama: item.nama,
+        tanggal_lahir: formatDateToYYYYMMDD(item.dob || ''),
+        usia: parseInt(item.usia) || 0,
+        jenis_kelamin: item.jenis_kelamin || 'Laki-laki',
+        no_whatsapp: item.no_whatsapp || '',
+        status_pernikahan: item.status_pernikahan || 'MENIKAH',
+        provinsi: item.provinsi || 'Jawa Barat',
+        kab_kota: item.kab_kota || 'Kab. Bandung',
+        kecamatan: item.kecamatan || 'Banjaran',
+        kelurahan: item.kelurahan || 'Tarajusari',
+        alamat: item.alamat || '',
+        pekerjaan: 'Lainnya',
+        merokok: 'Tidak',
+        bb: parseFloat(item.bb) || 0,
+        tb: parseFloat(item.tb) || 0,
+        lp: 0,
+        imt: parseFloat(item.imt) || 0,
+        td_sistolik: parseInt(item.sistol) || 0,
+        td_diastolik: parseInt(item.diastol) || 0,
+        gula_darah: parseInt(item.gula) || 0,
+        kolesterol: parseInt(item.kolesterol) || 0,
+        hb: 0,
+        telinga: 'Normal',
+        mata: 'Normal',
+        gigi: 'Baik',
+        katarak: 'Tidak',
+        status_validasi: 'Terverifikasi',
+        created_by: item.assigned_to || item.petugas_entry || sessionStorage.getItem('ckg_user_name') || 'Admin',
+        petugas_entry: item.assigned_to || item.petugas_entry || sessionStorage.getItem('ckg_user_name') || 'Admin',
+        created_at: tanggal_entry,
+        tanggal_entry: tanggal_entry
+      }));
+
+      // Post to /api/ckg
+      const resCkg = await fetch('/api/ckg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCkgRecords)
+      });
+
+      if (!resCkg.ok) {
+        throw new Error(`Gagal menyimpan data CKG ke server (HTTP ${resCkg.status})`);
+      }
+
+      records.unshift(...newCkgRecords);
+      localStorage.setItem('ckg_records', JSON.stringify(records));
+
+      // Delete from SIMPUS Cloud
+      const deleteTab = 'sudah_bagi';
+      for (const item of targetRecords) {
+        const targetId = item.id || item.nik;
+        try {
+          await fetch(`/api/simpus?tab=${deleteTab}&id=${encodeURIComponent(targetId)}`, { method: 'DELETE' });
+        } catch (_) {}
+      }
+
+      // Remove from local simpusRecords
+      const removeSet = new Set(selectedArray);
+      simpusRecords = simpusRecords.filter(r => !removeSet.has(String(r.id || r.nik)));
+      localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+
+      clearSimpusSelection();
+      renderApp();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Aksi Massal Berhasil!',
+        html: `Sebanyak <strong>${targetRecords.length} Data Pasien</strong> berhasil dipindahkan ke <strong>CKG ${kategori}</strong> pada tanggal <strong>${tanggal_entry}</strong> dan dihapus dari SIMPUS.`,
+        confirmButtonColor: '#059669'
+      });
+    } catch (err) {
+      console.error('Error in executeSimpusBulkAction (berhasil):', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Memindahkan Data!',
+        html: `Terjadi kesalahan saat memindahkan data massal: <strong>${err.message}</strong>`,
+        confirmButtonColor: '#dc2626'
+      });
+    }
+
+  } else if (actionType === 'sudah' || actionType === 'gagal') {
+    const isSudah = actionType === 'sudah';
+    const statusLabel = isSudah ? 'Sudah di Entry' : 'Gagal Entry';
+    const btnColor = isSudah ? '#f59e0b' : '#dc2626';
+    const iconClass = isSudah ? 'bi-bookmark-check-fill' : 'bi-x-circle-fill';
+
+    const result = await Swal.fire({
+      title: `<i class="bi ${iconClass}" style="color: ${btnColor};"></i> Bulk Action: ${statusLabel} (${targetRecords.length} Pasien)`,
+      html: `
+        <div style="font-size: 13.5px; text-align: left; line-height: 1.5;">
+          Apakah Anda yakin ingin menandai <strong>${targetRecords.length} data pasien terpilih</strong> sebagai <strong>"${statusLabel}"</strong>?
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 8px; margin: 10px 0; font-size: 13px;">
+            <strong>Jumlah Data:</strong> ${targetRecords.length} Pasien<br>
+            <strong>Status Baru:</strong> ${statusLabel}
+          </div>
+          <span style="color: ${btnColor}; font-weight: 600; font-size: 12px;">
+            <i class="bi bi-trash3-fill"></i> Data akan dihapus dari SIMPUS dan dipindahkan ke <strong>Recycle Data</strong>.
+          </span>
+        </div>
+      `,
+      icon: isSudah ? 'warning' : 'error',
+      showCancelButton: true,
+      confirmButtonColor: btnColor,
+      cancelButtonColor: '#64748b',
+      confirmButtonText: `<i class="bi ${iconClass}"></i> Ya, Tandai & Pindahkan ${targetRecords.length} Data`,
+      cancelButtonText: 'Batal'
+    });
+
+    if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: `Memindahkan ${targetRecords.length} Data ke Recycle...`,
+      html: `<div style="font-size: 13px; color: #475569; margin-top: 6px;">
+              <i class="bi bi-cloud-arrow-up-fill" style="color: ${btnColor};"></i> Mengupdate status data pasien ke <strong>${statusLabel}</strong>...
+            </div>`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const deleteTab = 'sudah_bagi';
+      const nowStr = new Date().toISOString().substring(0, 10) + ' ' + new Date().toLocaleTimeString('id-ID');
+      const currentUser = sessionStorage.getItem('ckg_user_name') || currentRole || 'User';
+
+      for (const item of targetRecords) {
+        const targetId = item.id || item.nik;
+        try {
+          await fetch(`/api/simpus?tab=${deleteTab}&id=${encodeURIComponent(targetId)}`, { method: 'DELETE' });
+        } catch (_) {}
+
+        item.deleted_at = nowStr;
+        item.deleted_by = currentUser;
+        item.delete_reason = statusLabel;
+        item.original_source = `Data SIMPUS (${statusLabel})`;
+
+        recycleBin.unshift(item);
+        await saveRecycleBinToStorage(item);
+      }
+
+      const removeSet = new Set(selectedArray);
+      simpusRecords = simpusRecords.filter(r => !removeSet.has(String(r.id || r.nik)));
+      localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+
+      clearSimpusSelection();
+      renderApp();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Aksi Massal Berhasil!',
+        html: `Sebanyak <strong>${targetRecords.length} Data Pasien</strong> telah ditandai sebagai <strong>${statusLabel}</strong> dan dipindahkan ke <strong>Recycle Data</strong>.`,
+        confirmButtonColor: '#059669'
+      });
+    } catch (err) {
+      console.error(`Error in executeSimpusBulkAction (${actionType}):`, err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Memindahkan Data!',
+        html: `Terjadi kesalahan saat mengupdate data massal: <strong>${err.message}</strong>`,
+        confirmButtonColor: '#dc2626'
+      });
+    }
+  }
 }
 
 function renderSimpusTableRecords() {
@@ -2450,11 +2758,17 @@ function renderSimpusTableRecords() {
       const kel = r.kelurahan || 'Tarajusari';
       const kec = r.kecamatan || 'Banjaran';
       const statusPernikahan = r.status_pernikahan || 'MENIKAH';
+      const isChecked = selectedSimpusIds.has(String(recId));
 
       return `
-        <tr>
+        <tr class="${isChecked ? 'simpus-row-selected' : ''}">
+          <!-- Checkbox Column -->
+          <td style="text-align: center; vertical-align: middle; padding: 12px 6px;">
+            <input type="checkbox" class="simpus-row-check" value="${safeRecId}" ${isChecked ? 'checked' : ''} onchange="updateSimpusBulkActionState()" style="width: 16px; height: 16px; cursor: pointer;">
+          </td>
+
           <!-- Column 1: No -->
-          <td style="text-align: center; vertical-align: middle; padding: 12px 10px;">
+          <td style="text-align: center; vertical-align: middle; padding: 12px 6px;">
             <div style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #e0f2fe; color: #0284c7; font-weight: 800; font-size: 12px; border-radius: 50%; border: 1px solid #bae6fd;">
               ${i + 1}
             </div>
@@ -2541,7 +2855,10 @@ function renderSimpusTableRecords() {
         <table class="simpus-registration-table">
           <thead>
             <tr>
-              <th style="width: 55px; text-align: center;">No</th>
+              <th style="width: 40px; text-align: center;">
+                <input type="checkbox" id="checkAllSimpusSudahBagi" onchange="toggleSelectAllSimpus(this.checked)" style="width: 16px; height: 16px; cursor: pointer;" title="Pilih Semua">
+              </th>
+              <th style="width: 45px; text-align: center;">No</th>
               <th>Nama Pasien & Identitas</th>
               <th>Hasil Skrining / Pemeriksaan CKG</th>
               <th>Alamat Pasien</th>
@@ -2554,6 +2871,8 @@ function renderSimpusTableRecords() {
         </table>
       </div>
     `;
+
+    updateSimpusBulkActionState();
   }
 }
 
@@ -9541,7 +9860,25 @@ function openInputSekolahModal(id = null) {
       if (title) title.innerHTML = `<i class="bi bi-pencil-square"></i> Edit Skrining CKG Sekolah`;
       document.getElementById('sekolahRecordId').value = rec.id;
       document.getElementById('schNama').value = (rec.nama || '').toUpperCase();
-      document.getElementById('schKelas').value = (rec.kelas || '').toUpperCase();
+      const kelasSelect = document.getElementById('schKelas');
+      if (kelasSelect && rec.kelas) {
+        const targetVal = rec.kelas.trim().toUpperCase();
+        let found = false;
+        for (let opt of kelasSelect.options) {
+          if (opt.value === targetVal || opt.textContent.toUpperCase() === targetVal) {
+            kelasSelect.value = opt.value;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          const newOpt = document.createElement('option');
+          newOpt.value = targetVal;
+          newOpt.textContent = targetVal;
+          kelasSelect.appendChild(newOpt);
+          kelasSelect.value = targetVal;
+        }
+      }
       
       const schSelect = document.getElementById('schSekolah');
       if (schSelect && rec.sekolah) {
