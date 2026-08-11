@@ -1,7 +1,13 @@
 // Main Application Logic for Pencatatan CKG Puskesmas Banjaran Kota
 
-// Initial User Database (Purely dynamic from Cloud D1 Database)
-const INITIAL_USERS_DB = [];
+// Initial User Database matching user specifications
+const INITIAL_USERS_DB = [
+  { nama_user: "Mochamad Fauzie, S.Gz", password: "213", role: "Admin" },
+  { nama_user: "Nurul Hidayah, Amd.Kes", password: "213", role: "Koordinator" },
+  { nama_user: "Anisa Rohmatunisa, AM.Keb", password: "", role: "Petugas" },
+  { nama_user: "Neng Yulia Trisnawati, AM.Keb", password: "", role: "Petugas" },
+  { nama_user: "Teti Nuryati, S.Keb, Bdn", password: "", role: "Petugas" }
+];
 
 // Officers List (Populated dynamically from database)
 const OFFICERS_DATA = [];
@@ -122,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadStoredRecycleBin();
   loadStoredAnnouncement();
   loadStoredSekolahRecords();
-  loadStoredMasterSekolah();
   setupImportDropzone();
   startLiveClock();
   initWilayahDropdowns();
@@ -135,18 +140,33 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadStoredUserDatabase() {
-  const saved = localStorage.getItem('ckg_user_db');
-  let loaded = null;
-  if (saved) {
-    try { loaded = JSON.parse(saved); } catch (e) { loaded = null; }
-  }
+  // Force clean stale local storage keys from previous test sessions
+  const isV2Synced = localStorage.getItem('ckg_user_db_v2_synced');
 
-  const legacyBlacklist = ['babeh', 'babcri', 'testuser', 'demo'];
-
-  if (Array.isArray(loaded) && loaded.length > 0) {
-    usersDb = loaded.filter(u => u && u.nama_user && !legacyBlacklist.includes(String(u.nama_user).toLowerCase().trim()));
+  if (!isV2Synced) {
+    localStorage.removeItem('ckg_user_db');
+    localStorage.setItem('ckg_user_db_v2_synced', 'true');
+    usersDb = [...INITIAL_USERS_DB];
   } else {
-    usersDb = [];
+    const saved = localStorage.getItem('ckg_user_db');
+    let loaded = null;
+    if (saved) {
+      try { loaded = JSON.parse(saved); } catch (e) { loaded = null; }
+    }
+
+    const legacyBlacklist = ['babeh', 'babcri', 'testuser', 'demo'];
+
+    if (Array.isArray(loaded) && loaded.length > 0) {
+      usersDb = loaded.filter(u => u && u.nama_user && !legacyBlacklist.includes(String(u.nama_user).toLowerCase().trim()));
+
+      INITIAL_USERS_DB.forEach(initUser => {
+        if (!usersDb.some(u => u.nama_user === initUser.nama_user)) {
+          usersDb.push(initUser);
+        }
+      });
+    } else {
+      usersDb = [...INITIAL_USERS_DB];
+    }
   }
 
   saveUserDatabaseToStorage();
@@ -173,9 +193,10 @@ function sortUsersDbByRoleHierarchy() {
   });
 }
 
-async function resetUserDatabaseToDefault() {
-  await fetchCloudUsers();
-  showToast('Database User berhasil dimuat ulang murni dari Cloud D1!', 'info');
+function resetUserDatabaseToDefault() {
+  usersDb = JSON.parse(JSON.stringify(INITIAL_USERS_DB));
+  saveUserDatabaseToStorage();
+  if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
 }
 
 function saveUserDatabaseToStorage() {
@@ -665,7 +686,6 @@ function checkAuthSession() {
     }
 
     renderApp();
-    hideLoadingOverlay();
     setTimeout(checkAndShowAnnouncement, 500);
 
     sendUserHeartbeat('active');
@@ -715,29 +735,16 @@ function selectPegawaiQuick(namaPegawai) {
    📊 LOADING OVERLAY HELPERS
    ========================================================================== */
 
-let _loadingOverlayTimeout = null;
-
-function showLoadingOverlay(text = 'Memuat Data...', subtext = 'Menghubungkan ke Database Cloudflare D1', autoHideMs = 2000) {
+function showLoadingOverlay(text = 'Memuat Data...', subtext = 'Menghubungkan ke Database Cloudflare D1') {
   const overlay = document.getElementById('loadingOverlay');
   const textEl = document.getElementById('loadingText');
   const subtextEl = document.getElementById('loadingSubtext');
   if (textEl) textEl.textContent = text;
   if (subtextEl) subtextEl.textContent = subtext;
   if (overlay) overlay.classList.add('active');
-
-  if (_loadingOverlayTimeout) clearTimeout(_loadingOverlayTimeout);
-  if (autoHideMs > 0) {
-    _loadingOverlayTimeout = setTimeout(() => {
-      hideLoadingOverlay();
-    }, autoHideMs);
-  }
 }
 
 function hideLoadingOverlay() {
-  if (_loadingOverlayTimeout) {
-    clearTimeout(_loadingOverlayTimeout);
-    _loadingOverlayTimeout = null;
-  }
   const overlay = document.getElementById('loadingOverlay');
   if (overlay) overlay.classList.remove('active');
 }
@@ -747,7 +754,7 @@ function hideLoadingOverlay() {
    ========================================================================== */
 
 function handleLogin(e) {
-  if (e && e.preventDefault) e.preventDefault();
+  e.preventDefault();
   const selectEl = document.getElementById('loginPegawaiSelect');
 
   if (!selectEl || !selectEl.value) {
@@ -762,17 +769,17 @@ function handleLogin(e) {
 
   const selectedPegawai = selectEl.value.trim();
 
-  // Match against usersDb database with fail-safe fallback
-  let user = usersDb.find(u => u && u.nama_user && u.nama_user.toLowerCase() === selectedPegawai.toLowerCase());
+  // Match against usersDb database
+  const user = usersDb.find(u => u.nama_user.toLowerCase() === selectedPegawai.toLowerCase());
 
   if (!user) {
-    const selectedOption = selectEl.options[selectEl.selectedIndex];
-    const roleAttr = (selectedOption && selectedOption.dataset) ? selectedOption.dataset.role : 'Petugas';
-    user = {
-      nama_user: selectedPegawai,
-      password: (selectedPegawai.toLowerCase().includes('fauzie') || selectedPegawai.toLowerCase().includes('hidayah') || roleAttr === 'Admin' || roleAttr === 'Koordinator') ? '213' : '',
-      role: roleAttr || 'Petugas'
-    };
+    Swal.fire({
+      icon: 'error',
+      title: 'Login Gagal',
+      html: `User <strong>${selectedPegawai}</strong> tidak terdaftar di Database!`,
+      confirmButtonColor: '#dc2626'
+    });
+    return;
   }
 
   // Check if user is BANNED
@@ -817,9 +824,6 @@ function handleLogin(e) {
              </div>
              <div style="font-size:13px; color:#64748b; font-weight:600;">
                Verifikasi akses <strong style="color:#0f172a;">${user.nama_user}</strong> (${user.role})
-             </div>
-             <div style="font-size:11.5px; color:#94a3b8; margin-top:4px;">
-               Kata sandi default: <strong style="color:#2563eb;">213</strong>
              </div>
            </div>`,
     input: 'password',
@@ -8980,153 +8984,6 @@ function resetLaporanFilters() {
 
 let sekolahRecords = [];
 let pendingSekolahImportData = null;
-let masterSekolahList = [
-  'SDN 1 BANJARAN',
-  'SDN 2 BANJARAN',
-  'SDN 3 BANJARAN',
-  'SDN TARAJUSARI',
-  'SMPN 1 BANJARAN',
-  'SMPN 2 BANJARAN',
-  'SMAN 1 BANJARAN',
-  'SMKN 1 BANJARAN'
-];
-
-function loadStoredMasterSekolah() {
-  const saved = localStorage.getItem('master_sekolah_list_v1');
-  if (saved) {
-    try {
-      masterSekolahList = JSON.parse(saved);
-    } catch (_) {}
-  }
-  populateSekolahSelectOptions();
-  renderMasterSekolahTable();
-  fetchMasterSekolahFromCloud();
-}
-
-function saveMasterSekolahToStorage() {
-  localStorage.setItem('master_sekolah_list_v1', JSON.stringify(masterSekolahList));
-  populateSekolahSelectOptions();
-  renderMasterSekolahTable();
-  syncMasterSekolahToCloud(masterSekolahList);
-}
-
-async function fetchMasterSekolahFromCloud() {
-  try {
-    const res = await fetch('/api/master-sekolah');
-    if (res.ok) {
-      const result = await res.json();
-      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-        masterSekolahList = result.data;
-        localStorage.setItem('master_sekolah_list_v1', JSON.stringify(masterSekolahList));
-        populateSekolahSelectOptions();
-        renderMasterSekolahTable();
-      }
-    }
-  } catch (err) {
-    console.warn('⚡ Fetch /api/master-sekolah notice:', err);
-  }
-}
-
-async function syncMasterSekolahToCloud(list) {
-  if (!Array.isArray(list)) return;
-  try {
-    await fetch('/api/master-sekolah', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(list)
-    });
-  } catch (err) {
-    console.warn('⚡ Sync /api/master-sekolah notice:', err);
-  }
-}
-
-function populateSekolahSelectOptions() {
-  const select = document.getElementById('schSekolah');
-  if (!select) return;
-  const currentVal = select.value;
-  select.innerHTML = '<option value="">-- PILIH SEKOLAH --</option>' +
-    masterSekolahList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
-  if (currentVal) {
-    // If current selected value isn't in master list yet, append it dynamically
-    if (!masterSekolahList.includes(currentVal)) {
-      select.innerHTML += `<option value="${escapeHtml(currentVal)}">${escapeHtml(currentVal)}</option>`;
-    }
-    select.value = currentVal;
-  }
-}
-
-function renderMasterSekolahTable() {
-  const tbody = document.getElementById('masterSekolahTableBody');
-  if (!tbody) return;
-
-  if (masterSekolahList.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="3" style="text-align: center; padding: 20px; color: var(--text-muted);">
-          Belum ada master nama sekolah. Klik <strong>"+ Tambah Nama Sekolah"</strong> untuk menambahkan.
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  tbody.innerHTML = masterSekolahList.map((sch, idx) => `
-    <tr>
-      <td style="text-align: center; font-weight: 700;">${idx + 1}</td>
-      <td style="font-weight: 700; color: #6d28d9; text-transform: uppercase;">${escapeHtml(sch)}</td>
-      <td style="text-align: center;">
-        <button class="btn btn-secondary btn-sm" onclick="deleteMasterSekolah(${idx})" title="Hapus Sekolah" style="padding: 4px 10px; border-radius: 6px;">
-          <i class="bi bi-trash-fill" style="color: #ef4444;"></i> Hapus
-        </button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function openAddSekolahMasterModal() {
-  const modal = document.getElementById('modalAddSekolahMaster');
-  if (!modal) return;
-  document.getElementById('inputMasterNamaSekolah').value = '';
-  modal.classList.add('active');
-}
-
-function closeAddSekolahMasterModal() {
-  const modal = document.getElementById('modalAddSekolahMaster');
-  if (modal) modal.classList.remove('active');
-}
-
-function saveMasterSekolah(event) {
-  event.preventDefault();
-  const input = document.getElementById('inputMasterNamaSekolah');
-  if (!input) return;
-  const val = input.value.trim().toUpperCase();
-  if (!val) return;
-
-  if (masterSekolahList.includes(val)) {
-    showToast('Nama sekolah tersebut sudah ada di daftar Master Sekolah.', 'warning');
-    return;
-  }
-
-  masterSekolahList.push(val);
-  saveMasterSekolahToStorage();
-  closeAddSekolahMasterModal();
-  showToast('Nama sekolah baru berhasil ditambahkan!', 'success');
-}
-
-async function deleteMasterSekolah(index) {
-  if (index < 0 || index >= masterSekolahList.length) return;
-  const name = masterSekolahList[index];
-  if (!confirm(`Apakah Anda yakin ingin menghapus "${name}" dari Master Daftar Sekolah?`)) return;
-
-  masterSekolahList.splice(index, 1);
-  saveMasterSekolahToStorage();
-
-  try {
-    await fetch(`/api/master-sekolah?nama=${encodeURIComponent(name)}`, { method: 'DELETE' });
-  } catch (_) {}
-
-  showToast(`Sekolah "${name}" berhasil dihapus dari master.`, 'info');
-}
 
 function loadStoredSekolahRecords() {
   const saved = localStorage.getItem('ckg_sekolah_records_v1');
@@ -9156,18 +9013,18 @@ async function fetchSekolahRecordsFromCloud() {
         sekolahRecords = result.data.map((r, idx) => ({
           id: r.id ? String(r.id) : `SCH-${Date.now()}-${idx}`,
           no: r.no || idx + 1,
-          nama: String(r.nama || r.nama_siswa || '').toUpperCase(),
-          kelas: String(r.kelas || '').toUpperCase(),
-          sekolah: String(r.sekolah || r.nama_sekolah || '').toUpperCase(),
+          nama: r.nama || r.nama_siswa || '',
+          kelas: r.kelas || '',
+          sekolah: r.sekolah || r.nama_sekolah || '',
           jk: r.jk || r.jenis_kelamin || 'L',
           nik: r.nik || r.nisn_nik || '',
           tanggal_lahir: r.tanggal_lahir || '',
           no_whatsapp: r.no_whatsapp || '',
-          provinsi: String(r.provinsi || 'JAWA BARAT').toUpperCase(),
-          kab_kota: String(r.kab_kota || 'KAB. BANDUNG').toUpperCase(),
-          kecamatan: String(r.kecamatan || 'BANJARAN').toUpperCase(),
-          kelurahan: String(r.kelurahan || 'TARAJUSARI').toUpperCase(),
-          alamat: String(r.alamat || '').toUpperCase(),
+          provinsi: r.provinsi || 'Jawa Barat',
+          kab_kota: r.kab_kota || 'Kab. Bandung',
+          kecamatan: r.kecamatan || 'Banjaran',
+          kelurahan: r.kelurahan || 'Tarajusari',
+          alamat: r.alamat || '',
           bb: r.bb !== undefined ? Number(r.bb) : 0,
           tb: r.tb !== undefined ? Number(r.tb) : 0,
           lp: r.lp !== undefined ? Number(r.lp) : 0,
@@ -9179,7 +9036,7 @@ async function fetchSekolahRecordsFromCloud() {
           kebugaran: r.kebugaran || 'Baik',
           menstruasi: r.menstruasi || 'Belum',
           kacamata: r.kacamata || 'Tidak',
-          petugas_entry: String(r.petugas_entry || 'ADMIN').toUpperCase(),
+          petugas_entry: r.petugas_entry || 'Admin',
           tanggal_entry: r.tanggal_entry || new Date().toISOString().substring(0, 10)
         }));
         localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
@@ -9326,45 +9183,45 @@ function renderSekolahView() {
   tbody.innerHTML = dataset.map((r, i) => {
     const hbNum = parseFloat(r.hb);
     const isAnemia = !isNaN(hbNum) && hbNum < 11.0;
-    const hbDisplay = r.hb && r.hb !== '-' ? `<span class="${isAnemia ? 'cell-anemia' : ''}">${escapeHtml(String(r.hb).toUpperCase())}</span>` : '-';
+    const hbDisplay = r.hb && r.hb !== '-' ? `<span class="${isAnemia ? 'cell-anemia' : ''}">${escapeHtml(r.hb)}</span>` : '-';
 
     const jkBadge = r.jk === 'P' 
       ? `<span class="badge" style="background: #fbcfe8; color: #9d174d; font-weight: 700;">P</span>` 
       : `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700;">L</span>`;
 
     const kariesBadge = r.karies === 'Ya'
-      ? `<span class="badge badge-rose">YA</span>`
-      : `<span class="badge badge-emerald">TIDAK</span>`;
+      ? `<span class="badge badge-rose">Ya</span>`
+      : `<span class="badge badge-emerald">Tidak</span>`;
 
     const kacamataBadge = r.kacamata === 'Ya'
-      ? `<span class="badge badge-amber">YA</span>`
-      : `<span class="badge badge-emerald">TIDAK</span>`;
+      ? `<span class="badge badge-amber">Ya</span>`
+      : `<span class="badge badge-emerald">Tidak</span>`;
 
     return `
       <tr>
         <td style="text-align: center; font-weight: 700; color: #64748b;">${r.no || i + 1}</td>
-        <td style="font-weight: 700; color: #6d28d9; text-transform: uppercase;">${escapeHtml(r.nama || '-')}</td>
-        <td style="font-weight: 600; text-transform: uppercase;">${escapeHtml(r.kelas || '-')}</td>
-        <td style="font-weight: 600; color: #1e293b; text-transform: uppercase;">${escapeHtml(r.sekolah || '-')}</td>
+        <td style="font-weight: 700; color: #6d28d9;">${escapeHtml(r.nama || '-')}</td>
+        <td style="font-weight: 600;">${escapeHtml(r.kelas || '-')}</td>
+        <td style="font-weight: 600; color: #1e293b;">${escapeHtml(r.sekolah || '-')}</td>
         <td style="text-align: center;">${jkBadge}</td>
         <td><code style="font-size: 11px; background: #f1f5f9; padding: 2px 5px; border-radius: 4px;">${escapeHtml(r.nik || '-')}</code></td>
         <td>${formatDisplayDate(r.tanggal_lahir) || '-'}</td>
         <td>${escapeHtml(r.no_whatsapp || '-')}</td>
-        <td style="text-transform: uppercase;">${escapeHtml(r.provinsi || 'JAWA BARAT')}</td>
-        <td style="text-transform: uppercase;">${escapeHtml(r.kab_kota || 'KAB. BANDUNG')}</td>
-        <td style="text-transform: uppercase;">${escapeHtml(r.kecamatan || 'BANJARAN')}</td>
-        <td style="text-transform: uppercase;">${escapeHtml(r.kelurahan || 'TARAJUSARI')}</td>
-        <td style="max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase;" title="${escapeHtml(r.alamat || '')}">${escapeHtml(r.alamat || '-')}</td>
+        <td>${escapeHtml(r.provinsi || 'Jawa Barat')}</td>
+        <td>${escapeHtml(r.kab_kota || 'Kab. Bandung')}</td>
+        <td>${escapeHtml(r.kecamatan || 'Banjaran')}</td>
+        <td>${escapeHtml(r.kelurahan || 'Tarajusari')}</td>
+        <td style="max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(r.alamat || '')}">${escapeHtml(r.alamat || '-')}</td>
         <td style="text-align: center;">${r.bb ? r.bb : '-'}</td>
         <td style="text-align: center;">${r.tb ? r.tb : '-'}</td>
         <td style="text-align: center;">${r.lp ? r.lp : '-'}</td>
         <td style="text-align: center;">${r.td_sistolik ? r.td_sistolik : '-'}</td>
         <td style="text-align: center;">${r.td_diastolik ? r.td_diastolik : '-'}</td>
-        <td style="text-align: center;">${escapeHtml(String(r.gula_darah || '-').toUpperCase())}</td>
+        <td style="text-align: center;">${escapeHtml(r.gula_darah || '-')}</td>
         <td style="text-align: center; font-weight: 600;">${hbDisplay}</td>
         <td style="text-align: center;">${kariesBadge}</td>
-        <td style="text-align: center; text-transform: uppercase;">${escapeHtml(r.kebugaran || 'BAIK')}</td>
-        <td style="text-align: center; text-transform: uppercase;">${escapeHtml(r.menstruasi || 'BELUM')}</td>
+        <td style="text-align: center;">${escapeHtml(r.kebugaran || 'Baik')}</td>
+        <td style="text-align: center;">${escapeHtml(r.menstruasi || 'Belum')}</td>
         <td style="text-align: center;">${kacamataBadge}</td>
         <td style="text-align: center;">
           <div style="display: flex; gap: 4px; justify-content: center;">
@@ -9402,14 +9259,12 @@ function openInputSekolahModal(id = null) {
   if (!modal || !form) return;
 
   form.reset();
-  populateSekolahSelectOptions();
-
   document.getElementById('sekolahRecordId').value = '';
-  document.getElementById('schProvinsi').value = 'JAWA BARAT';
-  document.getElementById('schKabKota').value = 'KAB. BANDUNG';
-  document.getElementById('schKecamatan').value = 'BANJARAN';
-  document.getElementById('schKelurahan').value = 'TARAJUSARI';
-  document.getElementById('schPetugasEntry').value = (currentUserName || 'ADMIN').toUpperCase();
+  document.getElementById('schProvinsi').value = 'Jawa Barat';
+  document.getElementById('schKabKota').value = 'Kab. Bandung';
+  document.getElementById('schKecamatan').value = 'Banjaran';
+  document.getElementById('schKelurahan').value = 'Tarajusari';
+  document.getElementById('schPetugasEntry').value = currentUserName || 'Admin';
   document.getElementById('schTanggalEntry').value = new Date().toISOString().substring(0, 10);
 
   if (id) {
@@ -9417,28 +9272,18 @@ function openInputSekolahModal(id = null) {
     if (rec) {
       if (title) title.innerHTML = `<i class="bi bi-pencil-square"></i> Edit Skrining CKG Sekolah`;
       document.getElementById('sekolahRecordId').value = rec.id;
-      document.getElementById('schNama').value = (rec.nama || '').toUpperCase();
-      document.getElementById('schKelas').value = (rec.kelas || '').toUpperCase();
-
-      // Set dropdown school value
-      const selectSch = document.getElementById('schSekolah');
-      if (selectSch) {
-        const schoolVal = (rec.sekolah || '').toUpperCase();
-        if (schoolVal && !masterSekolahList.includes(schoolVal)) {
-          selectSch.innerHTML += `<option value="${escapeHtml(schoolVal)}">${escapeHtml(schoolVal)}</option>`;
-        }
-        selectSch.value = schoolVal;
-      }
-
+      document.getElementById('schNama').value = rec.nama || '';
+      document.getElementById('schKelas').value = rec.kelas || '';
+      document.getElementById('schSekolah').value = rec.sekolah || '';
       document.getElementById('schJk').value = rec.jk || 'L';
       document.getElementById('schNik').value = rec.nik || '';
       document.getElementById('schTanggalLahir').value = rec.tanggal_lahir || '';
       document.getElementById('schNoWhatsapp').value = rec.no_whatsapp || '';
-      document.getElementById('schProvinsi').value = (rec.provinsi || 'JAWA BARAT').toUpperCase();
-      document.getElementById('schKabKota').value = (rec.kab_kota || 'KAB. BANDUNG').toUpperCase();
-      document.getElementById('schKecamatan').value = (rec.kecamatan || 'BANJARAN').toUpperCase();
-      document.getElementById('schKelurahan').value = (rec.kelurahan || 'TARAJUSARI').toUpperCase();
-      document.getElementById('schAlamat').value = (rec.alamat || '').toUpperCase();
+      document.getElementById('schProvinsi').value = rec.provinsi || 'Jawa Barat';
+      document.getElementById('schKabKota').value = rec.kab_kota || 'Kab. Bandung';
+      document.getElementById('schKecamatan').value = rec.kecamatan || 'Banjaran';
+      document.getElementById('schKelurahan').value = rec.kelurahan || 'Tarajusari';
+      document.getElementById('schAlamat').value = rec.alamat || '';
       document.getElementById('schBb').value = rec.bb || '';
       document.getElementById('schTb').value = rec.tb || '';
       document.getElementById('schLp').value = rec.lp || '';
@@ -9450,7 +9295,7 @@ function openInputSekolahModal(id = null) {
       document.getElementById('schKebugaran').value = rec.kebugaran || 'Baik';
       document.getElementById('schMenstruasi').value = rec.menstruasi || 'Belum';
       document.getElementById('schKacamata').value = rec.kacamata || 'Tidak';
-      document.getElementById('schPetugasEntry').value = (rec.petugas_entry || currentUserName || 'ADMIN').toUpperCase();
+      document.getElementById('schPetugasEntry').value = rec.petugas_entry || currentUserName || 'Admin';
       document.getElementById('schTanggalEntry').value = rec.tanggal_entry || new Date().toISOString().substring(0, 10);
     }
   } else {
@@ -9473,18 +9318,18 @@ async function saveSekolahRecordFromForm(event) {
   const recordObj = {
     id: idVal || `SCH-${Date.now()}`,
     no: existingIdx >= 0 ? sekolahRecords[existingIdx].no : (sekolahRecords.length + 1),
-    nama: document.getElementById('schNama').value.trim().toUpperCase(),
-    kelas: document.getElementById('schKelas').value.trim().toUpperCase(),
-    sekolah: document.getElementById('schSekolah').value.trim().toUpperCase(),
+    nama: document.getElementById('schNama').value.trim(),
+    kelas: document.getElementById('schKelas').value.trim(),
+    sekolah: document.getElementById('schSekolah').value.trim(),
     jk: document.getElementById('schJk').value,
     nik: document.getElementById('schNik').value.trim(),
     tanggal_lahir: document.getElementById('schTanggalLahir').value,
     no_whatsapp: document.getElementById('schNoWhatsapp').value.trim(),
-    provinsi: (document.getElementById('schProvinsi').value.trim() || 'JAWA BARAT').toUpperCase(),
-    kab_kota: (document.getElementById('schKabKota').value.trim() || 'KAB. BANDUNG').toUpperCase(),
-    kecamatan: (document.getElementById('schKecamatan').value.trim() || 'BANJARAN').toUpperCase(),
-    kelurahan: (document.getElementById('schKelurahan').value.trim() || 'TARAJUSARI').toUpperCase(),
-    alamat: document.getElementById('schAlamat').value.trim().toUpperCase(),
+    provinsi: document.getElementById('schProvinsi').value.trim() || 'Jawa Barat',
+    kab_kota: document.getElementById('schKabKota').value.trim() || 'Kab. Bandung',
+    kecamatan: document.getElementById('schKecamatan').value.trim() || 'Banjaran',
+    kelurahan: document.getElementById('schKelurahan').value.trim() || 'Tarajusari',
+    alamat: document.getElementById('schAlamat').value.trim(),
     bb: parseFloat(document.getElementById('schBb').value) || 0,
     tb: parseFloat(document.getElementById('schTb').value) || 0,
     lp: parseFloat(document.getElementById('schLp').value) || 0,
@@ -9496,7 +9341,7 @@ async function saveSekolahRecordFromForm(event) {
     kebugaran: document.getElementById('schKebugaran').value,
     menstruasi: document.getElementById('schMenstruasi').value,
     kacamata: document.getElementById('schKacamata').value,
-    petugas_entry: (document.getElementById('schPetugasEntry').value.trim() || currentUserName || 'ADMIN').toUpperCase(),
+    petugas_entry: document.getElementById('schPetugasEntry').value.trim() || currentUserName || 'Admin',
     tanggal_entry: document.getElementById('schTanggalEntry').value || new Date().toISOString().substring(0, 10)
   };
 
@@ -9611,18 +9456,18 @@ function exportSekolahToXLSX() {
 
   const rows = dataset.map((r, idx) => [
     r.no || idx + 1,
-    String(r.nama || '').toUpperCase(),
-    String(r.kelas || '').toUpperCase(),
-    String(r.sekolah || '').toUpperCase(),
+    r.nama || '',
+    r.kelas || '',
+    r.sekolah || '',
     r.jk || 'L',
     r.nik || '',
     r.tanggal_lahir || '',
     r.no_whatsapp || '',
-    String(r.provinsi || 'JAWA BARAT').toUpperCase(),
-    String(r.kab_kota || 'KAB. BANDUNG').toUpperCase(),
-    String(r.kecamatan || 'BANJARAN').toUpperCase(),
-    String(r.kelurahan || 'TARAJUSARI').toUpperCase(),
-    String(r.alamat || '').toUpperCase(),
+    r.provinsi || 'Jawa Barat',
+    r.kab_kota || 'Kab. Bandung',
+    r.kecamatan || 'Banjaran',
+    r.kelurahan || 'Tarajusari',
+    r.alamat || '',
     r.bb || '',
     r.tb || '',
     r.lp || '',
@@ -9659,8 +9504,8 @@ function downloadSekolahXLSXTemplate() {
   ];
 
   const sampleRows = [
-    [1, 'AHMAD FAUZI', '7A', 'SMPN 1 BANJARAN', 'L', '3204011504100001', '2010-04-15', '081234567890', 'JAWA BARAT', 'KAB. BANDUNG', 'BANJARAN', 'TARAJUSARI', 'KP. PAJAGALAN RT 01 RW 02', 45, 152, 65, 110, 70, '100', '13.5', 'Tidak', 'Baik', 'Belum', 'Tidak'],
-    [2, 'SITI NURHALIZA', '8B', 'SMPN 1 BANJARAN', 'P', '3204015508110002', '2011-08-15', '089876543210', 'JAWA BARAT', 'KAB. BANDUNG', 'BANJARAN', 'TARAJUSARI', 'KP. CIAPUS RT 03 RW 01', 42, 148, 60, 105, 65, '95', '11.8', 'Tidak', 'Baik', 'Teratur', 'Ya']
+    [1, 'Ahmad Fauzi', '7A', 'SMPN 1 Banjaran', 'L', '3204011504100001', '2010-04-15', '081234567890', 'Jawa Barat', 'Kab. Bandung', 'Banjaran', 'Tarajusari', 'Kp. Pajagalan RT 01 RW 02', 45, 152, 65, 110, 70, '100', '13.5', 'Tidak', 'Baik', 'Belum', 'Tidak'],
+    [2, 'Siti Nurhaliza', '8B', 'SMPN 1 Banjaran', 'P', '3204015508110002', '2011-08-15', '089876543210', 'Jawa Barat', 'Kab. Bandung', 'Banjaran', 'Tarajusari', 'Kp. Ciapus RT 03 RW 01', 42, 148, 60, 105, 65, '95', '11.8', 'Tidak', 'Baik', 'Teratur', 'Ya']
   ];
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
@@ -9743,21 +9588,21 @@ function handleSekolahImportFileSelect(event) {
         const row = json[i];
         if (!row || row.length === 0) continue;
 
-        const namaVal = idxNama >= 0 ? String(row[idxNama] || '').trim().toUpperCase() : '';
+        const namaVal = idxNama >= 0 ? String(row[idxNama] || '').trim() : '';
         if (!namaVal) continue;
 
         const noVal = idxNo >= 0 ? parseInt(row[idxNo], 10) || i : i;
-        const kelasVal = idxKelas >= 0 ? String(row[idxKelas] || '').trim().toUpperCase() : '';
-        const sekolahVal = idxSekolah >= 0 ? String(row[idxSekolah] || '').trim().toUpperCase() : '';
+        const kelasVal = idxKelas >= 0 ? String(row[idxKelas] || '').trim() : '';
+        const sekolahVal = idxSekolah >= 0 ? String(row[idxSekolah] || '').trim() : '';
         const jkVal = idxJk >= 0 ? (String(row[idxJk] || '').toUpperCase().includes('P') ? 'P' : 'L') : 'L';
         const nikVal = idxNik >= 0 ? String(row[idxNik] || '').trim() : '';
         const tglLahirVal = idxTglLahir >= 0 ? formatDateToYYYYMMDD(row[idxTglLahir]) : '';
         const waVal = idxWa >= 0 ? String(row[idxWa] || '').trim() : '';
-        const provVal = idxProv >= 0 ? String(row[idxProv] || '').trim().toUpperCase() : 'JAWA BARAT';
-        const kabVal = idxKab >= 0 ? String(row[idxKab] || '').trim().toUpperCase() : 'KAB. BANDUNG';
-        const kecVal = idxKec >= 0 ? String(row[idxKec] || '').trim().toUpperCase() : 'BANJARAN';
-        const kelVal = idxKel >= 0 ? String(row[idxKel] || '').trim().toUpperCase() : 'TARAJUSARI';
-        const alamatVal = idxAlamat >= 0 ? String(row[idxAlamat] || '').trim().toUpperCase() : '';
+        const provVal = idxProv >= 0 ? String(row[idxProv] || '').trim() : 'Jawa Barat';
+        const kabVal = idxKab >= 0 ? String(row[idxKab] || '').trim() : 'Kab. Bandung';
+        const kecVal = idxKec >= 0 ? String(row[idxKec] || '').trim() : 'Banjaran';
+        const kelVal = idxKel >= 0 ? String(row[idxKel] || '').trim() : 'Tarajusari';
+        const alamatVal = idxAlamat >= 0 ? String(row[idxAlamat] || '').trim() : '';
         const bbVal = idxBb >= 0 ? parseFloat(row[idxBb]) || 0 : 0;
         const tbVal = idxTb >= 0 ? parseFloat(row[idxTb]) || 0 : 0;
         const lpVal = idxLp >= 0 ? parseFloat(row[idxLp]) || 0 : 0;
@@ -9796,7 +9641,7 @@ function handleSekolahImportFileSelect(event) {
           kebugaran: kebugaranVal,
           menstruasi: menstruasiVal,
           kacamata: kacamataVal,
-          petugas_entry: (currentUserName || 'ADMIN').toUpperCase(),
+          petugas_entry: currentUserName || 'Admin',
           tanggal_entry: new Date().toISOString().substring(0, 10)
         });
       }
