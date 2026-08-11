@@ -9486,19 +9486,17 @@ function renderSekolahView() {
     return hbOk && tdOk && kariesOk && kacamataOk;
   }).length;
 
-  const countRujukan = dataset.filter(r => {
+  const countAnemia = dataset.filter(r => {
     const hbVal = parseFloat(r.hb);
-    const isAnemia = !isNaN(hbVal) && hbVal < 11.0;
-    const isHipertensi = r.td_sistolik && r.td_sistolik > 120;
-    const isKaries = r.karies === 'Ya';
-    const isKacamata = r.kacamata === 'Ya';
-    return isAnemia || isHipertensi || isKaries || isKacamata;
+    const isAnemiaHb = !isNaN(hbVal) && hbVal > 0 && hbVal < 12.0;
+    const isAnemiaText = String(r.status_hb || r.anemia || r.hasil_skrining || '').toLowerCase().includes('anemia');
+    return isAnemiaHb || isAnemiaText;
   }).length;
 
   if (metricTotal) metricTotal.textContent = countTotal.toLocaleString('id-ID');
   if (metricAnak) metricAnak.textContent = countAnak.toLocaleString('id-ID');
   if (metricNormal) metricNormal.textContent = countNormal.toLocaleString('id-ID');
-  if (metricRujukan) metricRujukan.textContent = countRujukan.toLocaleString('id-ID');
+  if (metricRujukan) metricRujukan.textContent = countAnemia.toLocaleString('id-ID');
 
   if (dataset.length === 0) {
     tbody.innerHTML = `

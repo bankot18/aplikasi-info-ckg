@@ -2976,6 +2976,101 @@ body.dark-mode .map-address-card.active {
   border-color: #38bdf8 !important;
 }
 
+/* 🏆 Leaderboard Top 3 Podium Card in Dark Mode */
+body.dark-mode #top3RankContainer > div {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.dark-mode #top3RankContainer h3 {
+  color: #f8fafc !important;
+}
+
+body.dark-mode #top3RankContainer h3 span,
+body.dark-mode #top3RankContainer p {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode #top3RankContainer [style*="background: #fef3c7"],
+body.dark-mode #top3RankContainer [style*="background:#fef3c7"] {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #fbbf24 !important;
+}
+
+body.dark-mode .podium-card-wrapper > div:first-child {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+}
+
+body.dark-mode .podium-card-wrapper [style*="background: #f8fafc"],
+body.dark-mode .podium-card-wrapper [style*="background:#f8fafc"] {
+  background: #162032 !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .podium-card-wrapper [style*="background: #e2e8f0"],
+body.dark-mode .podium-card-wrapper [style*="background:#e2e8f0"] {
+  background: #334155 !important;
+}
+
+body.dark-mode .podium-card-wrapper div[title] {
+  color: #f8fafc !important;
+}
+
+body.dark-mode .podium-card-wrapper [style*="color: #64748b"],
+body.dark-mode .podium-card-wrapper [style*="color: #475569"] {
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode .podium-card-wrapper [style*="color: #78350f"] {
+  color: #fbbf24 !important;
+}
+
+body.dark-mode .podium-card-wrapper [style*="color: #334155"] {
+  color: #e2e8f0 !important;
+}
+
+body.dark-mode .podium-card-wrapper [style*="color: #9a3412"],
+body.dark-mode .podium-card-wrapper [style*="color: #b45309"],
+body.dark-mode .podium-card-wrapper [style*="color: #c2410c"] {
+  color: #fb923c !important;
+}
+
+/* 🛠 Maintenance Panel in Dark Mode */
+body.dark-mode [style*="background: linear-gradient(135deg, #fef3c7"],
+body.dark-mode [style*="background: linear-gradient(135deg, #ede9fe"] {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode [style*="background: linear-gradient(135deg, #fef3c7"] h4,
+body.dark-mode [style*="background: linear-gradient(135deg, #fef3c7"] label {
+  color: #f59e0b !important;
+}
+
+body.dark-mode [style*="background: linear-gradient(135deg, #ede9fe"] h4 {
+  color: #a855f7 !important;
+}
+
+body.dark-mode [style*="background: linear-gradient(135deg, #fef3c7"] p,
+body.dark-mode [style*="background: linear-gradient(135deg, #ede9fe"] p {
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode [style*="background: #fff"][style*="border-radius: var(--radius-sm)"],
+body.dark-mode .menu-lock-item {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .menu-lock-item input[type="checkbox"] {
+  accent-color: #a855f7 !important;
+}
+
 /* Stepper Wizard Component */
 .wizard-stepper-bar {
   display: flex;
