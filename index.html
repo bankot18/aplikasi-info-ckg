@@ -1357,6 +1357,9 @@
               <button class="btn btn-primary" onclick="openAddPinModalFromMap()">
                 <i class="bi bi-geo-fill"></i> Catat Titik Alamat di Peta
               </button>
+              <button class="btn btn-emerald" onclick="repairAllRecordsAddressWithAi()" title="Khusus Admin: Perbaiki Alamat Record CKG, SIMPUS & Sekolah Otomatis">
+                <i class="bi bi-magic"></i> Auto-Repair Alamat AI (Admin)
+              </button>
               <button class="btn btn-amber" onclick="syncKamusFromCloudServer(); setTimeout(renderMapMarkers, 300);">
                 <i class="bi bi-cloud-arrow-down-fill"></i> Sync Database Cloud D1
               </button>
@@ -1380,6 +1383,9 @@
                     <span id="aiExplorerStateBadge" class="badge badge-emerald" style="font-size: 10.5px; border-radius: 12px; padding: 3px 10px;">
                       <i class="bi bi-record-fill" style="color: #22c55e; animation: blink 1s infinite;"></i> AUTO-SCANNING AKTIF
                     </span>
+                    <span id="aiTimerBadge" class="badge" style="font-size: 10.5px; border-radius: 12px; padding: 3px 10px; background: rgba(99, 102, 241, 0.25); color: #a5b4fc; border: 1px solid rgba(165, 180, 252, 0.4);">
+                      <i class="bi bi-clock-history"></i> Sisa Waktu: <strong id="aiTimerCountdownText" style="color: #6366f1;">⏳ 10:00</strong>
+                    </span>
                   </div>
                   <div style="font-size: 11.5px; color: #94a3b8; margin-top: 2px;">
                     Menjelajah otomatis & mencatat titik kampung di <strong style="color: #38bdf8;" id="aiExplorerTargetRegion">Kabupaten Bandung</strong> → Cloud D1 Database.
@@ -1392,8 +1398,14 @@
                 <button id="btnToggleAiExplorer" class="btn btn-sm btn-cyan" onclick="toggleAiAutoExplorer()" style="font-weight: 700; font-size: 11.5px; padding: 6px 12px;">
                   <i class="bi bi-pause-fill"></i> Jeda Jelajah AI
                 </button>
+                <button id="btnSetAiTimer" class="btn btn-sm btn-indigo" onclick="openSetAiTimerModal()" style="font-weight: 700; font-size: 11.5px; padding: 6px 12px; background: #4f46e5; color: white;" title="Setel Durasi Waktu Jelajah AI">
+                  <i class="bi bi-stopwatch-fill"></i> Durasi Waktu
+                </button>
                 <button id="btnSpeedAiExplorer" class="btn btn-sm btn-secondary" onclick="speedUpAiExplorer()" style="font-size: 11.5px; font-weight: 700; padding: 6px 12px;" title="Ubah Kecepatan Scanning AI">
                   <i class="bi bi-lightning-charge-fill" style="color: #f59e0b;"></i> Mode: Normal (4s)
+                </button>
+                <button class="btn btn-sm btn-emerald" onclick="repairAllRecordsAddressWithAi()" style="font-weight: 700; font-size: 11.5px; padding: 6px 12px; background: #10b981; color: white;" title="Perbaiki Kelurahan, Kecamatan, Kab/Kota, Provinsi di Data Record CKG, SIMPUS & Sekolah Otomatis">
+                  <i class="bi bi-magic"></i> Auto-Repair Alamat Records
                 </button>
                 <button class="btn btn-sm btn-secondary" onclick="reFocusAiRadarMarker()" style="font-size: 11.5px; font-weight: 700; padding: 6px 12px;" title="Ikuti Drone Radar AI">
                   <i class="bi bi-crosshair" style="color: #38bdf8;"></i> Ikuti Radar AI

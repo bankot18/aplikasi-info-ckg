@@ -10641,21 +10641,192 @@ const ACCURATE_KAMPUNG_DIRECTORY = {
   'SEKARWANGI': { kel: 'Sekarwangi', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   'PANYIRAPAN': { kel: 'Panyirapan', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   'KARAMATMULYA': { kel: 'Karamatmulya', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
-  'PARUNGSERAB': { kel: 'Parungserab', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' }
+  'PARUNGSERAB': { kel: 'Parungserab', kec: 'Soreang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN KATAPANG ---
+  'KATAPANG': { kel: 'Gandasari', kec: 'Katapang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'GANDASARI': { kel: 'Gandasari', kec: 'Katapang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SANGKANHURIP': { kel: 'Sangkanhurip', kec: 'Katapang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'PANGAUBAN': { kel: 'Pangauban', kec: 'Katapang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN BALEENDAH ---
+  'ANDIR': { kel: 'Andir', kec: 'Baleendah', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BOJONGMALAKA': { kel: 'Bojongmalaka', kec: 'Baleendah', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'MALAKASARI': { kel: 'Malakasari', kec: 'Baleendah', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'RANCAMANYAR': { kel: 'Rancamanyar', kec: 'Baleendah', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'WARGAMEKAR': { kel: 'Wargamekar', kec: 'Baleendah', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN DAYEUHKOLOT ---
+  'CITEUREUP': { kel: 'Citeureup', kec: 'Dayeuhkolot', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CANGKUANG BARAT': { kel: 'Cangkuang Barat', kec: 'Dayeuhkolot', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'PASAWAHAN': { kel: 'Pasawahan', kec: 'Dayeuhkolot', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SUKAPURA': { kel: 'Sukapura', kec: 'Dayeuhkolot', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN MARGAHAYU ---
+  'SAYATI': { kel: 'Sayati', kec: 'Margahayu', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'MARGAHAYU SELATAN': { kel: 'Margahayu Selatan', kec: 'Margahayu', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'MARGAHAYU TENGAH': { kel: 'Margahayu Tengah', kec: 'Margahayu', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SUKAMENAK': { kel: 'Sukamenak', kec: 'Margahayu', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN MARGAASIH ---
+  'NANJUNG': { kel: 'Nanjung', kec: 'Margaasih', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIGONDEWAH HILIR': { kel: 'Cigondewah Hilir', kec: 'Margaasih', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'LAGADAR': { kel: 'Lagadar', kec: 'Margaasih', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'RAHAYU': { kel: 'Rahayu', kec: 'Margaasih', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN CIWIDEY ---
+  'PANUNDAAN': { kel: 'Lebakmuncang', kec: 'Ciwidey', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'LEBAKMUNCANG': { kel: 'Lebakmuncang', kec: 'Ciwidey', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'NENGKELAN': { kel: 'Nengkelan', kec: 'Ciwidey', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'RAWABOGO': { kel: 'Rawabogo', kec: 'Ciwidey', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN PASIRJAMBU ---
+  'TENJOLAYA': { kel: 'Tenjolaya', kec: 'Pasirjambu', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIKONENG': { kel: 'Tenjolaya', kec: 'Pasirjambu', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CISONDARI': { kel: 'Cisondari', kec: 'Pasirjambu', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN RANCABALI ---
+  'ALAMENDAH': { kel: 'Alamendah', kec: 'Rancabali', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIPELAH': { kel: 'Cipelah', kec: 'Rancabali', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'INDRAGIRI': { kel: 'Indragiri', kec: 'Rancabali', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'PATENGAN': { kel: 'Patengan', kec: 'Rancabali', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN PANGALENGAN ---
+  'PULOSARI': { kel: 'Pulosari', kec: 'Pangalengan', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'WARNASARI': { kel: 'Warnasari', kec: 'Pangalengan', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BANJARSARI': { kel: 'Banjarsari', kec: 'Pangalengan', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN BOJONGSOANG ---
+  'BUAHBATU': { kel: 'Buahbatu', kec: 'Bojongsoang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BOJONGSARI': { kel: 'Bojongsari', kec: 'Bojongsoang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIPAGALO': { kel: 'Cipagalo', kec: 'Bojongsoang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'TEGALLUAR': { kel: 'Tegalluar', kec: 'Bojongsoang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN CILEUNYI ---
+  'CINUNUK': { kel: 'Cinunuk', kec: 'Cileunyi', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CILEUNYI KULON': { kel: 'Cileunyi Kulon', kec: 'Cileunyi', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CILEUNYI WETAN': { kel: 'Cileunyi Wetan', kec: 'Cileunyi', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIMEKAR': { kel: 'Cimekar', kec: 'Cileunyi', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN RANCAEKEK ---
+  'HAURPUGUR': { kel: 'Haurpugur', kec: 'Rancaekek', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'RANCAEKEK KULON': { kel: 'Rancaekek Kulon', kec: 'Rancaekek', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'BOJONGLOA': { kel: 'Bojongloa', kec: 'Rancaekek', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN MAJALAYA ---
+  'PADAMULYA': { kel: 'Padamulya', kec: 'Majalaya', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'MAJAKETA': { kel: 'Majakerta', kec: 'Majalaya', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'MAJASETRA': { kel: 'Majasetra', kec: 'Majalaya', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN CIPARAY ---
+  'GUNUNGLEUTIK': { kel: 'Gunungleutik', kec: 'Ciparay', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIHEULANG': { kel: 'Ciheulang', kec: 'Ciparay', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIKUYA': { kel: 'Cikuya', kec: 'Ciparay', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+
+  // --- KECAMATAN IBUN, SOLOKANJAN TUNG, KERTASARI, PACET, PASEH, NAGREG ---
+  'IBUN': { kel: 'Dukuh', kec: 'Ibun', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'SOLOKANJANTUNG': { kel: 'Bojongemas', kec: 'Solokanjantung', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'TARUMAJAYA': { kel: 'Tarumajaya', kec: 'Kertasari', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'MARUYUNG': { kel: 'Maruyung', kec: 'Pacet', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'NAGREG': { kel: 'Ciaro', kec: 'Nagreg', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CICALENGKA': { kel: 'Nagrog', kec: 'Cicalengka', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CILENGKRANG': { kel: 'Jatiendah', kec: 'Cilengkrang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'CIMENYAN': { kel: 'Ciburial', kec: 'Cimenyan', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  'KUTAWARINGIN': { kel: 'Buninagara', kec: 'Kutawaringin', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' }
 };
 
 function getOfficialAddressLookup(kw) {
   if (!kw) return null;
   const cleanKw = String(kw).toUpperCase().replace(/^KP\.\s*/i, '').trim();
+
+  // 1. Direct exact key match
   if (ACCURATE_KAMPUNG_DIRECTORY[cleanKw]) {
     return ACCURATE_KAMPUNG_DIRECTORY[cleanKw];
   }
+
+  // 2. Strict exact word boundary match
   for (let k in ACCURATE_KAMPUNG_DIRECTORY) {
-    if (cleanKw.includes(k) || k.includes(cleanKw)) {
+    if (k === cleanKw) {
       return ACCURATE_KAMPUNG_DIRECTORY[k];
     }
   }
+
   return null;
+}
+
+function detectAddressHierarchyFromRawText(rawAddressText, currentKel = '', currentKec = '', currentKab = '', currentProv = '') {
+  if (!rawAddressText) {
+    let kel = currentKel;
+    let kec = currentKec;
+    if (kel === 'Banjaran Kota') kel = 'Banjaran Kulon';
+    return {
+      kel: kel || 'Banjaran Kulon',
+      kec: kec || 'Banjaran',
+      kab: currentKab || 'Kabupaten Bandung',
+      prov: currentProv || 'Jawa Barat',
+      matchedKw: null
+    };
+  }
+
+  const cleanText = String(rawAddressText).toUpperCase()
+    .replace(/^KP\.\s*/i, '')
+    .replace(/RT\s*\d+/gi, '')
+    .replace(/RW\s*\d+/gi, '')
+    .replace(/DESA\s*/gi, '')
+    .replace(/KELURAHAN\s*/gi, '')
+    .replace(/KECAMATAN\s*/gi, '')
+    .trim();
+
+  // 1. Direct match in ACCURATE_KAMPUNG_DIRECTORY by individual tokens
+  const words = cleanText.split(/[\s,\.\/\-]+/).filter(w => w.length >= 3);
+  for (let w of words) {
+    if (ACCURATE_KAMPUNG_DIRECTORY[w]) {
+      return {
+        ...ACCURATE_KAMPUNG_DIRECTORY[w],
+        matchedKw: w
+      };
+    }
+  }
+
+  // 2. Multi-word phrase key match in ACCURATE_KAMPUNG_DIRECTORY
+  for (let k in ACCURATE_KAMPUNG_DIRECTORY) {
+    if (cleanText.includes(k)) {
+      return {
+        ...ACCURATE_KAMPUNG_DIRECTORY[k],
+        matchedKw: k
+      };
+    }
+  }
+
+  // 3. Learned address dictionary lookup match
+  if (typeof getLearnedKampungMap === 'function') {
+    const learnedList = getLearnedKampungMap();
+    for (let item of learnedList) {
+      const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase() : '';
+      if (kw && cleanText.includes(kw)) {
+        return {
+          kel: item.kel,
+          kec: item.kec,
+          kab: item.kab || 'Kabupaten Bandung',
+          prov: item.prov || 'Jawa Barat',
+          matchedKw: kw
+        };
+      }
+    }
+  }
+
+  // Fallback: Fix legacy Banjaran Kota if present
+  let kel = currentKel;
+  let kec = currentKec;
+  if (kel === 'Banjaran Kota') kel = 'Banjaran Kulon';
+
+  return {
+    kel: kel || 'Banjaran Kulon',
+    kec: kec || 'Banjaran',
+    kab: currentKab || 'Kabupaten Bandung',
+    prov: currentProv || 'Jawa Barat',
+    matchedKw: null
+  };
 }
 
 function realignLearnedAddressAccuracy() {
@@ -10666,15 +10837,9 @@ function realignLearnedAddressAccuracy() {
     let modified = false;
 
     list.forEach(item => {
-      // Auto-migrate legacy 'Banjaran Kota' kelurahan label to official 'Banjaran Kulon'
-      if (item.kel === 'Banjaran Kota') {
-        item.kel = 'Banjaran Kulon';
-        modified = true;
-      }
+      const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase().replace(/^KP\.\s*/i, '').trim() : '';
 
-      const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase() : '';
-      if (!kw) return;
-
+      // Check official lookup dictionary for exact match
       const verified = getOfficialAddressLookup(kw);
       if (verified) {
         if (item.kel !== verified.kel || item.kec !== verified.kec) {
@@ -10685,6 +10850,10 @@ function realignLearnedAddressAccuracy() {
           item.prov = verified.prov;
           modified = true;
         }
+      } else if (item.kel === 'Banjaran Kota') {
+        // If legacy item has 'Banjaran Kota' and no specific kampung override, convert kelurahan label to 'Banjaran Kulon'
+        item.kel = 'Banjaran Kulon';
+        modified = true;
       }
     });
 
@@ -10994,6 +11163,371 @@ const EXPLORATION_REGIONS = [
   { name: 'Kota Bandung & KBB', map: KOTA_BANDUNG_KBB_EXPLORATION_MAP, totalKec: 5 },
 ];
 
+let aiExplorerTimerInterval = null;
+let aiExplorerSecondsLeft = 600; // Default 10 minutes (600 seconds)
+let aiExplorerInitialDurationMinutes = 10;
+let isAiTimerUnlimited = false;
+
+function formatAiTimerDisplay(seconds) {
+  if (isAiTimerUnlimited) return '♾️ Tanpa Batas';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+function updateAiTimerUI() {
+  const badgeEl = document.getElementById('aiTimerCountdownText');
+  if (badgeEl) {
+    badgeEl.textContent = `⏳ ${formatAiTimerDisplay(aiExplorerSecondsLeft)}`;
+  }
+}
+
+function startAiExplorerCountdownTimer() {
+  if (aiExplorerTimerInterval) clearInterval(aiExplorerTimerInterval);
+  if (isAiTimerUnlimited) {
+    updateAiTimerUI();
+    return;
+  }
+
+  updateAiTimerUI();
+  aiExplorerTimerInterval = setInterval(() => {
+    if (!isAiExplorerActive) return;
+
+    aiExplorerSecondsLeft--;
+    updateAiTimerUI();
+
+    if (aiExplorerSecondsLeft <= 0) {
+      clearInterval(aiExplorerTimerInterval);
+      stopAiExplorerTimerExpired();
+    }
+  }, 1000);
+}
+
+function stopAiExplorerTimerExpired() {
+  isAiExplorerActive = false;
+
+  const btnHeader = document.getElementById('btnAiExplorerToggleHeader');
+  const btnHud = document.getElementById('btnToggleAiExplorer');
+  const badge = document.getElementById('aiExplorerStateBadge');
+
+  if (btnHeader) btnHeader.innerHTML = `<i class="bi bi-play-fill"></i> Mulai Jelajah AI`;
+  if (btnHud) btnHud.innerHTML = `<i class="bi bi-play-fill"></i> Mulai Jelajah AI`;
+  if (badge) {
+    badge.className = 'badge badge-amber';
+    badge.innerHTML = `<i class="bi bi-stopwatch-fill"></i> WAKTU SELESAI`;
+  }
+
+  updateAiLiveLog(`⏱️ WAKTU JELAJAH AI SELESAI (${aiExplorerInitialDurationMinutes} Menit). Penjelajahan dihentikan otomatis.`);
+
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      title: '⏱️ Waktu Jelajah AI Selesai!',
+      text: `Sesi penjelajahan otomatis selama ${aiExplorerInitialDurationMinutes} menit telah selesai. Seluruh titik kampung baru yang ditemukan telah tersimpan di Cloud D1 Database.`,
+      icon: 'info',
+      confirmButtonText: '<i class="bi bi-play-circle-fill"></i> Mulai Sesi Baru',
+      showCancelButton: true,
+      cancelButtonText: 'Tutup',
+      confirmButtonColor: '#4f46e5'
+    }).then(res => {
+      if (res.isConfirmed) {
+        openSetAiTimerModal();
+      }
+    });
+  } else if (typeof showToast === 'function') {
+    showToast(`⏱️ Waktu Jelajah Selesai (${aiExplorerInitialDurationMinutes} Menit)!`, 'info');
+  }
+}
+
+function openSetAiTimerModal() {
+  if (typeof Swal === 'undefined') return;
+
+  Swal.fire({
+    title: '<i class="bi bi-stopwatch-fill" style="color:#4f46e5;"></i> Setel Waktu Jelajah AI',
+    html: `
+      <div style="text-align: left; font-size: 13px; margin-top: 10px;">
+        <p style="color: #64748b; font-size: 12.5px; margin-bottom: 14px;">
+          Pilih berapa menit AI Autonomous Explorer akan berjelajah secara otomatis:
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(5, this)">⚡ 5 Menit</button>
+          <button type="button" class="btn btn-primary timer-opt-btn active" onclick="selectAiTimerOption(10, this)">🚀 10 Menit (Default)</button>
+          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(15, this)">🛡️ 15 Menit</button>
+          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(30, this)">🌐 30 Menit</button>
+          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(-1, this)">♾️ Tanpa Batas Waktu</button>
+          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(0, this)">✏️ Kustom Menit</button>
+        </div>
+
+        <div id="customTimerMinutesGroup" style="display: none; margin-top: 10px;">
+          <label class="form-label" style="font-weight: 700;">Masukkan Jumlah Menit Kustom:</label>
+          <input type="number" id="customTimerMinutesInput" class="swal2-input" placeholder="Contoh: 45" min="1" max="300" style="width: 100%; margin: 4px 0 0 0;" value="20">
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-play-fill"></i> Mulai Penjelajahan AI',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#4f46e5',
+    didOpen: () => {
+      window.selectedTimerMinutes = 10;
+    },
+    preConfirm: () => {
+      let mins = window.selectedTimerMinutes;
+      if (mins === 0) {
+        const inputVal = parseInt(document.getElementById('customTimerMinutesInput').value, 10);
+        if (isNaN(inputVal) || inputVal <= 0) {
+          Swal.showValidationMessage('Harap masukkan jumlah menit kustom yang valid!');
+          return false;
+        }
+        mins = inputVal;
+      }
+      return mins;
+    }
+  }).then(res => {
+    if (res.isConfirmed && res.value !== undefined) {
+      const selectedMins = res.value;
+      if (selectedMins === -1) {
+        isAiTimerUnlimited = true;
+        aiExplorerSecondsLeft = 0;
+        aiExplorerInitialDurationMinutes = 'Tanpa Batas';
+      } else {
+        isAiTimerUnlimited = false;
+        aiExplorerInitialDurationMinutes = selectedMins;
+        aiExplorerSecondsLeft = selectedMins * 60;
+      }
+
+      isAiExplorerActive = true;
+      initAiAutoExplorerEngine();
+      startAiExplorerCountdownTimer();
+
+      const btnHeader = document.getElementById('btnAiExplorerToggleHeader');
+      const btnHud = document.getElementById('btnToggleAiExplorer');
+      const badge = document.getElementById('aiExplorerStateBadge');
+
+      if (btnHeader) btnHeader.innerHTML = `<i class="bi bi-robot"></i> Jeda Jelajah AI`;
+      if (btnHud) btnHud.innerHTML = `<i class="bi bi-pause-fill"></i> Jeda Jelajah AI`;
+      if (badge) {
+        badge.className = 'badge badge-emerald';
+        badge.innerHTML = `<i class="bi bi-record-fill" style="color: #22c55e; animation: blink 1s infinite;"></i> AUTO-SCANNING AKTIF`;
+      }
+
+      const durText = isAiTimerUnlimited ? 'Tanpa Batas Waktu' : `${selectedMins} Menit`;
+      updateAiLiveLog(`▶️ AI Autonomous Explorer DIAKTIFKAN dengan durasi: ${durText}.`);
+      if (typeof showToast === 'function') showToast(`AI Explorer Aktif! Durasi: ${durText}`, 'success');
+    }
+  });
+}
+
+function selectAiTimerOption(mins, btnEl) {
+  window.selectedTimerMinutes = mins;
+  const container = btnEl.parentElement;
+  container.querySelectorAll('.timer-opt-btn').forEach(b => {
+    b.classList.remove('btn-primary', 'active');
+    b.classList.add('btn-outline-primary');
+  });
+  btnEl.classList.remove('btn-outline-primary');
+  btnEl.classList.add('btn-primary', 'active');
+
+  const customGroup = document.getElementById('customTimerMinutesGroup');
+  if (customGroup) {
+    customGroup.style.display = mins === 0 ? 'block' : 'none';
+  }
+}
+
+async function repairAllRecordsAddressWithAi() {
+  if (typeof Swal === 'undefined') return;
+
+  // 🔒 STRICT ROLE GUARD: Admin Only
+  const currentUserRole = sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas');
+  if (currentUserRole !== 'Admin') {
+    Swal.fire({
+      title: '🔒 Akses Terbatas (Admin Only)',
+      text: 'Maaf, fitur AI Auto-Repair Alamat Rekam Medis ini hanya dapat dijalankan oleh pengguna dengan Peran ADMIN.',
+      icon: 'warning',
+      confirmButtonText: 'Mengerti',
+      confirmButtonColor: '#f59e0b'
+    });
+    return;
+  }
+
+  const result = await Swal.fire({
+    title: '<i class="bi bi-magic" style="color: #10b981;"></i> Auto-Repair Alamat AI',
+    html: `
+      <div style="text-align: left; font-size: 13px;">
+        <p style="color: #475569; margin-bottom: 10px;">
+          Fitur khusus <strong>Admin</strong> ini akan menganalisis teks alamat mentah pada seluruh rekam medis <strong>Data Record CKG / SIMPUS</strong> dan <strong>CKG Sekolah</strong>, lalu secara otomatis memvalidasi & memperbaiki:
+        </p>
+        <ul style="color: #059669; padding-left: 20px; line-height: 1.6; margin-bottom: 12px; font-weight: 600;">
+          <li>Desa / Kelurahan (termasuk koreksi Banjaran Kota ➔ Banjaran Kulon)</li>
+          <li>Kecamatan</li>
+          <li>Kabupaten / Kota</li>
+          <li>Provinsi</li>
+        </ul>
+        <p style="font-size: 11.5px; color: #64748b; font-style: italic;">
+          Hasil perbaikan presisi akan langsung disimpan ke sistem lokal dan disinkronkan ke Cloud D1 Database Server.
+        </p>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: '✨ Jalankan Auto-Repair AI',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#10b981'
+  });
+
+  if (!result.isConfirmed) return;
+
+  // 1. Prepare records list for chunk processing
+  const allItems = [];
+  if (typeof simpusRecords !== 'undefined' && Array.isArray(simpusRecords)) {
+    simpusRecords.forEach((r, idx) => allItems.push({ type: 'simpus', data: r, idx }));
+  }
+  if (typeof sekolahRecords !== 'undefined' && Array.isArray(sekolahRecords)) {
+    sekolahRecords.forEach((r, idx) => allItems.push({ type: 'sekolah', data: r, idx }));
+  }
+
+  const totalCount = allItems.length;
+  if (totalCount === 0) {
+    Swal.fire('Informasi', 'Belum ada data rekam medis SIMPUS atau CKG Sekolah yang tersedia untuk di-audit.', 'info');
+    return;
+  }
+
+  // 2. Show Live Progress Modal with Animated Progress Bar & Percentage
+  Swal.fire({
+    title: '<i class="bi bi-cpu-fill" style="color: #3b82f6;"></i> AI Sedang Memeriksa Alamat...',
+    html: `
+      <div style="text-align: left; font-size: 12.5px; margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; color: #1e293b;">
+          <span id="aiRepairStatusText">Memulai pemindaian...</span>
+          <span id="aiRepairPercentText" style="color: #2563eb;">0%</span>
+        </div>
+
+        <div style="height: 16px; background: #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid #cbd5e1;">
+          <div id="aiRepairProgressBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #3b82f6, #10b981); border-radius: 8px; transition: width 0.15s ease;"></div>
+        </div>
+
+        <div style="font-size: 11px; color: #64748b; font-style: italic; text-align: center;">
+          Mohon tunggu, AI sedang menyelaraskan hierarki alamat dengan Kamus Administrasi Presisi...
+        </div>
+      </div>
+    `,
+    allowOutsideClick: false,
+    showConfirmButton: false
+  });
+
+  let processedCount = 0;
+  let simpusFixedCount = 0;
+  let sekolahFixedCount = 0;
+  const auditLogs = [];
+
+  function processNextChunk(index) {
+    if (index >= totalCount) {
+      finishRepairProcess();
+      return;
+    }
+
+    const chunkSize = Math.max(1, Math.floor(totalCount / 40));
+    const endIdx = Math.min(index + chunkSize, totalCount);
+
+    for (let i = index; i < endIdx; i++) {
+      const item = allItems[i];
+      const r = item.data;
+      const rawAddr = r.alamat || r.alamat_domisili || '';
+      const detected = detectAddressHierarchyFromRawText(rawAddr, r.kelurahan || r.desa, r.kecamatan, r.kab_kota || r.kabupaten, r.provinsi);
+
+      const oldKel = r.kelurahan || r.desa || '-';
+      const oldKec = r.kecamatan || '-';
+      const oldKab = r.kab_kota || r.kabupaten || '-';
+      const oldProv = r.provinsi || '-';
+
+      if (oldKel !== detected.kel || oldKec !== detected.kec || oldKab !== detected.kab || oldProv !== detected.prov) {
+        r.kelurahan = detected.kel;
+        if (r.desa !== undefined) r.desa = detected.kel;
+        r.kecamatan = detected.kec;
+        r.kab_kota = detected.kab;
+        if (r.kabupaten !== undefined) r.kabupaten = detected.kab;
+        r.provinsi = detected.prov;
+
+        if (item.type === 'simpus') {
+          simpusFixedCount++;
+          auditLogs.push(`[SIMPUS #${r.no || item.idx + 1}] ${r.nama || 'Pasien'}: "${rawAddr}" ➔ Desa: ${oldKel} ➔ <b>${detected.kel}</b>, Kec: ${oldKec} ➔ <b>${detected.kec}</b>`);
+        } else {
+          sekolahFixedCount++;
+          auditLogs.push(`[SEKOLAH #${r.no || item.idx + 1}] ${r.nama || 'Siswa'}: "${rawAddr}" ➔ Desa: ${oldKel} ➔ <b>${detected.kel}</b>, Kec: ${oldKec} ➔ <b>${detected.kec}</b>`);
+        }
+      }
+      processedCount++;
+    }
+
+    const pct = Math.round((processedCount / totalCount) * 100);
+    const barEl = document.getElementById('aiRepairProgressBar');
+    const pctEl = document.getElementById('aiRepairPercentText');
+    const statusEl = document.getElementById('aiRepairStatusText');
+
+    if (barEl) barEl.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
+    if (statusEl) statusEl.textContent = `Memeriksa ${processedCount} / ${totalCount} record...`;
+
+    setTimeout(() => processNextChunk(endIdx), 20);
+  }
+
+  function finishRepairProcess() {
+    if (simpusFixedCount > 0) {
+      localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+      if (typeof syncSimpusToCloud === 'function') syncSimpusToCloud(simpusRecords);
+    }
+    if (sekolahFixedCount > 0) {
+      localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+      if (typeof syncSekolahRecordsToCloud === 'function') syncSekolahRecordsToCloud(sekolahRecords);
+    }
+
+    if (typeof renderSimpusTable === 'function') renderSimpusTable();
+    if (typeof renderSekolahTable === 'function') renderSekolahTable();
+    if (typeof renderDashboardAnalytics === 'function') renderDashboardAnalytics();
+
+    const totalFixed = simpusFixedCount + sekolahFixedCount;
+
+    let logHtml = auditLogs.length > 0
+      ? auditLogs.slice(0, 50).map(l => `<div style="margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px;">${l}</div>`).join('')
+      : '<div style="color: #a7f3d0; text-align: center;">Seluruh data rekam medis alamat sudah 100% presisi dan sesuai hierarki administrasi!</div>';
+
+    if (auditLogs.length > 50) {
+      logHtml += `<div style="color: #fbbf24; margin-top: 6px; font-weight: 700;">...dan ${auditLogs.length - 50} perbaikan record lainnya.</div>`;
+    }
+
+    Swal.fire({
+      title: '🎉 Auto-Repair Alamat AI Selesai!',
+      html: `
+        <div style="text-align: left; font-size: 12.5px; color: #334155;">
+          <div style="background: #f1f5f9; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span>📊 Total Record Di-audit:</span> <strong>${totalCount} Data</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px; color: #059669;">
+              <span>✨ Total Record Diperbaiki:</span> <strong>${totalFixed} Data</strong>
+            </div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 6px; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
+              • SIMPUS / CKG Record: <strong>${simpusFixedCount} diperbaiki</strong><br>
+              • CKG Sekolah Record: <strong>${sekolahFixedCount} diperbaiki</strong>
+            </div>
+          </div>
+
+          <div style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">📋 Rincian Audit Perbaikan Alamat AI:</div>
+          <div style="max-height: 180px; overflow-y: auto; background: #0f172a; color: #38bdf8; font-family: monospace; font-size: 10.5px; padding: 8px 10px; border-radius: 8px;">
+            ${logHtml}
+          </div>
+        </div>
+      `,
+      icon: totalFixed > 0 ? 'success' : 'info',
+      confirmButtonText: 'Tutup & Simpan',
+      confirmButtonColor: '#10b981'
+    });
+  }
+
+  // Start process
+  processNextChunk(0);
+}
+
 function initAiAutoExplorerEngine() {
   if (aiExplorerInterval) clearInterval(aiExplorerInterval);
 
@@ -11001,9 +11535,16 @@ function initAiAutoExplorerEngine() {
     if (!isAiExplorerActive) return;
     stepAiExplorerNextLocation();
   }, aiScanSpeedMs);
+
+  startAiExplorerCountdownTimer();
 }
 
 function toggleAiAutoExplorer() {
+  if (!isAiExplorerActive && (aiExplorerSecondsLeft <= 0 && !isAiTimerUnlimited)) {
+    openSetAiTimerModal();
+    return;
+  }
+
   isAiExplorerActive = !isAiExplorerActive;
 
   const btnHeader = document.getElementById('btnAiExplorerToggleHeader');
