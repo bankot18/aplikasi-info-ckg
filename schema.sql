@@ -125,6 +125,28 @@ CREATE TABLE IF NOT EXISTS ckg_sekolah_records (
 
 
 -- --------------------------------------------------------------------
+-- 5.1 MASTER NAMA SEKOLAH CKG
+-- Tabel: master_sekolah (Daftar Pilihan Dropdown Sekolah)
+-- --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS master_sekolah (
+    id TEXT PRIMARY KEY,
+    nama_sekolah TEXT UNIQUE NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Default Master Sekolah Initial Data
+INSERT OR IGNORE INTO master_sekolah (id, nama_sekolah) VALUES
+('MSCH-1', 'SDN 1 BANJARAN'),
+('MSCH-2', 'SDN 2 BANJARAN'),
+('MSCH-3', 'SDN 3 BANJARAN'),
+('MSCH-4', 'SDN TARAJUSARI'),
+('MSCH-5', 'SMPN 1 BANJARAN'),
+('MSCH-6', 'SMPN 2 BANJARAN'),
+('MSCH-7', 'SMAN 1 BANJARAN'),
+('MSCH-8', 'SMKN 1 BANJARAN');
+
+
+-- --------------------------------------------------------------------
 -- 6. MENU: RECYCLE DATA (Tempat Sampah Data Terhapus)
 -- Tabel: recycle_bin
 -- --------------------------------------------------------------------

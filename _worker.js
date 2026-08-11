@@ -579,7 +579,54 @@ export default {
       }
     }
 
-    // 4. ROUTE: /api/recycle
+    // 4.1 ROUTE: /api/master-sekolah (Master List Sekolah Database)
+    if (url.pathname === '/api/master-sekolah' || url.pathname.startsWith('/api/master-sekolah/')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
+      }
+
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS master_sekolah (
+            id TEXT PRIMARY KEY,
+            nama_sekolah TEXT UNIQUE NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+
+        if (request.method === 'GET') {
+          const { results } = await env.DB.prepare('SELECT nama_sekolah FROM master_sekolah ORDER BY nama_sekolah ASC').all();
+          const list = results ? results.map(r => r.nama_sekolah) : [];
+          return new Response(JSON.stringify({ success: true, data: list }), { headers: corsHeaders });
+        }
+
+        if (request.method === 'POST') {
+          const body = await request.json();
+          const list = Array.isArray(body) ? body : (body.nama_sekolah ? [body.nama_sekolah] : []);
+          
+          if (list.length > 0) {
+            const stmt = env.DB.prepare('INSERT OR IGNORE INTO master_sekolah (id, nama_sekolah) VALUES (?, ?)');
+            const statements = list.map((name, idx) => stmt.bind(`MSCH-${Date.now()}-${idx}`, String(name).trim().toUpperCase()));
+            await env.DB.batch(statements);
+          }
+          return new Response(JSON.stringify({ success: true, count: list.length }), { headers: corsHeaders });
+        }
+
+        if (request.method === 'DELETE') {
+          const name = url.searchParams.get('nama');
+          if (name) {
+            await env.DB.prepare('DELETE FROM master_sekolah WHERE nama_sekolah = ?').bind(name.toUpperCase()).run();
+          } else {
+            await env.DB.prepare('DELETE FROM master_sekolah').run();
+          }
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        }
+      } catch (err) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    // 5. ROUTE: /api/recycle
     if (url.pathname === '/api/recycle' || url.pathname.startsWith('/api/recycle/')) {
       if (!env.DB) {
         return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
