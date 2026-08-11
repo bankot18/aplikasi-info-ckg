@@ -10901,42 +10901,62 @@ function getLearnedKampungMap() {
   // Pre-seed with accurate exploration map if list is empty
   if (list.length === 0 && typeof KAB_BANDUNG_EXPLORATION_MAP !== 'undefined') {
     KAB_BANDUNG_EXPLORATION_MAP.forEach(item => {
-      item.kampungs.forEach(kName => {
+      item.kampungs.forEach((kName, kIdx) => {
         const cleanKw = kName.replace(/^Kp\.\s*/i, '').trim();
-        const verified = getOfficialAddressLookup(cleanKw);
+        const baseLat = item.coords[0];
+        const baseLng = item.coords[1];
+        const stepOffsetLat = (kIdx * 0.0018) * (kIdx % 2 === 0 ? 1 : -1);
+        const stepOffsetLng = (kIdx * 0.0018) * (kIdx % 3 === 0 ? 1 : -1);
         list.push({
           keywords: [cleanKw],
-          kel: verified ? verified.kel : item.kel,
-          kec: verified ? verified.kec : item.kec,
-          kab: verified ? verified.kab : 'Kabupaten Bandung',
-          prov: verified ? verified.prov : 'Jawa Barat',
-          lat: item.coords[0],
-          lng: item.coords[1]
+          kel: item.kel,
+          kec: item.kec,
+          kab: 'Kabupaten Bandung',
+          prov: 'Jawa Barat',
+          lat: parseFloat((baseLat + stepOffsetLat).toFixed(6)),
+          lng: parseFloat((baseLng + stepOffsetLng).toFixed(6))
         });
       });
     });
     localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(list));
   }
+
+  updateAiDbSavedCounterUI();
   return list;
+}
+
+function updateAiDbSavedCounterUI() {
+  const badgeEl = document.getElementById('aiDbSavedCountText');
+  if (badgeEl) {
+    const raw = localStorage.getItem('ckg_learned_kampung_map');
+    let count = 0;
+    if (raw) {
+      try { count = JSON.parse(raw).length; } catch (e) { count = 0; }
+    }
+    badgeEl.textContent = `${count} Titik`;
+  }
 }
 
 async function saveLearnedKampungKeyword(kw, kel, kec, kab = 'Kabupaten Bandung', prov = 'Jawa Barat', syncToCloud = true, lat = null, lng = null) {
   if (!kw) return;
   const cleanKw = String(kw).toUpperCase().replace(/^KP\.\s*/i, '').trim();
 
-  // Cross-reference official lookup table to force accurate administrative attribution!
-  const verified = getOfficialAddressLookup(cleanKw);
-  const finalKel = verified ? verified.kel : (kel || 'Banjaran Kulon');
-  const finalKec = verified ? verified.kec : (kec || 'Banjaran');
-  const finalKab = verified ? verified.kab : (kab || 'Kabupaten Bandung');
-  const finalProv = verified ? verified.prov : (prov || 'Jawa Barat');
+  // Prefer provided Kelurahan & Kecamatan to support identical kampung names across different villages
+  const finalKel = kel || 'Banjaran Kulon';
+  const finalKec = kec || 'Banjaran';
+  const finalKab = kab || 'Kabupaten Bandung';
+  const finalProv = prov || 'Jawa Barat';
 
   const list = getLearnedKampungMap();
+  
+  // Match uniqueness by: Kampung Name + Kelurahan + Kecamatan (So identical names in different villages are kept!)
   const existingIndex = list.findIndex(item => {
-    if (Array.isArray(item.keywords)) {
-      return item.keywords.some(k => String(k).toUpperCase().trim() === cleanKw);
-    }
-    return String(item.keywords).toUpperCase().trim() === cleanKw;
+    const itemKw = (Array.isArray(item.keywords) ? item.keywords[0] : item.keywords) || '';
+    const itemCleanKw = String(itemKw).toUpperCase().replace(/^KP\.\s*/i, '').trim();
+    const itemKel = String(item.kel || '').toUpperCase().trim();
+    const itemKec = String(item.kec || '').toUpperCase().trim();
+
+    return itemCleanKw === cleanKw && itemKel === String(finalKel).toUpperCase().trim() && itemKec === String(finalKec).toUpperCase().trim();
   });
 
   const entry = {
@@ -10956,6 +10976,7 @@ async function saveLearnedKampungKeyword(kw, kel, kec, kab = 'Kabupaten Bandung'
   }
 
   localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(list));
+  updateAiDbSavedCounterUI();
 
   if (syncToCloud) {
     try {
@@ -11537,6 +11558,7 @@ function initAiAutoExplorerEngine() {
   }, aiScanSpeedMs);
 
   startAiExplorerCountdownTimer();
+  updateAiDbSavedCounterUI();
 }
 
 function toggleAiAutoExplorer() {
@@ -11607,17 +11629,23 @@ function stepAiExplorerNextLocation() {
       const regLabel = document.getElementById('aiExplorerTargetRegion');
       if (regLabel) regLabel.textContent = nextRegion.name;
     } else {
-      // Loop back to start to continuously refresh knowledge base
+      // All regions explored!
       aiCurrentRegionIndex = 0;
       aiCurrentKecIndex = 0;
       aiCurrentPointIndex = 0;
-      updateAiLiveLog(`🔄 Seluruh Wilayah Terjangkau! Melakukan siklus re-scan berkala...`);
+      updateAiLiveLog(`🏆 Seluruh Wilayah (${EXPLORATION_REGIONS.length} Region) 100% Terjangkau! Melanjutkan audit siklis...`);
     }
     return;
   }
 
   const kecObj = regionMap[aiCurrentKecIndex];
   const targetKampung = kecObj.kampungs[aiCurrentPointIndex] || `Kp. ${kecObj.kel}`;
+
+  const cleanKw = targetKampung.replace(/^Kp\.\s*/i, '').trim();
+  const targetKel = kecObj.kel;
+  const targetKec = kecObj.kec;
+  const targetKab = currentRegion.name.includes('Kota') ? 'Kota Bandung' : 'Kabupaten Bandung';
+  const targetProv = 'Jawa Barat';
 
   // Compute fine coordinate offset
   const baseLat = kecObj.coords[0];
@@ -11627,14 +11655,29 @@ function stepAiExplorerNextLocation() {
   const lat = parseFloat((baseLat + stepOffsetLat).toFixed(6));
   const lng = parseFloat((baseLng + stepOffsetLng).toFixed(6));
 
-  const cleanKw = targetKampung.replace(/^Kp\.\s*/i, '').trim();
+  // 🔒 SKIP VISITED / ALREADY PINNED CHECK:
+  // If this exact (cleanKw + targetKel + targetKec) is already saved in DB, advance pointer and search for a NEW undiscovered location!
+  const currentLearned = getLearnedKampungMap();
+  const isAlreadyPinned = currentLearned.some(item => {
+    const itemKw = (Array.isArray(item.keywords) ? item.keywords[0] : item.keywords) || '';
+    return String(itemKw).toUpperCase().trim() === cleanKw.toUpperCase() &&
+           String(item.kel || '').toUpperCase().trim() === targetKel.toUpperCase() &&
+           String(item.kec || '').toUpperCase().trim() === targetKec.toUpperCase();
+  });
 
-  // Validate hierarchy against official lookup table
-  const verified = getOfficialAddressLookup(cleanKw);
-  const targetKel = verified ? verified.kel : kecObj.kel;
-  const targetKec = verified ? verified.kec : kecObj.kec;
-  const targetKab = verified ? verified.kab : (currentRegion.name.includes('Kota') ? 'Kota Bandung' : 'Kabupaten Bandung');
-  const targetProv = verified ? verified.prov : 'Jawa Barat';
+  if (isAlreadyPinned) {
+    // Advance pointer to next location
+    aiCurrentPointIndex++;
+    if (aiCurrentPointIndex >= kecObj.kampungs.length) {
+      aiCurrentPointIndex = 0;
+      aiCurrentKecIndex++;
+    }
+    // Automatically advance to the next undiscovered location without waiting
+    setTimeout(() => {
+      if (isAiExplorerActive) stepAiExplorerNextLocation();
+    }, 50);
+    return;
+  }
 
   // 1. Auto-record to Cloud D1 database & Local Storage without asking user
   saveLearnedKampungKeyword(
@@ -11650,8 +11693,9 @@ function stepAiExplorerNextLocation() {
 
   aiLearnedCountTotal++;
 
-  // 2. Update Live Log HUD
-  updateAiLiveLog(`🔍 [${new Date().toLocaleTimeString('id-ID')}] Discovered: Kp. ${cleanKw}, Desa ${targetKel}, Kec. ${targetKec} → Saved to D1 Cloud`);
+  // 2. Update Live Log HUD & Indicator
+  updateAiLiveLog(`🔍 [${new Date().toLocaleTimeString('id-ID')}] Discovered NEW: Kp. ${cleanKw}, Desa ${targetKel}, Kec. ${targetKec} → Saved to D1 Cloud`);
+  updateAiDbSavedCounterUI();
 
   // 3. Move Live Radar Marker on Leaflet Map
   updateAiRadarMarkerOnMap(lat, lng, cleanKw, kecObj.kec);

@@ -587,6 +587,9 @@
               <button class="btn btn-purple admin-only" id="btnImportAdminCkg" onclick="openAdminImportModal()" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; padding: 8px 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.25); display: inline-flex; align-items: center; gap: 6px;">
                 <i class="bi bi-person-lines-fill"></i> Import Data (Khusus Admin)
               </button>
+              <button class="btn btn-emerald admin-only" id="btnAiRepairRecordsAdmin" onclick="repairAllRecordsAddressWithAi()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; padding: 8px 14px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25); display: inline-flex; align-items: center; gap: 6px;" title="Perbaiki Kelurahan, Kecamatan, Kab/Kota, Provinsi di Data CKG, SIMPUS & Sekolah Otomatis">
+                <i class="bi bi-magic"></i> Auto-Repair Alamat AI (Admin)
+              </button>
               <button class="btn btn-emerald" onclick="exportToXLSX()">
                 <i class="bi bi-file-earmark-arrow-down"></i> Download Data
               </button>
@@ -908,6 +911,9 @@
               </button>
               <button class="btn btn-danger admin-only" id="btnHapusSemuaDataSekolah" onclick="confirmDeleteAllSekolahRecords()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; padding: 8px 14px; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25); display: inline-flex; align-items: center; gap: 6px;">
                 <i class="bi bi-trash3-fill"></i> Hapus Semua Data
+              </button>
+              <button class="btn btn-emerald admin-only" onclick="repairAllRecordsAddressWithAi()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; padding: 8px 14px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25); display: inline-flex; align-items: center; gap: 6px;" title="Khusus Admin: Perbaiki Alamat Record CKG Sekolah Otomatis">
+                <i class="bi bi-magic"></i> Auto-Repair Alamat AI (Admin)
               </button>
               <button class="btn btn-secondary" onclick="fetchSekolahRecordsFromCloud()">
                 <i class="bi bi-arrow-clockwise"></i> Refresh Sekolah
@@ -1385,6 +1391,9 @@
                     </span>
                     <span id="aiTimerBadge" class="badge" style="font-size: 10.5px; border-radius: 12px; padding: 3px 10px; background: rgba(99, 102, 241, 0.25); color: #a5b4fc; border: 1px solid rgba(165, 180, 252, 0.4);">
                       <i class="bi bi-clock-history"></i> Sisa Waktu: <strong id="aiTimerCountdownText" style="color: #6366f1;">⏳ 10:00</strong>
+                    </span>
+                    <span id="aiDbSavedBadge" class="badge" style="font-size: 10.5px; border-radius: 12px; padding: 3px 10px; background: rgba(16, 185, 129, 0.25); color: #6ee7b7; border: 1px solid rgba(110, 231, 183, 0.4);" title="Jumlah titik alamat yang telah tersimpan otomatis ke Cloud D1 Database Server">
+                      <i class="bi bi-database-check"></i> Tersimpan Server D1: <strong id="aiDbSavedCountText" style="color: #10b981;">0 Titik</strong>
                     </span>
                   </div>
                   <div style="font-size: 11.5px; color: #94a3b8; margin-top: 2px;">
