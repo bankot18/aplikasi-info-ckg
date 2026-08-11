@@ -2831,6 +2831,104 @@ body.dark-mode .simpus-table-wrapper {
   border-color: #334155 !important;
 }
 
+/* Stepper Wizard Component */
+.wizard-stepper-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.stepper-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.stepper-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  color: #64748b;
+  font-weight: 800;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.stepper-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #64748b;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.stepper-item.active .stepper-circle {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  border-color: #7c3aed;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+  transform: scale(1.08);
+}
+
+.stepper-item.active .stepper-title {
+  color: #6d28d9;
+  font-weight: 800;
+}
+
+.stepper-item.completed .stepper-circle {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.stepper-item.completed .stepper-title {
+  color: #059669;
+}
+
+.stepper-line {
+  flex: 1;
+  height: 3px;
+  background: #e2e8f0;
+  margin: 0 12px;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.stepper-line.active {
+  background: linear-gradient(90deg, #10b981, #7c3aed);
+}
+
+.wizard-step-panel {
+  display: none;
+  animation: fadeInStep 0.25s ease-out;
+}
+
+.wizard-step-panel.active {
+  display: block;
+}
+
+@keyframes fadeInStep {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Stepper Wizard in Dark Mode */
 body.dark-mode .wizard-stepper-bar {
   background: #0f172a !important;
@@ -2841,9 +2939,15 @@ body.dark-mode .stepper-circle {
   border-color: #334155 !important;
   color: #94a3b8 !important;
 }
+body.dark-mode .stepper-title {
+  color: #94a3b8 !important;
+}
 body.dark-mode .stepper-item.active .stepper-circle {
-  background: #2563eb !important;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
   color: #ffffff !important;
+}
+body.dark-mode .stepper-item.active .stepper-title {
+  color: #c4b5fd !important;
 }
 body.dark-mode .stepper-line {
   background: #334155 !important;

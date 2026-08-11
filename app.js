@@ -9370,21 +9370,116 @@ function resetSekolahFilters() {
   showToast('Filter CKG Sekolah telah di-reset.', 'info');
 }
 
-function populateSekolahDatalists() {
-  const sekolahList = document.getElementById('listSekolahOptions');
-  const kelurahanList = document.getElementById('listKelurahanSekolahOptions');
-  
-  if (sekolahList) {
-    const existingSchools = new Set([
-      'SMPN 1 BANJARAN', 'SMPN 2 BANJARAN', 'SMPN 3 BANJARAN',
-      'SMAN 1 BANJARAN', 'SMKN 1 BANJARAN', 'MTS BANJARAN', 'MA BANJARAN',
-      'SDN BANJARAN 01', 'SDN BANJARAN 02', 'SDN BANJARAN 03'
-    ]);
-    sekolahRecords.forEach(r => {
-      if (r.sekolah) existingSchools.add(r.sekolah.toUpperCase());
-    });
-    sekolahList.innerHTML = Array.from(existingSchools).sort().map(s => `<option value="${escapeHtml(s)}"></option>`).join('');
+let currentSekolahStep = 1;
+
+function setSekolahStep(stepNum) {
+  currentSekolahStep = stepNum;
+
+  for (let i = 1; i <= 3; i++) {
+    const panel = document.getElementById(`stepSekolah${i}`);
+    const item = document.getElementById(`stepperSekolahTab${i}`);
+    const circle = document.getElementById(`stepperSekolahNum${i}`);
+    const line = document.getElementById(`stepperSekolahLine${i - 1}`);
+
+    if (panel) {
+      if (i === stepNum) {
+        panel.classList.add('active');
+      } else {
+        panel.classList.remove('active');
+      }
+    }
+
+    if (item) {
+      if (i === stepNum) {
+        item.className = 'stepper-item active';
+        if (circle) circle.innerHTML = `${i}`;
+      } else if (i < stepNum) {
+        item.className = 'stepper-item completed';
+        if (circle) circle.innerHTML = `<i class="bi bi-check-lg"></i>`;
+      } else {
+        item.className = 'stepper-item';
+        if (circle) circle.innerHTML = `${i}`;
+      }
+    }
+
+    if (line && i > 1) {
+      if (i <= stepNum) {
+        line.classList.add('active');
+      } else {
+        line.classList.remove('active');
+      }
+    }
   }
+
+  const btnPrev = document.getElementById('btnSekolahPrev');
+  const btnNext = document.getElementById('btnSekolahNext');
+  const btnSubmit = document.getElementById('btnSekolahSubmit');
+
+  if (btnPrev) btnPrev.style.display = stepNum > 1 ? 'inline-flex' : 'none';
+
+  if (btnNext) {
+    if (stepNum < 3) {
+      btnNext.style.display = 'inline-flex';
+      btnNext.innerHTML = `Lanjut Tahap ${stepNum + 1} <i class="bi bi-arrow-right"></i>`;
+    } else {
+      btnNext.style.display = 'none';
+    }
+  }
+
+  if (btnSubmit) {
+    btnSubmit.style.display = stepNum === 3 ? 'inline-flex' : 'none';
+  }
+}
+
+function validateSekolahStep(stepNum) {
+  if (stepNum === 1) {
+    const sekolah = document.getElementById('schSekolah')?.value.trim();
+    const kelas = document.getElementById('schKelas')?.value.trim();
+    if (!sekolah) {
+      if (typeof showToast === 'function') showToast('Harap pilih Nama Sekolah terlebih dahulu.', 'warning');
+      else alert('Harap pilih Nama Sekolah terlebih dahulu.');
+      document.getElementById('schSekolah')?.focus();
+      return false;
+    }
+    if (!kelas) {
+      if (typeof showToast === 'function') showToast('Harap isi Kelas siswa.', 'warning');
+      else alert('Harap isi Kelas siswa.');
+      document.getElementById('schKelas')?.focus();
+      return false;
+    }
+  } else if (stepNum === 2) {
+    const nama = document.getElementById('schNama')?.value.trim();
+    if (!nama) {
+      if (typeof showToast === 'function') showToast('Harap isi Nama Siswa terlebih dahulu.', 'warning');
+      else alert('Harap isi Nama Siswa terlebih dahulu.');
+      document.getElementById('schNama')?.focus();
+      return false;
+    }
+  }
+  return true;
+}
+
+function changeSekolahStep(direction) {
+  const targetStep = currentSekolahStep + direction;
+  if (direction > 0 && !validateSekolahStep(currentSekolahStep)) {
+    return;
+  }
+  if (targetStep >= 1 && targetStep <= 3) {
+    setSekolahStep(targetStep);
+  }
+}
+
+function jumpSekolahStep(stepNum) {
+  if (stepNum > currentSekolahStep) {
+    for (let s = currentSekolahStep; s < stepNum; s++) {
+      if (!validateSekolahStep(s)) return;
+    }
+  }
+  setSekolahStep(stepNum);
+}
+
+function populateSekolahDatalists() {
+  const kelurahanList = document.getElementById('listKelurahanSekolahOptions');
 
   if (kelurahanList) {
     const desaBanjaran = (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA['Jawa Barat'] && WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung'] && WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung']['Banjaran'])
@@ -9433,10 +9528,10 @@ function openInputSekolahModal(id = null) {
 
   form.reset();
   document.getElementById('sekolahRecordId').value = '';
-  document.getElementById('schProvinsi').value = 'Jawa Barat';
-  document.getElementById('schKabKota').value = 'Kab. Bandung';
-  document.getElementById('schKecamatan').value = 'Banjaran';
-  document.getElementById('schKelurahan').value = 'Tarajusari';
+  document.getElementById('schProvinsi').value = 'JAWA BARAT';
+  document.getElementById('schKabKota').value = 'KAB. BANDUNG';
+  document.getElementById('schKecamatan').value = 'BANJARAN';
+  document.getElementById('schKelurahan').value = 'TARAJUSARI';
   document.getElementById('schPetugasEntry').value = currentUserName;
   document.getElementById('schTanggalEntry').value = new Date().toISOString().substring(0, 10);
 
@@ -9447,15 +9542,34 @@ function openInputSekolahModal(id = null) {
       document.getElementById('sekolahRecordId').value = rec.id;
       document.getElementById('schNama').value = (rec.nama || '').toUpperCase();
       document.getElementById('schKelas').value = (rec.kelas || '').toUpperCase();
-      document.getElementById('schSekolah').value = (rec.sekolah || '').toUpperCase();
+      
+      const schSelect = document.getElementById('schSekolah');
+      if (schSelect && rec.sekolah) {
+        const targetVal = rec.sekolah.trim().toUpperCase();
+        let found = false;
+        for (let opt of schSelect.options) {
+          if (opt.value === targetVal) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          const newOpt = document.createElement('option');
+          newOpt.value = targetVal;
+          newOpt.textContent = targetVal;
+          schSelect.appendChild(newOpt);
+        }
+        schSelect.value = targetVal;
+      }
+
       document.getElementById('schJk').value = rec.jk || 'L';
       document.getElementById('schNik').value = rec.nik || '';
       document.getElementById('schTanggalLahir').value = rec.tanggal_lahir || '';
       document.getElementById('schNoWhatsapp').value = rec.no_whatsapp || '';
-      document.getElementById('schProvinsi').value = (rec.provinsi || 'Jawa Barat').toUpperCase();
-      document.getElementById('schKabKota').value = (rec.kab_kota || 'Kab. Bandung').toUpperCase();
-      document.getElementById('schKecamatan').value = (rec.kecamatan || 'Banjaran').toUpperCase();
-      document.getElementById('schKelurahan').value = (rec.kelurahan || 'Tarajusari').toUpperCase();
+      document.getElementById('schProvinsi').value = (rec.provinsi || 'JAWA BARAT').toUpperCase();
+      document.getElementById('schKabKota').value = (rec.kab_kota || 'KAB. BANDUNG').toUpperCase();
+      document.getElementById('schKecamatan').value = (rec.kecamatan || 'BANJARAN').toUpperCase();
+      document.getElementById('schKelurahan').value = (rec.kelurahan || 'TARAJUSARI').toUpperCase();
       document.getElementById('schAlamat').value = (rec.alamat || '').toUpperCase();
       document.getElementById('schBb').value = rec.bb || '';
       document.getElementById('schTb').value = rec.tb || '';
@@ -9475,6 +9589,9 @@ function openInputSekolahModal(id = null) {
     if (title) title.innerHTML = `<i class="bi bi-mortarboard-fill"></i> Form Input Skrining CKG Sekolah`;
   }
 
+  // Reset to step 1
+  setSekolahStep(1);
+
   // Show modal FIRST so user gets immediate visual feedback
   modal.classList.add('active');
   modal.classList.add('open');
@@ -9493,6 +9610,11 @@ function closeInputSekolahModal() {
 
 async function saveSekolahRecordFromForm(event) {
   event.preventDefault();
+
+  if (!validateSekolahStep(1) || !validateSekolahStep(2)) {
+    return;
+  }
+
   const idVal = document.getElementById('sekolahRecordId').value;
   const existingIdx = idVal ? sekolahRecords.findIndex(r => r.id === idVal) : -1;
   const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';

@@ -2249,169 +2249,356 @@
 
   <!-- Modal Input / Edit Data CKG Sekolah -->
   <div id="modalInputSekolah" class="modal-overlay">
-    <div class="modal-container" style="max-width: 860px;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff;">
+    <div class="modal-container" style="max-width: 860px; border-radius: 20px; overflow: hidden;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; padding: 18px 24px;">
         <div class="modal-title" id="modalInputSekolahTitle" style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
           <i class="bi bi-mortarboard-fill"></i> Form Input Skrining CKG Sekolah
         </div>
         <button class="modal-close" onclick="closeInputSekolahModal()" style="color: #fff;">&times;</button>
       </div>
-      <div class="modal-body" style="padding: 20px; max-height: 75vh; overflow-y: auto;">
+      
+      <div class="modal-body" style="padding: 24px; max-height: 75vh; overflow-y: auto;">
+        
+        <!-- Wizard Stepper Navigation -->
+        <div class="wizard-stepper-bar">
+          <div class="stepper-item active" id="stepperSekolahTab1" onclick="jumpSekolahStep(1)">
+            <div class="stepper-circle" id="stepperSekolahNum1">1</div>
+            <div class="stepper-title">Sekolah</div>
+          </div>
+          <div class="stepper-line" id="stepperSekolahLine1"></div>
+          
+          <div class="stepper-item" id="stepperSekolahTab2" onclick="jumpSekolahStep(2)">
+            <div class="stepper-circle" id="stepperSekolahNum2">2</div>
+            <div class="stepper-title">Identitas Siswa & Alamat</div>
+          </div>
+          <div class="stepper-line" id="stepperSekolahLine2"></div>
+          
+          <div class="stepper-item" id="stepperSekolahTab3" onclick="jumpSekolahStep(3)">
+            <div class="stepper-circle" id="stepperSekolahNum3">3</div>
+            <div class="stepper-title">Skrining Medis</div>
+          </div>
+        </div>
+
         <form id="formSekolahInput" onsubmit="saveSekolahRecordFromForm(event)">
           <input type="hidden" id="sekolahRecordId" value="">
-          
-          <div style="font-size: 13px; font-weight: 800; color: #7c3aed; margin-bottom: 12px; border-bottom: 1.5px solid #ede9fe; padding-bottom: 4px;">
-            <i class="bi bi-person-lines-fill"></i> 1. Identitas Siswa & Sekolah
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px;">
-            <div class="form-group">
-              <label class="form-label">Nama Siswa <span class="required">*</span></label>
-              <input type="text" id="schNama" class="form-control" required placeholder="Nama Lengkap Siswa" style="text-transform: uppercase;">
+          <input type="hidden" id="schPetugasEntry" value="">
+          <input type="hidden" id="schTanggalEntry" value="">
+
+          <!-- STEP 1: SEKOLAH -->
+          <div class="wizard-step-panel active" id="stepSekolah1">
+            <div style="background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1px solid #ddd6fe; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.06);">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: #7c3aed; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+                <i class="bi bi-mortarboard-fill"></i>
+              </div>
+              <div>
+                <h4 style="font-size: 14.5px; font-weight: 800; color: #5b21b6; margin: 0;">Tahap 1: Data Sekolah & Kelas</h4>
+                <p style="font-size: 12px; color: #6d28d9; margin: 2px 0 0 0; font-weight: 500;">Pilih nama sekolah asal siswa dan masukkan tingkat kelas.</p>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Kelas <span class="required">*</span></label>
-              <input type="text" id="schKelas" class="form-control" required placeholder="Contoh: 7A / 8B / 10 MIPA 1" style="text-transform: uppercase;">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Nama Sekolah <span class="required">*</span></label>
-              <input type="text" id="schSekolah" class="form-control" list="listSekolahOptions" required placeholder="Contoh: SMPN 1 BANJARAN" style="text-transform: uppercase;">
-              <datalist id="listSekolahOptions"></datalist>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Jenis Kelamin <span class="required">*</span></label>
-              <select id="schJk" class="form-control" required>
-                <option value="L">Laki-laki (L)</option>
-                <option value="P">Perempuan (P)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">NIK / NISN</label>
-              <input type="text" id="schNik" class="form-control" placeholder="16 Digit NIK / NISN" maxlength="16" oninput="handleSekolahNikInput(event)" style="font-family: monospace;">
-              <span style="font-size: 10.5px; color: #64748b; margin-top: 2px; display: block;">*Ketik 16 Digit NIK untuk auto-fill Lahir & JK</span>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Tanggal Lahir</label>
-              <input type="date" id="schTanggalLahir" class="form-control">
-            </div>
-            <div class="form-group">
-              <label class="form-label">No WhatsApp / Telepon</label>
-              <input type="text" id="schNoWhatsapp" class="form-control" placeholder="08xxxxxxxxxx">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 10px;">
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; font-size: 13px;">Nama Sekolah <span class="required" style="color: #dc2626;">*</span></label>
+                <select id="schSekolah" class="form-control" required style="font-weight: 700; height: 46px; font-size: 13px; border-radius: 10px;">
+                  <option value="">-- PILIH SEKOLAH --</option>
+                  <optgroup label="TK / PAUD">
+                    <option value="PP AL AMANAH">PP AL AMANAH</option>
+                    <option value="PP AL IKHLAS">PP AL IKHLAS</option>
+                    <option value="RA AL FITHRI">RA AL FITHRI</option>
+                    <option value="RA AN-NISAA">RA AN-NISAA</option>
+                    <option value="RA MIFTAHUL ULUM">RA MIFTAHUL ULUM</option>
+                    <option value="RA NURUL IHSAN">RA NURUL IHSAN</option>
+                    <option value="RA PERSIS NO. 6 BANJARAN">RA PERSIS NO. 6 BANJARAN</option>
+                    <option value="TK KARTINI">TK KARTINI</option>
+                    <option value="TK BINTANG">TK BINTANG</option>
+                    <option value="TK IT AL FATH INSANI">TK IT AL FATH INSANI</option>
+                    <option value="DEBUR OMBAK">DEBUR OMBAK</option>
+                    <option value="PP MELATI 1">PP MELATI 1</option>
+                    <option value="RA AL-HIDAYAH BANJARAN">RA AL-HIDAYAH BANJARAN</option>
+                    <option value="RA ALIKHLASH">RA ALIKHLASH</option>
+                    <option value="RA PERSIS 250">RA PERSIS 250</option>
+                    <option value="TK BAIDURI">TK BAIDURI</option>
+                    <option value="TK ISLAM AL-FURQON">TK ISLAM AL-FURQON</option>
+                    <option value="RA AL - MUTTAHID">RA AL - MUTTAHID</option>
+                    <option value="RA LUGINA GARDEN">RA LUGINA GARDEN</option>
+                    <option value="KB AMANI">KB AMANI</option>
+                    <option value="KB AVICENA">KB AVICENA</option>
+                    <option value="BAMBIM PERSIS 428 MUTIARA HIKMAH">BAMBIM PERSIS 428 MUTIARA HIKMAH</option>
+                    <option value="PP AL-HIKMAH">PP AL-HIKMAH</option>
+                    <option value="PP BINA MUDA">PP BINA MUDA</option>
+                    <option value="PP DARUL ULUM">PP DARUL ULUM</option>
+                    <option value="PP PLAMBOYAN 1">PP PLAMBOYAN 1</option>
+                    <option value="PP TUNAS MEKAR">PP TUNAS MEKAR</option>
+                    <option value="RA AL-MUWAFIQ BANJARAN">RA AL-MUWAFIQ BANJARAN</option>
+                    <option value="RA AULIA">RA AULIA</option>
+                    <option value="RA AZ-ZAHRA">RA AZ-ZAHRA</option>
+                    <option value="KB AZ-ZAHRA">KB AZ-ZAHRA</option>
+                    <option value="RA M THREE">RA M THREE</option>
+                    <option value="RA MIFTAAHUSSA'ADAH">RA MIFTAAHUSSA'ADAH</option>
+                    <option value="RA PERSIS 272 CIAPUS">RA PERSIS 272 CIAPUS</option>
+                    <option value="TK NURUL FALAH">TK NURUL FALAH</option>
+                    <option value="RA AL IKHLAS">RA AL IKHLAS</option>
+                    <option value="KB MUTIARA">KB MUTIARA</option>
+                    <option value="KB ASSALAM">KB ASSALAM</option>
+                    <option value="PP KUNCUP MEKAR">PP KUNCUP MEKAR</option>
+                    <option value="PP MEKAR MANDIRI">PP MEKAR MANDIRI</option>
+                    <option value="PP RAFLESIA">PP RAFLESIA</option>
+                    <option value="RA DARUSSALAM">RA DARUSSALAM</option>
+                    <option value="RA PERSIS 364">RA PERSIS 364</option>
+                    <option value="RA PERSIS 365 NASRUL HAQ">RA PERSIS 365 NASRUL HAQ</option>
+                    <option value="TK DERMAWAN">TK DERMAWAN</option>
+                    <option value="TK WIDI ASIH">TK WIDI ASIH</option>
+                    <option value="KB NURUL HIDAYAH">KB NURUL HIDAYAH</option>
+                    <option value="KB AL-IKHLAS">KB AL-IKHLAS</option>
+                    <option value="KB AL AZIZ">KB AL AZIZ</option>
+                    <option value="BAMBIM AL HIDAYAH">BAMBIM AL HIDAYAH</option>
+                    <option value="PP TAMAN SEKAR I RW3">PP TAMAN SEKAR I RW3</option>
+                    <option value="PP TAMAN SEKAR IV RW2">PP TAMAN SEKAR IV RW2</option>
+                    <option value="KOBER ANNIDA">KOBER ANNIDA</option>
+                    <option value="RA ANNIDA">RA ANNIDA</option>
+                    <option value="RA DAARUL HUSSAINI">RA DAARUL HUSSAINI</option>
+                    <option value="RA NAHJUSSALAM">RA NAHJUSSALAM</option>
+                    <option value="TK PGRI CIBARIBIS">TK PGRI CIBARIBIS</option>
+                    <option value="TAMAN SEKAR RW4">TAMAN SEKAR RW4</option>
+                    <option value="TAMAN SEKAR RW11">TAMAN SEKAR RW11</option>
+                    <option value="TAMAN SEKAR RW16">TAMAN SEKAR RW16</option>
+                    <option value="KB ALIF">KB ALIF</option>
+                    <option value="RA SAIFUL ULUM">RA SAIFUL ULUM</option>
+                  </optgroup>
+                  <optgroup label="SD / MI">
+                    <option value="SDN ARIASACANAGARA">SDN ARIASACANAGARA</option>
+                    <option value="SDN BANJARAN 01">SDN BANJARAN 01</option>
+                    <option value="SDN BANJARAN 02">SDN BANJARAN 02</option>
+                    <option value="SDN BANJARAN 04">SDN BANJARAN 04</option>
+                    <option value="SDN BANJARAN 06">SDN BANJARAN 06</option>
+                    <option value="SDN BANJARAN 07">SDN BANJARAN 07</option>
+                    <option value="SDN BANJARAN 08">SDN BANJARAN 08</option>
+                    <option value="SDN BANJARAN 09">SDN BANJARAN 09</option>
+                    <option value="SD CAHAYA IBU">SD CAHAYA IBU</option>
+                    <option value="MI CHOIRUL HUDA">MI CHOIRUL HUDA</option>
+                    <option value="SDN BANJARAN 05">SDN BANJARAN 05</option>
+                    <option value="SDN CIHAMERANG">SDN CIHAMERANG</option>
+                    <option value="SDN BATUKERIS">SDN BATUKERIS</option>
+                    <option value="SDN KIARAPAYUNG 01">SDN KIARAPAYUNG 01</option>
+                    <option value="SDN KIARAPAYUNG 02">SDN KIARAPAYUNG 02</option>
+                    <option value="SDN SIRAH RANCA 01">SDN SIRAH RANCA 01</option>
+                    <option value="SDN SIRAH RANCA 02">SDN SIRAH RANCA 02</option>
+                    <option value="MI PERSIS 119 CIHAMERANG">MI PERSIS 119 CIHAMERANG</option>
+                    <option value="SD IT ZAKIA">SD IT ZAKIA</option>
+                    <option value="SDN CIAPUS 01">SDN CIAPUS 01</option>
+                    <option value="SDN PANGAUBAN">SDN PANGAUBAN</option>
+                    <option value="SDN PONDOKSIRAP">SDN PONDOKSIRAP</option>
+                    <option value="M-THREE CIAPUS">M-THREE CIAPUS</option>
+                    <option value="MI MIFTAHUSSADAH CIAPUS">MI MIFTAHUSSADAH CIAPUS</option>
+                    <option value="SDN CIAPUS 02">SDN CIAPUS 02</option>
+                    <option value="SDN CIGENTUR">SDN CIGENTUR</option>
+                    <option value="SDN MEKARJAYA">SDN MEKARJAYA</option>
+                    <option value="SDN PASIRWARU">SDN PASIRWARU</option>
+                    <option value="SD ALIF">SD ALIF</option>
+                    <option value="SDN CIPEUNDEUY">SDN CIPEUNDEUY</option>
+                    <option value="SDN TARAJUSARI">SDN TARAJUSARI</option>
+                    <option value="MI PERSIS 278 TARAJUSARI">MI PERSIS 278 TARAJUSARI</option>
+                    <option value="MI DARUSSALAM TARAJUSARI">MI DARUSSALAM TARAJUSARI</option>
+                  </optgroup>
+                  <optgroup label="SMP / MTS">
+                    <option value="SMP PASUNDAN 1 BANJARAN">SMP PASUNDAN 1 BANJARAN</option>
+                    <option value="SMP PGRI BANJARAN BANWET">SMP PGRI BANJARAN BANWET</option>
+                    <option value="MTS PERSIS 31 BANJARAN">MTS PERSIS 31 BANJARAN</option>
+                    <option value="SMPN 1 BANJARAN">SMPN 1 BANJARAN</option>
+                    <option value="SMP 3 BANJARAN">SMP 3 BANJARAN</option>
+                    <option value="MTS MIFTAHUL HUDA BANWET">MTS MIFTAHUL HUDA BANWET</option>
+                    <option value="SMP T AL FALAH CIAPUS">SMP T AL FALAH CIAPUS</option>
+                    <option value="SMP PGRI CIBARIBIS BANJARAN">SMP PGRI CIBARIBIS BANJARAN</option>
+                    <option value="MTS PERSIS 282 BANWET">MTS PERSIS 282 BANWET</option>
+                    <option value="SMP IT NASRUL HAQ TARAJUSARI">SMP IT NASRUL HAQ TARAJUSARI</option>
+                  </optgroup>
+                  <optgroup label="SMA / MA / SMK">
+                    <option value="SMA PASUNDAN BANJARAN">SMA PASUNDAN BANJARAN</option>
+                    <option value="SMK PGRI CIBARIBIS MEKARJAYA">SMK PGRI CIBARIBIS MEKARJAYA</option>
+                    <option value="SMK PLUS PRATAMA ADI BANWET">SMK PLUS PRATAMA ADI BANWET</option>
+                    <option value="SMK KHARISMA NUSANTARA BANWET">SMK KHARISMA NUSANTARA BANWET</option>
+                    <option value="SMK PASUNDAN 1 BANJARAN">SMK PASUNDAN 1 BANJARAN</option>
+                    <option value="MA PERSIS 31 BANJARAN">MA PERSIS 31 BANJARAN</option>
+                    <option value="SMK PASUNDAN 2 BANJARAN">SMK PASUNDAN 2 BANJARAN</option>
+                    <option value="MA MIFTAHUL HUDA CIAPUS">MA MIFTAHUL HUDA CIAPUS</option>
+                    <option value="SMA AL FALAH CIAPUS">SMA AL FALAH CIAPUS</option>
+                    <option value="SMA N 1 BANJARAN">SMA N 1 BANJARAN</option>
+                    <option value="SMK HANDAYANI TARAJUSARI">SMK HANDAYANI TARAJUSARI</option>
+                    <option value="MA PERSIS 282 BANJARAN">MA PERSIS 282 BANJARAN</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700; font-size: 13px;">Kelas <span class="required" style="color: #dc2626;">*</span></label>
+                <input type="text" id="schKelas" class="form-control" required placeholder="Contoh: 7A / 8B / 10 MIPA 1" style="text-transform: uppercase; height: 46px; font-size: 13px; font-weight: 700; border-radius: 10px;">
+              </div>
             </div>
           </div>
 
-          <div style="font-size: 13px; font-weight: 800; color: #7c3aed; margin-bottom: 12px; border-bottom: 1.5px solid #ede9fe; padding-bottom: 4px;">
-            <i class="bi bi-geo-alt-fill"></i> 2. Alamat Domisili Siswa
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px;">
-            <div class="form-group">
-              <label class="form-label">Provinsi</label>
-              <input type="text" id="schProvinsi" class="form-control" value="Jawa Barat" style="text-transform: uppercase;">
+          <!-- STEP 2: IDENTITAS SISWA & ALAMAT -->
+          <div class="wizard-step-panel" id="stepSekolah2">
+            <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06);">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+                <i class="bi bi-person-vcard-fill"></i>
+              </div>
+              <div>
+                <h4 style="font-size: 14.5px; font-weight: 800; color: #1e40af; margin: 0;">Tahap 2: Identitas Siswa & Alamat Domisili</h4>
+                <p style="font-size: 12px; color: #1d4ed8; margin: 2px 0 0 0; font-weight: 500;">Lengkapi data diri siswa beserta lokasi tempat tinggalnya.</p>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Kab / Kota</label>
-              <input type="text" id="schKabKota" class="form-control" value="Kab. Bandung" style="text-transform: uppercase;">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Kecamatan</label>
-              <input type="text" id="schKecamatan" class="form-control" value="Banjaran" style="text-transform: uppercase;">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Kelurahan / Desa</label>
-              <input type="text" id="schKelurahan" class="form-control" list="listKelurahanSekolahOptions" value="Tarajusari" style="text-transform: uppercase;">
-              <datalist id="listKelurahanSekolahOptions"></datalist>
-            </div>
-          </div>
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label">Alamat Lengkap / Kp / RT / RW</label>
-            <input type="text" id="schAlamat" class="form-control" placeholder="Kp. Pajagalan RT 02 RW 05" style="text-transform: uppercase;">
-          </div>
 
-          <div style="font-size: 13px; font-weight: 800; color: #7c3aed; margin-bottom: 12px; border-bottom: 1.5px solid #ede9fe; padding-bottom: 4px;">
-            <i class="bi bi-heart-pulse-fill"></i> 3. Hasil Pemeriksaan Fisik & Skrining Medis
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
-            <div class="form-group">
-              <label class="form-label">BB (kg)</label>
-              <input type="number" step="0.1" id="schBb" class="form-control" placeholder="0">
+            <div style="font-size: 13px; font-weight: 800; color: #2563eb; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; border-bottom: 1.5px solid #dbeafe; padding-bottom: 4px;">
+              <i class="bi bi-person-lines-fill"></i> 1. Identitas Diri Siswa
             </div>
-            <div class="form-group">
-              <label class="form-label">TB (cm)</label>
-              <input type="number" step="0.1" id="schTb" class="form-control" placeholder="0">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+              <div class="form-group">
+                <label class="form-label">Nama Siswa <span class="required" style="color: #dc2626;">*</span></label>
+                <input type="text" id="schNama" class="form-control" required placeholder="Nama Lengkap Siswa" style="text-transform: uppercase;">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Jenis Kelamin <span class="required" style="color: #dc2626;">*</span></label>
+                <select id="schJk" class="form-control" required>
+                  <option value="L">Laki-laki (L)</option>
+                  <option value="P">Perempuan (P)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">NIK / NISN</label>
+                <input type="text" id="schNik" class="form-control" placeholder="16 Digit NIK / NISN" maxlength="16" oninput="handleSekolahNikInput(event)" style="font-family: monospace;">
+                <span style="font-size: 10.5px; color: #64748b; margin-top: 2px; display: block;">*Ketik 16 Digit NIK untuk auto-fill Lahir & JK</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tanggal Lahir</label>
+                <input type="date" id="schTanggalLahir" class="form-control">
+              </div>
+              <div class="form-group" style="grid-column: span 2;">
+                <label class="form-label">No WhatsApp / Telepon</label>
+                <input type="text" id="schNoWhatsapp" class="form-control" placeholder="08xxxxxxxxxx">
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">LP (cm)</label>
-              <input type="number" step="0.1" id="schLp" class="form-control" placeholder="0">
-            </div>
-            <div class="form-group">
-              <label class="form-label">TD Sistolik</label>
-              <input type="number" id="schTdSistolik" class="form-control" placeholder="110">
-            </div>
-            <div class="form-group">
-              <label class="form-label">TD Diastolik</label>
-              <input type="number" id="schTdDiastolik" class="form-control" placeholder="70">
-            </div>
-          </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
-            <div class="form-group">
-              <label class="form-label">Gula Darah</label>
-              <input type="text" id="schGulaDarah" class="form-control" placeholder="100">
+            <div style="font-size: 13px; font-weight: 800; color: #2563eb; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; border-bottom: 1.5px solid #dbeafe; padding-bottom: 4px;">
+              <i class="bi bi-geo-alt-fill"></i> 2. Alamat Domisili Siswa
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+              <div class="form-group">
+                <label class="form-label">Provinsi</label>
+                <input type="text" id="schProvinsi" class="form-control" value="JAWA BARAT" style="text-transform: uppercase;">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kab / Kota</label>
+                <input type="text" id="schKabKota" class="form-control" value="KAB. BANDUNG" style="text-transform: uppercase;">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kecamatan</label>
+                <input type="text" id="schKecamatan" class="form-control" value="BANJARAN" style="text-transform: uppercase;">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kelurahan / Desa</label>
+                <input type="text" id="schKelurahan" class="form-control" list="listKelurahanSekolahOptions" value="TARAJUSARI" style="text-transform: uppercase;">
+                <datalist id="listKelurahanSekolahOptions"></datalist>
+              </div>
             </div>
             <div class="form-group">
-              <label class="form-label">HB (g/dL)</label>
-              <input type="text" id="schHb" class="form-control" placeholder="13.5">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Karies Gigi</label>
-              <select id="schKaries" class="form-control">
-                <option value="Tidak">Tidak</option>
-                <option value="Ya">Ya (Berlubang)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Kebugaran</label>
-              <select id="schKebugaran" class="form-control">
-                <option value="Baik">Baik</option>
-                <option value="Cukup">Cukup</option>
-                <option value="Kurang">Kurang</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Menstruasi</label>
-              <select id="schMenstruasi" class="form-control">
-                <option value="Belum">Belum</option>
-                <option value="Teratur">Teratur</option>
-                <option value="Tidak Teratur">Tidak Teratur</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Kacamata</label>
-              <select id="schKacamata" class="form-control">
-                <option value="Tidak">Tidak</option>
-                <option value="Ya">Ya</option>
-              </select>
+              <label class="form-label">Alamat Lengkap / Kp / RT / RW</label>
+              <input type="text" id="schAlamat" class="form-control" placeholder="KP. PAJAGALAN RT 02 RW 05" style="text-transform: uppercase;">
             </div>
           </div>
 
-          <div style="font-size: 13px; font-weight: 800; color: #7c3aed; margin-bottom: 12px; border-bottom: 1.5px solid #ede9fe; padding-bottom: 4px;">
-            <i class="bi bi-person-badge-fill"></i> 4. Informasi Petugas & Tanggal Entry
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
-            <div class="form-group">
-              <label class="form-label">Petugas Entry</label>
-              <input type="text" id="schPetugasEntry" class="form-control" value="Admin">
+          <!-- STEP 3: SKRINING MEDIS -->
+          <div class="wizard-step-panel" id="stepSekolah3">
+            <div style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #a7f3d0; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.06);">
+              <div style="width: 44px; height: 44px; border-radius: 12px; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+                <i class="bi bi-heart-pulse-fill"></i>
+              </div>
+              <div>
+                <h4 style="font-size: 14.5px; font-weight: 800; color: #065f46; margin: 0;">Tahap 3: Hasil Skrining & Pemeriksaan Medis</h4>
+                <p style="font-size: 12px; color: #047857; margin: 2px 0 0 0; font-weight: 500;">Input hasil pengukuran fisik, laboratorium, dan skrining kesehatan siswa.</p>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Tanggal Entry / Skrining</label>
-              <input type="date" id="schTanggalEntry" class="form-control">
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+              <div class="form-group">
+                <label class="form-label">BB (kg)</label>
+                <input type="number" step="0.1" id="schBb" class="form-control" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label class="form-label">TB (cm)</label>
+                <input type="number" step="0.1" id="schTb" class="form-control" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label class="form-label">LP (cm)</label>
+                <input type="number" step="0.1" id="schLp" class="form-control" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label class="form-label">TD Sistolik</label>
+                <input type="number" id="schTdSistolik" class="form-control" placeholder="110">
+              </div>
+              <div class="form-group">
+                <label class="form-label">TD Diastolik</label>
+                <input type="number" id="schTdDiastolik" class="form-control" placeholder="70">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label class="form-label">Gula Darah</label>
+                <input type="text" id="schGulaDarah" class="form-control" placeholder="100">
+              </div>
+              <div class="form-group">
+                <label class="form-label">HB (g/dL)</label>
+                <input type="text" id="schHb" class="form-control" placeholder="13.5">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Karies Gigi</label>
+                <select id="schKaries" class="form-control">
+                  <option value="Tidak">Tidak</option>
+                  <option value="Ya">Ya (Berlubang)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kebugaran</label>
+                <select id="schKebugaran" class="form-control">
+                  <option value="Baik">Baik</option>
+                  <option value="Cukup">Cukup</option>
+                  <option value="Kurang">Kurang</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Menstruasi</label>
+                <select id="schMenstruasi" class="form-control">
+                  <option value="Belum">Belum</option>
+                  <option value="Teratur">Teratur</option>
+                  <option value="Tidak Teratur">Tidak Teratur</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kacamata</label>
+                <select id="schKacamata" class="form-control">
+                  <option value="Tidak">Tidak</option>
+                  <option value="Ya">Ya</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 14px; border-top: 1px solid #e2e8f0;">
-            <button type="button" class="btn btn-secondary" onclick="closeInputSekolahModal()">Batal</button>
-            <button type="submit" class="btn btn-purple" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; font-weight: 700;">
-              <i class="bi bi-save-fill"></i> Simpan Data CKG Sekolah
+          <div class="modal-footer" style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 0 0; margin-top: 20px; border-top: 1px solid #e2e8f0;">
+            <button type="button" class="btn btn-secondary" onclick="closeInputSekolahModal()" style="border-radius: 10px; padding: 9px 18px; font-weight: 700;">
+              Batal
             </button>
+            
+            <div style="display: flex; gap: 10px;">
+              <button type="button" class="btn btn-secondary" id="btnSekolahPrev" onclick="changeSekolahStep(-1)" style="display: none; border-radius: 10px; padding: 9px 20px; font-weight: 700;">
+                <i class="bi bi-arrow-left"></i> Kembali
+              </button>
+              <button type="button" class="btn btn-purple" id="btnSekolahNext" onclick="changeSekolahStep(1)" style="border-radius: 10px; padding: 9px 22px; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);">
+                Lanjut Tahap 2 <i class="bi bi-arrow-right"></i>
+              </button>
+              <button type="submit" class="btn btn-emerald" id="btnSekolahSubmit" style="display: none; border-radius: 10px; padding: 9px 24px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #fff; border: none; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);">
+                <i class="bi bi-check-circle-fill"></i> Simpan Data CKG Sekolah
+              </button>
+            </div>
           </div>
         </form>
       </div>
