@@ -2504,8 +2504,8 @@
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">NIK / NISN</label>
-                <input type="text" id="schNik" class="form-control" placeholder="16 Digit NIK / NISN" maxlength="16" oninput="handleSekolahNikInput(event)" style="font-family: monospace;">
+                <label class="form-label">NIK (16 Digit) <span class="required" style="color: #dc2626;">*</span></label>
+                <input type="text" id="schNik" class="form-control" placeholder="16 Digit NIK" maxlength="16" required oninput="handleSekolahNikInput(event)" style="font-family: monospace; font-weight: 700;">
                 <span style="font-size: 10.5px; color: #64748b; margin-top: 2px; display: block;">*Ketik 16 Digit NIK untuk auto-fill Lahir & JK</span>
               </div>
               <div class="form-group">
@@ -2524,25 +2524,28 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
               <div class="form-group">
                 <label class="form-label">Provinsi</label>
-                <input type="text" id="schProvinsi" class="form-control" value="JAWA BARAT" style="text-transform: uppercase;">
+                <input type="text" id="schProvinsi" class="form-control" list="listProvinsiSekolahOptions" value="JAWA BARAT" placeholder="PILIH / KETIK PROVINSI" onchange="updateSekolahAddressDatalists()" style="text-transform: uppercase;">
+                <datalist id="listProvinsiSekolahOptions"></datalist>
               </div>
               <div class="form-group">
                 <label class="form-label">Kab / Kota</label>
-                <input type="text" id="schKabKota" class="form-control" value="KAB. BANDUNG" style="text-transform: uppercase;">
+                <input type="text" id="schKabKota" class="form-control" list="listKabKotaSekolahOptions" value="KAB. BANDUNG" placeholder="PILIH / KETIK KAB/KOTA" onchange="updateSekolahAddressDatalists()" style="text-transform: uppercase;">
+                <datalist id="listKabKotaSekolahOptions"></datalist>
               </div>
               <div class="form-group">
                 <label class="form-label">Kecamatan</label>
-                <input type="text" id="schKecamatan" class="form-control" value="BANJARAN" style="text-transform: uppercase;">
+                <input type="text" id="schKecamatan" class="form-control" list="listKecamatanSekolahOptions" value="BANJARAN" placeholder="PILIH / KETIK KECAMATAN" onchange="updateSekolahAddressDatalists()" style="text-transform: uppercase;">
+                <datalist id="listKecamatanSekolahOptions"></datalist>
               </div>
               <div class="form-group">
                 <label class="form-label">Kelurahan / Desa</label>
-                <input type="text" id="schKelurahan" class="form-control" list="listKelurahanSekolahOptions" value="TARAJUSARI" style="text-transform: uppercase;">
+                <input type="text" id="schKelurahan" class="form-control" list="listKelurahanSekolahOptions" value="TARAJUSARI" placeholder="PILIH / KETIK KELURAHAN" style="text-transform: uppercase;">
                 <datalist id="listKelurahanSekolahOptions"></datalist>
               </div>
             </div>
             <div class="form-group">
               <label class="form-label">Alamat Lengkap / Kp / RT / RW</label>
-              <input type="text" id="schAlamat" class="form-control" placeholder="KP. PAJAGALAN RT 02 RW 05" style="text-transform: uppercase;">
+              <input type="text" id="schAlamat" class="form-control" placeholder="KP. PAJAGALAN RT 02 RW 05" oninput="handleSekolahAddressInput(event)" style="text-transform: uppercase;">
             </div>
           </div>
 

@@ -9774,6 +9774,13 @@ function validateSekolahStep(stepNum) {
       document.getElementById('schNama')?.focus();
       return false;
     }
+    const nik = document.getElementById('schNik')?.value.trim();
+    if (!nik || nik.length !== 16 || !/^\d{16}$/.test(nik)) {
+      if (typeof showToast === 'function') showToast('NIK wajib diisi tepat 16 digit angka!', 'warning');
+      else alert('NIK wajib diisi tepat 16 digit angka!');
+      document.getElementById('schNik')?.focus();
+      return false;
+    }
   }
   return true;
 }
@@ -9798,14 +9805,79 @@ function jumpSekolahStep(stepNum) {
 }
 
 function populateSekolahDatalists() {
-  const kelurahanList = document.getElementById('listKelurahanSekolahOptions');
+  const provList = document.getElementById('listProvinsiSekolahOptions');
+  const kabList = document.getElementById('listKabKotaSekolahOptions');
+  const kecList = document.getElementById('listKecamatanSekolahOptions');
+  const kelList = document.getElementById('listKelurahanSekolahOptions');
 
-  if (kelurahanList) {
-    const desaBanjaran = (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA['Jawa Barat'] && WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung'] && WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung']['Banjaran'])
-      ? WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung']['Banjaran']
-      : ['Banjaran', 'Banjaran Wetan', 'Ciapus', 'Kamasan', 'Kiangroke', 'Margahayu', 'Neglasari', 'Pasirhuni', 'Sindangpanon', 'Tarajusari'];
-    kelurahanList.innerHTML = desaBanjaran.map(d => `<option value="${d.toUpperCase()}"></option>`).join('');
+  if (provList) {
+    const provs = ['JAWA BARAT', 'DKI JAKARTA', 'JAWA TENGAH', 'JAWA TIMUR', 'BANTEN'];
+    provList.innerHTML = provs.map(p => `<option value="${p}"></option>`).join('');
   }
+
+  if (kabList) {
+    const kabs = ['KAB. BANDUNG', 'KOTA BANDUNG', 'KAB. BANDUNG BARAT', 'KOTA CIMAHI', 'KAB. SUMEDANG', 'KAB. GARUT'];
+    kabList.innerHTML = kabs.map(k => `<option value="${k}"></option>`).join('');
+  }
+
+  if (kecList) {
+    const kecs = ['BANJARAN', 'CIMAUNG', 'CANGKUANG', 'ARJASARI', 'PAMEUNGPEUK', 'SOREANG', 'KATAPANG', 'DAYEUHKOLOT'];
+    kecList.innerHTML = kecs.map(k => `<option value="${k}"></option>`).join('');
+  }
+
+  if (kelList) {
+    let desaBanjaran = ['TARAJUSARI', 'BANJARAN KOTA', 'BANJARAN WETAN', 'CIAPUS', 'KAMASAN', 'KIANGROKE', 'MARGAHAYU', 'NEGLASARI', 'PASIRHUNI', 'SINDANGPANON'];
+    if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA['Jawa Barat'] && WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung'] && WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung']['Banjaran']) {
+      desaBanjaran = WILAYAH_DATA['Jawa Barat']['Kabupaten Bandung']['Banjaran'].map(d => d.toUpperCase());
+    }
+    kelList.innerHTML = desaBanjaran.map(d => `<option value="${d}"></option>`).join('');
+  }
+}
+
+function updateSekolahAddressDatalists() {
+  // Option to dynamically refresh sub-level datalists when prov/kab/kec changes
+  populateSekolahDatalists();
+}
+
+let sekolahAddressTimeout = null;
+function handleSekolahAddressInput(e) {
+  const addrText = (e.target.value || '').trim();
+  if (addrText.length < 3) return;
+
+  clearTimeout(sekolahAddressTimeout);
+  sekolahAddressTimeout = setTimeout(() => {
+    const textUpper = addrText.toUpperCase();
+    const fullKnowledgeMap = (typeof BANJARAN_KAMPUNG_MAP !== 'undefined') ? [...BANJARAN_KAMPUNG_MAP, ...(typeof getLearnedKampungMap === 'function' ? getLearnedKampungMap() : [])] : [];
+
+    let localHit = null;
+    for (let entry of fullKnowledgeMap) {
+      if (!entry.keywords) continue;
+      for (let kw of entry.keywords) {
+        const regex = new RegExp(`\\b${kw.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
+        if (regex.test(textUpper) || textUpper.includes(kw)) {
+          localHit = entry;
+          break;
+        }
+      }
+      if (localHit) break;
+    }
+
+    if (localHit) {
+      const schProv = document.getElementById('schProvinsi');
+      const schKab = document.getElementById('schKabKota');
+      const schKec = document.getElementById('schKecamatan');
+      const schKel = document.getElementById('schKelurahan');
+
+      if (schProv && localHit.prov) schProv.value = localHit.prov.toUpperCase();
+      if (schKab && localHit.kab) {
+        let kabName = localHit.kab.toUpperCase();
+        if (kabName.includes('KABUPATEN BANDUNG')) kabName = 'KAB. BANDUNG';
+        schKab.value = kabName;
+      }
+      if (schKec && localHit.kec) schKec.value = localHit.kec.toUpperCase();
+      if (schKel && localHit.kel) schKel.value = localHit.kel.toUpperCase();
+    }
+  }, 180);
 }
 
 function handleSekolahNikInput(e) {
