@@ -12115,6 +12115,132 @@ function filterMapMarkers() {
   renderMapMarkers();
 }
 
+async function deleteAddressPin(kw) {
+  if (!checkAdminRoleOnly('Penghapusan Titik Alamat')) return;
+
+  const confirm = await Swal.fire({
+    title: 'Hapus Titik Alamat?',
+    text: `Apakah Anda yakin ingin menghapus titik kampung "${kw}" dari Kamus Alamat (Lokal & Cloud D1)?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus Titik',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#e11d48'
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  // 1. Remove from local storage
+  let localList = typeof getLearnedKampungMap === 'function' ? getLearnedKampungMap() : [];
+  const cleanKw = String(kw).toUpperCase().replace(/^KP\.\s*/i, '').trim();
+  localList = localList.filter(l => {
+    const lKw = (Array.isArray(l.keywords) ? l.keywords[0] : l.keywords) || '';
+    return String(lKw).toUpperCase().trim() !== cleanKw;
+  });
+  localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(localList));
+
+  // 2. Delete from D1 Cloud Server
+  try {
+    await fetch(`/api/kamus?keyword=${encodeURIComponent(cleanKw)}`, { method: 'DELETE' });
+  } catch (err) {
+    console.warn('Delete keyword D1 error:', err);
+  }
+
+  // 3. Refresh UI
+  if (typeof updateAiDbSavedCounterUI === 'function') updateAiDbSavedCounterUI();
+  if (typeof renderMapMarkers === 'function') renderMapMarkers();
+  if (typeof showToast === 'function') showToast(`Titik "${kw}" berhasil dihapus.`, 'success');
+}
+
+async function resetAllAddressPinsWithAi() {
+  if (!checkAdminRoleOnly('Reset Semua Titik Alamat')) return;
+
+  if (typeof Swal === 'undefined') return;
+
+  const result = await Swal.fire({
+    title: '⚠️ Reset & Hapus Seluruh Titik Alamat?',
+    html: `
+      <div style="text-align: left; font-size: 13px; color: #334155;">
+        <p style="color: #e11d48; font-weight: 700; margin-bottom: 8px;">
+          PERHATIAN: Tindakan ini akan menghapus SELURUH titik kamus alamat tersimpan di:
+        </p>
+        <ul style="line-height: 1.6; padding-left: 20px; color: #64748b; margin-bottom: 10px; font-weight: 600;">
+          <li>💾 Storage Lokal Browser (LocalStorage)</li>
+          <li>☁️ Cloud D1 Database Server (Tabel kamus_alamat)</li>
+        </ul>
+        <p style="font-size: 12px; color: #475569;">
+          Setelah di-reset, status penjelajahan AI Autonomous Explorer akan dikembalikan ke awal (0 Titik) sehingga pemindaian dapat dimulai dari nol.
+        </p>
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: '🗑️ Ya, Reset Semua Titik',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#e11d48',
+    cancelButtonColor: '#64748b'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    // 1. Hapus data di LocalStorage
+    localStorage.removeItem('ckg_learned_kampung_map');
+
+    // 2. Hapus data di Cloud D1 Database
+    try {
+      await fetch('/api/kamus', { method: 'DELETE' });
+    } catch (err) {
+      console.warn('Reset D1 Kamus Error:', err);
+    }
+
+    // 3. Reset status & pointer AI Autonomous Explorer
+    isAiExplorerActive = false;
+    if (aiExplorerInterval) clearInterval(aiExplorerInterval);
+    aiCurrentRegionIndex = 0;
+    aiCurrentKecIndex = 0;
+    aiCurrentPointIndex = 0;
+    aiTrajectoryPoints = [];
+
+    if (aiTrajectoryPolyline && leafletMap) {
+      leafletMap.removeLayer(aiTrajectoryPolyline);
+      aiTrajectoryPolyline = null;
+    }
+    if (aiRadarMarker && leafletMap) {
+      leafletMap.removeLayer(aiRadarMarker);
+      aiRadarMarker = null;
+    }
+
+    // 4. Update UI Badges & Markers
+    if (typeof updateAiDbSavedCounterUI === 'function') updateAiDbSavedCounterUI();
+    if (typeof renderMapMarkers === 'function') renderMapMarkers();
+
+    const btnHeader = document.getElementById('btnAiExplorerToggleHeader');
+    const btnHud = document.getElementById('btnToggleAiExplorer');
+    const badge = document.getElementById('aiExplorerStateBadge');
+
+    if (btnHeader) btnHeader.innerHTML = `<i class="bi bi-play-fill"></i> Mulai Jelajah AI`;
+    if (btnHud) btnHud.innerHTML = `<i class="bi bi-play-fill"></i> Mulai Jelajah AI`;
+    if (badge) {
+      badge.className = 'badge badge-amber';
+      badge.innerHTML = `<i class="bi bi-pause-circle-fill"></i> DI-JEDA`;
+    }
+
+    updateAiLiveLog(`🔄 Seluruh titik kamus alamat berhasil di-reset ke 0. Siap untuk scan dari nol.`);
+
+    Swal.fire({
+      title: '✨ Reset Berhasil!',
+      text: 'Seluruh titik kamus alamat di lokal & Cloud D1 Database telah dihapus. Penjelajahan AI siap dimulai dari nol.',
+      icon: 'success',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#10b981'
+    });
+  } catch (e) {
+    console.error('Error reset all pins:', e);
+    if (typeof showToast === 'function') showToast('Gagal memproses reset titik.', 'danger');
+  }
+}
+
 function openAddPinModalFromMap(lat = null, lng = null) {
   if (!checkAdminRoleOnly('Penambahan Titik Alamat Manual')) return;
 

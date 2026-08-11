@@ -1198,7 +1198,7 @@
               <button class="btn btn-emerald" onclick="document.getElementById('excelAddressFileInput').click()" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; border: none; font-weight: 700;">
                 <i class="bi bi-file-earmark-excel-fill"></i> 📤 Import Kamus Alamat (Excel)
               </button>
-              <button class="btn btn-rose" onclick="clearLearnedKampungMap()" style="background: linear-gradient(135deg, #e11d48, #f43f5e); color: #fff; border: none; font-weight: 700;">
+              <button class="btn btn-rose admin-only" onclick="resetAllAddressPinsWithAi()" style="background: linear-gradient(135deg, #e11d48, #f43f5e); color: #fff; border: none; font-weight: 700;">
                 <i class="bi bi-trash-fill"></i> Reset Kamus Pembelajaran
               </button>
             </div>
@@ -1538,9 +1538,14 @@
 
             <!-- Right Sidebar: Pinned Address Directory Card -->
             <div class="card-panel" style="margin-bottom: 0; padding: 14px; display: flex; flex-direction: column; height: 540px;">
-              <div style="font-size: 14px; font-weight: 700; color: var(--text-color); padding-bottom: 8px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-size: 14px; font-weight: 700; color: var(--text-color); padding-bottom: 8px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
                 <span><i class="bi bi-pin-map-fill" style="color: #0284c7;"></i> Daftar Titik Alamat</span>
-                <span id="mapSidebarCountBadge" class="badge badge-purple" style="font-size: 10.5px;">0 Titik</span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <button class="btn btn-sm admin-only" onclick="resetAllAddressPinsWithAi()" style="font-size: 10.5px; padding: 3px 8px; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 700;" title="Khusus Admin: Hapus & Reset Seluruh Titik Kamus Alamat (Lokal & Cloud D1)">
+                    <i class="bi bi-trash3-fill"></i> Reset Semua Titik
+                  </button>
+                  <span id="mapSidebarCountBadge" class="badge badge-purple" style="font-size: 10.5px;">0 Titik</span>
+                </div>
               </div>
 
               <div id="mapAddressListContainer" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
