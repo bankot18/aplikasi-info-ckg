@@ -1116,16 +1116,16 @@ export default {
           // Attempt 1: Cloudflare Workers AI execution if env.AI is bound
           if (env.AI) {
             try {
-              const systemPrompt = `Anda adalah AI Geocoding Spesialis Alamat Indonesia untuk Puskesmas.
-Tugas Anda: Deteksi dan pisahkan teks alamat bebas menjadi 4 Tingkat Wilayah Administrasi Indonesia berikut (Gunakan JSON murni tanpa kata/tanda baca lain):
+              const systemPrompt = `Anda adalah AI Geocoding Spesialis Alamat Seluruh Indonesia untuk Puskesmas & Layanan Kesehatan.
+Tugas Anda: Deteksi dan pisahkan teks alamat bebas dari SELURUH WILAYAH INDONESIA menjadi 4 Tingkat Wilayah Administrasi Indonesia berikut (Gunakan JSON murni tanpa kata/tanda baca lain):
 {
   "kampung": "Nama Kampung/Dusun/Jalan",
   "rt": "Nomor RT jika ada (contoh: 01)",
   "rw": "Nomor RW 2 digit jika ada (contoh: 04)",
-  "kelurahan": "Tentukan Desa/Kelurahan (Contoh di Kec. Banjaran: Tarajusari, Banjaran, Banjaran Kulon, Ciapus, Kamasan, Kiangroke, Margahayu, Mekarjaya, Pasirmulya, Sindangpanon)",
-  "kecamatan": "Nama Kecamatan (Default: Banjaran jika di wilayah Banjaran, atau sebutkan nama kecamatan lain)",
-  "kabupaten": "Nama Kabupaten/Kota (Default: Kab. Bandung)",
-  "provinsi": "Nama Provinsi (Default: Jawa Barat)"
+  "kelurahan": "Nama Desa/Kelurahan presisi sesuai lokasi pada map/teks",
+  "kecamatan": "Nama Kecamatan presisi sesuai lokasi pada map/teks",
+  "kabupaten": "Nama Kabupaten/Kota presisi",
+  "provinsi": "Nama Provinsi presisi di Indonesia"
 }`;
 
               const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
@@ -1152,17 +1152,33 @@ Tugas Anda: Deteksi dan pisahkan teks alamat bebas menjadi 4 Tingkat Wilayah Adm
 
           // Fallback parser if Workers AI unavailable or didn't return valid JSON
           if (!parsedResult) {
-            const lower = rawAddress.toLowerCase();
-            let kel = 'Tarajusari';
-            if (lower.includes('kulon')) kel = 'Banjaran Kulon';
-            else if (lower.includes('banjaran')) kel = 'Banjaran';
-            else if (lower.includes('ciapus')) kel = 'Ciapus';
-            else if (lower.includes('kamasan')) kel = 'Kamasan';
-            else if (lower.includes('kiangroke')) kel = 'Kiangroke';
-            else if (lower.includes('sindangpanon')) kel = 'Sindangpanon';
-            else if (lower.includes('pasirmulya')) kel = 'Pasirmulya';
-            else if (lower.includes('mekarjaya')) kel = 'Mekarjaya';
-            else if (lower.includes('margahayu')) kel = 'Margahayu';
+            const upper = rawAddress.toUpperCase();
+
+            let kel = '';
+            const kelM = upper.match(/(?:DESA|KEL(?:URAHAN)?|\bKP\.?|\bKAMPUNG)\s+([A-Z0-9\s\-]+?)(?=\s+(?:RT|RW|KEC|KAB|KOTA|PROV|JL|JALAN|NO)|$|,|\.)/i);
+            if (kelM && kelM[1]) {
+              kel = kelM[1].replace(/^(KP\.|KAMPUNG|DESA|KELURAHAN|KEL\.)\s*/i, '').trim();
+            }
+
+            let kec = '';
+            const kecM = upper.match(/(?:KEC(?:AMATAN)?)\s+([A-Z0-9\s\-]+?)(?=\s+(?:KAB|KOTA|PROV|DESA|KEL|JL|JALAN|NO)|$|,|\.)/i);
+            if (kecM && kecM[1]) kec = kecM[1].trim();
+
+            let kab = '';
+            const kabM = upper.match(/(?:KAB(?:UPATEN)?|KOTA)\s+([A-Z0-9\s\-]+?)(?=\s+(?:PROV|KEC|DESA|KEL|JL|JALAN|NO)|$|,|\.)/i);
+            if (kabM && kabM[1]) {
+              kab = (upper.includes('KOTA') ? 'Kota ' : 'Kab. ') + kabM[1].trim();
+            }
+
+            let prov = '';
+            const provM = upper.match(/(?:PROV(?:INSI)?)\s+([A-Z0-9\s\-]+?)(?=$|,|\.)/i);
+            if (provM && provM[1]) prov = provM[1].trim();
+
+            if (upper.includes('BANJARAN KULON')) { kel = 'Banjaran Kulon'; kec = 'Banjaran'; kab = 'Kab. Bandung'; prov = 'Jawa Barat'; }
+            else if (upper.includes('BANJARAN WETAN')) { kel = 'Banjaran Wetan'; kec = 'Banjaran'; kab = 'Kab. Bandung'; prov = 'Jawa Barat'; }
+            else if (upper.includes('TARAJUSARI')) { kel = 'Tarajusari'; kec = 'Banjaran'; kab = 'Kab. Bandung'; prov = 'Jawa Barat'; }
+            else if (upper.includes('KAMASAN')) { kel = 'Kamasan'; kec = 'Banjaran'; kab = 'Kab. Bandung'; prov = 'Jawa Barat'; }
+            else if (upper.includes('CIAPUS')) { kel = 'Ciapus'; kec = 'Banjaran'; kab = 'Kab. Bandung'; prov = 'Jawa Barat'; }
 
             const rwMatch = rawAddress.match(/rw\s*[\.:]?\s*(\d+)/i) || rawAddress.match(/\b0?([1-9]|1[0-9])\b/);
             const rtMatch = rawAddress.match(/rt\s*[\.:]?\s*(\d+)/i);
@@ -1171,11 +1187,11 @@ Tugas Anda: Deteksi dan pisahkan teks alamat bebas menjadi 4 Tingkat Wilayah Adm
               kampung: rawAddress.replace(/rw\s*\d+/gi, '').replace(/rt\s*\d+/gi, '').trim(),
               rt: rtMatch ? rtMatch[1] : '',
               rw: rwMatch ? rwMatch[1].padStart(2, '0') : '',
-              kelurahan: kel,
-              kecamatan: 'Banjaran',
-              kabupaten: 'Kab. Bandung',
-              provinsi: 'Jawa Barat',
-              source: 'Smart Rule Engine (Fallback)'
+              kelurahan: kel || 'Banjaran Kulon',
+              kecamatan: kec || 'Banjaran',
+              kabupaten: kab || 'Kab. Bandung',
+              provinsi: prov || 'Jawa Barat',
+              source: 'Dynamic Smart Rule Engine (Indonesia-Wide)'
             };
           }
 

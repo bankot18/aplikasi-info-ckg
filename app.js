@@ -1466,43 +1466,6 @@ async function syncKamusFromCloudServer() {
   }
 }
 
-function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupaten Bandung', prov = 'Jawa Barat', syncToCloud = true, lat = null, lng = null) {
-  if (!keyword || !kel) return;
-  const cleanKw = keyword.toUpperCase().replace(/^(KP\.|KAMPUNG|JLN?\.|JALAN|RT|RW)\s*/i, '').trim();
-  if (cleanKw.length < 3) return;
-
-  const current = getLearnedKampungMap();
-  const existing = current.find(item => item.keywords.includes(cleanKw));
-  if (existing) {
-    existing.kel = kel;
-    existing.kec = kec || existing.kec;
-    existing.kab = kab || existing.kab;
-    existing.prov = prov || existing.prov;
-    if (lat) existing.lat = lat;
-    if (lng) existing.lng = lng;
-  } else {
-    current.push({
-      keywords: [cleanKw],
-      kel: kel,
-      kec: kec || 'Banjaran',
-      kab: kab || 'Kabupaten Bandung',
-      prov: prov || 'Jawa Barat',
-      lat: lat || null,
-      lng: lng || null
-    });
-  }
-  try {
-    localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(current));
-  } catch (e) {}
-
-  if (syncToCloud) {
-    // Sync to D1 Cloud Server
-    fetch('/api/kamus', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([{ keyword: cleanKw, kel, kec, kab, prov, lat, lng }])
-    }).catch(err => console.warn('D1 Kamus push failed:', err));
-  }
 }
 
 function downloadKamusAlamatTemplate() {
@@ -2034,16 +1997,16 @@ async function autoDetectRegionalFromAddressText(addressText) {
   try {
     const cleanSearch = textUpper.replace(/KP\.|KAMPUNG|JLN?\.|JALAN|RT:?|\d+|RW:?|\d+/g, ' ').replace(/\s+/g, ' ').trim();
     if (cleanSearch.length >= 3) {
-      const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanSearch + ' Bandung Jawa Barat')}&format=json&addressdetails=1&limit=1`;
+      const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanSearch)}&format=json&addressdetails=1&countrycodes=id&limit=1`;
       const resp = await fetch(osmUrl);
       if (resp.ok) {
         const data = await resp.json();
         if (data && data.length > 0) {
           const addr = data[0].address || {};
-          const foundProv = addr.state || 'Jawa Barat';
-          const foundKab = addr.city || addr.regency || addr.county || 'Kabupaten Bandung';
-          const foundKec = addr.town || addr.district || addr.suburb || 'Banjaran';
-          const foundKel = addr.village || addr.quarter || addr.hamlet || addr.neighbourhood || '';
+          const foundProv = addr.state || '';
+          const foundKab = addr.city || addr.regency || addr.county || addr.municipality || '';
+          const foundKec = addr.town || addr.district || addr.suburb || addr.city_district || '';
+          const foundKel = addr.village || addr.quarter || addr.hamlet || addr.suburb || addr.neighbourhood || '';
 
           if (foundKel) {
             // Auto-fill dropdowns from Nominatim lookup without auto-saving to Kamus Peta
@@ -10755,77 +10718,155 @@ function getOfficialAddressLookup(kw) {
 }
 
 function detectAddressHierarchyFromRawText(rawAddressText, currentKel = '', currentKec = '', currentKab = '', currentProv = '') {
-  if (!rawAddressText) {
-    let kel = currentKel;
-    let kec = currentKec;
-    if (kel === 'Banjaran Kota') kel = 'Banjaran Kulon';
-    return {
-      kel: kel || 'Banjaran Kulon',
-      kec: kec || 'Banjaran',
-      kab: currentKab || 'Kabupaten Bandung',
-      prov: currentProv || 'Jawa Barat',
-      matchedKw: null
-    };
+  if (!rawAddressText || !String(rawAddressText).trim()) {
+    let kel = (currentKel === 'Banjaran Kota') ? 'Banjaran Kulon' : (currentKel || '');
+    let kec = currentKec || '';
+    let kab = currentKab || '';
+    let prov = currentProv || '';
+    return { kel, kec, kab, prov, matchedKw: null };
   }
 
-  const cleanText = String(rawAddressText).toUpperCase()
+  const rawUpper = String(rawAddressText).toUpperCase().trim();
+
+  // 1. Explicit Regex Extractors for Indonesian Administrative Keywords
+  // Check for Desa / Kelurahan
+  let detectedKel = '';
+  const kelMatch = rawUpper.match(/(?:DESA|KEL(?:URAHAN)?|\bKP\.?|\bKAMPUNG)\s+([A-Z0-9\s\-]+?)(?=\s+(?:RT|RW|KEC|KAB|KOTA|PROV|JL|JALAN|NO)|$|,|\.)/i);
+  if (kelMatch && kelMatch[1]) {
+    const candidate = kelMatch[1].replace(/^(KP\.|KAMPUNG|DESA|KELURAHAN|KEL\.)\s*/i, '').trim();
+    if (candidate.length >= 3 && !['RT', 'RW', 'KECAMATAN', 'KABUPATEN', 'PROVINSI'].includes(candidate)) {
+      detectedKel = candidate;
+    }
+  }
+
+  // Check for Kecamatan
+  let detectedKec = '';
+  const kecMatch = rawUpper.match(/(?:KEC(?:AMATAN)?)\s+([A-Z0-9\s\-]+?)(?=\s+(?:KAB|KOTA|PROV|DESA|KEL|JL|JALAN|NO)|$|,|\.)/i);
+  if (kecMatch && kecMatch[1]) {
+    const candidate = kecMatch[1].trim();
+    if (candidate.length >= 3) detectedKec = candidate;
+  }
+
+  // Check for Kabupaten / Kota
+  let detectedKab = '';
+  const kabMatch = rawUpper.match(/(?:KAB(?:UPATEN)?|KOTA)\s+([A-Z0-9\s\-]+?)(?=\s+(?:PROV|KEC|DESA|KEL|JL|JALAN|NO)|$|,|\.)/i);
+  if (kabMatch && kabMatch[1]) {
+    const prefix = rawUpper.includes('KOTA') ? 'Kota ' : 'Kab. ';
+    detectedKab = prefix + kabMatch[1].trim();
+  }
+
+  // Check for Provinsi
+  let detectedProv = '';
+  const provMatch = rawUpper.match(/(?:PROV(?:INSI)?)\s+([A-Z0-9\s\-]+?)(?=$|,|\.)/i);
+  if (provMatch && provMatch[1]) {
+    detectedProv = provMatch[1].trim();
+  }
+
+  // Common Province names check
+  const knownProvinces = ['JAWA BARAT', 'DKI JAKARTA', 'JAWA TENGAH', 'JAWA TIMUR', 'BANTEN', 'DI YOGYAKARTA', 'BALI', 'SUMATERA UTARA', 'SUMATERA BARAT', 'SUMATERA SELATAN', 'LAMPUNG', 'RIAU', 'KALIMANTAN TIMUR', 'SULAWESI SELATAN'];
+  for (let p of knownProvinces) {
+    if (rawUpper.includes(p)) {
+      detectedProv = p.split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+      break;
+    }
+  }
+
+  // 2. Direct Match in WILAYAH_DATA (covering provinces/regencies/kecamatans/desas)
+  let wilayahHit = null;
+  if (typeof WILAYAH_DATA !== 'undefined') {
+    for (let provName in WILAYAH_DATA) {
+      const kabs = WILAYAH_DATA[provName];
+      for (let kabName in kabs) {
+        const kecs = kabs[kabName];
+        for (let kecName in kecs) {
+          const desas = kecs[kecName];
+          for (let desaName of desas) {
+            const desaUpper = desaName.toUpperCase();
+            if (rawUpper.includes(desaUpper)) {
+              wilayahHit = {
+                kel: desaName,
+                kec: kecName,
+                kab: kabName,
+                prov: provName,
+                matchedKw: desaName
+              };
+              break;
+            }
+          }
+          if (wilayahHit) break;
+          if (rawUpper.includes(kecName.toUpperCase())) {
+            wilayahHit = {
+              kel: desas[0] || kecName,
+              kec: kecName,
+              kab: kabName,
+              prov: provName,
+              matchedKw: kecName
+            };
+          }
+        }
+        if (wilayahHit) break;
+      }
+      if (wilayahHit) break;
+    }
+  }
+
+  // 3. Match in ACCURATE_KAMPUNG_DIRECTORY (Banjaran core kampungs)
+  let accurateHit = null;
+  const cleanText = rawUpper
     .replace(/^KP\.\s*/i, '')
     .replace(/RT\s*\d+/gi, '')
     .replace(/RW\s*\d+/gi, '')
-    .replace(/DESA\s*/gi, '')
-    .replace(/KELURAHAN\s*/gi, '')
-    .replace(/KECAMATAN\s*/gi, '')
     .trim();
 
-  // 1. Direct match in ACCURATE_KAMPUNG_DIRECTORY by individual tokens
-  const words = cleanText.split(/[\s,\.\/\-]+/).filter(w => w.length >= 3);
-  for (let w of words) {
-    if (ACCURATE_KAMPUNG_DIRECTORY[w]) {
-      return {
-        ...ACCURATE_KAMPUNG_DIRECTORY[w],
-        matchedKw: w
-      };
-    }
-  }
-
-  // 2. Multi-word phrase key match in ACCURATE_KAMPUNG_DIRECTORY
   for (let k in ACCURATE_KAMPUNG_DIRECTORY) {
     if (cleanText.includes(k)) {
-      return {
+      accurateHit = {
         ...ACCURATE_KAMPUNG_DIRECTORY[k],
         matchedKw: k
       };
+      break;
     }
   }
 
-  // 3. Learned address dictionary lookup match
+  // 4. Match in getLearnedKampungMap
+  let learnedHit = null;
   if (typeof getLearnedKampungMap === 'function') {
     const learnedList = getLearnedKampungMap();
     for (let item of learnedList) {
       const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase() : '';
       if (kw && cleanText.includes(kw)) {
-        return {
+        learnedHit = {
           kel: item.kel,
           kec: item.kec,
           kab: item.kab || 'Kabupaten Bandung',
           prov: item.prov || 'Jawa Barat',
           matchedKw: kw
         };
+        break;
       }
     }
   }
 
-  // Fallback: Fix legacy Banjaran Kota if present
-  let kel = currentKel;
-  let kec = currentKec;
-  if (kel === 'Banjaran Kota') kel = 'Banjaran Kulon';
+  // Priority Assembly: Explicit Regex > Accurate Directory > Wilayah Data > Learned Map > Original Values
+  let finalKel = detectedKel || (accurateHit ? accurateHit.kel : (wilayahHit ? wilayahHit.kel : (learnedHit ? learnedHit.kel : currentKel)));
+  let finalKec = detectedKec || (accurateHit ? accurateHit.kec : (wilayahHit ? wilayahHit.kec : (learnedHit ? learnedHit.kec : currentKec)));
+  let finalKab = detectedKab || (accurateHit ? accurateHit.kab : (wilayahHit ? wilayahHit.kab : (learnedHit ? learnedHit.kab : currentKab)));
+  let finalProv = detectedProv || (accurateHit ? accurateHit.prov : (wilayahHit ? wilayahHit.prov : (learnedHit ? learnedHit.prov : currentProv)));
+
+  // Clean legacy 'Banjaran Kota' label
+  if (finalKel === 'Banjaran Kota') finalKel = 'Banjaran Kulon';
+
+  // Fill in missing hierarchy naturally if missing
+  if (!finalProv && (finalKab.includes('Bandung') || finalKec === 'Banjaran')) finalProv = 'Jawa Barat';
+  if (!finalKab && finalKec === 'Banjaran') finalKab = 'Kabupaten Bandung';
+  if (!finalKec && finalKel === 'Banjaran Kulon') finalKec = 'Banjaran';
 
   return {
-    kel: kel || 'Banjaran Kulon',
-    kec: kec || 'Banjaran',
-    kab: currentKab || 'Kabupaten Bandung',
-    prov: currentProv || 'Jawa Barat',
-    matchedKw: null
+    kel: finalKel || (currentKel && currentKel !== 'Banjaran Kota' ? currentKel : 'Banjaran Kulon'),
+    kec: finalKec || currentKec || 'Banjaran',
+    kab: finalKab || currentKab || 'Kabupaten Bandung',
+    prov: finalProv || currentProv || 'Jawa Barat',
+    matchedKw: accurateHit ? accurateHit.matchedKw : (wilayahHit ? wilayahHit.matchedKw : null)
   };
 }
 
@@ -12411,45 +12452,73 @@ async function resetAllAddressPinsWithAi() {
   }
 }
 
-function openAddPinModalFromMap(lat = null, lng = null) {
+async function openAddPinModalFromMap(lat = null, lng = null) {
   if (!checkAdminRoleOnly('Penambahan Titik Alamat Manual')) return;
 
   const defaultLat = lat || -7.0427;
   const defaultLng = lng || 107.5878;
 
+  let scannedKw = '';
+  let scannedKel = '';
+  let scannedKec = '';
+  let scannedKab = 'Kabupaten Bandung';
+  let scannedProv = 'Jawa Barat';
+
+  // Reverse geocode clicked coordinates via OpenStreetMap Nominatim for exact address anywhere in Indonesia
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${defaultLat}&lon=${defaultLng}&format=json&addressdetails=1`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.address) {
+        const a = data.address;
+        scannedProv = a.state || scannedProv;
+        scannedKab = a.city || a.regency || a.county || a.municipality || scannedKab;
+        scannedKec = a.town || a.district || a.suburb || a.city_district || scannedKec;
+        scannedKel = a.village || a.quarter || a.suburb || a.hamlet || a.neighbourhood || scannedKel;
+
+        const rawPlaceName = a.road || a.building || a.amenity || a.village || a.suburb || '';
+        if (rawPlaceName) {
+          scannedKw = rawPlaceName.replace(/^(KP\.|KAMPUNG|DESA|KELURAHAN|JALAN|JLN?\.)\s*/gi, '').trim();
+          if (scannedKw && !scannedKw.toUpperCase().startsWith('KP.')) scannedKw = 'Kp. ' + scannedKw;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Reverse geocoding error:', err);
+  }
+
   Swal.fire({
-    title: '<i class="bi bi-geo-alt-fill" style="color:#0284c7;"></i> Catat Titik Alamat di Peta',
+    title: '<i class="bi bi-geo-alt-fill" style="color:#0284c7;"></i> Catat Titik Alamat Presisi Peta',
     html: `
       <div style="text-align: left; font-size: 13px; margin-top: 10px;">
         <p style="color: #64748b; font-size: 12px; margin-bottom: 14px;">
-          Pilih lokasi kampung di <strong>Kabupaten Bandung</strong> dan catat nama kampung untuk disimpan ke Kamus Alamat D1.
+          Lokasi koordinat telah dipindai dari peta. Verifikasi atau sesuaikan detail wilayah administrasi Indonesia di bawah ini:
         </p>
 
         <div class="form-group" style="margin-bottom: 12px;">
           <label class="form-label">Nama Kampung / Keyword Alamat <span class="required">*</span></label>
-          <input type="text" id="swalMapKw" class="swal2-input" placeholder="Contoh: Kp. Pajagalan / Kp. Ciapus" style="width: 100%; margin: 4px 0 0 0;" required>
+          <input type="text" id="swalMapKw" class="swal2-input" placeholder="Contoh: Kp. Pajagalan / Kp. Dago" style="width: 100%; margin: 4px 0 0 0;" value="${scannedKw}" required>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
           <div class="form-group">
-            <label class="form-label">Kecamatan (Kab. Bandung) <span class="required">*</span></label>
-            <select id="swalMapKec" class="swal2-select" style="width: 100%; margin: 4px 0 0 0; font-weight:700;">
-              <option value="Banjaran" selected>Banjaran</option>
-              <option value="Cangkuang">Cangkuang</option>
-              <option value="Pameungpeuk">Pameungpeuk</option>
-              <option value="Arjasari">Arjasari</option>
-              <option value="Cimaung">Cimaung</option>
-              <option value="Soreang">Soreang</option>
-              <option value="Katapang">Katapang</option>
-              <option value="Baleendah">Baleendah</option>
-              <option value="Dayeuhkolot">Dayeuhkolot</option>
-              <option value="Margahayu">Margahayu</option>
-              <option value="Margaasih">Margaasih</option>
-            </select>
+            <label class="form-label">Desa / Kelurahan <span class="required">*</span></label>
+            <input type="text" id="swalMapKel" class="swal2-input" placeholder="Contoh: Banjaran Kulon" style="width: 100%; margin: 4px 0 0 0;" value="${scannedKel}" required>
           </div>
           <div class="form-group">
-            <label class="form-label">Kelurahan / Desa <span class="required">*</span></label>
-            <input type="text" id="swalMapKel" class="swal2-input" placeholder="Contoh: Banjaran Kulon" style="width: 100%; margin: 4px 0 0 0;" value="Banjaran Kulon" required>
+            <label class="form-label">Kecamatan <span class="required">*</span></label>
+            <input type="text" id="swalMapKec" class="swal2-input" placeholder="Contoh: Banjaran" style="width: 100%; margin: 4px 0 0 0;" value="${scannedKec}" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label class="form-label">Kabupaten / Kota <span class="required">*</span></label>
+            <input type="text" id="swalMapKab" class="swal2-input" placeholder="Contoh: Kabupaten Bandung" style="width: 100%; margin: 4px 0 0 0;" value="${scannedKab}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Provinsi <span class="required">*</span></label>
+            <input type="text" id="swalMapProv" class="swal2-input" placeholder="Contoh: Jawa Barat" style="width: 100%; margin: 4px 0 0 0;" value="${scannedProv}" required>
           </div>
         </div>
 
@@ -12482,15 +12551,17 @@ function openAddPinModalFromMap(lat = null, lng = null) {
     preConfirm: () => {
       const kw = document.getElementById('swalMapKw').value.trim();
       const kel = document.getElementById('swalMapKel').value.trim();
-      const kec = document.getElementById('swalMapKec').value;
+      const kec = document.getElementById('swalMapKec').value.trim();
+      const kab = document.getElementById('swalMapKab').value.trim();
+      const prov = document.getElementById('swalMapProv').value.trim();
       const latVal = parseFloat(document.getElementById('swalMapLat').value);
       const lngVal = parseFloat(document.getElementById('swalMapLng').value);
 
-      if (!kw || !kel) {
-        Swal.showValidationMessage('Harap isi Nama Kampung dan Kelurahan!');
+      if (!kw || !kel || !kec) {
+        Swal.showValidationMessage('Harap isi Nama Kampung, Desa/Kelurahan, dan Kecamatan!');
         return false;
       }
-      return { kw, kel, kec, lat: latVal, lng: lngVal };
+      return { kw, kel, kec, kab, prov, lat: latVal, lng: lngVal };
     }
   }).then((res) => {
     if (currentAddingPinMarker && leafletMap) {
@@ -12499,9 +12570,9 @@ function openAddPinModalFromMap(lat = null, lng = null) {
     }
 
     if (res.isConfirmed && res.value) {
-      const { kw, kel, kec, lat: pLat, lng: pLng } = res.value;
-      saveLearnedKampungKeyword(kw, kel, kec, 'Kabupaten Bandung', 'Jawa Barat', true, pLat, pLng);
-      showToast('Titik Alamat Berhasil Dicatat di Peta!', 'success');
+      const { kw, kel, kec, kab, prov, lat: pLat, lng: pLng } = res.value;
+      saveLearnedKampungKeyword(kw, kel, kec, kab, prov, true, pLat, pLng);
+      showToast(`Titik Alamat "${kw}" (${kel}, ${kec}, ${kab}) Berhasil Dicatat!`, 'success');
       renderMapMarkers();
     }
   });
@@ -12656,7 +12727,7 @@ function attachGoogleMapsAddressAutocomplete(kwInput, kelInput, kecSelect, latIn
       if (suggestions.length < 6) {
         try {
           const locIqKey = 'pk.87f2b960c1d68379ba5189288e7343e0';
-          const locIqUrl = `https://api.locationiq.com/v1/autocomplete?key=${locIqKey}&q=${encodeURIComponent(query + ' Bandung Jawa Barat')}&limit=6&countrycodes=id&viewbox=107.45,-7.25,107.85,-6.85&bounded=1&format=json`;
+          const locIqUrl = `https://api.locationiq.com/v1/autocomplete?key=${locIqKey}&q=${encodeURIComponent(query)}&limit=6&countrycodes=id&format=json`;
           const res = await fetch(locIqUrl);
           if (res.ok) {
             const data = await res.json();
@@ -12664,8 +12735,10 @@ function attachGoogleMapsAddressAutocomplete(kwInput, kelInput, kecSelect, latIn
               const addr = place.address || {};
               const village = addr.village || addr.quarter || addr.hamlet || addr.suburb || addr.neighbourhood || addr.road || place.display_name.split(',')[0];
               const kwClean = village.toUpperCase().replace(/^(KP\.|KAMPUNG|DESA|KELURAHAN|JALAN|JLN?\.)\s*/gi, '').trim();
-              const kecFound = addr.town || addr.district || addr.suburb || addr.city_district || 'Banjaran';
+              const kecFound = addr.town || addr.district || addr.suburb || addr.city_district || '';
               const kelFound = addr.village || addr.quarter || addr.suburb || kwClean;
+              const kabFound = addr.city || addr.regency || addr.county || addr.municipality || 'Kabupaten Bandung';
+              const provFound = addr.state || 'Jawa Barat';
 
               if (kwClean && !addedSet.has(kwClean)) {
                 addedSet.add(kwClean);
@@ -12673,7 +12746,9 @@ function attachGoogleMapsAddressAutocomplete(kwInput, kelInput, kecSelect, latIn
                   title: `Kp. ${kwClean}`,
                   kw: kwClean,
                   kel: kelFound,
-                  kec: kecFound,
+                  kec: kecFound || 'Banjaran',
+                  kab: kabFound,
+                  prov: provFound,
                   lat: parseFloat(place.lat),
                   lng: parseFloat(place.lon),
                   source: 'LocationIQ Presisi'
@@ -12689,7 +12764,7 @@ function attachGoogleMapsAddressAutocomplete(kwInput, kelInput, kecSelect, latIn
       // 4. OpenStreetMap Nominatim Fallback
       if (suggestions.length < 6) {
         try {
-          const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' Bandung Jawa Barat')}&format=json&addressdetails=1&countrycodes=id&viewbox=107.45,-7.25,107.85,-6.85&bounded=1&limit=6`;
+          const osmUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&countrycodes=id&limit=6`;
           const res = await fetch(osmUrl);
           if (res.ok) {
             const data = await res.json();
@@ -12697,17 +12772,22 @@ function attachGoogleMapsAddressAutocomplete(kwInput, kelInput, kecSelect, latIn
               const addr = place.address || {};
               const village = addr.village || addr.quarter || addr.hamlet || addr.suburb || addr.neighbourhood || place.display_name.split(',')[0];
               const kwClean = village.toUpperCase().replace(/^(KP\.|KAMPUNG|DESA|KELURAHAN|JALAN|JLN?\.)\s*/gi, '').trim();
-              const kecFound = addr.town || addr.district || addr.suburb || addr.city_district || 'Banjaran';
+              const kecFound = addr.town || addr.district || addr.suburb || addr.city_district || '';
+              const kabFound = addr.city || addr.regency || addr.county || addr.municipality || 'Kabupaten Bandung';
+              const provFound = addr.state || 'Jawa Barat';
+
               if (kwClean && !addedSet.has(kwClean)) {
                 addedSet.add(kwClean);
                 suggestions.push({
                   title: `Kp. ${kwClean}`,
                   kw: kwClean,
                   kel: addr.village || addr.quarter || kwClean,
-                  kec: kecFound,
+                  kec: kecFound || 'Banjaran',
+                  kab: kabFound,
+                  prov: provFound,
                   lat: parseFloat(place.lat),
                   lng: parseFloat(place.lon),
-                  source: 'Peta Presisi Bandung'
+                  source: 'OSM Presisi Peta'
                 });
               }
             });
@@ -12730,7 +12810,7 @@ function attachGoogleMapsAddressAutocomplete(kwInput, kelInput, kecSelect, latIn
               ${s.title}
             </div>
             <div style="font-size: 11px; color: #64748b; margin-top: 1px;">
-              Desa ${s.kel}, Kec. ${s.kec}, Kab. Bandung
+              Desa ${s.kel}, Kec. ${s.kec}${s.kab ? ', ' + s.kab : ''}
             </div>
           </div>
           <span style="font-size: 10px; background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 10px; font-weight: 700; flex-shrink: 0;">
@@ -12749,12 +12829,24 @@ function attachGoogleMapsAddressAutocomplete(kwInput, kelInput, kecSelect, latIn
 
           if (selected) {
             kwInput.value = selected.title;
-            if (kelInput) kelInput.value = selected.kel;
+            if (kelInput) {
+              if (kelInput.tagName === 'SELECT') {
+                const optMatch = Array.from(kelInput.options).find(opt => opt.text.toLowerCase().includes(selected.kel.toLowerCase()) || opt.value.toLowerCase().includes(selected.kel.toLowerCase()));
+                if (optMatch) kelInput.value = optMatch.value;
+                else kelInput.value = selected.kel;
+              } else {
+                kelInput.value = selected.kel;
+              }
+            }
 
             if (kecSelect) {
-              const options = Array.from(kecSelect.options);
-              const match = options.find(opt => opt.text.toLowerCase().includes(selected.kec.toLowerCase()) || opt.value.toLowerCase().includes(selected.kec.toLowerCase()));
-              if (match) kecSelect.value = match.value;
+              if (kecSelect.tagName === 'SELECT') {
+                const match = Array.from(kecSelect.options).find(opt => opt.text.toLowerCase().includes(selected.kec.toLowerCase()) || opt.value.toLowerCase().includes(selected.kec.toLowerCase()));
+                if (match) kecSelect.value = match.value;
+                else kecSelect.value = selected.kec;
+              } else {
+                kecSelect.value = selected.kec;
+              }
             }
 
             if (latInput && selected.lat) latInput.value = selected.lat.toFixed(6);
