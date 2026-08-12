@@ -2055,12 +2055,12 @@ async function scanExistingRecordsForAddressDictionary() {
 const BANJARAN_KAMPUNG_MAP = [
   { keywords: ['PAJAGALAN', 'PEJAGALAN', 'JAGALAN', 'BANJARAN KULON', 'BANJARAN KOTA', 'ALUN-ALUN BANJARAN', 'PASAR BANJARAN', 'STASIUN', 'BARULAKSANA', 'KAUM', 'BUNTRIS', 'PANGKAT'], kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['KAMASAN', 'SEKECANDANG', 'SITUANGANG', 'BANTARPANJANG', 'CIGENTUR', 'SANGKAN', 'LEBAKSARI'], kel: 'Kamasan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
-  { keywords: ['CIAPUS', 'CITARIM', 'CIPEUNEUY', 'LEUWIWUNGGU', 'PALASARI', 'PASIRPANJANG'], kel: 'Ciapus', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['CIAPUS', 'CITARIM', 'CIPEUNEUY', 'CIPEUNDEUY', 'CIPEUNDEY', 'LEUWIWUNGGU', 'PALASARI', 'PASIRPANJANG'], kel: 'Ciapus', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['TARAJUSARI', 'TARAJU', 'SAMPORA', 'WARUNGLEBAK', 'SUKAMUKTI', 'BABAKAN TARAJU'], kel: 'Tarajusari', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['PASIRHUNI', 'PASIR HUNI', 'CIKUPA', 'SUKASARI', 'CIBEROD', 'LEBAKMUDA'], kel: 'Pasirhuni', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['SINDANGPANON', 'SINDANG PANON', 'SUKAGALIH', 'CIGANITRI', 'SINDANG'], kel: 'Sindangpanon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['MARGAHURUN', 'MARGA HURUN', 'CILUNCAT', 'CIMANGGU'], kel: 'Margahurun', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
-  { keywords: ['KIANGROKE', 'KIANG ROKE', 'CITEUREUP', 'NAGRAK', 'BABAKAN KIANGROKE'], kel: 'Kiangroke', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
+  { keywords: ['KIANGROKE', 'KIANG ROKE', 'CITEUREUP', 'NAGRAK', 'BABAKAN KIANGROKE', 'BOJONG', 'PAMOYANAN'], kel: 'Kiangroke', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['CIMAUNG', 'PUNTANG', 'CAMPAKA', 'WARUNGBANTENG', 'CIPALASARI', 'SUKAMAJU'], kel: 'Cimaung', kec: 'Cimaung', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['CANGKUANG', 'BANDASARI', 'JATISARI', 'PANANJUNG'], kel: 'Cangkuang', kec: 'Cangkuang', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   { keywords: ['ARJASARI', 'PINGGIRSARI', 'PATROL', 'BARTIM'], kel: 'Arjasari', kec: 'Arjasari', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
@@ -2082,9 +2082,25 @@ async function autoDetectRegionalFromAddressText(addressText) {
 
   if (!provSelect || !kabSelect || !kecSelect || !kelSelect) return;
 
-  const triggerChange = async (el) => {
+  const waitForOptions = async (selectEl, maxWaitMs = 1500) => {
+    const start = Date.now();
+    while (Date.now() - start < maxWaitMs) {
+      if (selectEl && selectEl.options && selectEl.options.length > 1) {
+        const valid = Array.from(selectEl.options).filter(o => o.value);
+        if (valid.length > 0) return true;
+      }
+      await new Promise(r => setTimeout(r, 50));
+    }
+    return false;
+  };
+
+  const triggerChange = async (el, targetChildSelect = null) => {
     el.dispatchEvent(new Event('change'));
-    await new Promise(r => setTimeout(r, 180));
+    if (targetChildSelect) {
+      await waitForOptions(targetChildSelect);
+    } else {
+      await new Promise(r => setTimeout(r, 120));
+    }
   };
 
   const selectMatchingOption = (selectEl, targetVal, fuzzy = true) => {
@@ -2133,11 +2149,11 @@ async function autoDetectRegionalFromAddressText(addressText) {
     if (provMatch) {
       if (provSelect.value !== provMatch.value) {
         provSelect.value = provMatch.value;
-        await triggerChange(provSelect);
+        await triggerChange(provSelect, kabSelect);
       }
     } else if (provSelect.options.length > 1 && !provSelect.value) {
       provSelect.value = provSelect.options[1].value;
-      await triggerChange(provSelect);
+      await triggerChange(provSelect, kabSelect);
     }
 
     // 2. Set Kab / Kota
@@ -2145,7 +2161,7 @@ async function autoDetectRegionalFromAddressText(addressText) {
     if (kabMatch) {
       if (kabSelect.value !== kabMatch.value) {
         kabSelect.value = kabMatch.value;
-        await triggerChange(kabSelect);
+        await triggerChange(kabSelect, kecSelect);
       }
     }
 
@@ -2154,14 +2170,24 @@ async function autoDetectRegionalFromAddressText(addressText) {
     if (kecMatch) {
       if (kecSelect.value !== kecMatch.value) {
         kecSelect.value = kecMatch.value;
-        await triggerChange(kecSelect);
+        await triggerChange(kecSelect, kelSelect);
       }
     }
+
+    // Ensure kelurahan options are populated before setting value
+    await waitForOptions(kelSelect, 2000);
 
     // 4. Set Kelurahan
     const kelMatch = selectMatchingOption(kelSelect, localHit.kel);
     if (kelMatch) {
       kelSelect.value = kelMatch.value;
+    } else if (localHit.kel) {
+      const cleanTargetKel = String(localHit.kel).toLowerCase().replace(/^(kelurahan|desa)\s*/i, '').trim();
+      const matchOpt = Array.from(kelSelect.options).find(o => {
+        const cleanOpt = o.value.toLowerCase().replace(/^(kelurahan|desa)\s*/i, '').trim();
+        return cleanOpt === cleanTargetKel || cleanOpt.includes(cleanTargetKel) || cleanTargetKel.includes(cleanOpt);
+      });
+      if (matchOpt) kelSelect.value = matchOpt.value;
     }
     return;
   }
