@@ -29,39 +29,9 @@ export default {
         });
       }
 
-      // Auto-create users table if not existing
-      try {
-        await env.DB.prepare(`
-          CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nama_user TEXT UNIQUE NOT NULL,
-            password TEXT,
-            role TEXT DEFAULT 'Petugas',
-            is_banned INTEGER DEFAULT 0,
-            banned_duration_label TEXT
-          )
-        `).run();
-      } catch (_) {}
-
-      // Auto-seed initial default users if table is empty
-      try {
-        const { results: countRes } = await env.DB.prepare('SELECT COUNT(*) as count FROM users').all();
-        if (countRes && countRes[0] && countRes[0].count === 0) {
-          const initUsers = [
-            ['Mochamad Fauzie, S.Gz', '213', 'Admin'],
-            ['Nurul Hidayah, Amd.Kes', '213', 'Koordinator'],
-            ['Anisa Rohmatunisa, AM.Keb', '', 'Petugas'],
-            ['Neng Yulia Trisnawati, AM.Keb', '', 'Petugas'],
-            ['Teti Nuryati, S.Keb, Bdn', '', 'Petugas']
-          ];
-          const stmt = env.DB.prepare('INSERT OR IGNORE INTO users (nama_user, password, role) VALUES (?, ?, ?)');
-          await env.DB.batch(initUsers.map(u => stmt.bind(u[0], u[1], u[2])));
-        }
-      } catch (_) {}
-
       if (request.method === 'GET') {
         try {
-          const { results } = await env.DB.prepare('SELECT nama_user, password, role, is_banned, banned_duration_label FROM users ORDER BY id ASC').all();
+          const { results } = await env.DB.prepare('SELECT nama_user, password, role FROM users ORDER BY id ASC').all();
           return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
@@ -73,20 +43,12 @@ export default {
           const body = await request.json();
           const users = Array.isArray(body) ? body : [body];
           const stmt = env.DB.prepare(`
-            INSERT INTO users (nama_user, password, role, is_banned, banned_duration_label) VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (nama_user, password, role) VALUES (?, ?, ?)
             ON CONFLICT(nama_user) DO UPDATE SET
               password = excluded.password,
-              role = excluded.role,
-              is_banned = excluded.is_banned,
-              banned_duration_label = excluded.banned_duration_label
+              role = excluded.role
           `);
-          const statements = users.map(u => stmt.bind(
-            u.nama_user,
-            u.password || '',
-            u.role || 'Petugas',
-            u.is_banned ? 1 : 0,
-            u.banned_duration_label || ''
-          ));
+          const statements = users.map(u => stmt.bind(u.nama_user, u.password || '', u.role || 'Petugas'));
           await env.DB.batch(statements);
           return new Response(JSON.stringify({ success: true, count: users.length }), { headers: corsHeaders });
         } catch (err) {

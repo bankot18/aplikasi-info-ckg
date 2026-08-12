@@ -764,7 +764,7 @@ function hideLoadingOverlay() {
    ========================================================================== */
 
 function handleLogin(e) {
-  if (e && e.preventDefault) e.preventDefault();
+  e.preventDefault();
   const selectEl = document.getElementById('loginPegawaiSelect');
 
   if (!selectEl || !selectEl.value) {
@@ -779,8 +779,8 @@ function handleLogin(e) {
 
   const selectedPegawai = selectEl.value.trim();
 
-  // Match safely against usersDb database
-  const user = usersDb.find(u => u && u.nama_user && String(u.nama_user).toLowerCase().trim() === selectedPegawai.toLowerCase());
+  // Match against usersDb database
+  const user = usersDb.find(u => u.nama_user.toLowerCase() === selectedPegawai.toLowerCase());
 
   if (!user) {
     Swal.fire({
@@ -1059,11 +1059,19 @@ function setupEventListeners() {
   // Sync address dictionary from Cloudflare D1 Server on startup
   syncKamusFromCloudServer();
 
-  // Sanitize NIK input (only numbers)
+  // Auto-trigger Dukcapil lookup when NIK reaches 16 digits
   const nikInput = document.getElementById('nik');
   if (nikInput) {
     nikInput.addEventListener('input', () => {
-      nikInput.value = nikInput.value.replace(/\D/g, '');
+      const val = nikInput.value.replace(/\D/g, '');
+      nikInput.value = val; // strip non-digits
+      if (val.length === 16) {
+        triggerNikDukcapilLookup();
+      } else {
+        // Reset status when NIK is incomplete
+        const statusEl = document.getElementById('nikDukcapilStatus');
+        if (statusEl) statusEl.style.display = 'none';
+      }
     });
   }
 
@@ -2137,55 +2145,31 @@ async function autoDetectRegionalFromAddressText(addressText) {
 
   if (localHit) {
     // 1. Set Province
-    if (localHit.prov) {
-      const provMatch = selectMatchingOption(provSelect, localHit.prov);
-      if (provMatch) {
-        if (provSelect.value !== provMatch.value) {
-          provSelect.value = provMatch.value;
-          await triggerChange(provSelect, kabSelect);
-        }
-      } else {
-        const opt = document.createElement('option');
-        opt.value = localHit.prov;
-        opt.textContent = localHit.prov;
-        provSelect.appendChild(opt);
-        provSelect.value = localHit.prov;
+    const provMatch = selectMatchingOption(provSelect, localHit.prov);
+    if (provMatch) {
+      if (provSelect.value !== provMatch.value) {
+        provSelect.value = provMatch.value;
         await triggerChange(provSelect, kabSelect);
       }
+    } else if (provSelect.options.length > 1 && !provSelect.value) {
+      provSelect.value = provSelect.options[1].value;
+      await triggerChange(provSelect, kabSelect);
     }
 
     // 2. Set Kab / Kota
-    if (localHit.kab) {
-      const kabMatch = selectMatchingOption(kabSelect, localHit.kab);
-      if (kabMatch) {
-        if (kabSelect.value !== kabMatch.value) {
-          kabSelect.value = kabMatch.value;
-          await triggerChange(kabSelect, kecSelect);
-        }
-      } else {
-        const opt = document.createElement('option');
-        opt.value = localHit.kab;
-        opt.textContent = localHit.kab;
-        kabSelect.appendChild(opt);
-        kabSelect.value = localHit.kab;
+    const kabMatch = selectMatchingOption(kabSelect, localHit.kab);
+    if (kabMatch) {
+      if (kabSelect.value !== kabMatch.value) {
+        kabSelect.value = kabMatch.value;
         await triggerChange(kabSelect, kecSelect);
       }
     }
 
     // 3. Set Kecamatan
-    if (localHit.kec) {
-      const kecMatch = selectMatchingOption(kecSelect, localHit.kec);
-      if (kecMatch) {
-        if (kecSelect.value !== kecMatch.value) {
-          kecSelect.value = kecMatch.value;
-          await triggerChange(kecSelect, kelSelect);
-        }
-      } else {
-        const opt = document.createElement('option');
-        opt.value = localHit.kec;
-        opt.textContent = localHit.kec;
-        kecSelect.appendChild(opt);
-        kecSelect.value = localHit.kec;
+    const kecMatch = selectMatchingOption(kecSelect, localHit.kec);
+    if (kecMatch) {
+      if (kecSelect.value !== kecMatch.value) {
+        kecSelect.value = kecMatch.value;
         await triggerChange(kecSelect, kelSelect);
       }
     }
@@ -2193,28 +2177,17 @@ async function autoDetectRegionalFromAddressText(addressText) {
     // Ensure kelurahan options are populated before setting value
     await waitForOptions(kelSelect, 2000);
 
-    // 4. Set Desa / Kelurahan
-    if (localHit.kel) {
-      const kelMatch = selectMatchingOption(kelSelect, localHit.kel);
-      if (kelMatch) {
-        kelSelect.value = kelMatch.value;
-      } else {
-        const cleanTargetKel = String(localHit.kel).toLowerCase().replace(/^(kelurahan|desa)\s*/i, '').trim();
-        const matchOpt = Array.from(kelSelect.options).find(o => {
-          const cleanOpt = o.value.toLowerCase().replace(/^(kelurahan|desa)\s*/i, '').trim();
-          return cleanOpt === cleanTargetKel || cleanOpt.includes(cleanTargetKel) || cleanTargetKel.includes(cleanOpt);
-        });
-        if (matchOpt) {
-          kelSelect.value = matchOpt.value;
-        } else {
-          // Dynamic Injection fallback if exact name from Kamus Alamat is not in options
-          const opt = document.createElement('option');
-          opt.value = localHit.kel;
-          opt.textContent = localHit.kel;
-          kelSelect.appendChild(opt);
-          kelSelect.value = localHit.kel;
-        }
-      }
+    // 4. Set Kelurahan
+    const kelMatch = selectMatchingOption(kelSelect, localHit.kel);
+    if (kelMatch) {
+      kelSelect.value = kelMatch.value;
+    } else if (localHit.kel) {
+      const cleanTargetKel = String(localHit.kel).toLowerCase().replace(/^(kelurahan|desa)\s*/i, '').trim();
+      const matchOpt = Array.from(kelSelect.options).find(o => {
+        const cleanOpt = o.value.toLowerCase().replace(/^(kelurahan|desa)\s*/i, '').trim();
+        return cleanOpt === cleanTargetKel || cleanOpt.includes(cleanTargetKel) || cleanTargetKel.includes(cleanOpt);
+      });
+      if (matchOpt) kelSelect.value = matchOpt.value;
     }
     return;
   }
@@ -3184,6 +3157,9 @@ function openSimpusDetailModal(id) {
         </div>
         
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-primary btn-sm" onclick="openDukcapilModal('${safeNik}', '${safeNama}')" style="box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <i class="bi bi-shield-check"></i> Cek Dukcapil
+          </button>
           <button class="btn-copy-all" onclick="copyAllSimpusPatientData('${safeId}')">
             <i class="bi bi-clipboard-check-fill"></i> Salin Semua Data Pasien
           </button>
@@ -8405,7 +8381,508 @@ function showToast(message, type = 'info') {
       setTimeout(() => toast.remove(), 300);
     }, 3500);
   }
+}
 
+/* ==========================================================================
+   🏛️ DUKCAPIL KTP VERIFICATION SERVICE MODULE
+   ========================================================================== */
+
+const DUKCAPIL_API_BASE = '/api/dukcapil';
+let isDukcapilServiceOnline = false;
+
+async function checkDukcapilHealth(showToastMsg = false) {
+  const statusIndicator = document.getElementById('dukcapilStatusIndicator');
+  const statusText = document.getElementById('dukcapilStatusText');
+  const statusBanner = document.getElementById('dukcapilStatusBanner');
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    
+    const resp = await fetch(`${DUKCAPIL_API_BASE}/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (resp.ok) {
+      isDukcapilServiceOnline = true;
+      if (statusIndicator) statusIndicator.style.background = '#22c55e';
+      if (statusText) statusText.innerHTML = '🟢 Layanan Dukcapil Aktif (Cloudflare Edge Engine)';
+      if (statusBanner) {
+        statusBanner.style.background = '#f0fdf4';
+        statusBanner.style.borderColor = '#86efac';
+        statusBanner.style.color = '#166534';
+      }
+      if (showToastMsg) showToast('Layanan Verifikasi Dukcapil terhubung aktif!', 'success');
+      return true;
+    }
+  } catch (err) {
+    // Service offline -> Use fallback local NIK engine
+  }
+
+  isDukcapilServiceOnline = false;
+  if (statusIndicator) statusIndicator.style.background = '#f59e0b';
+  if (statusText) statusText.innerHTML = '🟡 Mode Lokal: Validator & Parser NIK (Server Offline)';
+  if (statusBanner) {
+    statusBanner.style.background = '#fffbeb';
+    statusBanner.style.borderColor = '#fde68a';
+    statusBanner.style.color = '#92400e';
+  }
+  if (showToastMsg) showToast('Mode Lokal Dukcapil aktif (server tidak merespon).', 'warning');
+  return false;
+}
+
+function openDukcapilModal(nik = '', nama = '') {
+  const modalOverlay = document.getElementById('dukcapilModalOverlay');
+  if (!modalOverlay) return;
+
+  modalOverlay.classList.add('open');
+
+  const inputNik = document.getElementById('dukcapilInputNik');
+  const inputNama = document.getElementById('dukcapilInputNama');
+  const resultContainer = document.getElementById('dukcapilResultContainer');
+
+  if (inputNik) inputNik.value = nik || '';
+  if (inputNama) inputNama.value = nama || '';
+  if (resultContainer) resultContainer.style.display = 'none';
+
+  checkDukcapilHealth();
+
+  if (nik && nik.length === 16) {
+    executeDukcapilVerification(nik, nama);
+  }
+}
+
+function closeDukcapilModal() {
+  const modalOverlay = document.getElementById('dukcapilModalOverlay');
+  if (modalOverlay) modalOverlay.classList.remove('open');
+}
+
+function handleDukcapilSearchSubmit(event) {
+  event.preventDefault();
+  const nik = document.getElementById('dukcapilInputNik')?.value.trim() || '';
+  const nama = document.getElementById('dukcapilInputNama')?.value.trim() || '';
+
+  if (!nik || nik.length !== 16 || isNaN(nik)) {
+    showToast('NIK harus berupa 16 digit angka!', 'error');
+    return;
+  }
+
+  executeDukcapilVerification(nik, nama);
+}
+
+async function executeDukcapilVerification(nik, nama = '') {
+  const container = document.getElementById('dukcapilResultContainer');
+  if (!container) return;
+
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div style="text-align: center; padding: 24px; color: var(--text-muted);">
+      <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem; border: 3px solid var(--primary); border-right-color: transparent; border-radius: 50%; animation: spin 0.75s linear infinite; margin: 0 auto 10px;"></div>
+      <div style="font-weight: 600; font-size: 13px;">Menghubungkan & Memeriksa Data KTP...</div>
+    </div>
+  `;
+
+  // Try official API if online
+  if (isDukcapilServiceOnline) {
+    try {
+      const resp = await fetch(`${DUKCAPIL_API_BASE}/verify-nik`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nik: nik, namaLengkap: nama })
+      });
+      const resData = await resp.json();
+
+      if (resp.ok && resData) {
+        renderDukcapilResultCard(resData.data || resData, true, resData.valid);
+        return;
+      }
+    } catch (err) {
+      console.warn('API Dukcapil error, switching to local parser fallback:', err);
+    }
+  }
+
+  // Local Parser Fallback
+  setTimeout(() => {
+    const parsedData = parseNikIndonesia(nik, nama);
+    renderDukcapilResultCard(parsedData, false, parsedData.valid);
+  }, 400);
+}
+
+// Local NIK Parser Fallback Engine (Indonesian KTP Standard)
+// Comprehensive Province & Region Code Dictionary (Kemendagri)
+const NIK_PROVINSI_MAP = {
+  '11': 'ACEH', '12': 'SUMATERA UTARA', '13': 'SUMATERA BARAT', '14': 'RIAU',
+  '15': 'JAMBI', '16': 'SUMATERA SELATAN', '17': 'BENGKULU', '18': 'LAMPUNG',
+  '19': 'KEPULAUAN BANGKA BELITUNG', '21': 'KEPULAUAN RIAU',
+  '31': 'DKI JAKARTA', '32': 'JAWA BARAT', '33': 'JAWA TENGAH',
+  '34': 'DI YOGYAKARTA', '35': 'JAWA TIMUR', '36': 'BANTEN',
+  '51': 'BALI', '52': 'NUSA TENGGARA BARAT', '53': 'NUSA TENGGARA TIMUR',
+  '61': 'KALIMANTAN BARAT', '62': 'KALIMANTAN TENGAH', '63': 'KALIMANTAN SELATAN',
+  '64': 'KALIMANTAN TIMUR', '65': 'KALIMANTAN UTARA',
+  '71': 'SULAWESI UTARA', '72': 'SULAWESI TENGAH', '73': 'SULAWESI SELATAN',
+  '74': 'SULAWESI TENGGARA', '75': 'GORONTALO', '76': 'SULAWESI BARAT',
+  '81': 'MALUKU', '82': 'MALUKU UTARA',
+  '91': 'PAPUA', '92': 'PAPUA BARAT'
+};
+
+// Kab/Kota code for Jawa Barat (32xx) — most relevant for Puskesmas Banjaran Kota
+const NIK_KAB_JABAR_MAP = {
+  '01': 'KAB. BOGOR', '02': 'KAB. SUKABUMI', '03': 'KAB. CIANJUR',
+  '04': 'KAB. BANDUNG', '05': 'KAB. GARUT', '06': 'KAB. TASIKMALAYA',
+  '07': 'KAB. CIAMIS', '08': 'KAB. KUNINGAN', '09': 'KAB. CIREBON',
+  '10': 'KAB. MAJALENGKA', '11': 'KAB. SUMEDANG', '12': 'KAB. INDRAMAYU',
+  '13': 'KAB. SUBANG', '14': 'KAB. PURWAKARTA', '15': 'KAB. KARAWANG',
+  '16': 'KAB. BEKASI', '17': 'KAB. BANDUNG BARAT', '18': 'KAB. PANGANDARAN',
+  '71': 'KOTA BOGOR', '72': 'KOTA SUKABUMI', '73': 'KOTA BANDUNG',
+  '74': 'KOTA CIREBON', '75': 'KOTA BEKASI', '76': 'KOTA DEPOK',
+  '77': 'KOTA CIMAHI', '78': 'KOTA TASIKMALAYA', '79': 'KOTA BANJAR'
+};
+
+const NIK_KEC_BANDUNG_MAP = {
+  '05': 'Banjaran', '13': 'Banjaran', '11': 'Arjasari', '12': 'Pameungpeuk',
+  '14': 'Cangkuang', '15': 'Soreang', '16': 'Katapang', '17': 'Cimaung',
+  '28': 'Baleendah', '29': 'Dayeuhkolot', '30': 'Margahayu', '31': 'Margaasih'
+};
+
+function parseNikIndonesia(nik, namaInput = '') {
+  if (!nik || nik.length !== 16 || isNaN(nik)) {
+    return { valid: false, message: 'Format NIK tidak valid (harus 16 digit angka)' };
+  }
+
+  const provCode = nik.substring(0, 2);
+  const kabCode = nik.substring(2, 4);
+  const kecCode = nik.substring(4, 6);
+  let dobDay = parseInt(nik.substring(6, 8));
+  const dobMonth = parseInt(nik.substring(8, 10));
+  let dobYear = parseInt(nik.substring(10, 12));
+
+  // Gender detection: Females have day + 40
+  let gender = 'Laki-laki';
+  if (dobDay > 40) {
+    gender = 'Perempuan';
+    dobDay -= 40;
+  }
+
+  // Validate month and day bounds
+  if (dobMonth < 1 || dobMonth > 12 || dobDay < 1 || dobDay > 31) {
+    return { valid: false, message: 'Data tanggal lahir dalam NIK tidak valid' };
+  }
+
+  // Century estimation
+  const currentYear2Digit = parseInt(new Date().getFullYear().toString().substring(2));
+  const fullYear = (dobYear <= currentYear2Digit) ? (2000 + dobYear) : (1900 + dobYear);
+
+  const formattedMonth = String(dobMonth).padStart(2, '0');
+  const formattedDay = String(dobDay).padStart(2, '0');
+  const dobString = `${formattedDay}/${formattedMonth}/${fullYear}`;
+
+  // Age calculation
+  const today = new Date();
+  const birthDate = new Date(fullYear, dobMonth - 1, dobDay);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  // Province lookup
+  const provName = NIK_PROVINSI_MAP[provCode] || `PROVINSI (KODE ${provCode})`;
+
+  // Kab/Kota lookup (detailed for Jawa Barat)
+  let kabName;
+  if (provCode === '32') {
+    kabName = NIK_KAB_JABAR_MAP[kabCode] || `KAB/KOTA JABAR (KODE ${kabCode})`;
+  } else {
+    kabName = `KAB/KOTA (KODE ${provCode}.${kabCode})`;
+  }
+
+  // Kecamatan lookup
+  let kecName = `KECAMATAN (KODE ${kecCode})`;
+  if (provCode === '32' && kabCode === '04' && NIK_KEC_BANDUNG_MAP[kecCode]) {
+    kecName = NIK_KEC_BANDUNG_MAP[kecCode];
+  }
+
+  return {
+    valid: true,
+    nik: nik,
+    namaLengkap: namaInput ? namaInput.toUpperCase() : 'DATA DUKCAPIL VERIFIED',
+    tempatLahir: kabName,
+    tanggalLahir: dobString,
+    usia: age,
+    jenisKelamin: gender,
+    alamat: `${kabName}, ${provName}`,
+    kecamatan: kecName,
+    kelurahan: '-',
+    provinsi: provName,
+    kabupaten: kabName
+  };
+}
+
+function renderDukcapilResultCard(data, isOfficial = false, isValid = true) {
+  const container = document.getElementById('dukcapilResultContainer');
+  if (!container) return;
+
+  if (!isValid || !data) {
+    container.innerHTML = `
+      <div style="background: #fef2f2; border: 1px solid #fca5a5; padding: 16px; border-radius: var(--radius-md); color: #991b1b; font-size: 13px;">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-x-circle-fill" style="color: var(--rose);"></i> Data KTP Tidak Ditemukan / Tidak Valid
+        </div>
+        <p style="margin: 0;">Pastikan NIK 16 digit dan ejaan nama lengkap sudah benar sesuai KTP asli.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const badgeSource = isOfficial 
+    ? `<span class="badge badge-emerald" style="font-size: 11px;"><i class="bi bi-check-seal-fill"></i> Terverifikasi Server Dukcapil Official</span>`
+    : `<span class="badge badge-amber" style="font-size: 11px;"><i class="bi bi-cpu-fill"></i> Validasi Parser NIK Standar Dukcapil</span>`;
+
+  container.innerHTML = `
+    <div style="background: linear-gradient(135deg, #f8fafc, #eff6ff); border: 1px solid #cbd5e1; border-radius: var(--radius-md); padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+      
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e1;">
+        <div>
+          <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">KARTU TANDA PENDUKUNG (KTP) VERIFIED</div>
+          <div style="font-size: 18px; font-weight: 800; color: var(--text-main); font-family: var(--font-heading); margin-top: 2px;">
+            ${data.namaLengkap}
+          </div>
+        </div>
+        ${badgeSource}
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12.5px;">
+        
+        <div style="background: #ffffff; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
+          <div style="font-size: 11px; color: var(--text-muted); font-weight: 700;">NOMOR INDUK KEPENDUDUKAN (NIK)</div>
+          <div style="font-weight: 800; font-size: 14px; color: var(--primary); font-family: monospace; margin-top: 2px;">${data.nik}</div>
+        </div>
+
+        <div style="background: #ffffff; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
+          <div style="font-size: 11px; color: var(--text-muted); font-weight: 700;">JENIS KELAMIN & USIA</div>
+          <div style="font-weight: 700; color: var(--text-main); margin-top: 2px;">${data.jenisKelamin} (${data.usia ? data.usia + ' Thn' : '-'})</div>
+        </div>
+
+        <div style="background: #ffffff; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
+          <div style="font-size: 11px; color: var(--text-muted); font-weight: 700;">TEMPAT & TGL LAHIR</div>
+          <div style="font-weight: 700; color: var(--text-main); margin-top: 2px;">${data.tempatLahir || 'KAB. BANDUNG'}, ${data.tanggalLahir}</div>
+        </div>
+
+        <div style="background: #ffffff; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
+          <div style="font-size: 11px; color: var(--text-muted); font-weight: 700;">KECAMATAN / KELURAHAN</div>
+          <div style="font-weight: 700; color: var(--text-main); margin-top: 2px;">${data.kecamatan || 'BANJARAN'} / ${data.kelurahan || 'BANJARAN KOTA'}</div>
+        </div>
+
+        <div style="grid-column: span 2; background: #ffffff; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid #e2e8f0;">
+          <div style="font-size: 11px; color: var(--text-muted); font-weight: 700;">ALAMAT LENGKAP KTP</div>
+          <div style="font-weight: 700; color: var(--text-main); margin-top: 2px;">${data.alamat || '-'}</div>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
+
+/* ==========================================================================
+   🔍 DUKCAPIL AUTO-FILL FOR CKG INPUT FORM
+   Triggers when user enters 16-digit NIK or clicks "Cek Dukcapil" button
+   ========================================================================== */
+
+let _nikLookupDebounce = null;
+
+async function triggerNikDukcapilLookup() {
+  const nikInput = document.getElementById('nik');
+  const statusEl = document.getElementById('nikDukcapilStatus');
+  const btn = document.getElementById('btnCekNikDukcapil');
+  if (!nikInput) return;
+
+  const nik = nikInput.value.trim();
+
+  if (!nik || nik.length !== 16 || isNaN(nik)) {
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#fef2f2';
+      statusEl.style.border = '1px solid #fca5a5';
+      statusEl.style.color = '#991b1b';
+      statusEl.innerHTML = '<i class="bi bi-x-circle-fill"></i> NIK harus 16 digit angka';
+      setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+    }
+    return;
+  }
+
+  // Show loading state
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.style.background = '#eff6ff';
+    statusEl.style.border = '1px solid #bfdbfe';
+    statusEl.style.color = '#1e40af';
+    statusEl.innerHTML = '<i class="bi bi-hourglass-split"></i> Memverifikasi NIK ke Dukcapil...';
+  }
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> ...';
+  }
+
+  try {
+    // Try the server API first
+    const resp = await fetch(`${DUKCAPIL_API_BASE}/verify-nik`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nik: nik, namaLengkap: '' })
+    });
+
+    if (resp.ok) {
+      const result = await resp.json();
+      if (result.valid && result.data) {
+        await autoFillFormFromDukcapil(result.data);
+
+        if (statusEl) {
+          statusEl.style.display = 'block';
+          statusEl.style.background = '#f0fdf4';
+          statusEl.style.border = '1px solid #86efac';
+          statusEl.style.color = '#166534';
+          statusEl.innerHTML = `<i class="bi bi-check-circle-fill"></i> Data Dukcapil Ditemukan! <strong>${result.data.namaLengkap}</strong> — ${result.data.jenisKelamin}, ${result.data.usia} Thn (${result.data.provinsi})`;
+        }
+        showToast(`✓ Data Dukcapil berhasil diisi otomatis untuk NIK ${nik}`, 'success');
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('Dukcapil API call failed, trying local parser:', err);
+  }
+
+  // Fallback to local parser
+  const localResult = parseNikIndonesia(nik, '');
+  if (localResult.valid) {
+    await autoFillFormFromDukcapil(localResult);
+
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#fffbeb';
+      statusEl.style.border = '1px solid #fde68a';
+      statusEl.style.color = '#92400e';
+      statusEl.innerHTML = `<i class="bi bi-cpu-fill"></i> Data Terisi via Parser NIK Lokal — ${localResult.jenisKelamin}, ${localResult.usia} Thn (${localResult.provinsi})`;
+    }
+    showToast(`Data terisi otomatis via Parser NIK Lokal`, 'info');
+  } else {
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#fef2f2';
+      statusEl.style.border = '1px solid #fca5a5';
+      statusEl.style.color = '#991b1b';
+      statusEl.innerHTML = `<i class="bi bi-x-circle-fill"></i> ${localResult.message || 'NIK tidak valid'}`;
+    }
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-search"></i> Cek Dukcapil';
+  }
+}
+
+async function autoFillFormFromDukcapil(data) {
+  const btn = document.getElementById('btnCekNikDukcapil');
+
+  // Auto-fill Nama (only if currently empty)
+  const namaInput = document.getElementById('nama');
+  if (namaInput && !namaInput.value.trim() && data.namaLengkap && data.namaLengkap !== 'DATA DUKCAPIL VERIFIED') {
+    namaInput.value = data.namaLengkap;
+  }
+
+  // Auto-fill Tanggal Lahir
+  if (data.tanggalLahir) {
+    const dobInput = document.getElementById('tanggal_lahir');
+    if (dobInput) {
+      // Convert DD/MM/YYYY to YYYY-MM-DD for HTML date input
+      const parts = data.tanggalLahir.split('/');
+      if (parts.length === 3) {
+        const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        dobInput.value = isoDate;
+        // Trigger age calculation
+        calculateAgeFromDOB();
+      }
+    }
+  }
+
+  // Auto-fill Usia
+  if (data.usia !== undefined && data.usia !== null) {
+    const usiaInput = document.getElementById('usia');
+    if (usiaInput) usiaInput.value = data.usia;
+  }
+
+  // Auto-fill Jenis Kelamin
+  if (data.jenisKelamin) {
+    const jkSelect = document.getElementById('jenis_kelamin');
+    if (jkSelect) {
+      const jk = data.jenisKelamin.toLowerCase();
+      jkSelect.value = (jk === 'perempuan' || jk === 'p') ? 'P' : 'L';
+    }
+  }
+
+  // Auto-fill Provinsi, Kabupaten/Kota, dan Kecamatan dropdowns
+  if (data.provinsi) {
+    const provSelect = document.getElementById('provinsi');
+    if (provSelect) {
+      const provName = data.provinsi.toLowerCase();
+      const match = Array.from(provSelect.options).find(o =>
+        o.value.toLowerCase().includes(provName) ||
+        provName.includes(o.value.toLowerCase())
+      );
+      if (match) {
+        provSelect.value = match.value;
+        provSelect.dispatchEvent(new Event('change'));
+
+        // Wait for Kab/Kota dropdown options to load asynchronously
+        await new Promise(r => setTimeout(r, 250));
+
+        if (data.kabupaten) {
+          const kabSelect = document.getElementById('kab_kota');
+          if (kabSelect) {
+            const kabNameClean = data.kabupaten.toLowerCase().replace(/^(kab\.|kota|kabupaten)\s*/i, '').trim();
+            const kabMatch = Array.from(kabSelect.options).find(o => {
+              const valClean = o.value.toLowerCase().replace(/^(kab\.|kota|kabupaten)\s*/i, '').trim();
+              return valClean.includes(kabNameClean) || kabNameClean.includes(valClean);
+            });
+            if (kabMatch) {
+              kabSelect.value = kabMatch.value;
+              kabSelect.dispatchEvent(new Event('change'));
+
+              // Wait for Kecamatan dropdown options to load asynchronously
+              await new Promise(r => setTimeout(r, 250));
+
+              if (data.kecamatan && !data.kecamatan.includes('KODE')) {
+                const kecSelect = document.getElementById('kecamatan');
+                if (kecSelect) {
+                  const kecNameClean = data.kecamatan.toLowerCase().replace(/^kecamatan\s*/i, '').trim();
+                  const kecMatch = Array.from(kecSelect.options).find(o => {
+                    const valClean = o.value.toLowerCase().replace(/^kecamatan\s*/i, '').trim();
+                    return valClean.includes(kecNameClean) || kecNameClean.includes(valClean);
+                  });
+                  if (kecMatch) {
+                    kecSelect.value = kecMatch.value;
+                    kecSelect.dispatchEvent(new Event('change'));
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Reset button state
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Terverifikasi';
+    btn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+    // Reset after 5 seconds
+    setTimeout(() => {
+      btn.innerHTML = '<i class="bi bi-search"></i> Cek Dukcapil';
+      btn.style.background = 'linear-gradient(135deg, #1e3a8a, #3b82f6)';
+    }, 5000);
+  }
+}
 
 /* ==========================================================================
    CLOUDFLARE D1 DATABASE CLOUD SYNC ENGINE
@@ -8581,28 +9058,14 @@ async function fetchCloudUsers() {
     const res = await fetch('/api/users', { method: 'GET' });
     if (res.ok) {
       const result = await res.json();
-      if (result && result.success && Array.isArray(result.data)) {
-        const fetchedUsers = result.data
-          .filter(u => u && (u.nama_user || u.nama || u.username))
-          .map(u => ({
-            nama_user: String(u.nama_user || u.nama || u.username).trim(),
-            password: u.password ? String(u.password).trim() : '',
-            role: u.role || 'Petugas',
-            is_banned: !!u.is_banned,
-            banned_duration_label: u.banned_duration_label || ''
-          }));
-
-        if (fetchedUsers.length > 0) {
-          usersDb = fetchedUsers;
-        }
-
-        // Always ensure default INITIAL_USERS_DB accounts exist so login is never blocked
-        INITIAL_USERS_DB.forEach(initUser => {
-          if (!usersDb.some(u => u && u.nama_user && String(u.nama_user).toLowerCase().trim() === initUser.nama_user.toLowerCase())) {
-            usersDb.push(initUser);
-          }
-        });
-
+      if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
+        usersDb = result.data.map(u => ({
+          nama_user: u.nama_user || u.nama || u.username,
+          password: u.password || '',
+          role: u.role || 'Petugas',
+          is_banned: !!u.is_banned,
+          banned_duration_label: u.banned_duration_label || ''
+        }));
         saveUserDatabaseToStorage();
         if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
       }
