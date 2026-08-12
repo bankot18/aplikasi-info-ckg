@@ -1350,10 +1350,10 @@
           <div class="card-header-bar" style="margin-bottom: 16px;">
             <div>
               <div class="card-header-title" style="font-size: 18px;">
-                <i class="bi bi-geo-alt-fill" style="color: #0284c7;"></i> Peta Interaktif & Auto-Learning Alamat (Kabupaten Bandung)
+                <i class="bi bi-geo-alt-fill" style="color: #0284c7;"></i> Peta Interaktif & Auto-Learning Alamat (Seluruh Indonesia)
               </div>
               <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
-                Fokus Wilayah: <strong>Kabupaten Bandung, Jawa Barat</strong> (Puskesmas Banjaran Kota & Sekitarnya). Klik di peta untuk mencatat titik alamat baru.
+                Cakupan: <strong>Seluruh Wilayah Indonesia</strong> — Desa, Kecamatan, Kab/Kota & Provinsi otomatis terdeteksi dari Nominatim (OpenStreetMap). Klik di peta untuk scan alamat.
               </p>
             </div>
             <div class="action-buttons-group">
@@ -1450,7 +1450,7 @@
           <div class="metric-cards-grid" style="margin-bottom: 16px; grid-template-columns: repeat(4, 1fr);">
             <div class="metric-card-solid bg-blue" style="padding: 12px 16px;">
               <div class="metric-card-info">
-                <span class="metric-card-title">TITIK KAMPUNG KAB. BANDUNG</span>
+                <span class="metric-card-title">TOTAL TITIK ALAMAT</span>
                 <span class="metric-card-value" id="mapStatTotalPoints">0 Titik</span>
               </div>
               <div class="metric-card-icon"><i class="bi bi-pin-map-fill"></i></div>
@@ -1489,10 +1489,10 @@
             </div>
 
             <div class="filter-item">
-              <i class="bi bi-building"></i> Kecamatan (Kab. Bandung):
+              <i class="bi bi-building"></i> Filter Kecamatan:
               <select id="mapKecamatanSelect" class="filter-control" style="font-weight: 700;" onchange="filterMapMarkers()">
-                <option value="">-- Semua Kecamatan --</option>
-                <option value="Banjaran" selected>Banjaran (Puskesmas Utama)</option>
+                <option value="" selected>-- Semua Kecamatan --</option>
+                <option value="Banjaran">Banjaran (Puskesmas Utama)</option>
                 <option value="Cangkuang">Cangkuang</option>
                 <option value="Pameungpeuk">Pameungpeuk</option>
                 <option value="Arjasari">Arjasari</option>
@@ -1532,7 +1532,7 @@
               <!-- Map Floating Info Banner -->
               <div style="position: absolute; bottom: 12px; left: 12px; z-index: 500; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); padding: 8px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 11.5px; font-weight: 600; color: #334155; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px;">
                 <i class="bi bi-info-circle-fill" style="color: #0284c7; font-size: 14px;"></i>
-                <span>Petunjuk: <strong>Klik di area mana saja pada peta</strong> untuk mencatat titik kampung/alamat baru.</span>
+                <span>Petunjuk: <strong>Klik di area mana saja pada peta</strong> untuk mendeteksi & mencatat alamat otomatis (Desa, Kecamatan, Kab/Kota, Provinsi via Nominatim).</span>
               </div>
             </div>
 
