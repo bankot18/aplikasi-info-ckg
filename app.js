@@ -764,7 +764,7 @@ function hideLoadingOverlay() {
    ========================================================================== */
 
 function handleLogin(e) {
-  e.preventDefault();
+  if (e && e.preventDefault) e.preventDefault();
   const selectEl = document.getElementById('loginPegawaiSelect');
 
   if (!selectEl || !selectEl.value) {
@@ -779,8 +779,8 @@ function handleLogin(e) {
 
   const selectedPegawai = selectEl.value.trim();
 
-  // Match against usersDb database
-  const user = usersDb.find(u => u.nama_user.toLowerCase() === selectedPegawai.toLowerCase());
+  // Match safely against usersDb database
+  const user = usersDb.find(u => u && u.nama_user && String(u.nama_user).toLowerCase().trim() === selectedPegawai.toLowerCase());
 
   if (!user) {
     Swal.fire({
@@ -8581,14 +8581,28 @@ async function fetchCloudUsers() {
     const res = await fetch('/api/users', { method: 'GET' });
     if (res.ok) {
       const result = await res.json();
-      if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
-        usersDb = result.data.map(u => ({
-          nama_user: u.nama_user || u.nama || u.username,
-          password: u.password || '',
-          role: u.role || 'Petugas',
-          is_banned: !!u.is_banned,
-          banned_duration_label: u.banned_duration_label || ''
-        }));
+      if (result && result.success && Array.isArray(result.data)) {
+        const fetchedUsers = result.data
+          .filter(u => u && (u.nama_user || u.nama || u.username))
+          .map(u => ({
+            nama_user: String(u.nama_user || u.nama || u.username).trim(),
+            password: u.password ? String(u.password).trim() : '',
+            role: u.role || 'Petugas',
+            is_banned: !!u.is_banned,
+            banned_duration_label: u.banned_duration_label || ''
+          }));
+
+        if (fetchedUsers.length > 0) {
+          usersDb = fetchedUsers;
+        }
+
+        // Always ensure default INITIAL_USERS_DB accounts exist so login is never blocked
+        INITIAL_USERS_DB.forEach(initUser => {
+          if (!usersDb.some(u => u && u.nama_user && String(u.nama_user).toLowerCase().trim() === initUser.nama_user.toLowerCase())) {
+            usersDb.push(initUser);
+          }
+        });
+
         saveUserDatabaseToStorage();
         if (typeof renderUserDatabaseTable === 'function') renderUserDatabaseTable();
       }
