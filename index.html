@@ -20,14 +20,12 @@
 
   <!-- Application Stylesheet & SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="index.css">
 
-  <!-- Chart.js, SweetAlert2, SheetJS & Leaflet Libraries -->
+  <!-- Chart.js, SweetAlert2 & SheetJS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -245,9 +243,6 @@
       </button>
       <button class="nav-tab-btn" data-view="sekolah">
         <i class="bi bi-mortarboard-fill"></i> CKG Sekolah
-      </button>
-      <button class="nav-tab-btn" data-view="peta-wilayah">
-        <i class="bi bi-geo-alt-fill"></i> MAP
       </button>
       <button class="nav-tab-btn admin-koordinator-only" data-view="recycle-data">
         <i class="bi bi-trash3-fill"></i> Recycle Data
@@ -1187,21 +1182,13 @@
                 Kelola kamus deteksi otomatis wilayah (Provinsi, Kab/Kota, Kecamatan, Kelurahan) dari alamat pasien & impor file Excel
               </p>
             </div>
-            <div class="action-buttons-group">
-              <button class="btn btn-primary" onclick="scanExistingRecordsForAddressDictionary()" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: #fff; border: none; font-weight: 700;">
-                <i class="bi bi-cpu-fill"></i> âš¡ Scan & Learn Data Existing
-              </button>
-              <button class="btn btn-secondary" onclick="downloadKamusAlamatTemplate()" style="background: linear-gradient(135deg, #475569, #64748b); color: #fff; border: none; font-weight: 700;">
-                <i class="bi bi-download"></i> ðŸ“¥ Download Template Excel
+              <button class="btn btn-secondary" onclick="downloadKamusAlamatTemplate()" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: none; font-weight: 700;">
+                <i class="bi bi-file-earmark-arrow-down-fill"></i> 📥 Download Template Excel
               </button>
               <input type="file" id="excelAddressFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelAddressUpload(event)">
               <button class="btn btn-emerald" onclick="document.getElementById('excelAddressFileInput').click()" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; border: none; font-weight: 700;">
-                <i class="bi bi-file-earmark-excel-fill"></i> ðŸ“¤ Import Kamus Alamat (Excel)
+                <i class="bi bi-file-earmark-excel-fill"></i> 📤 Import Kamus Alamat (Excel)
               </button>
-              <button class="btn btn-rose admin-only" onclick="resetAllAddressPinsWithAi()" style="background: linear-gradient(135deg, #e11d48, #f43f5e); color: #fff; border: none; font-weight: 700;">
-                <i class="bi bi-trash-fill"></i> Reset Kamus Pembelajaran
-              </button>
-            </div>
           </div>
 
           <div style="padding: 16px; background: #f8fafc; border-radius: var(--radius-md); margin-top: 14px; border: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
@@ -1339,218 +1326,6 @@
                 <i class="bi bi-shield-lock-fill"></i> Simpan Pengaturan Kunci Menu
               </button>
             </div>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- VIEW 8: PETA WILAYAH & LEARNING ALAMAT (KABUPATEN BANDUNG, JAWA BARAT) -->
-      <section id="view-peta-wilayah" class="view-panel">
-        <div class="card-panel">
-          <div class="card-header-bar" style="margin-bottom: 16px;">
-            <div>
-              <div class="card-header-title" style="font-size: 18px;">
-                <i class="bi bi-geo-alt-fill" style="color: #0284c7;"></i> Peta Interaktif & Auto-Learning Alamat (Seluruh Indonesia)
-              </div>
-              <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
-                Cakupan: <strong>Seluruh Wilayah Indonesia</strong> — Desa, Kecamatan, Kab/Kota & Provinsi otomatis terdeteksi dari Nominatim (OpenStreetMap). Klik di peta untuk scan alamat.
-              </p>
-            </div>
-            <div class="action-buttons-group">
-              <button id="btnAiExplorerToggleHeader" class="btn btn-purple admin-only" onclick="toggleAiAutoExplorer()">
-                <i class="bi bi-play-fill"></i> Mulai Jelajah AI
-              </button>
-              <button class="btn btn-primary admin-only" onclick="openAddPinModalFromMap()">
-                <i class="bi bi-geo-fill"></i> Catat Titik Alamat di Peta
-              </button>
-              <button class="btn btn-emerald admin-only" onclick="repairAllRecordsAddressWithAi()" title="Khusus Admin: Perbaiki Alamat Record CKG, SIMPUS & Sekolah Otomatis">
-                <i class="bi bi-magic"></i> Auto-Repair Alamat AI (Admin)
-              </button>
-              <button class="btn btn-amber admin-only" onclick="syncKamusFromCloudServer(); setTimeout(renderMapMarkers, 300);">
-                <i class="bi bi-cloud-arrow-down-fill"></i> Sync Database Cloud D1
-              </button>
-              <button class="btn btn-secondary" onclick="resetMapFocusToBanjaran()">
-                <i class="bi bi-crosshair"></i> Reset Fokus (Banjaran)
-              </button>
-            </div>
-          </div>
-
-          <!-- ðŸ¤– AI AUTONOMOUS EXPLORER LIVE TRACKING HUD PANEL -->
-          <div id="aiExplorerPanel" class="ai-explorer-hud-panel">
-            <div class="ai-hud-header">
-              
-              <div class="ai-hud-info-block">
-                <div class="ai-hud-robot-icon">
-                  <i class="bi bi-robot"></i>
-                </div>
-                <div>
-                  <div class="ai-hud-title">
-                    <span>Tukang Penjelajah Pencatat Titik Alamat</span>
-                    <span id="aiExplorerStateBadge" class="badge badge-amber" style="font-size: 10.5px; border-radius: 12px; padding: 3px 10px;">
-                      <i class="bi bi-pause-circle-fill"></i> DI-JEDA
-                    </span>
-                    <span id="aiTimerBadge" class="badge" style="font-size: 10.5px; border-radius: 12px; padding: 3px 10px; background: rgba(99, 102, 241, 0.15); color: #4f46e5; border: 1px solid rgba(99, 102, 241, 0.3);">
-                      <i class="bi bi-clock-history"></i> Sisa Waktu: <strong id="aiTimerCountdownText" style="color: #4f46e5;">â³ 10:00</strong>
-                    </span>
-                    <span id="aiDbSavedBadge" class="badge" style="font-size: 10.5px; border-radius: 12px; padding: 3px 10px; background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3);" title="Jumlah titik alamat yang telah tersimpan otomatis ke Cloud D1 Database Server">
-                      <i class="bi bi-database-check"></i> Tersimpan Server D1: <strong id="aiDbSavedCountText" style="color: #059669;">0 Titik</strong>
-                    </span>
-                  </div>
-                  <div class="ai-hud-subtitle">
-                    Menjelajah otomatis dan mencatat titik kampung di <strong class="ai-hud-target-region" id="aiExplorerTargetRegion">Kabupaten Bandung</strong> → Cloud D1 Database.
-                  </div>
-                </div>
-              </div>
-
-              <!-- AI Controls (Admin Only except Ikuti Radar AI) -->
-              <div class="ai-hud-controls">
-                <button id="btnToggleAiExplorer" class="btn btn-sm btn-cyan admin-only" onclick="toggleAiAutoExplorer()" style="font-weight: 700; font-size: 11.5px; padding: 6px 12px;">
-                  <i class="bi bi-play-fill"></i> Mulai Jelajah AI
-                </button>
-                <button id="btnSetAiTimer" class="btn btn-sm btn-indigo admin-only" onclick="openSetAiTimerModal()" style="font-weight: 700; font-size: 11.5px; padding: 6px 12px; background: #4f46e5; color: white;" title="Setel Durasi Waktu Jelajah AI">
-                  <i class="bi bi-stopwatch-fill"></i> Durasi Waktu
-                </button>
-                <button id="btnSpeedAiExplorer" class="btn btn-sm btn-secondary admin-only" onclick="speedUpAiExplorer()" style="font-size: 11.5px; font-weight: 700; padding: 6px 12px;" title="Ubah Kecepatan Scanning AI">
-                  <i class="bi bi-lightning-charge-fill" style="color: #f59e0b;"></i> Mode: Normal (4s)
-                </button>
-                <button class="btn btn-sm btn-emerald admin-only" onclick="repairAllRecordsAddressWithAi()" style="font-weight: 700; font-size: 11.5px; padding: 6px 12px; background: #10b981; color: white;" title="Perbaiki Kelurahan, Kecamatan, Kab/Kota, Provinsi di Data Record CKG, SIMPUS &amp; Sekolah Otomatis">
-                  <i class="bi bi-magic"></i> Auto-Repair Alamat Records
-                </button>
-                <button class="btn btn-sm btn-secondary" onclick="reFocusAiRadarMarker()" style="font-size: 11.5px; font-weight: 700; padding: 6px 12px;" title="Ikuti Drone Radar AI">
-                  <i class="bi bi-crosshair" style="color: #0284c7;"></i> Ikuti Radar AI
-                </button>
-              </div>
-
-            </div>
-
-            <!-- Live Status Ticker & Progress Bar -->
-            <div class="ai-hud-bottom-grid">
-              
-              <!-- Live Log Ticker Bar -->
-              <div class="ai-hud-ticker-bar">
-                <i class="bi bi-radar" style="font-size: 15px; color: #0284c7; animation: spin 4s linear infinite;"></i>
-                <span id="aiLiveLogTicker" style="overflow: hidden; text-overflow: ellipsis;">ðŸ” AI Radar Active: Scanning Kp. Cipeundeuy, Kec. Banjaran (Kabupaten Bandung)...</span>
-              </div>
-
-              <!-- Exploration Coverage Progress -->
-              <div>
-                <div class="ai-hud-coverage-text">
-                  <span>Coverage <span id="aiCoverageRegionLabel">Kab. Bandung</span>:</span>
-                  <span id="aiCoverageText" style="color: #0284c7;">0% (0/31 Kec)</span>
-                </div>
-                <div class="ai-hud-coverage-track">
-                  <div id="aiCoverageBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #0284c7); border-radius: 4px; transition: width 0.5s ease;"></div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- Summary Metric Pills -->
-          <div class="metric-cards-grid" style="margin-bottom: 16px; grid-template-columns: repeat(4, 1fr);">
-            <div class="metric-card-solid bg-blue" style="padding: 12px 16px;">
-              <div class="metric-card-info">
-                <span class="metric-card-title">TOTAL TITIK ALAMAT</span>
-                <span class="metric-card-value" id="mapStatTotalPoints">0 Titik</span>
-              </div>
-              <div class="metric-card-icon"><i class="bi bi-pin-map-fill"></i></div>
-            </div>
-
-            <div class="metric-card-solid bg-cyan" style="padding: 12px 16px;">
-              <div class="metric-card-info">
-                <span class="metric-card-title">KECAMATAN TERMAPPING</span>
-                <span class="metric-card-value" id="mapStatTotalKec">0 Kec</span>
-              </div>
-              <div class="metric-card-icon"><i class="bi bi-map"></i></div>
-            </div>
-
-            <div class="metric-card-solid bg-emerald" style="padding: 12px 16px;">
-              <div class="metric-card-info">
-                <span class="metric-card-title">PASIEN CKG TERPETA</span>
-                <span class="metric-card-value" id="mapStatTotalPatients">0 Pasien</span>
-              </div>
-              <div class="metric-card-icon"><i class="bi bi-people-fill"></i></div>
-            </div>
-
-            <div class="metric-card-solid bg-purple" style="padding: 12px 16px;">
-              <div class="metric-card-info">
-                <span class="metric-card-title">BANJARAN & SEKITARNYA</span>
-                <span class="metric-card-value" id="mapStatBanjaranPoints">0 Titik</span>
-              </div>
-              <div class="metric-card-icon"><i class="bi bi-hospital-fill"></i></div>
-            </div>
-          </div>
-
-          <!-- Map Control Filter Bar -->
-          <div class="filter-bar-box" style="margin-bottom: 14px; padding: 10px 14px;">
-            <div class="filter-item" style="flex: 1; min-width: 220px;">
-              <i class="bi bi-search" style="color: var(--primary);"></i> Cari Kampung / Alamat:
-              <input type="text" id="mapSearchInput" class="filter-control" placeholder="Ketik nama kampung/jalan..." style="width: 100%; font-weight: 600;" oninput="filterMapMarkers()">
-            </div>
-
-            <div class="filter-item">
-              <i class="bi bi-building"></i> Filter Kecamatan:
-              <select id="mapKecamatanSelect" class="filter-control" style="font-weight: 700;" onchange="filterMapMarkers()">
-                <option value="" selected>-- Semua Kecamatan --</option>
-                <option value="Banjaran">Banjaran (Puskesmas Utama)</option>
-                <option value="Cangkuang">Cangkuang</option>
-                <option value="Pameungpeuk">Pameungpeuk</option>
-                <option value="Arjasari">Arjasari</option>
-                <option value="Cimaung">Cimaung</option>
-                <option value="Soreang">Soreang</option>
-                <option value="Katapang">Katapang</option>
-                <option value="Baleendah">Baleendah</option>
-                <option value="Dayeuhkolot">Dayeuhkolot</option>
-                <option value="Margahayu">Margahayu</option>
-                <option value="Margaasih">Margaasih</option>
-                <option value="Ciwidey">Ciwidey</option>
-                <option value="Pasirjambu">Pasirjambu</option>
-                <option value="Rancabali">Rancabali</option>
-                <option value="Pangalengan">Pangalengan</option>
-                <option value="Bojongsoang">Bojongsoang</option>
-                <option value="Cileunyi">Cileunyi</option>
-                <option value="Rancaekek">Rancaekek</option>
-                <option value="Majalaya">Majalaya</option>
-                <option value="Ciparay">Ciparay</option>
-              </select>
-            </div>
-
-            <div class="filter-item">
-              <i class="bi bi-layers-half"></i> Mode Tampilan:
-              <select id="mapDisplayMode" class="filter-control" style="font-weight: 700;" onchange="filterMapMarkers()">
-                <option value="all" selected>Semua Titik Kampung</option>
-                <option value="with_patients">Hanya Kampung Berpasien CKG</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Main Layout Grid: Map container on left, address list on right -->
-          <div style="display: grid; grid-template-columns: 2.2fr 1fr; gap: 16px;">
-            <div style="position: relative;">
-              <div id="interactiveMap" style="height: 540px; width: 100%; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-md); z-index: 1;"></div>
-              
-              <!-- Map Floating Info Banner -->
-              <div style="position: absolute; bottom: 12px; left: 12px; z-index: 500; background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(8px); padding: 8px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 11.5px; font-weight: 600; color: #334155; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px;">
-                <i class="bi bi-info-circle-fill" style="color: #0284c7; font-size: 14px;"></i>
-                <span>Petunjuk: <strong>Klik di area mana saja pada peta</strong> untuk mendeteksi & mencatat alamat otomatis (Desa, Kecamatan, Kab/Kota, Provinsi via Nominatim).</span>
-              </div>
-            </div>
-
-            <!-- Right Sidebar: Pinned Address Directory Card -->
-            <div class="card-panel" style="margin-bottom: 0; padding: 14px; display: flex; flex-direction: column; height: 540px;">
-              <div style="font-size: 14px; font-weight: 700; color: var(--text-color); padding-bottom: 8px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-                <span><i class="bi bi-pin-map-fill" style="color: #0284c7;"></i> Daftar Titik Alamat</span>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <button class="btn btn-sm admin-only" onclick="resetAllAddressPinsWithAi()" style="font-size: 10.5px; padding: 3px 8px; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; font-weight: 700;" title="Khusus Admin: Hapus & Reset Seluruh Titik Kamus Alamat (Lokal & Cloud D1)">
-                    <i class="bi bi-trash3-fill"></i> Reset Semua Titik
-                  </button>
-                  <span id="mapSidebarCountBadge" class="badge badge-purple" style="font-size: 10.5px;">0 Titik</span>
-                </div>
-              </div>
-
-              <div id="mapAddressListContainer" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
-                <!-- Dynamically rendered address cards -->
-              </div>
             </div>
           </div>
 

@@ -1163,8 +1163,6 @@ function switchView(viewId) {
     renderTableRecords();
   } else if (viewId === 'recycle-data') {
     renderRecycleTable();
-  } else if (viewId === 'peta-wilayah') {
-    initInteractiveMap();
   } else if (viewId === 'admin-panel') {
     refreshAdminKamusStats();
   }
@@ -1511,16 +1509,68 @@ function downloadKamusAlamatTemplate() {
     return;
   }
   const templateData = [
-    { "Alamat Lengkap / Nama Kampung": "Kp. Pajagalan RT 02 RW 05", "Kelurahan / Desa": "Banjaran Kota", "Kecamatan": "Banjaran", "Kabupaten / Kota": "Kabupaten Bandung", "Provinsi": "Jawa Barat" },
-    { "Alamat Lengkap / Nama Kampung": "Kp. Kamasan Hilir", "Kelurahan / Desa": "Kamasan", "Kecamatan": "Banjaran", "Kabupaten / Kota": "Kabupaten Bandung", "Provinsi": "Jawa Barat" },
-    { "Alamat Lengkap / Nama Kampung": "Jl. Raya Ciapus No. 12", "Kelurahan / Desa": "Ciapus", "Kecamatan": "Banjaran", "Kabupaten / Kota": "Kabupaten Bandung", "Provinsi": "Jawa Barat" },
-    { "Alamat Lengkap / Nama Kampung": "Dusun Margahayu", "Kelurahan / Desa": "Margahayu", "Kecamatan": "Banjaran", "Kabupaten / Kota": "Kabupaten Bandung", "Provinsi": "Jawa Barat" },
-    { "Alamat Lengkap / Nama Kampung": "Kp. Sindangpanon", "Kelurahan / Desa": "Sindangpanon", "Kecamatan": "Banjaran", "Kabupaten / Kota": "Kabupaten Bandung", "Provinsi": "Jawa Barat" }
+    {
+      "KATA KUNCI KAMPUNG": "PAJAGALAN",
+      "KELURAHAN / DESA": "Banjaran Kota",
+      "KECAMATAN": "Banjaran",
+      "KABUPATEN / KOTA": "Kabupaten Bandung",
+      "PROVINSI": "Jawa Barat",
+      "LATITUDE": "-7.045612",
+      "LONGITUDE": "107.587421"
+    },
+    {
+      "KATA KUNCI KAMPUNG": "KAMASAN",
+      "KELURAHAN / DESA": "Kamasan",
+      "KECAMATAN": "Banjaran",
+      "KABUPATEN / KOTA": "Kabupaten Bandung",
+      "PROVINSI": "Jawa Barat",
+      "LATITUDE": "-7.041234",
+      "LONGITUDE": "107.589012"
+    },
+    {
+      "KATA KUNCI KAMPUNG": "CIAPUS",
+      "KELURAHAN / DESA": "Ciapus",
+      "KECAMATAN": "Banjaran",
+      "KABUPATEN / KOTA": "Kabupaten Bandung",
+      "PROVINSI": "Jawa Barat",
+      "LATITUDE": "-7.051122",
+      "LONGITUDE": "107.591234"
+    },
+    {
+      "KATA KUNCI KAMPUNG": "DARMO",
+      "KELURAHAN / DESA": "Darmo",
+      "KECAMATAN": "Wonokromo",
+      "KABUPATEN / KOTA": "Kota Surabaya",
+      "PROVINSI": "Jawa Timur",
+      "LATITUDE": "-7.291234",
+      "LONGITUDE": "112.734567"
+    },
+    {
+      "KATA KUNCI KAMPUNG": "MENTENG",
+      "KELURAHAN / DESA": "Menteng",
+      "KECAMATAN": "Menteng",
+      "KABUPATEN / KOTA": "Kota Jakarta Pusat",
+      "PROVINSI": "DKI Jakarta",
+      "LATITUDE": "-6.191234",
+      "LONGITUDE": "106.834567"
+    }
   ];
+
   const worksheet = XLSX.utils.json_to_sheet(templateData);
+  // Auto-set column widths for clean presentation
+  worksheet['!cols'] = [
+    { wch: 22 }, // Kata Kunci Kampung
+    { wch: 22 }, // Kelurahan / Desa
+    { wch: 18 }, // Kecamatan
+    { wch: 22 }, // Kabupaten / Kota
+    { wch: 18 }, // Provinsi
+    { wch: 14 }, // Latitude
+    { wch: 14 }  // Longitude
+  ];
+
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Kamus Alamat CKG");
-  XLSX.writeFile(workbook, "Template_Kamus_Alamat_CKG.xlsx");
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Template Kamus Alamat D1");
+  XLSX.writeFile(workbook, "Template_Kamus_Alamat_Cloud_D1.xlsx");
 }
 
 async function handleExcelAddressUpload(event) {
@@ -1534,8 +1584,8 @@ async function handleExcelAddressUpload(event) {
   }
 
   Swal.fire({
-    title: 'Membaca File Excel...',
-    text: 'Mohon tunggu sebentar, sistem sedang mengekstrak nama kampung & kelurahan dari file Excel Anda.',
+    title: 'Membaca & Mengunggah File Excel...',
+    text: 'Mohon tunggu sebentar, sistem sedang memproses data alamat dan mengirim ke Cloud D1 Database Server.',
     allowOutsideClick: false,
     didOpen: () => { Swal.showLoading(); }
   });
@@ -1547,30 +1597,25 @@ async function handleExcelAddressUpload(event) {
     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
 
     console.log('📊 [Kamus Import] Sheet parsed, total rows:', rows.length);
-    if (rows.length > 0) {
-      console.log('📊 [Kamus Import] Column headers:', Object.keys(rows[0]));
-      console.log('📊 [Kamus Import] Sample row 1:', JSON.stringify(rows[0]));
-    }
-
     if (!rows || rows.length === 0) {
       Swal.fire('File Kosong', 'Tidak ada data ditemukan dalam file Excel tersebut.', 'warning');
       return;
     }
 
-    let addedCount = 0;
-    let skippedCount = 0;
-    const batchMap = new Map();
+    const itemsToSave = [];
     const prefixRegex = /^(KP\.?\s*|KAMPUNG\s+|JL\.?\s*|JLN\.?\s*|JALAN\s+|GG\.?\s*|GANG\s+|DS\.?\s*|DUSUN\s+)/i;
     const rtRwRegex = /\s*RT\.?\s*\d*\s*\/?\s*RW\.?\s*\d*/gi;
     const digitOnlyRegex = /^\d+$/;
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      let addressVal = '';
+      let kwVal = '';
       let kelVal = '';
       let kecVal = '';
       let kabVal = '';
       let provVal = '';
+      let latVal = null;
+      let lngVal = null;
 
       const keys = Object.keys(r);
       for (let k of keys) {
@@ -1578,92 +1623,87 @@ async function handleExcelAddressUpload(event) {
         const valStr = String(r[k]).trim();
         if (!valStr) continue;
 
-        if (keyLower.includes('alamat') || keyLower.includes('street') || keyLower.includes('jalan') || keyLower.includes('kampung') || keyLower.includes('dusun') || keyLower.includes('lokasi') || keyLower.includes('keyword')) {
-          if (!addressVal) addressVal = valStr;
+        if (keyLower.includes('kata kunci') || keyLower.includes('keyword') || keyLower.includes('kampung') || keyLower.includes('alamat') || keyLower.includes('jalan')) {
+          if (!kwVal) kwVal = valStr;
         } else if (keyLower.includes('kelurahan') || keyLower.includes('desa') || keyLower === 'kel') {
-          kelVal = valStr;
+          if (!kelVal) kelVal = valStr;
         } else if (keyLower.includes('kecamatan') || keyLower === 'kec') {
-          kecVal = valStr;
+          if (!kecVal) kecVal = valStr;
         } else if (keyLower.includes('kabupaten') || keyLower.includes('kab') || keyLower.includes('kota')) {
-          kabVal = valStr;
+          if (!kabVal) kabVal = valStr;
         } else if (keyLower.includes('provinsi') || keyLower.includes('prov')) {
-          provVal = valStr;
+          if (!provVal) provVal = valStr;
+        } else if (keyLower.includes('latitude') || keyLower === 'lat') {
+          latVal = parseFloat(valStr) || null;
+        } else if (keyLower.includes('longitude') || keyLower === 'lng' || keyLower === 'lon') {
+          lngVal = parseFloat(valStr) || null;
         }
       }
 
-      // Fallback: if no recognized header matched, use first two columns
-      if (!addressVal && keys.length > 0) {
-        addressVal = String(r[keys[0]] || '').trim();
-      }
-      if (!kelVal && keys.length > 1) {
-        kelVal = String(r[keys[1]] || '').trim();
-      }
-      if (!kelVal) {
-        kelVal = 'Banjaran Kota';
+      // Fallback: if headers didn't match keyword, check first column
+      if (!kwVal && keys.length > 0) {
+        kwVal = String(r[keys[0]] || '').trim();
       }
 
-      if (!addressVal) {
-        skippedCount++;
-        continue;
-      }
+      if (!kwVal) continue;
 
-      // Clean the address: strip common prefixes and RT/RW segments
-      let cleaned = addressVal.toUpperCase().trim();
-      cleaned = cleaned.replace(prefixRegex, '').trim();
-      cleaned = cleaned.replace(rtRwRegex, '').trim();
+      // Clean the keyword
+      let cleanedKw = kwVal.toUpperCase().trim();
+      cleanedKw = cleanedKw.replace(prefixRegex, '').trim();
+      cleanedKw = cleanedKw.replace(rtRwRegex, '').trim();
 
-      // Extract meaningful words (length >= 3, not pure digits)
-      const words = cleaned.split(/[\s,;\/\\]+/).filter(w => w.length >= 3 && !digitOnlyRegex.test(w));
+      const words = cleanedKw.split(/[\s,;\/\\]+/).filter(w => w.length >= 2 && !digitOnlyRegex.test(w));
+      const finalKw = words[0] || cleanedKw;
 
-      if (words.length === 0) {
-        skippedCount++;
-        continue;
-      }
+      if (!finalKw || finalKw.length < 2) continue;
 
-      const kw = words[0];
+      // Clean administration names
+      kelVal = kelVal.replace(/^Kelurahan\s+|^Desa\s+/i, '').trim();
+      kecVal = kecVal.replace(/^Kecamatan\s+/i, '').trim();
+      kabVal = kabVal.replace(/^Kabupaten\s+|^Kota\s+/i, '').trim();
 
-      if (!batchMap.has(kw)) {
-        saveLearnedKampungKeyword(kw, kelVal, kecVal || 'Banjaran', kabVal || 'Kabupaten Bandung', provVal || 'Jawa Barat', false);
-        batchMap.set(kw, {
-          keyword: kw,
-          kel: kelVal,
-          kec: kecVal || 'Banjaran',
-          kab: kabVal || 'Kabupaten Bandung',
-          prov: provVal || 'Jawa Barat'
-        });
-        addedCount++;
-      }
+      itemsToSave.push({
+        keyword: finalKw.toUpperCase(),
+        kel: kelVal,
+        kec: kecVal,
+        kab: kabVal,
+        prov: provVal,
+        lat: latVal,
+        lng: lngVal
+      });
     }
 
-    const batchPayload = Array.from(batchMap.values());
-    console.log('📊 [Kamus Import] Batch payload size:', batchPayload.length, 'Skipped rows:', skippedCount);
-    if (batchPayload.length > 0) {
-      console.log('📊 [Kamus Import] Sample keywords:', batchPayload.slice(0, 5).map(b => b.keyword + ' → ' + b.kel).join(', '));
+    if (itemsToSave.length === 0) {
+      event.target.value = '';
+      Swal.fire('Data Tidak Valid', 'Sistem tidak dapat menemukan kata kunci kampung yang valid dari file Excel.', 'warning');
+      return;
     }
 
-    // Push batch to D1 Cloud Server
+    // Save to LocalStorage cache
+    itemsToSave.forEach(item => {
+      saveLearnedKampungKeyword(item.keyword, item.kel, item.kec, item.kab, item.prov, false, item.lat, item.lng);
+    });
+
+    // Upload directly to Cloud D1 Database via POST /api/kamus
     let d1Success = false;
-    let d1Message = '';
-    if (batchPayload.length > 0) {
-      try {
-        const res = await fetch('/api/kamus', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(batchPayload)
-        });
-        const resJson = await res.json();
-        console.log('⚡ [Kamus Import] D1 Response status:', res.status, 'Body:', JSON.stringify(resJson));
-        d1Success = res.ok && resJson.success;
-        d1Message = d1Success
-          ? `✅ Cloud D1: ${resJson.count || batchPayload.length} kata kunci tersimpan.`
-          : `⚠️ Cloud D1 Error: ${resJson.error || 'Unknown error'} (Status: ${res.status})`;
-      } catch (e) {
-        console.error('❌ [Kamus Import] Fetch /api/kamus failed:', e);
-        d1Success = false;
-        d1Message = `❌ Network Error: ${e.message}`;
+    let d1Count = 0;
+    let d1ErrorMsg = '';
+
+    try {
+      const res = await fetch('/api/kamus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(itemsToSave)
+      });
+      const resJson = await res.json();
+      if (res.ok && resJson.success) {
+        d1Success = true;
+        d1Count = resJson.count || itemsToSave.length;
+      } else {
+        d1ErrorMsg = resJson.error || 'Response not OK';
       }
-    } else {
-      d1Message = 'Tidak ada data baru untuk dikirim ke Cloud.';
+    } catch (netErr) {
+      d1ErrorMsg = netErr.message;
     }
 
     event.target.value = '';
@@ -1671,36 +1711,26 @@ async function handleExcelAddressUpload(event) {
     refreshAdminKamusStats();
     renderKamusAlamatTable();
 
-    if (addedCount === 0) {
-      Swal.fire({
-        icon: 'info',
-        title: 'File Excel Berhasil Dibaca',
-        html: `<div style="font-size:13px; line-height:1.7;">
-          Data dari file Excel telah dibaca (<strong>${rows.length}</strong> baris), namun <strong>0 kata kunci baru</strong> ditambahkan.<br><br>
-          <strong>Kemungkinan penyebab:</strong><br>
-          • Kata kunci kampung sudah tersimpan di Kamus<br>
-          • Teks alamat terlalu pendek (< 3 karakter)<br>
-          • Kolom alamat tidak terdeteksi<br><br>
-          <span style="color:#64748b; font-size:12px;">Baris dilewati: ${skippedCount} | Headers: ${Object.keys(rows[0] || {}).join(', ')}</span>
-        </div>`,
-        confirmButtonText: 'Mengerti'
-      });
-    } else {
-      Swal.fire({
-        icon: d1Success ? 'success' : 'warning',
-        title: d1Success ? 'Impor Kamus Alamat Berhasil!' : 'Tersimpan Lokal, Cloud Gagal',
-        html: `<div style="font-size:13px; line-height:1.7;">
-          Berhasil mengekstrak <strong>${addedCount}</strong> kata kunci kampung unik dari <strong>${rows.length}</strong> baris data.<br><br>
-          <div style="padding: 8px 12px; background: ${d1Success ? '#f0fdf4' : '#fef2f2'}; border-radius: 6px; margin-top: 4px; font-size: 12px;">
-            ${d1Message}
+    Swal.fire({
+      icon: d1Success ? 'success' : 'warning',
+      title: d1Success ? 'Upload Kamus ke Cloud D1 Berhasil!' : 'Tersimpan Lokal, Gagal Upload Cloud',
+      html: `
+        <div style="text-align: left; font-size: 13px; line-height: 1.7;">
+          <p>Berhasil mengekstrak <strong>${itemsToSave.length}</strong> data kampung dari <strong>${rows.length}</strong> baris file Excel.</p>
+          <div style="margin-top: 10px; padding: 10px 12px; background: ${d1Success ? '#f0fdf4' : '#fef2f2'}; border-radius: 8px; border: 1px solid ${d1Success ? '#bbf7d0' : '#fecaca'}; font-size: 12px;">
+            ${d1Success
+              ? `<strong style="color: #15803d;">☁️ Cloud D1 Database:</strong> ${d1Count} data berhasil disimpan/diperbarui ke cloud.`
+              : `<strong style="color: #b91c1c;">⚠️ Error Cloud D1:</strong> ${d1ErrorMsg}`}
           </div>
-        </div>`,
-        confirmButtonText: 'OK'
-      });
-    }
+        </div>
+      `,
+      confirmButtonText: 'Selesai'
+    });
+
   } catch (err) {
-    console.error('❌ [Kamus Import] Fatal error:', err);
-    Swal.fire('Gagal Impor', 'Terjadi kesalahan saat membaca file Excel: ' + err.message, 'error');
+    event.target.value = '';
+    console.error('❌ Error handling Excel import:', err);
+    Swal.fire('Gagal Membaca File', `Terjadi kesalahan saat memproses file Excel: ${err.message}`, 'error');
   }
 }
 
@@ -1890,29 +1920,25 @@ async function scanExistingRecordsForAddressDictionary() {
   }
 
   Swal.fire({
-    title: 'Perekaman Alamat Berbasis Peta',
+    title: 'Kelola Kamus Alamat Varian',
     html: `
-      <div style="text-align: left; font-size: 13px; color: #475569;">
+      <div style="text-align: left; font-size: 13px; color: #475569; line-height: 1.6;">
         <p style="margin-bottom: 10px;">
-          Sesuai standar validasi data, perekaman Kamus Alamat <strong>TIDAK LAGI diambil dari entrian data pasien CKG</strong> untuk menghindari salah ketik/alamat tidak valid.
+          Manajemen Kamus Alamat sekarang dipusatkan secara resmi melalui <strong>File Excel</strong> untuk menjamin akurasi dan keselarasan database Cloud D1.
         </p>
         <p style="margin-bottom: 10px; color: #0f172a; font-weight: 700;">
-          📍 Untuk menambah titik alamat baru ke Kamus Alamat & Peta:
+          📥 Cara Menambahkan Data Kamus Alamat:
         </p>
         <ol style="padding-left: 20px; color: #0369a1; font-weight: 600;">
-          <li>Buka menu <strong>"Peta Alamat Kab. Bandung"</strong>.</li>
-          <li>Klik di titik peta lokasi kampung tersebut (Click-to-Pin).</li>
-          <li>Atau impor file Excel resmi melalui tombol <strong>"Import Kamus Alamat (Excel)"</strong>.</li>
+          <li>Klik <strong>"Download Template Excel"</strong> di menu Admin.</li>
+          <li>Isi nama kampung, kelurahan, kecamatan, kabupaten, dan provinsi.</li>
+          <li>Unggah file melalui tombol <strong>"Import Kamus Alamat (Excel)"</strong>. Data akan langsung tersimpan di Cloud D1 Database.</li>
         </ol>
       </div>
     `,
     icon: 'info',
-    confirmButtonText: 'Paham, Buka Peta Alamat',
+    confirmButtonText: 'Mengerti',
     confirmButtonColor: '#0284c7'
-  }).then((res) => {
-    if (res.isConfirmed) {
-      switchView('peta-wilayah');
-    }
   });
 }
 
@@ -11738,16 +11764,17 @@ async function stepAiExplorerNextLocation() {
   const lng = parseFloat((baseLng + stepOffsetLng).toFixed(6));
 
   // 🔒 SKIP VISITED / ALREADY PINNED CHECK:
-  // If this exact (cleanKw + targetKel + targetKec) is already saved in DB, advance pointer and search for a NEW undiscovered location!
+  // Match by kampung keyword name ONLY — regardless of kel/kec (which may vary from geocode results)
   const currentLearned = getLearnedKampungMap();
   const isAlreadyPinned = currentLearned.some(item => {
     const itemKw = (Array.isArray(item.keywords) ? item.keywords[0] : item.keywords) || '';
-    return String(itemKw).toUpperCase().trim() === cleanKw.toUpperCase() &&
-           String(item.kel || '').toUpperCase().trim() === targetKel.toUpperCase() &&
-           String(item.kec || '').toUpperCase().trim() === targetKec.toUpperCase();
+    return String(itemKw).toUpperCase().trim() === cleanKw.toUpperCase();
   });
 
   if (isAlreadyPinned) {
+    // Update HUD to show skipping activity
+    updateAiLiveLog(`⏩ [${new Date().toLocaleTimeString('id-ID')}] Skip: Kp. ${cleanKw} (Desa ${targetKel}, Kec. ${targetKec}) — sudah tercatat`);
+
     // Advance pointer to next location
     aiCurrentPointIndex++;
     if (aiCurrentPointIndex >= kecObj.kampungs.length) {
@@ -11761,7 +11788,10 @@ async function stepAiExplorerNextLocation() {
     return;
   }
 
-  // 1. Reverse geocode to get accurate address from Nominatim (async, enriches static data)
+  // Inform live ticker immediately that AI is actively scanning this coordinate
+  updateAiLiveLog(`🔍 [${new Date().toLocaleTimeString('id-ID')}] Sedang memindai: Kp. ${cleanKw} (Desa ${targetKel}, Kec. ${targetKec})...`);
+
+  // 1. Reverse geocode to get accurate address from Dual-API (BigDataCloud + Nominatim)
   let finalKel = targetKel;
   let finalKec = targetKec;
   let finalKab = targetKab;
@@ -11791,11 +11821,11 @@ async function stepAiExplorerNextLocation() {
 
   aiLearnedCountTotal++;
 
-  // 3. Update Live Log HUD & Indicator
-  updateAiLiveLog(`🔍 [${new Date().toLocaleTimeString('id-ID')}] Discovered NEW: Kp. ${cleanKw}, Desa ${finalKel}, Kec. ${finalKec}, ${finalKab} → Saved to D1 Cloud`);
+  // 3. Update Live Log HUD & Indicator with final resolved details
+  updateAiLiveLog(`✅ [${new Date().toLocaleTimeString('id-ID')}] Tersimpan D1: Kp. ${cleanKw}, Desa ${finalKel}, Kec. ${finalKec} (${finalKab})`);
   updateAiDbSavedCounterUI();
 
-  // 4. Move Live Radar Marker on Leaflet Map
+  // 4. Move Live Radar Marker on Leaflet Map & update popup text
   updateAiRadarMarkerOnMap(lat, lng, cleanKw, finalKec);
 
   // 5. Update Coverage Progress Bar
@@ -11831,14 +11861,27 @@ function updateAiRadarMarkerOnMap(lat, lng, kw, kec) {
     });
 
     aiRadarMarker = L.marker(pointLatLng, { icon: radarIcon, zIndexOffset: 2000 }).addTo(leafletMap);
-    aiRadarMarker.bindPopup(`
-      <div style="font-family:'Plus Jakarta Sans',sans-serif; text-align:center; font-size:12px;">
-        <strong style="color:#0284c7; font-size:13px;">🤖 AI Radar Exploration Agent</strong><br>
-        <span>Sedang memindai & mencatat: <strong>Kp. ${kw}</strong> (Kec. ${kec})</span>
-      </div>
-    `);
   } else {
     aiRadarMarker.setLatLng(pointLatLng);
+  }
+
+  // Always update popup content with current location info
+  const popupHtml = `
+    <div style="font-family:'Plus Jakarta Sans',sans-serif; text-align:center; font-size:12px; min-width: 180px;">
+      <strong style="color:#0284c7; font-size:13px;">🤖 AI Radar Exploration Agent</strong><br>
+      <div style="margin-top: 4px; background: #f0f9ff; border-radius: 6px; padding: 6px 8px; border: 1px solid #bae6fd;">
+        <div style="font-size: 11px; color: #64748b;">Sedang memindai & mencatat:</div>
+        <div style="font-weight: 800; color: #0f172a; font-size: 13px; margin-top: 2px;">📍 Kp. ${kw}</div>
+        <div style="font-size: 11px; color: #475569; margin-top: 2px;">Kec. ${kec}</div>
+      </div>
+    </div>
+  `;
+  aiRadarMarker.setPopupContent(popupHtml);
+  if (!aiRadarMarker.getPopup()) {
+    aiRadarMarker.bindPopup(popupHtml);
+  }
+  if (aiAutoFollowMap && !aiRadarMarker.isPopupOpen()) {
+    aiRadarMarker.openPopup();
   }
 
   // Trajectory line connecting scanned locations
@@ -11901,8 +11944,42 @@ function updateAiCoverageProgress(currentRegion) {
 
 async function reverseGeocodeNominatim(lat, lng) {
   const result = { kampung: '', kelurahan: '', kecamatan: '', kabupaten: '', provinsi: '', displayName: '' };
+
+  // === STRATEGY 1: BigDataCloud (free, excellent Indonesia village/kelurahan data) ===
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=id&zoom=18`;
+    const bdcUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=id`;
+    const bdcRes = await fetch(bdcUrl);
+    if (bdcRes.ok) {
+      const bdc = await bdcRes.json();
+      const adminLevels = bdc.localityInfo?.administrative || [];
+
+      // BigDataCloud admin levels for Indonesia:
+      // Level 4 = Provinsi, Level 6 = Kabupaten/Kota, Level 7 = Kecamatan, Level 8 = Desa/Kelurahan
+      for (const lv of adminLevels) {
+        const name = lv.name || '';
+        const order = lv.adminLevel || lv.order || 0;
+        if (order === 4 || lv.description === 'state') result.provinsi = result.provinsi || name;
+        if (order === 5 || order === 6 || lv.description === 'county' || lv.description === 'regency') result.kabupaten = result.kabupaten || name;
+        if (order === 7 || lv.description === 'district') result.kecamatan = result.kecamatan || name;
+        if (order === 8 || order === 9 || lv.description === 'village' || lv.description === 'suburb') result.kelurahan = result.kelurahan || name;
+      }
+
+      result.kampung = bdc.locality || bdc.localityInfo?.informative?.[0]?.name || result.kelurahan || '';
+      result.displayName = bdc.localityInfo?.administrative?.map(a => a.name).reverse().join(', ') || '';
+
+      // If BigDataCloud returned sufficient data, clean & return
+      if (result.kelurahan && result.kecamatan) {
+        cleanGeoResult(result);
+        return result;
+      }
+    }
+  } catch (e) {
+    console.warn('BigDataCloud geocode error:', e);
+  }
+
+  // === STRATEGY 2: Nominatim fallback (zoom=14 for kecamatan-level accuracy) ===
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=id&zoom=14`;
     const res = await fetch(url, {
       headers: { 'User-Agent': 'CKG-Puskesmas-App/1.0' }
     });
@@ -11910,28 +11987,35 @@ async function reverseGeocodeNominatim(lat, lng) {
     const data = await res.json();
     const addr = data.address || {};
 
-    // Extract kampung/jalan/hamlet name
-    result.kampung = addr.hamlet || addr.neighbourhood || addr.quarter || addr.road || addr.suburb || addr.village || '';
-    // Kelurahan/Desa
-    result.kelurahan = addr.village || addr.suburb || addr.quarter || addr.neighbourhood || addr.hamlet || '';
-    // Kecamatan (district level)
-    result.kecamatan = addr.district || addr.city_district || addr.town || addr.suburb || '';
-    // Kabupaten/Kota (regency/city level)
-    result.kabupaten = addr.regency || addr.county || addr.city || addr.municipality || '';
-    // Provinsi
-    result.provinsi = addr.state || '';
-    // Full display name
-    result.displayName = data.display_name || '';
+    // Indonesia admin hierarchy (strict order):
+    // Kelurahan/Desa: village > suburb
+    // Kecamatan: district > city_district
+    // Kabupaten/Kota: regency > county > city > municipality
+    // Provinsi: state
 
-    // Clean up: remove "Kecamatan " prefix if present from Nominatim
-    if (result.kecamatan.startsWith('Kecamatan ')) result.kecamatan = result.kecamatan.replace('Kecamatan ', '');
-    if (result.kelurahan.startsWith('Kelurahan ')) result.kelurahan = result.kelurahan.replace('Kelurahan ', '');
-    if (result.kelurahan.startsWith('Desa ')) result.kelurahan = result.kelurahan.replace('Desa ', '');
+    if (!result.kelurahan) result.kelurahan = addr.village || addr.suburb || addr.town || '';
+    if (!result.kecamatan) result.kecamatan = addr.district || addr.city_district || '';
+    if (!result.kabupaten) result.kabupaten = addr.regency || addr.county || addr.city || addr.municipality || '';
+    if (!result.provinsi) result.provinsi = addr.state || '';
+    if (!result.kampung) result.kampung = addr.hamlet || addr.neighbourhood || addr.quarter || addr.road || result.kelurahan || '';
+    if (!result.displayName) result.displayName = data.display_name || '';
 
   } catch (err) {
     console.warn('Nominatim reverse geocode error:', err);
   }
+
+  cleanGeoResult(result);
   return result;
+}
+
+// Clean common prefixes from Indonesian admin names
+function cleanGeoResult(r) {
+  const prefixes = ['Kecamatan ', 'Kelurahan ', 'Desa ', 'Kabupaten ', 'Kota Administrasi '];
+  prefixes.forEach(p => {
+    if (r.kecamatan.startsWith(p)) r.kecamatan = r.kecamatan.replace(p, '');
+    if (r.kelurahan.startsWith(p)) r.kelurahan = r.kelurahan.replace(p, '');
+    if (r.kampung.startsWith(p)) r.kampung = r.kampung.replace(p, '');
+  });
 }
 
 function initInteractiveMap() {
