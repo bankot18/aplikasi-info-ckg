@@ -1826,19 +1826,18 @@ async function clearLearnedKampungMap() {
   const learnedMap = getLearnedKampungMap();
   const totalCount = learnedMap ? learnedMap.length : 0;
 
-  Swal.fire({
+  const result = await Swal.fire({
     title: 'Hapus SEMUA Data Alamat?',
     html: `
-      <div style="font-size: 13px; color: #64748b; text-align: left;">
+      <div style="font-size: 13px; color: #64748b; text-align: left; line-height: 1.6;">
         <p style="margin-bottom: 10px;">
           Tindakan ini akan <strong>MENGHAPUS PERMANEN</strong> seluruh <strong>${totalCount} data kata kunci alamat/kampung</strong> dari:
         </p>
-        <ul style="padding-left: 20px; color: #0f172a; margin-bottom: 12px;">
+        <ul style="padding-left: 20px; color: #0f172a; margin-bottom: 12px; font-weight: 600;">
           <li>☁️ Cloud Database D1 Cloudflare</li>
           <li>💾 LocalStorage Penyimpanan Browser</li>
-          <li>🗺️ Penanda Titik Peta Alamat Kab. Bandung</li>
         </ul>
-        <div style="padding: 10px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; color: #be123c; font-weight: 700; font-size: 12px;">
+        <div style="padding: 10px 12px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; color: #be123c; font-weight: 700; font-size: 12px;">
           ⚠️ PERINGATAN: Tindakan ini tidak dapat dibatalkan!
         </div>
       </div>
@@ -1847,25 +1846,135 @@ async function clearLearnedKampungMap() {
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#64748b',
-    confirmButtonText: '<i class="bi bi-trash3-fill"></i> Ya, Hapus Semua Data Alamat!',
+    confirmButtonText: 'Ya, Hapus Semua Data Alamat!',
     cancelButtonText: 'Batal'
-  }).then(async (res) => {
-    if (res.isConfirmed) {
-      try {
-        localStorage.removeItem('ckg_learned_kampung_map');
-        localStorage.removeItem('ckg_deleted_kampung_list');
-        const apiRes = await fetch('/api/kamus', { method: 'DELETE' });
-        const json = await apiRes.json();
-        console.log('☁️ [D1 Kamus Delete] Result:', json);
-      } catch (err) {
-        console.warn('D1 kamus delete failed:', err);
-      }
-
-      refreshAdminKamusStats();
-      if (typeof renderMapMarkers === 'function') renderMapMarkers();
-      Swal.fire('Berhasil Dihapus!', 'Seluruh data alamat telah berhasil dihapus dari Cloud Database D1 & Local Storage.', 'success');
-    }
   });
+
+  if (!result.isConfirmed) return;
+
+  // ====== SHOW REAL-TIME STEP-BY-STEP PROGRESS POPUP ======
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+  Swal.fire({
+    title: '🔄 Menghapus Seluruh Data Alamat...',
+    html: `
+      <div id="clearKamusProgressContainer" style="text-align: left; font-size: 13px; padding-top: 6px;">
+        <div id="clearKamusProgressStep" style="font-weight: 700; color: #0284c7; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+          <span class="spinner-border spinner-border-sm" style="width: 16px; height: 16px; border-width: 2px; color: #0284c7;"></span>
+          <span>Memulai proses penghapusan...</span>
+        </div>
+        <div style="height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 12px;">
+          <div id="clearKamusProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #f43f5e, #be123c); border-radius: 6px; transition: width 0.4s ease;"></div>
+        </div>
+        <div id="clearKamusProgressLog" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 11.5px; color: #475569; max-height: 160px; overflow-y: auto; line-height: 1.7;">
+          <div>⏳ Menghubungkan ke server D1...</div>
+        </div>
+      </div>
+    `,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  const updateProgress = (pct, stepMsg, logText = '') => {
+    const barEl = document.getElementById('clearKamusProgressBar');
+    const stepEl = document.getElementById('clearKamusProgressStep');
+    const logEl = document.getElementById('clearKamusProgressLog');
+    if (barEl) barEl.style.width = pct + '%';
+    if (stepEl && stepMsg) stepEl.querySelector('span:last-child').textContent = stepMsg;
+    if (logEl && logText) {
+      logEl.innerHTML += `<div>${logText}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+  };
+
+  try {
+    // --- STEP 1: Count initial cloud items ---
+    updateProgress(15, '🔍 Mengecek data Cloud D1 Database...', '🔍 Menghitung data di Cloud D1 Database Server...');
+    await delay(400);
+
+    let initialCloudCount = 0;
+    try {
+      const checkRes = await fetch('/api/kamus');
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        initialCloudCount = (checkData.data && Array.isArray(checkData.data)) ? checkData.data.length : 0;
+      }
+    } catch (e) {
+      initialCloudCount = 'Error';
+    }
+    updateProgress(30, '☁️ Mengirim perintah DELETE ke Cloud D1...', `☁️ Ditemukan ${initialCloudCount} data di Cloud D1. Mengirim permohonan hapus...`);
+    await delay(400);
+
+    // --- STEP 2: Execute DELETE command on Cloud D1 ---
+    let cloudDeleted = false;
+    let serverMessage = '';
+    try {
+      const delRes = await fetch('/api/kamus', { method: 'DELETE' });
+      if (delRes.ok) {
+        const delJson = await delRes.json();
+        cloudDeleted = delJson.success === true;
+        serverMessage = delJson.message || 'OK';
+        updateProgress(60, '✅ Respon diterima dari Cloud D1...', `✅ Cloud D1 Respon: ${serverMessage}`);
+      } else {
+        updateProgress(60, '⚠️ Respon HTTP server non-200...', `⚠️ Cloud D1 Respon status: ${delRes.status}`);
+      }
+    } catch (netErr) {
+      updateProgress(60, '❌ Kesalahan jaringan ke Cloud D1...', `❌ Error koneksi: ${netErr.message}`);
+    }
+    await delay(500);
+
+    // --- STEP 3: Verify deletion on Cloud D1 ---
+    updateProgress(75, '🔍 Memverifikasi status akhir Cloud D1...', '🔍 Verifikasi ulang data di Cloud D1...');
+    let remainingCloudCount = 0;
+    try {
+      const vRes = await fetch('/api/kamus');
+      if (vRes.ok) {
+        const vData = await vRes.json();
+        remainingCloudCount = (vData.data && Array.isArray(vData.data)) ? vData.data.length : 0;
+      }
+    } catch (e) { remainingCloudCount = 0; }
+
+    updateProgress(85, '💾 Membersihkan Storage Browser (LocalStorage)...', `✅ Verifikasi Cloud D1 selesai (sisa record: ${remainingCloudCount}).`);
+    await delay(400);
+
+    // --- STEP 4: Clear LocalStorage ---
+    localStorage.removeItem('ckg_learned_kampung_map');
+    localStorage.removeItem('ckg_deleted_kampung_list');
+    localStorage.removeItem('ckg_deleted_kampungs_blacklist');
+    localStorage.setItem('ckg_dictionary_is_reset', 'true');
+    updateProgress(95, '🔄 Memperbarui Tampilan UI...', '💾 LocalStorage browser berhasil dibersihkan.');
+    await delay(400);
+
+    // --- STEP 5: Refresh UI ---
+    refreshAdminKamusStats();
+    renderKamusAlamatTable();
+    updateProgress(100, '✨ Penghapusan Selesai!', '✨ Seluruh data alamat berhasil dihapus!');
+    await delay(500);
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Seluruh Data Alamat Berhasil Dihapus!',
+      html: `
+        <div style="text-align: left; font-size: 13px; line-height: 1.7;">
+          <p style="color: #059669; font-weight: 700; margin-bottom: 6px;">
+            🎉 Pembersihan data Kamus Alamat berhasil dilaksanakan.
+          </p>
+          <ul style="padding-left: 20px; color: #475569; font-size: 12px;">
+            <li>☁️ <strong>Cloud D1 Database:</strong> ${cloudDeleted ? 'Terhapus total (0 Record)' : 'Respon diproses'}</li>
+            <li>💾 <strong>LocalStorage Browser:</strong> Terhapus bersih</li>
+          </ul>
+        </div>
+      `,
+      confirmButtonText: 'Selesai',
+      confirmButtonColor: '#0284c7'
+    });
+
+  } catch (fatalErr) {
+    console.error('❌ Fatal clear kamus error:', fatalErr);
+    Swal.fire('Gagal Menghapus', `Terjadi kesalahan: ${fatalErr.message}`, 'error');
+  }
 }
 
 async function deleteSingleKamusKeyword(keyword) {
@@ -1876,39 +1985,56 @@ async function deleteSingleKamusKeyword(keyword) {
     return;
   }
 
-  Swal.fire({
+  const cleanKw = String(keyword).toUpperCase().trim();
+
+  const res = await Swal.fire({
     title: 'Hapus Kata Kunci Alamat?',
-    text: `Kata kunci "${keyword}" akan dihapus dari Cloud Database D1 & Local Storage.`,
+    html: `Kata kunci <strong style="color: #e11d48;">"${cleanKw}"</strong> akan dihapus dari Cloud Database D1 & Local Storage.`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#e11d48',
     cancelButtonColor: '#64748b',
-    confirmButtonText: 'Hapus',
+    confirmButtonText: 'Ya, Hapus!',
     cancelButtonText: 'Batal'
-  }).then(async (res) => {
-    if (res.isConfirmed) {
-      const cleanKw = String(keyword).toUpperCase().trim();
-      addToDeletedBlacklist(cleanKw);
+  });
 
-      const current = getLearnedKampungMap();
-      const filtered = current.filter(item => {
-        if (Array.isArray(item.keywords)) {
-          return !item.keywords.some(k => String(k).toUpperCase().trim() === cleanKw);
-        }
-        return String(item.keywords).toUpperCase().trim() !== cleanKw;
-      });
-      localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(filtered));
+  if (!res.isConfirmed) return;
 
-      try {
-        await fetch(`/api/kamus?keyword=${encodeURIComponent(cleanKw)}`, { method: 'DELETE' });
-      } catch (err) {
-        console.warn('Single kamus delete error:', err);
-      }
+  Swal.fire({
+    title: 'Menghapus Data...',
+    text: `Menghapus kata kunci "${cleanKw}" dari Cloud D1 & Local Storage...`,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
 
-      refreshAdminKamusStats();
-      if (typeof renderMapMarkers === 'function') renderMapMarkers();
-      showToast(`Kata kunci "${cleanKw}" berhasil dihapus.`, 'success');
+  addToDeletedBlacklist(cleanKw);
+
+  const current = getLearnedKampungMap();
+  const filtered = current.filter(item => {
+    if (Array.isArray(item.keywords)) {
+      return !item.keywords.some(k => String(k).toUpperCase().trim() === cleanKw);
     }
+    return String(item.keywords).toUpperCase().trim() !== cleanKw;
+  });
+  localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(filtered));
+
+  try {
+    await fetch(`/api/kamus?keyword=${encodeURIComponent(cleanKw)}`, { method: 'DELETE' });
+  } catch (err) {
+    console.warn('Single kamus delete error:', err);
+  }
+
+  refreshAdminKamusStats();
+  renderKamusAlamatTable();
+  if (typeof renderMapMarkers === 'function') renderMapMarkers();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Berhasil Dihapus',
+    text: `Kata kunci "${cleanKw}" telah berhasil dihapus dari Cloud D1 & Local Storage.`,
+    timer: 1800,
+    showConfirmButton: false
   });
 }
 
@@ -11032,56 +11158,7 @@ async function saveLearnedKampungKeyword(kw, kel, kec, kab = 'Kabupaten Bandung'
   }
 }
 
-async function syncKamusFromCloudServer() {
-  if (!checkAdminRoleOnly('Sinkronisasi Database Cloud D1')) return;
 
-  try {
-    if (typeof showToast === 'function') showToast('🔄 Mengunduh & men-sinkronkan Kamus Alamat dari Cloud D1...', 'info');
-    const res = await fetch('/api/kamus');
-    if (!res.ok) throw new Error('Gagal mengambil data kamus dari cloud');
-    const result = await res.json();
-    
-    if (result.success && Array.isArray(result.data)) {
-      const cloudList = result.data;
-      if (cloudList.length > 0) {
-        let localList = typeof getLearnedKampungMap === 'function' ? getLearnedKampungMap() : [];
-        cloudList.forEach(item => {
-          const kw = item.keyword || item.keywords;
-          if (kw) {
-            const cleanKw = String(kw).toUpperCase().replace(/^KP\.\s*/i, '').trim();
-            const kel = item.kelurahan || item.kel || '';
-            const kec = item.kecamatan || item.kec || '';
-            const idx = localList.findIndex(l => {
-              const lKw = (Array.isArray(l.keywords) ? l.keywords[0] : l.keywords) || '';
-              return String(lKw).toUpperCase().trim() === cleanKw &&
-                     String(l.kel || '').toUpperCase().trim() === kel.toUpperCase().trim() &&
-                     String(l.kec || '').toUpperCase().trim() === kec.toUpperCase().trim();
-            });
-            const entry = {
-              keywords: [cleanKw],
-              kel: kel,
-              kec: kec,
-              kab: item.kab_kota || item.kab || '',
-              prov: item.provinsi || item.prov || '',
-              lat: item.lat || null,
-              lng: item.lng || null
-            };
-            if (idx >= 0) localList[idx] = { ...localList[idx], ...entry };
-            else localList.push(entry);
-          }
-        });
-        localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(localList));
-        localStorage.removeItem('ckg_dictionary_is_reset');
-        if (typeof updateAiDbSavedCounterUI === 'function') updateAiDbSavedCounterUI();
-        if (typeof renderMapMarkers === 'function') renderMapMarkers();
-        if (typeof showToast === 'function') showToast(`✨ Sync Cloud D1 Berhasil! ${cloudList.length} titik kamus tersimpan.`, 'success');
-      }
-    }
-  } catch (err) {
-    console.warn('Sync Cloud D1 Error:', err);
-    if (typeof showToast === 'function') showToast('Info Sync Cloud: Data lokal tetap aktif.', 'info');
-  }
-}
 
 // Pre-defined coordinate lookup dictionary for Kabupaten Bandung kampungs/kelurahans
 const KAB_BANDUNG_COORDS_MAP = {

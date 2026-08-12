@@ -394,8 +394,8 @@
             </div>
             <div class="action-buttons-group">
               <button id="btnRekapSemua" class="btn btn-primary btn-sm" onclick="filterRekapitulasi('semua')">Semua</button>
-              <button id="btnRekapLuar" class="btn btn-outline-primary btn-sm" style="background: #ffffff; color: #0284c7; border: 1px solid #0284c7; font-weight: 600;" onclick="filterRekapitulasi('luar')">ðŸ“ Luar Gedung</button>
-              <button id="btnRekapDalam" class="btn btn-outline-primary btn-sm" style="background: #ffffff; color: #059669; border: 1px solid #059669; font-weight: 600;" onclick="filterRekapitulasi('dalam')">ðŸ¢ Dalam Gedung</button>
+              <button id="btnRekapLuar" class="btn btn-outline-primary btn-sm" style="background: #ffffff; color: #0284c7; border: 1px solid #0284c7; font-weight: 600;" onclick="filterRekapitulasi('luar')"><i class="bi bi-geo-alt"></i> Luar Gedung</button>
+              <button id="btnRekapDalam" class="btn btn-outline-primary btn-sm" style="background: #ffffff; color: #059669; border: 1px solid #059669; font-weight: 600;" onclick="filterRekapitulasi('dalam')"><i class="bi bi-building"></i> Dalam Gedung</button>
               <span class="badge badge-purple" style="font-size: 11px;">Min: 200 entri</span>
             </div>
           </div>
@@ -1171,6 +1171,7 @@
               </tbody>
             </table>
           </div>
+        </div>
         <!-- KAMUS ALAMAT & AUTO-LEARNING CONTROL PANEL -->
         <div class="card-panel" style="margin-top: 20px; border: 2px solid #0284c7;">
           <div class="card-header-bar">
@@ -1182,18 +1183,20 @@
                 Kelola kamus deteksi otomatis wilayah (Provinsi, Kab/Kota, Kecamatan, Kelurahan) dari alamat pasien & impor file Excel
               </p>
             </div>
-              <button class="btn btn-secondary" onclick="downloadKamusAlamatTemplate()" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: none; font-weight: 700;">
-                <i class="bi bi-file-earmark-arrow-down-fill"></i> 📥 Download Template Excel
+            <div class="action-buttons-group">
+              <button class="btn btn-secondary btn-sm" onclick="downloadKamusAlamatTemplate()" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: none; font-weight: 700; border-radius: 6px; padding: 6px 14px;">
+                <i class="bi bi-file-earmark-arrow-down-fill"></i> Download Template Excel
               </button>
               <input type="file" id="excelAddressFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelAddressUpload(event)">
-              <button class="btn btn-emerald" onclick="document.getElementById('excelAddressFileInput').click()" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; border: none; font-weight: 700;">
-                <i class="bi bi-file-earmark-excel-fill"></i> 📤 Import Kamus Alamat (Excel)
+              <button class="btn btn-emerald btn-sm" onclick="document.getElementById('excelAddressFileInput').click()" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; border: none; font-weight: 700; border-radius: 6px; padding: 6px 14px;">
+                <i class="bi bi-file-earmark-excel-fill"></i> Import Kamus Alamat (Excel)
               </button>
+            </div>
           </div>
 
           <div style="padding: 16px; background: #f8fafc; border-radius: var(--radius-md); margin-top: 14px; border: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
             <div>
-              <div style="font-size: 13.5px; font-weight: 700; color: #0f172a;">ðŸ“Š Stat Bank Data Kamus Alamat Saat Ini:</div>
+              <div style="font-size: 13.5px; font-weight: 700; color: #0f172a;"><i class="bi bi-bar-chart-line-fill" style="color: #0284c7;"></i> Stat Bank Data Kamus Alamat Saat Ini:</div>
               <div style="font-size: 12px; color: #475569; margin-top: 4px;" id="statKamusAlamatText">
                 Memuat statistik kamus...
               </div>
@@ -1207,10 +1210,10 @@
           <div style="margin-top: 16px; background: #ffffff; border-radius: var(--radius-md); border: 1px solid #e2e8f0; padding: 14px;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
               <div style="font-size: 13.5px; font-weight: 700; color: #0f172a;">
-                ðŸ“– Daftar Kata Kunci Kamus Pembelajaran (D1 Cloud & Local)
+                <i class="bi bi-journal-bookmark-fill" style="color: #0284c7;"></i> Daftar Kata Kunci Kamus Pembelajaran (D1 Cloud & Local)
               </div>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <input type="text" id="searchKamusInput" placeholder="ðŸ” Cari kampung / kelurahan..." class="form-control" style="font-size: 12px; width: 220px; padding: 4px 10px;" oninput="renderKamusAlamatTable()">
+                <input type="text" id="searchKamusInput" placeholder="Cari kampung / kelurahan..." class="form-control" style="font-size: 12px; width: 220px; padding: 4px 10px;" oninput="renderKamusAlamatTable()">
                 <button class="btn btn-secondary btn-sm" onclick="syncKamusFromCloudServer().then(renderKamusAlamatTable)" style="font-size: 11.5px;">
                   <i class="bi bi-cloud-download-fill"></i> Sync Dari Cloud
                 </button>
@@ -1267,7 +1270,7 @@
                   <i class="bi bi-globe2" style="color: #fff; font-size: 20px;"></i>
                 </div>
                 <div>
-                  <h4 style="font-size: 15px; font-weight: 800; color: #92400e; margin: 0;">ðŸŒ Maintenance Web</h4>
+                  <h4 style="font-size: 15px; font-weight: 800; color: #92400e; margin: 0;"><i class="bi bi-globe"></i> Maintenance Web</h4>
                   <p style="font-size: 11.5px; color: #a16207; margin: 0;">Non-Admin tidak bisa login ke aplikasi</p>
                 </div>
               </div>
@@ -1296,7 +1299,7 @@
                   <i class="bi bi-menu-button-wide-fill" style="color: #fff; font-size: 20px;"></i>
                 </div>
                 <div>
-                  <h4 style="font-size: 15px; font-weight: 800; color: #5b21b6; margin: 0;">ðŸ“‹ Maintenance Menu</h4>
+                  <h4 style="font-size: 15px; font-weight: 800; color: #5b21b6; margin: 0;"><i class="bi bi-list-check"></i> Maintenance Menu</h4>
                   <p style="font-size: 11.5px; color: #7c3aed; margin: 0;">Kunci menu tertentu agar tidak bisa diakses non-Admin</p>
                 </div>
               </div>
@@ -1777,7 +1780,7 @@
 
         <!-- Kolom Info Format -->
         <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); padding: 12px; border-radius: var(--radius-sm); font-size: 11.5px; color: var(--text-muted); margin-top: 10px;">
-          <strong style="color: var(--text-main);">ðŸ“‹ Format Kolom yang Didukung:</strong>
+          <strong style="color: var(--text-main);"><i class="bi bi-file-earmark-code"></i> Format Kolom yang Didukung:</strong>
           <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 10px;">
             <span><code>NAMA PASIEN</code></span>
             <span><code>NIK</code></span>
