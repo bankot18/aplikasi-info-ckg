@@ -1382,23 +1382,7 @@ function addToDeletedBlacklist(keyword) {
   }
 }
 
-function getLearnedKampungMap() {
-  try {
-    const raw = localStorage.getItem('ckg_learned_kampung_map');
-    const list = raw ? JSON.parse(raw) : [];
-    const deletedList = getDeletedKampungList();
-    if (deletedList.length === 0) return list;
 
-    return list.filter(item => {
-      if (Array.isArray(item.keywords)) {
-        return !item.keywords.some(k => deletedList.includes(String(k).toUpperCase()));
-      }
-      return !deletedList.includes(String(item.keywords).toUpperCase());
-    });
-  } catch (e) {
-    return [];
-  }
-}
 
 async function syncKamusFromCloudServer() {
   try {
@@ -1766,7 +1750,7 @@ function renderKamusAlamatTable() {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; padding: 16px; color: #94a3b8;">
-          ☁️ Belum ada kata kunci tersimpan di Kamus Cloud D1. Silakan impor file Excel atau jalankan Scan Existing.
+          ☁️ Belum ada kata kunci tersimpan di Kamus Cloud D1. Silakan unduh Template & impor file Excel.
         </td>
       </tr>`;
     return;
@@ -1940,7 +1924,7 @@ async function clearLearnedKampungMap() {
     await delay(400);
 
     // --- STEP 4: Clear LocalStorage ---
-    localStorage.removeItem('ckg_learned_kampung_map');
+    localStorage.setItem('ckg_learned_kampung_map', '[]');
     localStorage.removeItem('ckg_deleted_kampung_list');
     localStorage.removeItem('ckg_deleted_kampungs_blacklist');
     localStorage.setItem('ckg_dictionary_is_reset', 'true');
@@ -11030,52 +11014,26 @@ function addToDeletedBlacklist(kw) {
 }
 
 function getLearnedKampungMap() {
-  const isReset = localStorage.getItem('ckg_dictionary_is_reset') === 'true';
   const raw = localStorage.getItem('ckg_learned_kampung_map');
   let list = [];
   if (raw) {
     try { list = JSON.parse(raw); } catch (e) { list = []; }
   }
 
-  // If dictionary was intentionally reset by Admin, do not auto-preseed!
-  if (isReset) {
-    updateAiDbSavedCounterUI();
-    return list;
-  }
-
-  // Filter out blacklisted/deleted keywords
+  // Filter out deleted/blacklisted keywords
+  const deletedList = typeof getDeletedKampungList === 'function' ? getDeletedKampungList() : [];
   const blacklistRaw = localStorage.getItem('ckg_deleted_kampungs_blacklist');
+  let blacklist = [];
   if (blacklistRaw) {
-    try {
-      const blacklist = JSON.parse(blacklistRaw);
-      list = list.filter(item => {
-        const kw = (item.keywords && item.keywords[0]) ? item.keywords[0].toUpperCase().trim() : '';
-        return !blacklist.includes(kw);
-      });
-    } catch (e) {}
+    try { blacklist = JSON.parse(blacklistRaw); } catch (e) { blacklist = []; }
   }
+  const combinedFilter = [...new Set([...deletedList, ...blacklist])];
 
-  // Pre-seed with accurate exploration map if list is empty and NOT reset
-  if (list.length === 0 && typeof KAB_BANDUNG_EXPLORATION_MAP !== 'undefined') {
-    KAB_BANDUNG_EXPLORATION_MAP.forEach(item => {
-      item.kampungs.forEach((kName, kIdx) => {
-        const cleanKw = kName.replace(/^Kp\.\s*/i, '').trim();
-        const baseLat = item.coords[0];
-        const baseLng = item.coords[1];
-        const stepOffsetLat = (kIdx * 0.0018) * (kIdx % 2 === 0 ? 1 : -1);
-        const stepOffsetLng = (kIdx * 0.0018) * (kIdx % 3 === 0 ? 1 : -1);
-        list.push({
-          keywords: [cleanKw],
-          kel: item.kel,
-          kec: item.kec,
-          kab: 'Kabupaten Bandung',
-          prov: 'Jawa Barat',
-          lat: parseFloat((baseLat + stepOffsetLat).toFixed(6)),
-          lng: parseFloat((baseLng + stepOffsetLng).toFixed(6))
-        });
-      });
+  if (combinedFilter.length > 0) {
+    list = list.filter(item => {
+      const kw = (Array.isArray(item.keywords) ? item.keywords[0] : item.keywords) || '';
+      return !combinedFilter.includes(String(kw).toUpperCase().trim());
     });
-    localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(list));
   }
 
   updateAiDbSavedCounterUI();
