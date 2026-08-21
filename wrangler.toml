@@ -1,0 +1,17 @@
+# Cloudflare Pages & Workers Configuration
+name = "aplikasi-info-ckg"
+main = "_worker.js"
+compatibility_date = "2024-08-01"
+
+[assets]
+directory = "."
+
+# Cloudflare D1 Database Binding (Serverless SQL Database)
+[[d1_databases]]
+binding = "DB"
+database_name = "ckg_database"
+database_id = "9eaf93fb-1afc-4928-84da-53ee9c93b9c8"
+
+# Cloudflare Workers AI Binding (Edge AI Models)
+[ai]
+binding = "AI"
