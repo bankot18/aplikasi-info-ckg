@@ -1,3 +1,0 @@
-# Cloudflare Pages SPA Redirects for SICEKAS v2.0
-/dashboard    /dashboard.html   200
-/login        /index.html       200
