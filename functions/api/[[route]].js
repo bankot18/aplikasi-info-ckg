@@ -402,7 +402,7 @@ async function handleApiRequest(request, env, ctx) {
         `).run();
       } catch (tblErr) {}
 
-      let query = 'SELECT * FROM jadwal_kegiatan';
+      let query = 'SELECT * FROM jadwal_kegiatan WHERE (id NOT LIKE "poa-%")';
       const params = [];
 
       if (bulan && tahun) {
@@ -410,7 +410,7 @@ async function handleApiRequest(request, env, ctx) {
         const yNum = parseInt(tahun, 10);
         const mStr = String(mNum).padStart(2, '0');
         // Match either by bulan & tahun columns, or by ISO date prefix (YYYY-MM-%) to prevent timezone mismatch data loss
-        query += ' WHERE (bulan = ? AND tahun = ?) OR (tanggal LIKE ?)';
+        query += ' AND ((bulan = ? AND tahun = ?) OR (tanggal LIKE ?))';
         params.push(mNum, yNum, `${yNum}-${mStr}-%`);
       }
 
@@ -527,44 +527,151 @@ async function handleApiRequest(request, env, ctx) {
     }
 
     // ------------------------------------------------------------------------
-    // 5. POA BULANAN (/api/poa, /api/poa/save)
+    // 5. POA BULANAN (/api/poa, /api/poa/save, /api/poa/delete) - SEPARATE TABLE poa_bulanan
     // ------------------------------------------------------------------------
     if (pathname === '/api/poa' && method === 'GET') {
       const bulan = url.searchParams.get('bulan');
       const tahun = url.searchParams.get('tahun');
       const nip = url.searchParams.get('nip');
 
+      // Auto-migration: Ensure table poa_bulanan exists with tanggal column
+      try {
+        await db.prepare(`
+          CREATE TABLE IF NOT EXISTS poa_bulanan (
+            id TEXT PRIMARY KEY,
+            tanggal DATE,
+            bulan INTEGER NOT NULL,
+            tahun INTEGER NOT NULL,
+            petugas_nip TEXT NOT NULL,
+            petugas_nama TEXT NOT NULL,
+            petugas_jabatan TEXT,
+            program_kesehatan TEXT DEFAULT 'BOK Puskesmas',
+            uraian_kegiatan TEXT NOT NULL,
+            keterangan TEXT,
+            target_sasaran TEXT,
+            lokasi_pelaksanaan TEXT,
+            vol_kegiatan INTEGER DEFAULT 1,
+            satuan TEXT DEFAULT 'Kegiatan',
+            anggaran_bok REAL DEFAULT 0,
+            sumber_dana TEXT DEFAULT 'BOK Puskesmas',
+            status TEXT DEFAULT 'Aktif',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+        `).run();
+      } catch (tblErr) {}
+
+      // Add tanggal column if table exists from previous migrations without it
+      try {
+        await db.prepare(`ALTER TABLE poa_bulanan ADD COLUMN tanggal DATE;`).run();
+      } catch (colErr) {}
+      try {
+        await db.prepare(`ALTER TABLE poa_bulanan ADD COLUMN keterangan TEXT;`).run();
+      } catch (colErr) {}
+
       let query = 'SELECT * FROM poa_bulanan WHERE 1=1';
       const params = [];
 
       if (bulan && tahun) {
-        query += ' AND bulan = ? AND tahun = ?';
-        params.push(parseInt(bulan), parseInt(tahun));
+        const mNum = parseInt(bulan, 10);
+        const yNum = parseInt(tahun, 10);
+        const mStr = String(mNum).padStart(2, '0');
+        query += ' AND ((bulan = ? AND tahun = ?) OR (tanggal LIKE ?))';
+        params.push(mNum, yNum, `${yNum}-${mStr}-%`);
       }
       if (nip) {
-        query += ' AND petugas_nip = ?';
-        params.push(nip);
+        query += ' AND (petugas_nip = ? OR petugas_nip LIKE ?)';
+        params.push(nip, `%${nip}%`);
       }
 
-      query += ' ORDER BY created_at DESC';
+      query += ' ORDER BY tanggal ASC, created_at DESC';
       const { results } = await db.prepare(query).bind(...params).all();
-      return jsonResponse({ success: true, total: results.length, data: results });
+
+      const parsed = (results || []).map(r => {
+        let b = r.bulan;
+        let y = r.tahun;
+        if (r.tanggal && typeof r.tanggal === 'string' && r.tanggal.includes('-')) {
+          const p = r.tanggal.split('-');
+          y = parseInt(p[0], 10) || y;
+          b = parseInt(p[1], 10) || b;
+        }
+        return {
+          ...r,
+          bulan: b,
+          tahun: y
+        };
+      });
+
+      return jsonResponse({ success: true, total: parsed.length, data: parsed });
     }
 
     if (pathname === '/api/poa/save' && method === 'POST') {
       const item = await request.json();
-      const id = item.id || `poa-${Date.now()}`;
-      const bulan = parseInt(item.bulan) || (new Date().getMonth() + 1);
-      const tahun = parseInt(item.tahun) || new Date().getFullYear();
+      const nipClean = (item.petugas_nip || item.nip || 'user').replace(/[^a-zA-Z0-9]/g, '');
+      const id = item.id || `poa-${item.tanggal || Date.now()}-${nipClean}`;
+      
+      let bulan = parseInt(item.bulan, 10);
+      let tahun = parseInt(item.tahun, 10);
+      if (isNaN(bulan) || isNaN(tahun)) {
+        if (item.tanggal && typeof item.tanggal === 'string' && item.tanggal.includes('-')) {
+          const parts = item.tanggal.split('-');
+          tahun = isNaN(tahun) ? parseInt(parts[0], 10) : tahun;
+          bulan = isNaN(bulan) ? parseInt(parts[1], 10) : bulan;
+        } else {
+          const now = new Date();
+          bulan = now.getMonth() + 1;
+          tahun = now.getFullYear();
+        }
+      }
+
+      // Auto-migration
+      try {
+        await db.prepare(`
+          CREATE TABLE IF NOT EXISTS poa_bulanan (
+            id TEXT PRIMARY KEY,
+            tanggal DATE,
+            bulan INTEGER NOT NULL,
+            tahun INTEGER NOT NULL,
+            petugas_nip TEXT NOT NULL,
+            petugas_nama TEXT NOT NULL,
+            petugas_jabatan TEXT,
+            program_kesehatan TEXT DEFAULT 'BOK Puskesmas',
+            uraian_kegiatan TEXT NOT NULL,
+            keterangan TEXT,
+            target_sasaran TEXT,
+            lokasi_pelaksanaan TEXT,
+            vol_kegiatan INTEGER DEFAULT 1,
+            satuan TEXT DEFAULT 'Kegiatan',
+            anggaran_bok REAL DEFAULT 0,
+            sumber_dana TEXT DEFAULT 'BOK Puskesmas',
+            status TEXT DEFAULT 'Aktif',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+        `).run();
+      } catch (tblErr) {}
+
+      // Add tanggal column if missing
+      try {
+        await db.prepare(`ALTER TABLE poa_bulanan ADD COLUMN tanggal DATE;`).run();
+      } catch (colErr) {}
+      try {
+        await db.prepare(`ALTER TABLE poa_bulanan ADD COLUMN keterangan TEXT;`).run();
+      } catch (colErr) {}
 
       await db.prepare(`
-        INSERT INTO poa_bulanan (id, bulan, tahun, petugas_nip, petugas_nama, program_kesehatan, uraian_kegiatan, target_sasaran, lokasi_pelaksanaan, vol_kegiatan, satuan, anggaran_bok, sumber_dana, status, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        INSERT INTO poa_bulanan (id, tanggal, bulan, tahun, petugas_nip, petugas_nama, petugas_jabatan, program_kesehatan, uraian_kegiatan, keterangan, target_sasaran, lokasi_pelaksanaan, vol_kegiatan, satuan, anggaran_bok, sumber_dana, status, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO UPDATE SET
+          tanggal = excluded.tanggal,
           bulan = excluded.bulan,
           tahun = excluded.tahun,
+          petugas_nip = excluded.petugas_nip,
+          petugas_nama = excluded.petugas_nama,
+          petugas_jabatan = excluded.petugas_jabatan,
           program_kesehatan = excluded.program_kesehatan,
           uraian_kegiatan = excluded.uraian_kegiatan,
+          keterangan = excluded.keterangan,
           target_sasaran = excluded.target_sasaran,
           lokasi_pelaksanaan = excluded.lokasi_pelaksanaan,
           vol_kegiatan = excluded.vol_kegiatan,
@@ -575,14 +682,17 @@ async function handleApiRequest(request, env, ctx) {
           updated_at = CURRENT_TIMESTAMP
       `).bind(
         id,
+        item.tanggal || '',
         bulan,
         tahun,
         item.petugas_nip || item.nip || '',
         item.petugas_nama || item.nama || '',
-        item.program_kesehatan || item.program || '',
-        item.uraian_kegiatan || item.uraian || '',
+        item.petugas_jabatan || item.jabatan || '',
+        item.program_kesehatan || item.program || 'BOK Puskesmas',
+        item.uraian_kegiatan || item.uraian || item.kegiatan || item.nama_kegiatan || '',
+        item.keterangan || '',
         item.target_sasaran || '',
-        item.lokasi_pelaksanaan || '',
+        item.lokasi_pelaksanaan || item.lokasi || 'Puskesmas / Wilayah Kerja',
         parseInt(item.vol_kegiatan) || 1,
         item.satuan || 'Kegiatan',
         parseFloat(item.anggaran_bok) || 0,
@@ -591,6 +701,18 @@ async function handleApiRequest(request, env, ctx) {
       ).run();
 
       return jsonResponse({ success: true, message: 'POA Bulanan berhasil disimpan ke Cloudflare D1!', id });
+    }
+
+    if (pathname === '/api/poa/delete' && (method === 'DELETE' || method === 'POST')) {
+      const body = await request.json();
+      const { id } = body;
+
+      if (!id) {
+        return jsonResponse({ success: false, error: 'ID POA wajib disertakan!' }, 400);
+      }
+
+      await db.prepare('DELETE FROM poa_bulanan WHERE id = ?').bind(id).run();
+      return jsonResponse({ success: true, message: `Data POA [${id}] berhasil dihapus dari Cloudflare D1.` });
     }
 
     // ------------------------------------------------------------------------
