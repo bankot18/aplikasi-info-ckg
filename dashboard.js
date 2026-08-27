@@ -6276,6 +6276,37 @@ document.addEventListener('DOMContentLoaded', () => {
             createdAt: item.created_at || item.createdAt || ''
           };
         });
+        // Safety net: merge localStorage items yang belum ter-sync ke cloud
+        // Ini menangkap data yang tersimpan lokal saat cloud save gagal
+        try {
+          const localData = JSON.parse(localStorage.getItem(STORAGE_BOK_DATA)) || [];
+          localData.forEach(localItem => {
+            if (!localItem || !localItem.id) return;
+            const existsInCloud = normalized.some(c => c.id === localItem.id);
+            if (!existsInCloud) {
+              normalized.push({
+                id: localItem.id,
+                tanggal: localItem.tanggal || '',
+                bulan: localItem.bulan,
+                tahun: localItem.tahun,
+                noKegiatan: localItem.noKegiatan || localItem.no_kegiatan || 0,
+                namaKegiatan: localItem.namaKegiatan || localItem.nama_kegiatan || '',
+                keterangan: localItem.keterangan || '',
+                lokasi: localItem.lokasi || '',
+                username: localItem.username || '',
+                namaUser: localItem.namaUser || localItem.petugas_nama || '',
+                jabatan: localItem.jabatan || localItem.petugas_jabatan || '',
+                petugas_nip: localItem.petugas_nip || '',
+                rekan_kolaborasi: localItem.rekan_kolaborasi || [],
+                status: localItem.status || 'Disetujui',
+                createdAt: localItem.created_at || localItem.createdAt || ''
+              });
+            }
+          });
+        } catch (mergeErr) {
+          console.warn('[SICEKAS] localStorage merge skipped', mergeErr);
+        }
+
         this._cachedData = normalized;
         this._lastFetchKey = fetchKey;
         return normalized;
@@ -7135,14 +7166,54 @@ document.addEventListener('DOMContentLoaded', () => {
         window.showToast(editId ? '✓ Jadwal berhasil diperbarui di Cloudflare D1!' : '✓ Jadwal berhasil ditambahkan ke Cloudflare D1!', 'success');
       }
 
-      // Close modal, reset form & editId, invalidate cache & refresh from cloud
+      // Close modal & reset form
       const modal = document.getElementById('modalTambahJadwalBOK');
       const form = document.getElementById('formTambahJadwalBOK');
       if (form) form.reset();
       if (editIdEl) editIdEl.value = '';
       if (modal) modal.classList.remove('active');
-      this.invalidateCache();
+
+      // OPTIMISTIC UPDATE: Langsung tambah/update item di cache tanpa re-fetch dari cloud
+      // Ini mencegah data hilang akibat eventual consistency Cloudflare D1
+      const optimisticItem = {
+        id: entryId,
+        tanggal: tanggal,
+        bulan: bulanVal,
+        tahun: tahunVal,
+        noKegiatan: noKeg,
+        namaKegiatan: namaKegiatan,
+        keterangan: keterangan,
+        lokasi: 'Puskesmas / Wilayah Kerja',
+        username: CURRENT_USER.username,
+        namaUser: CURRENT_USER.nama,
+        jabatan: CURRENT_USER.jabatan,
+        petugas_nip: CURRENT_USER.nip,
+        rekan_kolaborasi: [],
+        status: 'Disetujui',
+        createdAt: new Date().toISOString()
+      };
+
+      if (this._cachedData && this._lastFetchKey === `${this.currentMonth}-${this.currentYear}`) {
+        const existIdx = this._cachedData.findIndex(i => i.id === entryId);
+        if (existIdx >= 0) {
+          this._cachedData[existIdx] = optimisticItem;
+        } else {
+          this._cachedData.push(optimisticItem);
+        }
+      } else {
+        // Cache belum ada atau beda bulan, invalidate agar fetch fresh
+        this.invalidateCache();
+      }
+
       await this.render();
+
+      // Background re-sync: setelah 2 detik, fetch ulang dari cloud untuk sinkronisasi
+      // Ini memastikan data akhirnya konsisten dengan Cloudflare D1
+      const self = this;
+      setTimeout(() => {
+        self.invalidateCache();
+        self.render();
+      }, 2000);
     },
 
     async hapusJadwal(id) {
@@ -7157,8 +7228,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
       await CloudflareDB.deleteJadwal(id);
       if (window.showToast) window.showToast('✓ Jadwal kegiatan berhasil dihapus dari Cloudflare D1.', 'info');
-      this.invalidateCache();
+
+      // OPTIMISTIC DELETE: Langsung hapus dari cache tanpa re-fetch
+      if (this._cachedData) {
+        this._cachedData = this._cachedData.filter(i => i.id !== id);
+      } else {
+        this.invalidateCache();
+      }
+
       await this.render();
+
+      // Background re-sync
+      const self = this;
+      setTimeout(() => {
+        self.invalidateCache();
+        self.render();
+      }, 2000);
     },
 
     bukaModalCollab() {

@@ -1,158 +1,152 @@
--- ====================================================================
--- SCHEMA DATABASE CKG PUSKESMAS BANJARAN KOTA (CLOUDFLARE D1 DATABASE)
--- Struktur Tabel Lengkap Berdasarkan Setiap Menu Aplikasi CKG
--- ====================================================================
-
--- --------------------------------------------------------------------
--- 1. MENU: ADMIN PANEL & DATABASE USER
--- Tabel: users (Pengelolaan User, Password, & Hierarchy Role)
--- --------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nama_user VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) DEFAULT '',
-    role VARCHAR(50) DEFAULT 'Petugas',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  no_urut INTEGER,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL DEFAULT 'bankot2026',
+  nip TEXT UNIQUE NOT NULL,
+  nip_full TEXT,
+  nama TEXT NOT NULL,
+  jabatan TEXT NOT NULL,
+  golongan TEXT NOT NULL DEFAULT 'BLUD',
+  role TEXT NOT NULL DEFAULT 'Petugas Puskesmas',
+  avatar TEXT DEFAULT 'MF',
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Default User Accounts
-INSERT OR IGNORE INTO users (nama_user, password, role) VALUES 
-('Mochamad Fauzie, S.Gz', '213', 'Admin'),
-('Nurul Hidayah, Amd.Kes', '213', 'Koordinator'),
-('Anisa Rohmatunisa, AM.Keb', '', 'Petugas'),
-('Neng Yulia Trisnawati, AM.Keb', '', 'Petugas'),
-('Teti Nuryati, S.Keb, Bdn', '', 'Petugas');
-
-
--- --------------------------------------------------------------------
--- 2. LIVE SESSION TRACKER (STATUS ONLINE / OFFLINE USER REALTIME)
--- Tabel: user_sessions
--- --------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS user_sessions (
-    nama_user TEXT PRIMARY KEY,
-    last_seen INTEGER NOT NULL,
-    status TEXT DEFAULT 'active'
+CREATE TABLE IF NOT EXISTS jadwal_kegiatan (
+  id TEXT PRIMARY KEY,
+  tanggal DATE NOT NULL,
+  bulan INTEGER NOT NULL,
+  tahun INTEGER NOT NULL,
+  nama_kegiatan TEXT NOT NULL,
+  keterangan TEXT,
+  lokasi TEXT,
+  petugas_nip TEXT NOT NULL,
+  petugas_nama TEXT NOT NULL,
+  petugas_jabatan TEXT,
+  rekan_kolaborasi TEXT,
+  status TEXT NOT NULL DEFAULT 'Disetujui',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-
--- --------------------------------------------------------------------
--- 3. MENU: DATA ENTRY CKG DARI SIMPUS
--- Tabel: simpus_records (Antrean Pasien SIMPUS, Bagi Petugas & Status Entry)
--- --------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS simpus_records (
-    id VARCHAR(50) PRIMARY KEY,
-    no INTEGER NOT NULL,
-    tanggal VARCHAR(20) NOT NULL,
-    nama VARCHAR(150) NOT NULL,
-    nik VARCHAR(20) NOT NULL,
-    alamat TEXT,
-    dob VARCHAR(20),
-    usia INTEGER DEFAULT 0,
-    bb REAL DEFAULT 0,
-    tb REAL DEFAULT 0,
-    imt REAL DEFAULT 0,
-    sistol INTEGER DEFAULT 0,
-    diastol INTEGER DEFAULT 0,
-    gula VARCHAR(50) DEFAULT '-',
-    kolesterol VARCHAR(50) DEFAULT '-',
-    keterangan VARCHAR(50) DEFAULT 'Dewasa',
-    is_divided BOOLEAN DEFAULT 0,
-    assigned_to VARCHAR(100) DEFAULT '',
-    entry_status VARCHAR(50) DEFAULT 'belum',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS poa_bulanan (
+  id TEXT PRIMARY KEY,
+  tanggal DATE,
+  bulan INTEGER NOT NULL,
+  tahun INTEGER NOT NULL,
+  petugas_nip TEXT NOT NULL,
+  petugas_nama TEXT NOT NULL,
+  petugas_jabatan TEXT,
+  program_kesehatan TEXT DEFAULT 'BOK Puskesmas',
+  uraian_kegiatan TEXT NOT NULL,
+  keterangan TEXT,
+  target_sasaran TEXT,
+  lokasi_pelaksanaan TEXT,
+  vol_kegiatan INTEGER DEFAULT 1,
+  satuan TEXT DEFAULT 'Kegiatan',
+  anggaran_bok REAL DEFAULT 0,
+  sumber_dana TEXT DEFAULT 'BOK Puskesmas',
+  status TEXT DEFAULT 'Aktif',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_simpus_nik ON simpus_records(nik);
-CREATE INDEX IF NOT EXISTS idx_simpus_assigned ON simpus_records(assigned_to);
-
-
--- --------------------------------------------------------------------
--- 4. MENU: DATA RECORDS CKG (Luar Gedung & Dalam Gedung)
--- Tabel: ckg_full_records (Penyimpanan Utama 28 Parameter Skrining & Medis CKG)
--- --------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ckg_full_records (
-    id TEXT PRIMARY KEY,
-    nik TEXT NOT NULL,
-    nama_pasien TEXT NOT NULL,
-    petugas_entry TEXT NOT NULL,
-    tanggal_entry TEXT NOT NULL,
-    lokasi_pelayanan TEXT DEFAULT 'Luar Gedung',
-    status_entry TEXT DEFAULT 'Terverifikasi',
-    raw_json TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS tppol_jaspel (
+  id TEXT PRIMARY KEY,
+  bulan INTEGER NOT NULL,
+  tahun INTEGER NOT NULL,
+  petugas_nip TEXT NOT NULL,
+  petugas_nama TEXT NOT NULL,
+  petugas_jabatan TEXT NOT NULL,
+  skor_kehadiran REAL DEFAULT 100.0,
+  skor_pelayanan REAL DEFAULT 95.0,
+  skor_administrasi REAL DEFAULT 90.0,
+  skor_perilaku REAL DEFAULT 95.0,
+  total_skor REAL DEFAULT 95.0,
+  catatan TEXT,
+  form_data TEXT,
+  status_verifikasi TEXT DEFAULT 'Terverifikasi',
+  verified_by TEXT,
+  verified_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_ckg_nik ON ckg_full_records(nik);
-CREATE INDEX IF NOT EXISTS idx_ckg_petugas ON ckg_full_records(petugas_entry);
-CREATE INDEX IF NOT EXISTS idx_ckg_tanggal ON ckg_full_records(tanggal_entry);
-
-
--- --------------------------------------------------------------------
--- 5. MENU: CKG SEKOLAH
--- Tabel: ckg_sekolah_records (Skrining Kesehatan Siswa Sekolah - Terpisah Dari Record CKG Utama & SIMPUS)
--- --------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ckg_sekolah_records (
-    id TEXT PRIMARY KEY,
-    no INTEGER,
-    nama TEXT NOT NULL,
-    kelas TEXT,
-    sekolah TEXT,
-    jk TEXT DEFAULT 'L',
-    nik TEXT,
-    tanggal_lahir TEXT,
-    no_whatsapp TEXT,
-    provinsi TEXT DEFAULT 'Jawa Barat',
-    kab_kota TEXT DEFAULT 'Kab. Bandung',
-    kecamatan TEXT DEFAULT 'Banjaran',
-    kelurahan TEXT DEFAULT 'Tarajusari',
-    alamat TEXT,
-    bb REAL DEFAULT 0,
-    tb REAL DEFAULT 0,
-    lp REAL DEFAULT 0,
-    td_sistolik INTEGER DEFAULT 0,
-    td_diastolik INTEGER DEFAULT 0,
-    gula_darah TEXT DEFAULT '-',
-    hb TEXT DEFAULT '-',
-    karies TEXT DEFAULT 'Tidak',
-    kebugaran TEXT DEFAULT 'Baik',
-    menstruasi TEXT DEFAULT 'Belum',
-    kacamata TEXT DEFAULT 'Tidak',
-    petugas_entry TEXT DEFAULT 'Admin',
-    tanggal_entry TEXT,
-    raw_json TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS sppd_lpt (
+  id TEXT PRIMARY KEY,
+  no_surat TEXT NOT NULL,
+  tanggal_surat DATE NOT NULL,
+  petugas_nip TEXT NOT NULL,
+  petugas_nama TEXT NOT NULL,
+  maksud_perjalanan TEXT NOT NULL,
+  tempat_tujuan TEXT NOT NULL,
+  tanggal_berangkat DATE NOT NULL,
+  tanggal_kembali DATE NOT NULL,
+  lama_hari INTEGER DEFAULT 1,
+  alat_angkut TEXT DEFAULT 'Kendaraan Pribadi / Umum',
+  hasil_kegiatan TEXT,
+  kendala_masalah TEXT,
+  saran_tindak_lanjut TEXT,
+  foto_dokumentasi TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-
--- --------------------------------------------------------------------
--- 6. MENU: RECYCLE DATA (Tempat Sampah Data Terhapus)
--- Tabel: recycle_bin
--- --------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS recycle_bin (
-    id VARCHAR(100) PRIMARY KEY,
-    nik VARCHAR(50),
-    nama VARCHAR(150),
-    jenis_kegiatan VARCHAR(50),
-    deleted_at VARCHAR(50),
-    deleted_by VARCHAR(100),
-    original_source VARCHAR(100),
-    raw_json TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  user_nip TEXT,
+  user_nama TEXT,
+  category TEXT NOT NULL,
+  action TEXT NOT NULL,
+  details TEXT,
+  status TEXT DEFAULT 'SUCCESS',
+  ip_address TEXT DEFAULT '127.0.0.1'
 );
 
+INSERT OR REPLACE INTO users (no_urut, username, password_hash, nip, nip_full, nama, jabatan, golongan, role, avatar) VALUES
+(1, 'rina', 'bankot2026', '19740404 201411 2 001', 'NIP. 19740404 201411 2 001', 'dr. Rina Indriati', 'Kepala Puskesmas', 'III/d', 'Kepala Puskesmas', 'RI'),
+(2, 'teti', 'bankot2026', '19750816 200701 2 012', 'NIP. 19750816 200701 2 012', 'Teti Nuryati, S.Keb, Bdn', 'Satker/Bidan Mahir', 'III/b', 'PJ Klaster', 'TN'),
+(3, 'satrianita', 'bankot2026', '19730908 199403 2 006', 'NIP. 19730908 199403 2 006', 'Satrianita, SKM', 'Sanitarian Ahli Muda', 'IV/b', 'Admin', 'SN'),
+(4, 'asepyanto', 'bankot2026', '19690623 199103 1 002', 'NIP. 19690623 199103 1 002', 'Asep Yanto, AMKG', 'Perawat Gigi Penyelia', 'III/d', 'Petugas Puskesmas', 'AY'),
+(5, 'yayat', 'bankot2026', '19690613 198903 2 005', 'NIP. 19690613 198903 2 005', 'N. Yayat Rohayati, AM.Keb', 'Bidan Penyelia', 'III/d', 'Petugas Puskesmas', 'YR'),
+(6, 'tetimulyati', 'bankot2026', '19680825 199003 2 008', 'NIP. 19680825 199003 2 008', 'Rd Teti Mulyati, Amd.Kep', 'Perawat Penyelia', 'III/d', 'Petugas Puskesmas', 'TM'),
+(7, 'indri', 'bankot2026', '19681004 199103 2 007', 'NIP. 19681004 199103 2 007', 'Indri Yusiana, Amd.Kep', 'Perawat Penyelia', 'III/d', 'Petugas Puskesmas', 'IY'),
+(8, 'santi', 'bankot2026', '19781014 200501 2 007', 'NIP. 19781014 200501 2 007', 'Santi Sentri Yanti, S.Keb', 'Bidan Pelaksana', 'III/d', 'Petugas Puskesmas', 'SS'),
+(9, 'imas', 'bankot2026', '19690524 200604 2 004', 'NIP. 19690524 200604 2 004', 'Imas Winarti, AM.Keb', 'Bidan Pelaksana', 'III/a', 'Petugas Puskesmas', 'IW'),
+(10, 'eva', 'bankot2026', '19840508 201704 2 011', 'NIP. 19840508 201704 2 011', 'Eva Farida, S.Keb', 'Bidan Mahir', 'III/a', 'Petugas Puskesmas', 'EF'),
+(11, 'nengyulia', 'bankot2026', '19860725 201704 2 007', 'NIP. 19860725 201704 2 007', 'Neng Yulia Ernawati, S.Keb', 'Bidan Pelaksana', 'III/a', 'Petugas Puskesmas', 'NY'),
+(12, 'evasolina', 'bankot2026', '19821219 201704 2 003', 'NIP. 19821219 201704 2 003', 'Eva Solina, S.Keb', 'Bidan Pelaksana', 'III/a', 'Petugas Puskesmas', 'ES'),
+(13, 'riza', 'bankot2026', '19910127 202203 2 010', 'NIP. 19910127 202203 2 010', 'Riza Nur Multiani, A.Md.AK', 'Penata Laboratorium Kesehatan Terampil', 'II/c', 'Petugas Puskesmas', 'RN'),
+(14, 'drg_regina', 'bankot2026', '19930805 202505 2 002', 'NIP. 19930805 202505 2 002', 'drg. Regina Desi Gresiana Simamora', 'Dokter Gigi Ahli Pertama', 'III/b', 'Petugas Puskesmas', 'RG'),
+(15, 'nurul', 'bankot2026', '20001224 202505 2 002', 'NIP. 20001224 202505 2 002', 'Nurul Hidayah, Amd.Kes', 'Terapis Gigi dan Mulut Terampil', 'II/c', 'Petugas Puskesmas', 'NH'),
+(16, 'dadi', 'bankot2026', '19840525 202221 1 001', 'NIP. 19840525 202221 1 001', 'Dadi Permadi, SKM', 'Penyuluh Kesehatan Ahli Pertama', 'IX', 'PJ Klaster', 'DP'),
+(17, 'anisa', 'bankot2026', '19880321 202321 2 001', 'NIP. 19880321 202321 2 001', 'Anisa Rohmatunisa, AM.Keb', 'Bidan Terampil', 'VII', 'Petugas Puskesmas', 'AR'),
+(18, 'nina', 'bankot2026', '19960728 202321 2 005', 'NIP. 19960728 202321 2 005', 'Nina Mariyana, Amd.Kep', 'Perawat Terampil', 'VII', 'Petugas Puskesmas', 'NM'),
+(19, 'sheila', 'bankot2026', '19930713 202321 2 003', 'NIP. 19930713 202321 2 003', 'Sheila Nurlaila, A.Md.Gz', 'Nutrisionis Terampil', 'VII', 'Petugas Puskesmas', 'SN'),
+(20, 'debby', 'bankot2026', '19921004 202521 2 044', 'NIP. 19921004 202521 2 044', 'Debby Nadia Lofika, S.Farm. Apt', 'Apoteker', 'IX', 'Petugas Puskesmas', 'DL'),
+(21, 'lutfiyatun', 'bankot2026', '873.3204.10.02.005', 'NRP. 873.3204.10.02.005', 'Lutfiyatun Oktaviana, S.Kep.Ners', 'Perawat', 'PPTK PW', 'Petugas Puskesmas', 'LO'),
+(22, 'dr_dinar', 'bankot2026', '873.3204.07.05.005', 'NRP. 873.3204.07.05.005', 'dr. Dinar Dwi Restika Agustin', 'Dokter Umum', 'BLUD', 'Petugas Puskesmas', 'DD'),
+(23, 'dr_putri', 'bankot2026', '873.3204.08.06.029', 'NRP. 873.3204.08.06.029', 'dr. Putri Tasya Afifah', 'Dokter Umum', 'BLUD', 'Petugas Puskesmas', 'PT'),
+(24, 'drg_intan', 'bankot2026', '873.3204.08.06.019', 'NRP. 873.3204.08.06.019', 'drg. Intan Nur Atsila', 'Dokter Gigi', 'BLUD', 'Petugas Puskesmas', 'IN'),
+(25, 'rini', 'bankot2026', '873.06.02.021', 'NRP. 873.06.02.021', 'Rini Julianti, SE', 'Akuntan', 'BLUD', 'Petugas Puskesmas', 'RJ'),
+(26, 'andriana', 'bankot2026', '873.120.10.03', 'NRP. 873.120.10.03', 'Andriana Mahardhytia, Amd.Kes', 'Rekam Medis', 'BLUD', 'Petugas Puskesmas', 'AM'),
+(27, 'dilla', 'bankot2026', '873.3204.13.03.012', 'NRP. 873.3204.13.03.012', 'Dilla Anggraeni Pratiwi, A.Md.Akun', 'Admin BOK', 'BLUD', 'Admin', 'DA'),
+(28, 'ozie', 'bankot2026', '873.3204.16.02.008', 'NRP. 873.3204.16.02.008', 'Mochamad Fauzie, S.Gz', 'Nutrisionis', 'BLUD', 'Super Admin', 'MF'),
+(29, 'ilham', 'bankot2026', '873.3204.11.06.011', 'NRP. 873.3204.11.06.011', 'Ilham Ardiansyah Isnandar, SKM', 'Epidemiolog', 'BLUD', 'Petugas Puskesmas', 'IA'),
+(30, 'rian', 'bankot2026', '873.3204.12.06.007', 'NRP. 873.3204.12.06.007', 'Rian Sidik Sudiana, Amd.Kes', 'Rekam Medis', 'BLUD', 'Petugas Puskesmas', 'RS'),
+(31, 'fahri', 'bankot2026', '873.3204.13.07.037', 'NRP. 873.3204.13.07.037', 'Fahri Dzulfikar Rismayanto, A.Md. Bns', 'Admin BLUD', 'BLUD', 'Admin', 'FD'),
+(32, 'mutiara', 'bankot2026', '873.3204.05.05.005', 'NRP. 873.3204.05.05.005', 'Mutiara Sofiatussirri, Amd.', 'ATLM', 'BLUD', 'Petugas Puskesmas', 'MS'),
+(33, 'faridz', 'bankot2026', '873.3204.14.05.040', 'NRP. 873.3204.14.05.040', 'Muhamad Faridz Alparizy, Amd.Kep', 'Perawat', 'BLUD', 'Petugas Puskesmas', 'FA'),
+(34, 'nengsafitri', 'bankot2026', '873.3204.09.06.106', 'NRP. 873.3204.09.06.106', 'Neng Safitri Nur Ladyawati, AM.Keb', 'Bidan Desa', 'BLUD', 'Petugas Puskesmas', 'NS'),
+(35, 'dani', 'bankot2026', '873.3204.18.01.002', 'NRP. 873.3204.18.01.002', 'Dani Setiadi, S.Farm', 'TTK', 'BLUD', 'Petugas Puskesmas', 'DS'),
+(36, 'ripan', 'bankot2026', 'BLUD-SEC-01', 'NRP. BLUD-SEC-01', 'Ripan Sutiana', 'Petugas Keamanan', 'BLUD', 'Petugas Puskesmas', 'RS'),
+(37, 'mevi', 'bankot2026', 'BLUD-CL-01', 'NRP. BLUD-CL-01', 'Mevi Riyanayasti', 'Petugas Kebersihan', 'BLUD', 'Petugas Puskesmas', 'MR'),
+(38, 'adeboy', 'bankot2026', 'BLUD-DRV-01', 'NRP. BLUD-DRV-01', 'Ade Boy', 'Supir', 'BLUD', 'Petugas Puskesmas', 'AB'),
+(39, 'suhara', 'bankot2026', 'BLUD-SEC-02', 'NRP. BLUD-SEC-02', 'Suhara', 'Petugas Keamanan', 'BLUD', 'Petugas Puskesmas', 'SH');
 
--- --------------------------------------------------------------------
--- 7. PENGUMUMAN SISTEM CKG (Banner Announcement Top Header)
--- Tabel: announcement
--- --------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS announcement (
-    id INTEGER PRIMARY KEY DEFAULT 1,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    author TEXT DEFAULT 'Admin',
-    date TEXT,
-    active INTEGER DEFAULT 1
-);
 
-INSERT OR IGNORE INTO announcement (id, title, content, author, date, active) VALUES
-(1, 'PENGUMUMAN SISTEM CKG', 'Selamat datang di Sistem Informasi Pencatatan CKG Puskesmas Banjaran Kota. Harap lakukan verifikasi data pasien By Name By Address (BNBA) dengan cermat dan akurat.', 'Admin Utama', '2026-08-06', 1);
+-- Tidak ada data dummy jadwal_kegiatan - data diisi langsung oleh petugas via aplikasi
