@@ -601,6 +601,445 @@ body.dark-mode .nav-tab-btn.nav-tab-portal:hover {
   border-color: rgba(52, 211, 153, 0.6) !important;
 }
 
+/* ============================================================
+   IN-APP BROWSER (PORTAL ASIK KEMKES) STYLING
+============================================================ */
+.browser-card-panel {
+  padding: 0 !important;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.browser-card-panel.is-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.browser-top-bar {
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  user-select: none;
+}
+
+.browser-traffic-lights {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.browser-traffic-lights .light {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+  display: inline-block;
+}
+
+.browser-traffic-lights .light.red { background: #ef4444; }
+.browser-traffic-lights .light.yellow { background: #f59e0b; }
+.browser-traffic-lights .light.green { background: #10b981; }
+.browser-traffic-lights .light:hover { transform: scale(1.2); }
+
+.browser-tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border-radius: 8px 8px 0 0;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-bottom: none;
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.03);
+}
+
+.badge-status-ssl {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.browser-top-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-browser-tool {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.btn-browser-tool:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+.browser-toolbar {
+  background: #ffffff;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.browser-nav-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn-toolbar-nav {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-toolbar-nav:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.browser-omnibox-form {
+  flex: 1;
+  min-width: 240px;
+}
+
+.browser-omnibox {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 3px 12px;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.browser-omnibox:focus-within {
+  border-color: #10b981;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.omnibox-lock-icon {
+  color: #10b981;
+  font-size: 13px;
+}
+
+.omnibox-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1e293b;
+  outline: none;
+  padding: 4px 0;
+  font-family: inherit;
+}
+
+.omnibox-go-btn {
+  border: none;
+  background: #10b981;
+  color: white;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.2s;
+}
+
+.omnibox-go-btn:hover {
+  background: #059669;
+}
+
+.browser-bookmarks {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-bookmark {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #059669;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+
+.btn-bookmark:hover {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+  transform: translateY(-1px);
+}
+
+.browser-viewport-container {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: calc(100vh - 235px);
+  min-height: 720px;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.browser-card-panel.is-fullscreen .browser-viewport-container {
+  height: calc(100vh - 90px) !important;
+  min-height: 0 !important;
+}
+
+.browser-loading-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6, #10b981);
+  background-size: 200% 100%;
+  z-index: 10;
+  display: none;
+}
+
+.browser-loading-bar.loading {
+  display: block;
+  animation: browserLoadingSlide 1.2s infinite linear;
+}
+
+@keyframes browserLoadingSlide {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.browser-iframe {
+  width: 100%;
+  flex: 1;
+  border: none;
+  min-height: 660px;
+  background: #ffffff;
+}
+
+.browser-card-panel.is-fullscreen .browser-iframe {
+  min-height: 0;
+}
+
+.browser-bottom-bar {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: #64748b;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.browser-status-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.browser-status-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-bottom-action {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.btn-bottom-action:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.spin-anim {
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Dark Mode Overrides for Browser */
+body.dark-mode .browser-card-panel {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+body.dark-mode .browser-top-bar {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+body.dark-mode .browser-tab-pill {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+body.dark-mode .badge-status-ssl {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+body.dark-mode .btn-browser-tool {
+  background: #1e293b;
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+body.dark-mode .btn-browser-tool:hover {
+  background: #334155;
+  color: #f8fafc;
+}
+
+body.dark-mode .browser-toolbar {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+body.dark-mode .btn-toolbar-nav {
+  background: #0f172a;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+body.dark-mode .btn-toolbar-nav:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+body.dark-mode .browser-omnibox {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+body.dark-mode .browser-omnibox:focus-within {
+  background: #1e293b;
+}
+
+body.dark-mode .omnibox-input {
+  color: #f1f5f9;
+}
+
+body.dark-mode .btn-bookmark {
+  background: #0f172a;
+  border-color: #334155;
+  color: #34d399;
+}
+
+body.dark-mode .btn-bookmark:hover {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+body.dark-mode .browser-viewport-container {
+  background: #1e293b;
+}
+
+body.dark-mode .browser-iframe {
+  background: #1e293b;
+}
+
+body.dark-mode .browser-bottom-bar {
+  background: #0f172a;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+body.dark-mode .btn-bottom-action {
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+body.dark-mode .btn-bottom-action:hover {
+  background: #334155;
+  color: #f8fafc;
+}
+
 /* Main Container Area */
 .main-content {
   padding: 24px 28px;
