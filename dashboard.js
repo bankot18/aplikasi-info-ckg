@@ -6239,17 +6239,28 @@ document.addEventListener('DOMContentLoaded', () => {
             noKeg = (kegIdx >= 0) ? (kegIdx + 1) : 0;
           }
 
+          let normTanggal = item.tanggal || '';
+          if (normTanggal && typeof normTanggal === 'string' && normTanggal.includes('-')) {
+            const parts = normTanggal.split('-');
+            if (parts.length === 3) {
+              const y = parts[0];
+              const m = String(parseInt(parts[1], 10)).padStart(2, '0');
+              const d = String(parseInt(parts[2], 10)).padStart(2, '0');
+              normTanggal = `${y}-${m}-${d}`;
+            }
+          }
+
           let bulanVal = item.bulan;
           let tahunVal = item.tahun;
-          if (item.tanggal && typeof item.tanggal === 'string' && item.tanggal.includes('-')) {
-            const parts = item.tanggal.split('-');
+          if (normTanggal && normTanggal.includes('-')) {
+            const parts = normTanggal.split('-');
             tahunVal = parseInt(parts[0], 10) || tahunVal;
             bulanVal = parseInt(parts[1], 10) || bulanVal;
           }
 
           return {
             id: item.id,
-            tanggal: item.tanggal,
+            tanggal: normTanggal,
             bulan: bulanVal,
             tahun: tahunVal,
             noKegiatan: noKeg,
@@ -6502,6 +6513,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const closeModalTambah = () => {
         if (modalTambah) modalTambah.classList.remove('active');
+        const editIdEl = document.getElementById('bokEditId');
+        if (editIdEl) editIdEl.value = '';
+        if (formTambah) formTambah.reset();
       };
       if (closeTambah) closeTambah.addEventListener('click', closeModalTambah);
       if (btnCancelTambah) btnCancelTambah.addEventListener('click', closeModalTambah);
@@ -6596,15 +6610,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const monthStr = String(this.currentMonth).padStart(2, '0');
       const yearMonthPrefix = `${this.currentYear}-${monthStr}`;
 
-      return all.filter(item => {
-        if (!item.tanggal || !item.tanggal.startsWith(yearMonthPrefix)) return false;
+      return (all || []).filter(item => {
+        if (!item || !item.tanggal) return false;
+
+        // Match year & month (via string prefix or explicit bulan/tahun numbers)
+        const isMonthMatch = item.tanggal.startsWith(yearMonthPrefix) || 
+                             (parseInt(item.bulan, 10) === this.currentMonth && parseInt(item.tahun, 10) === this.currentYear);
+        if (!isMonthMatch) return false;
 
         // Staff filter
-        if (this.selectedStaff && item.namaUser !== this.selectedStaff) return false;
+        if (this.selectedStaff) {
+          const sNorm = this.selectedStaff.toLowerCase().replace(/^(dr\.|drg\.|h\.|hj\.)\s*/i, '').trim();
+          const uNorm = (item.namaUser || item.petugas_nama || '').toLowerCase().replace(/^(dr\.|drg\.|h\.|hj\.)\s*/i, '').trim();
+          if (!uNorm.includes(sNorm) && !sNorm.includes(uNorm)) return false;
+        }
 
         // Tab filter
         if (this.activeTab === 'mine') {
-          if (item.namaUser !== CURRENT_USER.nama) return false;
+          const myNorm = (CURRENT_USER.nama || '').toLowerCase().replace(/^(dr\.|drg\.|h\.|hj\.)\s*/i, '').trim();
+          const uNorm = (item.namaUser || item.petugas_nama || '').toLowerCase().replace(/^(dr\.|drg\.|h\.|hj\.)\s*/i, '').trim();
+          if (!uNorm.includes(myNorm) && !myNorm.includes(uNorm)) return false;
         } else if (this.activeTab === 'collab') {
           if (!item.keterangan || !item.keterangan.toLowerCase().includes('kolaborasi')) return false;
         }
@@ -6613,7 +6638,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (this.searchKeyword) {
           const matchKeg = (item.namaKegiatan || '').toLowerCase().includes(this.searchKeyword);
           const matchKet = (item.keterangan || '').toLowerCase().includes(this.searchKeyword);
-          const matchUser = (item.namaUser || '').toLowerCase().includes(this.searchKeyword);
+          const matchUser = (item.namaUser || item.petugas_nama || '').toLowerCase().includes(this.searchKeyword);
           if (!matchKeg && !matchKet && !matchUser) return false;
         }
 
@@ -6829,22 +6854,20 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="bok-cal-events-wrap">
         `;
 
-        dayEvents.slice(0, 2).forEach(ev => {
-          const isMine = ev.namaUser === CURRENT_USER.nama;
+        dayEvents.forEach(ev => {
+          const myNorm = (CURRENT_USER.nama || '').toLowerCase().replace(/^(dr\.|drg\.|h\.|hj\.)\s*/i, '').trim();
+          const uNorm = (ev.namaUser || ev.petugas_nama || '').toLowerCase().replace(/^(dr\.|drg\.|h\.|hj\.)\s*/i, '').trim();
+          const isMine = uNorm.includes(myNorm) || myNorm.includes(uNorm);
           const isCollab = ev.keterangan && ev.keterangan.toLowerCase().includes('kolaborasi');
           const cls = isMine ? 'mine' : (isCollab ? 'collab' : 'other');
           const noPrefix = (ev.noKegiatan && ev.noKegiatan > 0) ? `No.${ev.noKegiatan} ` : '';
 
           html += `
-            <span class="bok-cal-pill ${cls}" title="${noPrefix}${ev.namaKegiatan} (${ev.namaUser})" onclick="event.stopPropagation(); window.JadwalBOKController.bukaModalDetail('${ev.id}')">
+            <span class="bok-cal-pill ${cls}" title="${noPrefix}${ev.namaKegiatan} (${ev.namaUser || ev.petugas_nama || ''})" onclick="event.stopPropagation(); window.JadwalBOKController.bukaModalDetail('${ev.id}')">
               ${noPrefix}${ev.namaKegiatan}
             </span>
           `;
         });
-
-        if (dayEvents.length > 2) {
-          html += `<span class="bok-cal-more-pill">+${dayEvents.length - 2} kegiatan lagi</span>`;
-        }
 
         html += `
             </div>
@@ -6980,29 +7003,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const isMine = item.namaUser === CURRENT_USER.nama;
         const isCollab = item.keterangan && item.keterangan.toLowerCase().includes('kolaborasi');
 
-        let badgeTime = '';
-        if (diffDays === 0) {
-          badgeTime = '<span class="badge-system-live" style="font-size:10.5px; background:rgba(239,68,68,0.2); color:#f87171; border-color:rgba(239,68,68,0.35);"><span class="live-dot" style="background:#ef4444;"></span> Hari Ini!</span>';
-        } else if (diffDays === 1) {
-          badgeTime = '<span class="badge-system-live" style="font-size:10.5px; background:rgba(245,158,11,0.2); color:#fbbf24; border-color:rgba(245,158,11,0.35);">Besok</span>';
-        } else {
-          badgeTime = `<span class="badge-system-live" style="font-size:10.5px; background:rgba(14,165,233,0.15); color:#38bdf8; border-color:rgba(14,165,233,0.3);">${diffDays} hari lagi</span>`;
-        }
-
         html += `
-          <div class="bok-beranda-item ${isMine ? 'is-mine' : ''}">
-            <div class="bok-beranda-date-box">
-              <span class="num">${dayNum}</span>
-              <span class="mth">${mthStr}</span>
-            </div>
-            <div class="bok-beranda-info">
-              <h5 title="${item.namaKegiatan}">${item.noKegiatan ? 'No.' + item.noKegiatan + ' ' : ''}${item.namaKegiatan}</h5>
-              <div class="bok-beranda-meta">
-                <span class="bok-staff-pill ${isMine ? 'mine' : 'other'}">${isMine ? 'Jadwal Anda' : item.namaUser}</span>
-                ${isCollab ? '<span class="bok-collab-tag-pill">👥 Kolaborasi</span>' : ''}
-                ${badgeTime}
+          <div class="dash-list-item" style="padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(255, 209, 102, 0.12); border: 1px solid rgba(255, 209, 102, 0.25); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;">
+                <span style="font-size: 14px; font-weight: 800; color: #ffd166; line-height: 1;">${dayNum}</span>
+                <span style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${monthName.slice(0, 3)}</span>
+              </div>
+              <div>
+                <h5 style="margin: 0 0 3px 0; font-size: 13.5px; font-weight: 700; color: #ffffff;">${item.namaKegiatan}</h5>
+                <div style="font-size: 11.5px; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+                  <span>${dayName}</span>
+                  <span>•</span>
+                  <span style="color: ${isMine ? '#ffd166' : '#94a3b8'};">${isMine ? 'Anda' : item.namaUser}</span>
+                </div>
               </div>
             </div>
+            <button type="button" class="btn-bok-act" title="Detail" onclick="window.JadwalBOKController.bukaModalDetail('${item.id}')" style="flex-shrink: 0;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            </button>
           </div>
         `;
       });
@@ -7021,6 +7040,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (form) form.reset();
       if (editId) editId.value = '';
+      if (kegInput) kegInput.value = '';
+      if (ketInput) ketInput.value = '';
       if (titleEl) titleEl.textContent = 'Tambah Jadwal Kegiatan BOK';
 
       // Default date
@@ -7067,9 +7088,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async simpanJadwal() {
       const editIdEl = document.getElementById('bokEditId');
-      const editId = editIdEl ? editIdEl.value : '';
+      const editId = editIdEl ? editIdEl.value.trim() : '';
       const tanggal = document.getElementById('inputTanggalBOK').value;
-      const noKeg = parseInt(document.getElementById('inputKegiatanBOK').value);
+      const noKeg = parseInt(document.getElementById('inputKegiatanBOK').value, 10);
       const keterangan = document.getElementById('inputKeteranganBOK').value.trim();
 
       if (!tanggal) {
@@ -7082,7 +7103,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const namaKegiatan = KEGIATAN_BOK_LIST[noKeg - 1];
-      const entryId = editId || ('bok-' + Date.now());
+      const entryId = editId ? editId : (`bok-${tanggal}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
 
       const tParts = tanggal.split('-');
       const tahunVal = parseInt(tParts[0], 10);

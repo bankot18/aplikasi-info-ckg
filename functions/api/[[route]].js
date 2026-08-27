@@ -439,14 +439,26 @@ async function handleApiRequest(request, env, ctx) {
 
     if (pathname === '/api/jadwal/save' && method === 'POST') {
       const item = await request.json();
-      const id = item.id || `bok-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      
+      let tanggal = item.tanggal || '';
+      if (tanggal && typeof tanggal === 'string' && tanggal.includes('-')) {
+        const parts = tanggal.split('-');
+        if (parts.length === 3) {
+          const y = parts[0];
+          const m = String(parseInt(parts[1], 10)).padStart(2, '0');
+          const d = String(parseInt(parts[2], 10)).padStart(2, '0');
+          tanggal = `${y}-${m}-${d}`;
+        }
+      }
+
+      const id = item.id || `bok-${tanggal || Date.now()}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
       
       // Calculate bulan and tahun directly from tanggal string "YYYY-MM-DD" to avoid timezone conversion bugs
       let bulan = parseInt(item.bulan, 10);
       let tahun = parseInt(item.tahun, 10);
       if (isNaN(bulan) || isNaN(tahun)) {
-        if (item.tanggal && typeof item.tanggal === 'string' && item.tanggal.includes('-')) {
-          const parts = item.tanggal.split('-');
+        if (tanggal && tanggal.includes('-')) {
+          const parts = tanggal.split('-');
           tahun = isNaN(tahun) ? parseInt(parts[0], 10) : tahun;
           bulan = isNaN(bulan) ? parseInt(parts[1], 10) : bulan;
         } else {
@@ -498,7 +510,7 @@ async function handleApiRequest(request, env, ctx) {
           updated_at = CURRENT_TIMESTAMP
       `).bind(
         id,
-        item.tanggal,
+        tanggal,
         bulan,
         tahun,
         item.nama_kegiatan || item.kegiatan || item.namaKegiatan || '',
