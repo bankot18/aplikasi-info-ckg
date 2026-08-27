@@ -1015,9 +1015,7 @@ function setupEventListeners() {
   document.querySelectorAll('.nav-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const viewId = btn.getAttribute('data-view');
-      if (viewId) {
-        switchView(viewId);
-      }
+      switchView(viewId);
     });
   });
 
@@ -1099,7 +1097,6 @@ function setupEventListeners() {
 }
 
 function switchView(viewId) {
-  if (!viewId) return;
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
 
   if (role === 'petugas') {
@@ -1168,8 +1165,6 @@ function switchView(viewId) {
     renderRecycleTable();
   } else if (viewId === 'admin-panel') {
     refreshAdminKamusStats();
-  } else if (viewId === 'portal-asik') {
-    initPortalAsikView();
   }
 }
 
@@ -13116,67 +13111,6 @@ async function analyzePatientHealthWithAI(patientData) {
   } catch (err) {
     console.error('AI Health Analyzer Error:', err);
     return 'Gagal memuat saran AI.';
-  }
-}
-
-/* ============================================================
-   PORTAL ASIK KEMKES CONTROLLERS
-============================================================ */
-function initPortalAsikView() {
-  const urlInput = document.getElementById('portalBrowserUrl');
-  if (urlInput && !urlInput.value) {
-    urlInput.value = 'https://sehatindonesiaku.kemkes.go.id/';
-  }
-}
-
-function portalBrowserNavigate(url) {
-  if (!url) return;
-  let targetUrl = url.trim();
-  if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-    targetUrl = 'https://' + targetUrl;
-  }
-  const urlInput = document.getElementById('portalBrowserUrl');
-  if (urlInput) {
-    urlInput.value = targetUrl;
-  }
-  openAsikPopupWindow(targetUrl);
-}
-
-function handlePortalUrlSubmit(e) {
-  if (e) e.preventDefault();
-  const urlInput = document.getElementById('portalBrowserUrl');
-  if (urlInput && urlInput.value) {
-    portalBrowserNavigate(urlInput.value);
-  }
-}
-
-function togglePortalFullscreen() {
-  const card = document.querySelector('.browser-card-panel');
-  const btnIcon = document.querySelector('#btnBrowserFullscreen i');
-  if (card) {
-    card.classList.toggle('is-fullscreen');
-    const isFull = card.classList.contains('is-fullscreen');
-    if (btnIcon) {
-      btnIcon.className = isFull ? 'bi bi-fullscreen-exit' : 'bi bi-arrows-fullscreen';
-    }
-  }
-}
-
-function openAsikPopupWindow(url) {
-  const targetUrl = url || document.getElementById('portalBrowserUrl')?.value || 'https://sehatindonesiaku.kemkes.go.id/';
-  const width = Math.min(1380, window.screen.availWidth - 60);
-  const height = Math.min(900, window.screen.availHeight - 60);
-  const left = Math.max(0, (window.screen.availWidth - width) / 2);
-  const top = Math.max(0, (window.screen.availHeight - height) / 2);
-  
-  const popup = window.open(
-    targetUrl,
-    'asik_app_popup_window',
-    `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=yes,status=no,resizable=yes,scrollbars=yes`
-  );
-  
-  if (popup) {
-    popup.focus();
   }
 }
 

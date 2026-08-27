@@ -235,9 +235,6 @@
       <button class="nav-tab-btn admin-koordinator-only" data-view="laporan">
         <i class="bi bi-file-earmark-bar-graph"></i> Laporan Data
       </button>
-      <button class="nav-tab-btn nav-tab-portal" data-view="portal-asik" id="tab-portal-asik" title="Portal Masuk Web ASIK Kemenkes RI (Browser dalam Aplikasi)">
-        <i class="bi bi-globe2"></i> Portal ASIK Kemkes
-      </button>
       <button class="nav-tab-btn" data-view="data-records">
         <i class="bi bi-folder-symlink-fill"></i> Data Records CKG
       </button>
@@ -436,9 +433,6 @@
               </p>
             </div>
             <div class="action-buttons-group">
-              <button class="btn btn-primary" onclick="switchView('portal-asik')" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); border: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);">
-                <i class="bi bi-globe2"></i> Buka Web ASIK Kemkes
-              </button>
               <button class="btn btn-emerald" onclick="exportToXLSX()">
                 <i class="bi bi-file-earmark-excel-fill"></i> Ekspor Excel (XLSX)
               </button>
@@ -563,240 +557,6 @@
                 <!-- Rendered dynamically via JS -->
               </tbody>
             </table>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- VIEW: PORTAL ASIK KEMKES (IN-APP BROWSER) -->
-      <section id="view-portal-asik" class="view-panel">
-        <div class="card-panel browser-card-panel">
-          
-          <!-- Top Window Chrome / Title Bar -->
-          <div class="browser-top-bar">
-            <div class="browser-traffic-lights">
-              <span class="light red" title="Kembali ke Dashboard" onclick="switchView('dashboard')"></span>
-              <span class="light yellow" title="Buka Jendela Popup Khusus" onclick="openAsikPopupWindow()"></span>
-              <span class="light green" title="Layar Penuh (Fullscreen)" onclick="togglePortalFullscreen()"></span>
-            </div>
-            
-            <div class="browser-tab-pill">
-              <i class="bi bi-heart-pulse-fill" style="color: #10b981;"></i>
-              <span id="browserTabTitle">ASIK Kemkes RI - Sehat IndonesiaKu</span>
-              <span class="badge-status-ssl"><i class="bi bi-shield-fill-check"></i> Resmi Kemenkes RI</span>
-            </div>
-
-            <div class="browser-top-actions">
-              <button class="btn-browser-tool" onclick="openAsikPopupWindow()" title="Buka Jendela Khusus Terpisah">
-                <i class="bi bi-window-stack"></i> <span class="d-none-mobile">Jendela App</span>
-              </button>
-              <a href="https://sehatindonesiaku.kemkes.go.id/" target="_blank" rel="noopener noreferrer" class="btn-browser-tool" title="Buka di Tab Baru Browser">
-                <i class="bi bi-box-arrow-up-right"></i> <span class="d-none-mobile">Tab Baru</span>
-              </a>
-              <button class="btn-browser-tool" id="btnBrowserFullscreen" onclick="togglePortalFullscreen()" title="Toggle Layar Penuh (Fullscreen)">
-                <i class="bi bi-arrows-fullscreen"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Browser Navigation & URL Omnibox -->
-          <div class="browser-toolbar">
-            <div class="browser-nav-group">
-              <button class="btn-toolbar-nav" onclick="openAsikPopupWindow('https://sehatindonesiaku.kemkes.go.id/')" title="Beranda ASIK"><i class="bi bi-house-door-fill"></i></button>
-              <button class="btn-toolbar-nav" onclick="openAsikPopupWindow(document.getElementById('portalBrowserUrl').value)" title="Buka di Jendela Aplikasi"><i class="bi bi-window-stack"></i></button>
-              <button class="btn-toolbar-nav" onclick="window.open(document.getElementById('portalBrowserUrl').value, '_blank')" title="Buka di Tab Baru"><i class="bi bi-box-arrow-up-right"></i></button>
-            </div>
-
-            <form class="browser-omnibox-form" onsubmit="handlePortalUrlSubmit(event)">
-              <div class="browser-omnibox">
-                <i class="bi bi-lock-fill omnibox-lock-icon"></i>
-                <input type="text" id="portalBrowserUrl" class="omnibox-input" value="https://sehatindonesiaku.kemkes.go.id/" placeholder="Masukkan URL ASIK..." autocomplete="off">
-                <button type="submit" class="omnibox-go-btn" title="Buka URL"><i class="bi bi-arrow-right-short"></i></button>
-              </div>
-            </form>
-
-            <div class="browser-bookmarks">
-              <button class="btn-bookmark" onclick="portalBrowserNavigate('https://sehatindonesiaku.kemkes.go.id/')" title="Beranda Utama">
-                <i class="bi bi-house"></i> Home
-              </button>
-              <button class="btn-bookmark" onclick="portalBrowserNavigate('https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan')" title="Pelayanan CKG Luar & Dalam Gedung">
-                <i class="bi bi-person-check-fill"></i> CKG Pelayanan
-              </button>
-              <button class="btn-bookmark" onclick="portalBrowserNavigate('https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan-sekolah')" title="Pelayanan CKG Anak Sekolah">
-                <i class="bi bi-mortarboard-fill"></i> CKG Sekolah
-              </button>
-              <button class="btn-bookmark" onclick="portalBrowserNavigate('https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-individu')" title="Pendaftaran Pasien Individu">
-                <i class="bi bi-person-plus-fill"></i> Pendaftaran
-              </button>
-            </div>
-          </div>
-
-          <!-- Browser Launchpad & Module Hub -->
-          <div class="browser-launchpad-container">
-            
-            <!-- Hero Launch Banner -->
-            <div class="launchpad-hero-banner">
-              <div class="launchpad-hero-content">
-                <div class="launchpad-badge">
-                  <i class="bi bi-shield-check"></i> PORTAL RESMI KEMENTERIAN KESEHATAN RI
-                </div>
-                <h2>Aplikasi Sehat IndonesiaKu (ASIK)</h2>
-                <p>
-                  Sistem terpusat pencatatan skrining kesehatan CKG (Cek Kesehatan Gratis) Puskesmas Banjaran Kota. Akses langsung melalui <strong>Jendela Aplikasi Mandiri</strong> untuk kemudahan entri data bersama ekstensi otomatisasi.
-                </p>
-                <div class="launchpad-hero-actions">
-                  <button class="btn-hero-launch" onclick="openAsikPopupWindow('https://sehatindonesiaku.kemkes.go.id/')">
-                    <i class="bi bi-window-stack"></i> Buka Web ASIK (Jendela Aplikasi)
-                  </button>
-                  <a href="https://sehatindonesiaku.kemkes.go.id/" target="_blank" rel="noopener noreferrer" class="btn-hero-tab">
-                    <i class="bi bi-box-arrow-up-right"></i> Buka di Tab Baru
-                  </a>
-                </div>
-              </div>
-              <div class="launchpad-hero-icon">
-                <i class="bi bi-hospital-fill"></i>
-              </div>
-            </div>
-
-            <!-- Quick Access Modules Grid -->
-            <div class="launchpad-section-title">
-              <i class="bi bi-grid-fill" style="color: #10b981;"></i> Akses Cepat Modul ASIK Kemenkes
-            </div>
-
-            <div class="launchpad-grid">
-              
-              <!-- Card 1: CKG Pelayanan -->
-              <div class="launchpad-card">
-                <div class="card-icon-circle bg-emerald-light">
-                  <i class="bi bi-person-check-fill text-emerald"></i>
-                </div>
-                <div class="card-body-info">
-                  <h4>CKG Pelayanan (Dewasa / Lansia)</h4>
-                  <p>Entri skrining riwayat penyakit, faktor risiko PTM, dan pengukuran kesehatan Luar & Dalam Gedung.</p>
-                  <div class="card-url-tag">https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan</div>
-                </div>
-                <div class="card-actions">
-                  <button class="btn-card-launch" onclick="openAsikPopupWindow('https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan')">
-                    <i class="bi bi-window-stack"></i> Buka Jendela App
-                  </button>
-                  <a href="https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan" target="_blank" rel="noopener noreferrer" class="btn-card-link" title="Buka Tab Baru">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                  </a>
-                </div>
-              </div>
-
-              <!-- Card 2: CKG Sekolah -->
-              <div class="launchpad-card">
-                <div class="card-icon-circle bg-blue-light">
-                  <i class="bi bi-mortarboard-fill text-blue"></i>
-                </div>
-                <div class="card-body-info">
-                  <h4>CKG Pelayanan Anak Sekolah</h4>
-                  <p>Entri skrining kesehatan berkala peserta didik sekolah (SD/SMP/SMA) per jenjang kelas dan sekolah.</p>
-                  <div class="card-url-tag">https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan-sekolah</div>
-                </div>
-                <div class="card-actions">
-                  <button class="btn-card-launch" onclick="openAsikPopupWindow('https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan-sekolah')">
-                    <i class="bi bi-window-stack"></i> Buka Jendela App
-                  </button>
-                  <a href="https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan-sekolah" target="_blank" rel="noopener noreferrer" class="btn-card-link" title="Buka Tab Baru">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                  </a>
-                </div>
-              </div>
-
-              <!-- Card 3: Pendaftaran Individu -->
-              <div class="launchpad-card">
-                <div class="card-icon-circle bg-purple-light">
-                  <i class="bi bi-person-plus-fill text-purple"></i>
-                </div>
-                <div class="card-body-info">
-                  <h4>Pendaftaran Pasien Individu</h4>
-                  <p>Validasi NIK Dukcapil dan pendaftaran peserta untuk penerbitan nomor tiket pemeriksaan skrining.</p>
-                  <div class="card-url-tag">https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-individu</div>
-                </div>
-                <div class="card-actions">
-                  <button class="btn-card-launch" onclick="openAsikPopupWindow('https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-individu')">
-                    <i class="bi bi-window-stack"></i> Buka Jendela App
-                  </button>
-                  <a href="https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-individu" target="_blank" rel="noopener noreferrer" class="btn-card-link" title="Buka Tab Baru">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                  </a>
-                </div>
-              </div>
-
-              <!-- Card 4: Pendaftaran Sekolah -->
-              <div class="launchpad-card">
-                <div class="card-icon-circle bg-amber-light">
-                  <i class="bi bi-backpack-fill text-amber"></i>
-                </div>
-                <div class="card-body-info">
-                  <h4>Pendaftaran Anak Sekolah</h4>
-                  <p>Pendaftaran peserta didik secara rombongan berdasarkan nama sekolah dan rombel belajar.</p>
-                  <div class="card-url-tag">https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-anak-sekolah</div>
-                </div>
-                <div class="card-actions">
-                  <button class="btn-card-launch" onclick="openAsikPopupWindow('https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-anak-sekolah')">
-                    <i class="bi bi-window-stack"></i> Buka Jendela App
-                  </button>
-                  <a href="https://sehatindonesiaku.kemkes.go.id/ckg-pendaftaran-anak-sekolah" target="_blank" rel="noopener noreferrer" class="btn-card-link" title="Buka Tab Baru">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                  </a>
-                </div>
-              </div>
-
-              <!-- Card 5: Beranda & Dashboard -->
-              <div class="launchpad-card">
-                <div class="card-icon-circle bg-teal-light">
-                  <i class="bi bi-speedometer text-teal"></i>
-                </div>
-                <div class="card-body-info">
-                  <h4>Beranda & Dashboard ASIK</h4>
-                  <p>Login akun petugas, ganti faskes, dan monitoring rekapitulasi data capaian skrining nasional.</p>
-                  <div class="card-url-tag">https://sehatindonesiaku.kemkes.go.id/</div>
-                </div>
-                <div class="card-actions">
-                  <button class="btn-card-launch" onclick="openAsikPopupWindow('https://sehatindonesiaku.kemkes.go.id/')">
-                    <i class="bi bi-window-stack"></i> Buka Jendela App
-                  </button>
-                  <a href="https://sehatindonesiaku.kemkes.go.id/" target="_blank" rel="noopener noreferrer" class="btn-card-link" title="Buka Tab Baru">
-                    <i class="bi bi-box-arrow-up-right"></i>
-                  </a>
-                </div>
-              </div>
-
-              <!-- Card 6: Ekstensi Otomatisasi Input -->
-              <div class="launchpad-card">
-                <div class="card-icon-circle bg-rose-light">
-                  <i class="bi bi-robot text-rose"></i>
-                </div>
-                <div class="card-body-info">
-                  <h4>Ekstensi Otomatisasi (Tukang Input)</h4>
-                  <p>Ekstensi otomatis aktif di browser saat membuka halaman ASIK untuk entri data massal secepat kilat.</p>
-                  <div class="card-url-tag"><i class="bi bi-check-circle-fill" style="color: #10b981;"></i> Ekstensi Terpasang & Siap</div>
-                </div>
-                <div class="card-actions">
-                  <button class="btn-card-launch" onclick="openAsikPopupWindow('https://sehatindonesiaku.kemkes.go.id/ckg-pelayanan')">
-                    <i class="bi bi-play-circle-fill"></i> Mulai Entri Data
-                  </button>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Security Note Footer -->
-            <div class="launchpad-security-note">
-              <div style="display: flex; align-items: flex-start; gap: 12px;">
-                <i class="bi bi-info-circle-fill" style="color: #0284c7; font-size: 20px; margin-top: 2px;"></i>
-                <div>
-                  <h5 style="margin: 0 0 4px 0; font-size: 13px; font-weight: 700; color: var(--text-color);">Informasi Integrasi ASIK Kemenkes RI:</h5>
-                  <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
-                    Portal Kemenkes menerapkan proteksi keamanan <code>X-Frame-Options: SAMEORIGIN</code>. Membuka melalui <strong>Mode Jendela Aplikasi</strong> memberikan pengalaman browser mandiri yang cepat, aman, dan mendukung penuh ekstensi otomatisasi entri.
-                  </p>
-                </div>
-              </div>
-            </div>
-
           </div>
 
         </div>
@@ -1559,9 +1319,6 @@
                 </label>
                 <label class="menu-lock-item">
                   <input type="checkbox" value="sekolah" class="menu-lock-checkbox"> <i class="bi bi-mortarboard-fill"></i> CKG Sekolah
-                </label>
-                <label class="menu-lock-item">
-                  <input type="checkbox" value="portal-asik" class="menu-lock-checkbox"> <i class="bi bi-globe2"></i> Portal ASIK Kemkes
                 </label>
                 <label class="menu-lock-item">
                   <input type="checkbox" value="recycle-data" class="menu-lock-checkbox"> <i class="bi bi-trash3-fill"></i> Recycle Data
