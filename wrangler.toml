@@ -1,24 +1,17 @@
-# ============================================================================
-# SICEKAS v2.0 - CLOUDFLARE PAGES & D1 DATABASE CONFIGURATION
-# ============================================================================
-
-name = "sicekas-v2"
-compatibility_date = "2026-08-01"
-main = "functions/api/[[route]].js"
+# Cloudflare Pages & Workers Configuration
+name = "aplikasi-info-ckg"
+main = "_worker.js"
+compatibility_date = "2024-08-01"
 
 [assets]
 directory = "."
-binding = "ASSETS"
-html_handling = "none"
-not_found_handling = "none"
 
-# Cloudflare D1 Database Binding
+# Cloudflare D1 Database Binding (Serverless SQL Database)
 [[d1_databases]]
 binding = "DB"
-database_name = "sicekas-v2"
-database_id = "8186f6c9-f454-4a87-a541-50d09e74b929"
+database_name = "ckg_database"
+database_id = "9eaf93fb-1afc-4928-84da-53ee9c93b9c8"
 
-[vars]
-ENVIRONMENT = "production"
-APP_NAME = "SICEKAS v2.0"
-PUSKESMAS_NAME = "Puskesmas Banjaran Kota"
+# Cloudflare Workers AI Binding (Edge AI Models)
+[ai]
+binding = "AI"
