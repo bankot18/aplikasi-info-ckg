@@ -13120,45 +13120,12 @@ async function analyzePatientHealthWithAI(patientData) {
 }
 
 /* ============================================================
-   PORTAL ASIK KEMKES (IN-APP BROWSER) CONTROLLERS
+   PORTAL ASIK KEMKES CONTROLLERS
 ============================================================ */
-let isPortalIframeInitialized = false;
-
 function initPortalAsikView() {
-  const iframe = document.getElementById('portalAsikIframe');
   const urlInput = document.getElementById('portalBrowserUrl');
-  const defaultUrl = 'https://sehatindonesiaku.kemkes.go.id/';
-
-  if (iframe) {
-    if (!isPortalIframeInitialized || iframe.src === 'about:blank' || !iframe.src || iframe.src.endsWith('about:blank')) {
-      isPortalIframeInitialized = true;
-      showBrowserLoading(true);
-      iframe.src = defaultUrl;
-      iframe.onload = () => showBrowserLoading(false);
-      iframe.onerror = () => showBrowserLoading(false);
-    }
-    if (urlInput) {
-      urlInput.value = (iframe.src && iframe.src !== 'about:blank') ? iframe.src : defaultUrl;
-    }
-  }
-}
-
-function showBrowserLoading(show) {
-  const bar = document.getElementById('browserLoadingBar');
-  const reloadIcon = document.getElementById('browserReloadIcon');
-  if (bar) {
-    if (show) {
-      bar.classList.add('loading');
-    } else {
-      bar.classList.remove('loading');
-    }
-  }
-  if (reloadIcon) {
-    if (show) {
-      reloadIcon.classList.add('spin-anim');
-    } else {
-      reloadIcon.classList.remove('spin-anim');
-    }
+  if (urlInput && !urlInput.value) {
+    urlInput.value = 'https://sehatindonesiaku.kemkes.go.id/';
   }
 }
 
@@ -13168,19 +13135,11 @@ function portalBrowserNavigate(url) {
   if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
     targetUrl = 'https://' + targetUrl;
   }
-  
-  const iframe = document.getElementById('portalAsikIframe');
   const urlInput = document.getElementById('portalBrowserUrl');
-  
-  showBrowserLoading(true);
-  if (iframe) {
-    iframe.src = targetUrl;
-    iframe.onload = () => showBrowserLoading(false);
-    iframe.onerror = () => showBrowserLoading(false);
-  }
   if (urlInput) {
     urlInput.value = targetUrl;
   }
+  openAsikPopupWindow(targetUrl);
 }
 
 function handlePortalUrlSubmit(e) {
@@ -13189,46 +13148,6 @@ function handlePortalUrlSubmit(e) {
   if (urlInput && urlInput.value) {
     portalBrowserNavigate(urlInput.value);
   }
-}
-
-function portalBrowserReload() {
-  const iframe = document.getElementById('portalAsikIframe');
-  if (iframe) {
-    showBrowserLoading(true);
-    const currentUrl = iframe.src || 'https://sehatindonesiaku.kemkes.go.id/';
-    iframe.src = 'about:blank';
-    setTimeout(() => {
-      iframe.src = currentUrl;
-      iframe.onload = () => showBrowserLoading(false);
-      iframe.onerror = () => showBrowserLoading(false);
-    }, 150);
-  }
-}
-
-function portalBrowserGoHome() {
-  portalBrowserNavigate('https://sehatindonesiaku.kemkes.go.id/');
-}
-
-function portalBrowserBack() {
-  try {
-    const iframe = document.getElementById('portalAsikIframe');
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.history.back();
-    } else {
-      portalBrowserGoHome();
-    }
-  } catch (_) {
-    portalBrowserGoHome();
-  }
-}
-
-function portalBrowserForward() {
-  try {
-    const iframe = document.getElementById('portalAsikIframe');
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.history.forward();
-    }
-  } catch (_) {}
 }
 
 function togglePortalFullscreen() {
@@ -13249,11 +13168,16 @@ function openAsikPopupWindow(url) {
   const height = Math.min(900, window.screen.availHeight - 60);
   const left = Math.max(0, (window.screen.availWidth - width) / 2);
   const top = Math.max(0, (window.screen.availHeight - height) / 2);
-  window.open(
+  
+  const popup = window.open(
     targetUrl,
     'asik_app_popup_window',
     `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=yes,status=no,resizable=yes,scrollbars=yes`
   );
+  
+  if (popup) {
+    popup.focus();
+  }
 }
 
 
