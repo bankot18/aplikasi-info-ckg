@@ -1238,7 +1238,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const isPrimaryMatch = itemOfficer.includes(normSearch) || normSearch.includes(itemOfficer) || (it.petugas_nip && officerObj.nip && it.petugas_nip === officerObj.nip);
 
         if (isPrimaryMatch && it.tanggal) {
-          poaActivitiesState[it.tanggal] = it.uraian_kegiatan || it.kegiatan || it.nama_kegiatan || '';
+          poaActivitiesState[it.tanggal] = {
+            kegiatan: it.uraian_kegiatan || it.kegiatan || it.nama_kegiatan || '',
+            keterangan: it.keterangan || ''
+          };
         }
       });
     } catch (e) {
@@ -1368,12 +1371,21 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
-      // Task Activities from Cloudflare D1
-      const currentTask = poaActivitiesState[dateKey] || '';
+      // Task Activities from Cloudflare D1 poa_bulanan
+      const taskData = poaActivitiesState[dateKey];
+      const currentTask = typeof taskData === 'object' ? (taskData.kegiatan || '') : (taskData || '');
+      const currentDesc = typeof taskData === 'object' ? (taskData.keterangan || '') : '';
+
       let taskHtml = '';
-      if (currentTask) {
+      if (currentTask || currentDesc) {
         const isHighlight = isToday ? 'highlight' : '';
-        taskHtml = `<div class="poa-task-badge ${isHighlight}" title="${currentTask}">${currentTask}</div>`;
+        const titleTooltip = currentDesc ? `${currentTask} (${currentDesc})` : currentTask;
+        taskHtml = `
+          <div class="poa-task-badge ${isHighlight}" title="${titleTooltip}">
+            ${currentTask ? `<div class="poa-task-title">${currentTask}</div>` : ''}
+            ${currentDesc ? `<div class="poa-task-desc" style="font-size: 10.5px; font-weight: 500; color: #047857; margin-top: 3px; font-style: italic; border-top: 1px dashed rgba(5, 150, 105, 0.3); padding-top: 2px;">📌 ${currentDesc}</div>` : ''}
+          </div>
+        `;
       }
 
       const activitiesDiv = `<div class="cell-activities">${taskHtml}</div>`;
@@ -1420,17 +1432,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const day = cell.getAttribute('data-day');
         const dayname = cell.getAttribute('data-dayname');
         const dateDisplayStr = `${parseInt(day, 10)} ${monthName} ${year} (${dayname})`;
-        openSingleActivityModal(dateKey, dateDisplayStr, badge.textContent.trim());
+        const taskData = poaActivitiesState[dateKey];
+        const taskKeg = typeof taskData === 'object' ? (taskData.kegiatan || '') : (taskData || '');
+        const taskKet = typeof taskData === 'object' ? (taskData.keterangan || '') : '';
+        openSingleActivityModal(dateKey, dateDisplayStr, taskKeg, taskKet);
       });
     });
   };
 
   // Open Single Activity Modal
-  const openSingleActivityModal = (dateKey, dateDisplayStr, currentText = '') => {
+  const openSingleActivityModal = (dateKey, dateDisplayStr, currentText = '', currentDesc = '') => {
     currentActiveDateKey = dateKey;
+    const taskData = poaActivitiesState[dateKey];
+    const initialText = currentText || (typeof taskData === 'object' ? taskData.kegiatan : taskData) || '';
+    const initialDesc = currentDesc || (typeof taskData === 'object' ? taskData.keterangan : '') || '';
+
     if (singleModalDateTitle) singleModalDateTitle.textContent = `📅 ${dateDisplayStr}`;
-    if (activityInput) activityInput.value = currentText || (poaActivitiesState[dateKey] || '');
-    if (activityDesc) activityDesc.value = '';
+    if (activityInput) activityInput.value = initialText;
+    if (activityDesc) activityDesc.value = initialDesc;
     if (singleActivityModal) singleActivityModal.classList.add('active');
   };
 
@@ -1453,6 +1472,7 @@ document.addEventListener('DOMContentLoaded', () => {
     singleActivityForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const val = activityInput.value.trim();
+      const ketVal = activityDesc ? activityDesc.value.trim() : '';
       const selectedMonth = parseInt(poaSelectMonth.value, 10);
       const selectedYear = parseInt(poaSelectYear.value, 10);
       const officerText = getPoaOfficerName();
@@ -1461,8 +1481,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentActiveDateKey) {
         const poaId = `poa-${currentActiveDateKey}-${(officerObj.nip || 'user').replace(/[^a-zA-Z0-9]/g, '')}`;
 
-        if (val) {
-          poaActivitiesState[currentActiveDateKey] = val;
+        if (val || ketVal) {
+          poaActivitiesState[currentActiveDateKey] = { kegiatan: val, keterangan: ketVal };
           await CloudflareDB.savePoa({
             id: poaId,
             tanggal: currentActiveDateKey,
@@ -1473,7 +1493,7 @@ document.addEventListener('DOMContentLoaded', () => {
             petugas_jabatan: officerObj.jabatan || '',
             program_kesehatan: 'BOK Puskesmas',
             uraian_kegiatan: val,
-            keterangan: (activityDesc ? activityDesc.value.trim() : ''),
+            keterangan: ketVal,
             lokasi_pelaksanaan: 'Puskesmas / Wilayah Kerja',
             status: 'Aktif'
           });
@@ -1521,7 +1541,9 @@ document.addEventListener('DOMContentLoaded', () => {
         holidayTag = `<span style="font-size: 10px; color: ${color}; display: block; font-weight: 600;">${icon} ${holidayInfo.name}</span>`;
       }
 
-      const currentVal = poaActivitiesState[dateKey] || '';
+      const taskData = poaActivitiesState[dateKey];
+      const currentVal = typeof taskData === 'object' ? (taskData.kegiatan || '') : (taskData || '');
+      const currentKet = typeof taskData === 'object' ? (taskData.keterangan || '') : '';
 
       tr.innerHTML = `
         <td>
@@ -1534,7 +1556,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <input type="text" class="bulk-input input-kegiatan" data-datekey="${dateKey}" placeholder="Kegiatan..." value="${currentVal}">
         </td>
         <td>
-          <input type="text" class="bulk-input input-keterangan" data-datekey="${dateKey}" placeholder="Keterangan..." value="">
+          <input type="text" class="bulk-input input-keterangan" data-datekey="${dateKey}" placeholder="Keterangan..." value="${currentKet}">
         </td>
       `;
       bulkTableBody.appendChild(tr);
@@ -1577,16 +1599,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const officerText = getPoaOfficerName();
       const officerObj = DAFTAR_PEGAWAI.find(p => p.nama === officerText) || {};
 
-      const inputs = bulkActivityForm.querySelectorAll('.input-kegiatan');
       let savedCount = 0;
 
-      for (const input of inputs) {
-        const dateKey = input.getAttribute('data-datekey');
-        const val = input.value.trim();
+      for (const tr of bulkTableBody.querySelectorAll('tr')) {
+        const inputKeg = tr.querySelector('.input-kegiatan');
+        const inputKet = tr.querySelector('.input-keterangan');
+        if (!inputKeg) continue;
+
+        const dateKey = inputKeg.getAttribute('data-datekey');
+        const val = inputKeg.value.trim();
+        const ket = inputKet ? inputKet.value.trim() : '';
         const poaId = `poa-${dateKey}-${(officerObj.nip || 'user').replace(/[^a-zA-Z0-9]/g, '')}`;
 
-        if (val) {
-          poaActivitiesState[dateKey] = val;
+        if (val || ket) {
+          poaActivitiesState[dateKey] = { kegiatan: val, keterangan: ket };
           await CloudflareDB.savePoa({
             id: poaId,
             tanggal: dateKey,
@@ -1597,7 +1623,7 @@ document.addEventListener('DOMContentLoaded', () => {
             petugas_jabatan: officerObj.jabatan || '',
             program_kesehatan: 'BOK Puskesmas',
             uraian_kegiatan: val,
-            keterangan: '',
+            keterangan: ket,
             lokasi_pelaksanaan: 'Puskesmas / Wilayah Kerja',
             status: 'Aktif'
           });
@@ -1718,7 +1744,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const isHoliday = (holidayInfo && holidayInfo.type === 'national');
           const isCuti = (holidayInfo && holidayInfo.type === 'cuti');
           const isToday = (year === currentRealYear && month === currentRealMonth && day === currentRealDay);
-          const task = poaActivitiesState[dateKey] || '';
+          
+          const taskData = poaActivitiesState[dateKey];
+          const task = typeof taskData === 'object' ? (taskData.kegiatan || '') : (taskData || '');
+          const taskDesc = typeof taskData === 'object' ? (taskData.keterangan || '') : '';
 
           let badgeHtml = '';
           if (isHoliday) {
@@ -1728,10 +1757,11 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           let taskContent = '';
-          if (task) {
+          if (task || taskDesc) {
             taskContent = `
               <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 3px solid #10b981; color: #065f46; font-size: 9px; font-weight: 700; padding: 3px 5px; border-radius: 4px; line-height: 1.25; margin-top: 4px; word-break: break-word;">
-                ${task}
+                ${task ? `<div>${task}</div>` : ''}
+                ${taskDesc ? `<div style="font-size: 8px; font-weight: 500; color: #047857; margin-top: 2px; font-style: italic; border-top: 1px dashed #a7f3d0; padding-top: 1px;">📌 ${taskDesc}</div>` : ''}
               </div>
             `;
           }
