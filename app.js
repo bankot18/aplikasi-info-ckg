@@ -1015,7 +1015,9 @@ function setupEventListeners() {
   document.querySelectorAll('.nav-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const viewId = btn.getAttribute('data-view');
-      switchView(viewId);
+      if (viewId) {
+        switchView(viewId);
+      }
     });
   });
 
@@ -1097,6 +1099,7 @@ function setupEventListeners() {
 }
 
 function switchView(viewId) {
+  if (!viewId) return;
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
 
   if (role === 'petugas') {
