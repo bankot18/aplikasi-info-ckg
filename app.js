@@ -10143,7 +10143,45 @@ function renderSekolahView() {
 // 🩺 POP-UP PEMERIKSAAN & IDENTITAS SISWA
 // --------------------------------------------------------------------------
 
-function openPemeriksaanModal(siswaId) {
+function switchSekolahModalTab(tabKey) {
+  const tabs = ['identitas', 'antro', 'organ', 'kesimpulan', 'semua'];
+  
+  tabs.forEach(t => {
+    const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+    const panel = document.getElementById(`panelPemeriksaan${t.charAt(0).toUpperCase() + t.slice(1)}`);
+    
+    if (btn) {
+      if (t === tabKey) {
+        btn.classList.add('active');
+        btn.style.background = '#4f46e5';
+        btn.style.color = '#ffffff';
+        btn.style.borderColor = '#4f46e5';
+        btn.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.25)';
+      } else {
+        btn.classList.remove('active');
+        btn.style.background = '#f8fafc';
+        btn.style.color = '#475569';
+        btn.style.borderColor = '#cbd5e1';
+        btn.style.boxShadow = 'none';
+      }
+    }
+    
+    if (panel) {
+      if (tabKey === 'semua' || t === tabKey) {
+        panel.style.display = 'block';
+      } else {
+        panel.style.display = 'none';
+      }
+    }
+  });
+
+  const globalFooter = document.getElementById('panelPemeriksaanSemuaFooter');
+  if (globalFooter) {
+    globalFooter.style.display = (tabKey === 'semua') ? 'flex' : 'none';
+  }
+}
+
+function openPemeriksaanModal(siswaId, defaultTab = 'identitas') {
   const siswa = sekolahRecords.find(r => r.id === siswaId);
   if (!siswa) {
     showToast('Data siswa tidak ditemukan.', 'warning');
@@ -10210,6 +10248,7 @@ function openPemeriksaanModal(siswaId) {
   if (document.getElementById('periksaCatatanRujukan')) document.getElementById('periksaCatatanRujukan').value = (siswa.catatan_rujukan && siswa.catatan_rujukan !== '-') ? siswa.catatan_rujukan : '';
 
   calculateSiswaIMT();
+  switchSekolahModalTab(defaultTab);
 
   const modal = document.getElementById('modalPemeriksaanSiswa');
   if (modal) {
@@ -10277,10 +10316,119 @@ function calculateSiswaIMT() {
   }
 }
 
-async function savePemeriksaanSiswa(event) {
-  event.preventDefault();
+async function saveSekolahCategory(categoryKey) {
+  const id = document.getElementById('periksaSiswaId')?.value;
+  const idx = sekolahRecords.findIndex(r => r.id === id);
+  if (idx < 0) {
+    showToast('Data siswa tidak valid.', 'danger');
+    return;
+  }
 
-  const id = document.getElementById('periksaSiswaId').value;
+  const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
+  const existing = sekolahRecords[idx];
+
+  let titleMsg = '';
+  let updatedRecord = { ...existing };
+
+  if (categoryKey === 'identitas') {
+    const nama = document.getElementById('periksaNama')?.value.trim().toUpperCase();
+    if (!nama) {
+      showToast('Nama Lengkap Siswa wajib diisi!', 'warning');
+      return;
+    }
+    updatedRecord.nama = nama;
+    updatedRecord.nik = document.getElementById('periksaNik')?.value.trim() || '';
+    updatedRecord.jk = document.getElementById('periksaJk')?.value || 'L';
+    updatedRecord.sekolah = document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || existing.sekolah;
+    updatedRecord.kelas = document.getElementById('periksaKelas')?.value.trim().toUpperCase() || existing.kelas;
+    updatedRecord.tanggal_lahir = document.getElementById('periksaTglLahir')?.value || '';
+    updatedRecord.no_whatsapp = document.getElementById('periksaWa')?.value.trim() || '';
+    updatedRecord.alamat = document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '';
+    titleMsg = 'Data Identitas Siswa Berhasil Disimpan!';
+  } else if (categoryKey === 'antro') {
+    const bbVal = parseFloat(document.getElementById('periksaBb')?.value) || 0;
+    const tbVal = parseFloat(document.getElementById('periksaTb')?.value) || 0;
+    let imtVal = 0;
+    let statusImt = 'Normal';
+    if (bbVal > 0 && tbVal > 0) {
+      const tbM = tbVal / 100;
+      imtVal = parseFloat((bbVal / (tbM * tbM)).toFixed(2));
+      if (imtVal < 17.0) statusImt = 'Sangat Kurus';
+      else if (imtVal < 18.5) statusImt = 'Kurus';
+      else if (imtVal <= 25.0) statusImt = 'Normal';
+      else if (imtVal <= 27.0) statusImt = 'Gemuk';
+      else statusImt = 'Obesitas';
+    }
+
+    updatedRecord.bb = bbVal;
+    updatedRecord.tb = tbVal;
+    updatedRecord.lp = parseFloat(document.getElementById('periksaLp')?.value) || 0;
+    updatedRecord.imt = imtVal;
+    updatedRecord.status_imt = statusImt;
+    updatedRecord.td_sistolik = parseInt(document.getElementById('periksaSistol')?.value, 10) || 0;
+    updatedRecord.td_diastolik = parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0;
+    updatedRecord.gula_darah = document.getElementById('periksaGula')?.value.trim() || '-';
+    updatedRecord.hb = document.getElementById('periksaHb')?.value.trim() || '-';
+    updatedRecord.is_examined = true;
+    titleMsg = 'Data Antropometri & Tanda Vital Berhasil Disimpan!';
+  } else if (categoryKey === 'organ') {
+    updatedRecord.telinga = document.getElementById('periksaTelinga')?.value || 'Tidak ada serumen';
+    updatedRecord.gigi = document.getElementById('periksaGigi')?.value || 'Tidak ada';
+    updatedRecord.mata = document.getElementById('periksaMata')?.value || 'Normal';
+    updatedRecord.kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
+    updatedRecord.menstruasi = document.getElementById('periksaMenstruasi')?.value || 'Belum';
+    updatedRecord.is_examined = true;
+    titleMsg = 'Data Organ Indera & UKS Berhasil Disimpan!';
+  } else if (categoryKey === 'kesimpulan') {
+    updatedRecord.status_kesehatan = document.getElementById('periksaStatusKesehatan')?.value || 'Sehat';
+    updatedRecord.catatan_rujukan = document.getElementById('periksaCatatanRujukan')?.value.trim() || '-';
+    updatedRecord.is_examined = true;
+    titleMsg = 'Data Kesimpulan & Rujukan Berhasil Disimpan!';
+  }
+
+  updatedRecord.petugas_entry = currentUserName;
+  updatedRecord.tanggal_entry = new Date().toISOString().substring(0, 10);
+
+  sekolahRecords[idx] = updatedRecord;
+  saveSekolahRecordsToStorage();
+  populateSekolahFilterDropdowns();
+  renderSekolahView();
+
+  // Update modal header display in real-time
+  document.getElementById('displayNamaSiswa').textContent = updatedRecord.nama || 'Nama Siswa';
+  document.getElementById('displaySekolahSiswa').textContent = updatedRecord.sekolah || 'Nama Sekolah';
+  document.getElementById('displayKelasSiswa').textContent = updatedRecord.kelas || 'Kelas';
+  document.getElementById('displayJkSiswa').textContent = updatedRecord.jk === 'P' ? 'Perempuan' : 'Laki-laki';
+
+  const badgeStatus = document.getElementById('badgeStatusSkrining');
+  if (badgeStatus) {
+    if (updatedRecord.is_examined) {
+      if (updatedRecord.status_kesehatan === 'Perlu Rujukan') {
+        badgeStatus.className = 'badge badge-rose';
+        badgeStatus.textContent = 'PERLU RUJUKAN';
+      } else if (updatedRecord.status_kesehatan === 'Perlu Perhatian') {
+        badgeStatus.className = 'badge badge-amber';
+        badgeStatus.textContent = 'PERLU PERHATIAN';
+      } else {
+        badgeStatus.className = 'badge badge-emerald';
+        badgeStatus.textContent = 'SUDAH DIPERIKSA (SEHAT)';
+      }
+    }
+  }
+
+  Swal.fire({
+    icon: 'success',
+    title: titleMsg,
+    html: `Format data untuk <strong>${updatedRecord.nama}</strong> telah tersimpan di Cloud Database.`,
+    confirmButtonColor: '#4f46e5',
+    timer: 2000
+  });
+}
+
+async function savePemeriksaanSiswa(event) {
+  if (event && event.preventDefault) event.preventDefault();
+
+  const id = document.getElementById('periksaSiswaId')?.value;
   const idx = sekolahRecords.findIndex(r => r.id === id);
   if (idx < 0) {
     showToast('Data siswa tidak valid.', 'danger');
@@ -10291,8 +10439,8 @@ async function savePemeriksaanSiswa(event) {
 
   let imtVal = 0;
   let statusImt = 'Normal';
-  const bbVal = parseFloat(document.getElementById('periksaBb').value) || 0;
-  const tbVal = parseFloat(document.getElementById('periksaTb').value) || 0;
+  const bbVal = parseFloat(document.getElementById('periksaBb')?.value) || 0;
+  const tbVal = parseFloat(document.getElementById('periksaTb')?.value) || 0;
   if (bbVal > 0 && tbVal > 0) {
     const tbM = tbVal / 100;
     imtVal = parseFloat((bbVal / (tbM * tbM)).toFixed(2));
@@ -10310,26 +10458,26 @@ async function savePemeriksaanSiswa(event) {
 
   const updatedRecord = {
     ...sekolahRecords[idx],
-    nama: document.getElementById('periksaNama').value.trim().toUpperCase(),
-    nik: document.getElementById('periksaNik').value.trim(),
-    jk: document.getElementById('periksaJk').value,
-    sekolah: document.getElementById('periksaSekolah').value.trim().toUpperCase(),
-    kelas: document.getElementById('periksaKelas').value.trim().toUpperCase(),
-    tanggal_lahir: document.getElementById('periksaTglLahir').value,
-    no_whatsapp: document.getElementById('periksaWa').value.trim(),
-    alamat: document.getElementById('periksaAlamat').value.trim().toUpperCase(),
+    nama: document.getElementById('periksaNama')?.value.trim().toUpperCase() || sekolahRecords[idx].nama,
+    nik: document.getElementById('periksaNik')?.value.trim() || '',
+    jk: document.getElementById('periksaJk')?.value || 'L',
+    sekolah: document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || sekolahRecords[idx].sekolah,
+    kelas: document.getElementById('periksaKelas')?.value.trim().toUpperCase() || sekolahRecords[idx].kelas,
+    tanggal_lahir: document.getElementById('periksaTglLahir')?.value || '',
+    no_whatsapp: document.getElementById('periksaWa')?.value.trim() || '',
+    alamat: document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '',
     bb: bbVal,
     tb: tbVal,
-    lp: parseFloat(document.getElementById('periksaLp').value) || 0,
+    lp: parseFloat(document.getElementById('periksaLp')?.value) || 0,
     imt: imtVal,
     status_imt: statusImt,
-    td_sistolik: parseInt(document.getElementById('periksaSistol').value, 10) || 0,
-    td_diastolik: parseInt(document.getElementById('periksaDiastol').value, 10) || 0,
-    gula_darah: document.getElementById('periksaGula').value.trim() || '-',
-    hb: document.getElementById('periksaHb').value.trim() || '-',
-    telinga: document.getElementById('periksaTelinga').value,
-    gigi: document.getElementById('periksaGigi').value,
-    mata: document.getElementById('periksaMata').value,
+    td_sistolik: parseInt(document.getElementById('periksaSistol')?.value, 10) || 0,
+    td_diastolik: parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0,
+    gula_darah: document.getElementById('periksaGula')?.value.trim() || '-',
+    hb: document.getElementById('periksaHb')?.value.trim() || '-',
+    telinga: document.getElementById('periksaTelinga')?.value || 'Tidak ada serumen',
+    gigi: document.getElementById('periksaGigi')?.value || 'Tidak ada',
+    mata: document.getElementById('periksaMata')?.value || 'Normal',
     kebugaran: kebugaran,
     menstruasi: menstruasi,
     status_kesehatan: statusKesehatan,
@@ -10348,7 +10496,7 @@ async function savePemeriksaanSiswa(event) {
   Swal.fire({
     icon: 'success',
     title: 'Pemeriksaan Berhasil Disimpan!',
-    html: `Data pemeriksaan untuk <strong>${updatedRecord.nama}</strong> (${statusKesehatan}) telah berhasil disimpan ke Cloud Database.`,
+    html: `Seluruh data pemeriksaan untuk <strong>${updatedRecord.nama}</strong> (${statusKesehatan}) telah berhasil disimpan ke Cloud Database.`,
     confirmButtonColor: '#4f46e5',
     timer: 2500
   });

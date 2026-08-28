@@ -4971,10 +4971,38 @@ body.dark-mode .badge-purple {
     font-size: 7.5px !important;
   }
 
-  #modalPemeriksaanSiswa [style*="grid-template-columns"],
-  #modalTambahSiswa [style*="grid-template-columns"] {
-    grid-template-columns: 1fr !important;
-  }
+/* ==========================================================================
+   CKG SEKOLAH CATEGORY TABS & FORMAT PANELS
+   ========================================================================== */
+.ckg-category-tab-bar {
+  scrollbar-width: thin;
 }
 
+.sekolah-cat-tab {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.sekolah-cat-tab:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.sekolah-cat-tab:active {
+  transform: translateY(0);
+}
+
+body.dark-mode .sekolah-form-panel {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .panel-action-footer {
+  border-color: #334155 !important;
+}
+
+body.dark-mode .sekolah-cat-tab:not(.active) {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
 
