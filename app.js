@@ -1156,7 +1156,7 @@ function switchView(viewId) {
   } else if (viewId === 'laporan') {
     renderLaporanView();
   } else if (viewId === 'sekolah') {
-    renderSekolahView();
+    fetchSekolahRecordsFromCloud(false);
   } else if (viewId === 'data-records') {
     renderTableRecords();
   } else if (viewId === 'recycle-data') {
@@ -9621,25 +9621,24 @@ let sekolahRecords = [];
 let pendingSekolahImportData = null;
 
 function loadStoredSekolahRecords() {
-  const saved = localStorage.getItem('ckg_sekolah_records_v1');
-  if (saved) {
-    try {
-      sekolahRecords = JSON.parse(saved);
-    } catch (e) {
-      sekolahRecords = [];
-    }
-  } else {
-    sekolahRecords = [];
+  fetchSekolahRecordsFromCloud(false);
+}
+
+async function fetchSekolahRecordsFromCloud(showFeedback = false) {
+  const tableBody = document.getElementById('tableBodySekolah');
+  if (showFeedback && tableBody && sekolahRecords.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 40px; color: #4f46e5;">
+          <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem; border-width: 3px; display: inline-block;"></div>
+          <div style="font-weight: 800; font-size: 13.5px; margin-top: 12px; color: #4338ca;">
+            <i class="bi bi-cloud-arrow-down-fill"></i> Memuat data langsung dari Cloud Database...
+          </div>
+        </td>
+      </tr>
+    `;
   }
-  fetchSekolahRecordsFromCloud();
-}
 
-function saveSekolahRecordsToStorage() {
-  localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
-  syncSekolahRecordsToCloud(sekolahRecords);
-}
-
-async function fetchSekolahRecordsFromCloud() {
   try {
     const res = await fetch('/api/sekolah');
     if (res.ok) {
@@ -9702,12 +9701,19 @@ async function fetchSekolahRecordsFromCloud() {
         localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
         populateSekolahFilterDropdowns();
         renderSekolahView();
+
+        if (showFeedback) {
+          showToast(`Berhasil memuat ${sekolahRecords.length} data siswa dari Cloud Database.`, 'success');
+        }
       }
     }
   } catch (err) {
     console.warn('⚡ Fetch /api/sekolah notice (Offline/Fallback):', err);
     populateSekolahFilterDropdowns();
     renderSekolahView();
+    if (showFeedback) {
+      showToast('Gagal memuat data dari Cloud Database.', 'warning');
+    }
   }
 }
 
@@ -10389,10 +10395,18 @@ async function saveSekolahCategory(categoryKey) {
   updatedRecord.petugas_entry = currentUserName;
   updatedRecord.tanggal_entry = new Date().toISOString().substring(0, 10);
 
-  sekolahRecords[idx] = updatedRecord;
-  saveSekolahRecordsToStorage();
-  populateSekolahFilterDropdowns();
-  renderSekolahView();
+  // Directly POST to Cloud Database
+  try {
+    await fetch('/api/sekolah', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([updatedRecord])
+    });
+  } catch (err) {
+    console.warn('Sync to cloud error:', err);
+  }
+
+  await fetchSekolahRecordsFromCloud();
 
   // Update modal header display in real-time
   document.getElementById('displayNamaSiswa').textContent = updatedRecord.nama || 'Nama Siswa';
@@ -10419,7 +10433,7 @@ async function saveSekolahCategory(categoryKey) {
   Swal.fire({
     icon: 'success',
     title: titleMsg,
-    html: `Format data untuk <strong>${updatedRecord.nama}</strong> telah tersimpan di Cloud Database.`,
+    html: `Format data untuk <strong>${updatedRecord.nama}</strong> telah tersimpan langsung di Cloud Database.`,
     confirmButtonColor: '#4f46e5',
     timer: 2000
   });
@@ -10487,23 +10501,31 @@ async function savePemeriksaanSiswa(event) {
     tanggal_entry: new Date().toISOString().substring(0, 10)
   };
 
-  sekolahRecords[idx] = updatedRecord;
-  saveSekolahRecordsToStorage();
+  // Directly POST to Cloud Database
+  try {
+    await fetch('/api/sekolah', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([updatedRecord])
+    });
+  } catch (err) {
+    console.warn('Sync to cloud error:', err);
+  }
+
+  await fetchSekolahRecordsFromCloud();
   closePemeriksaanModal();
-  populateSekolahFilterDropdowns();
-  renderSekolahView();
 
   Swal.fire({
     icon: 'success',
     title: 'Pemeriksaan Berhasil Disimpan!',
-    html: `Seluruh data pemeriksaan untuk <strong>${updatedRecord.nama}</strong> (${statusKesehatan}) telah berhasil disimpan ke Cloud Database.`,
+    html: `Seluruh data pemeriksaan untuk <strong>${updatedRecord.nama}</strong> (${statusKesehatan}) telah berhasil disimpan langsung ke Cloud Database.`,
     confirmButtonColor: '#4f46e5',
     timer: 2500
   });
 }
 
 // --------------------------------------------------------------------------
-// ➕ TAMBAH SISWA BARU
+// ➕ TAMBAH SISWA BARU (LANGSUNG KE CLOUD DATABASE)
 // --------------------------------------------------------------------------
 
 function openTambahSiswaModal() {
@@ -10586,25 +10608,31 @@ async function saveTambahSiswa(event) {
     tanggal_entry: new Date().toISOString().substring(0, 10)
   };
 
-  sekolahRecords.unshift(newSiswa);
-  sekolahRecords.forEach((r, i) => { r.no = i + 1; });
+  // Directly POST to Cloud Database
+  try {
+    await fetch('/api/sekolah', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([newSiswa])
+    });
+  } catch (err) {
+    console.warn('Sync to cloud error:', err);
+  }
 
-  saveSekolahRecordsToStorage();
+  await fetchSekolahRecordsFromCloud();
   closeTambahSiswaModal();
-  populateSekolahFilterDropdowns();
-  renderSekolahView();
 
   Swal.fire({
     icon: 'success',
     title: 'Siswa Berhasil Ditambahkan!',
-    html: `Data siswa <strong>${newSiswa.nama}</strong> (${newSiswa.sekolah} - ${newSiswa.kelas}) siap dilakukan pemeriksaan.`,
+    html: `Data siswa <strong>${newSiswa.nama}</strong> (${newSiswa.sekolah} - ${newSiswa.kelas}) telah tersimpan langsung di Cloud Database.`,
     confirmButtonColor: '#2563eb',
     timer: 2500
   });
 }
 
 // --------------------------------------------------------------------------
-// 🗑️ HAPUS SISWA
+// 🗑️ HAPUS SISWA (LANGSUNG DARI CLOUD DATABASE)
 // --------------------------------------------------------------------------
 
 async function deleteSiswaSekolah(id) {
@@ -10614,7 +10642,7 @@ async function deleteSiswaSekolah(id) {
   const result = await Swal.fire({
     icon: 'warning',
     title: 'Hapus Data Siswa?',
-    html: `Apakah Anda yakin ingin menghapus <strong>${namaSiswa}</strong> dari database CKG Sekolah?`,
+    html: `Apakah Anda yakin ingin menghapus <strong>${namaSiswa}</strong> secara permanen dari Cloud Database?`,
     showCancelButton: true,
     confirmButtonText: 'Ya, Hapus Data',
     cancelButtonText: 'Batal',
@@ -10624,20 +10652,14 @@ async function deleteSiswaSekolah(id) {
 
   if (!result.isConfirmed) return;
 
-  const targetIdx = sekolahRecords.findIndex(r => r.id === id);
-  if (targetIdx >= 0) {
-    sekolahRecords.splice(targetIdx, 1);
-    sekolahRecords.forEach((r, idx) => { r.no = idx + 1; });
-    saveSekolahRecordsToStorage();
-
-    try {
-      await fetch(`/api/sekolah?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-    } catch (_) {}
-
-    populateSekolahFilterDropdowns();
-    renderSekolahView();
-    showToast(`Data ${namaSiswa} berhasil dihapus.`, 'info');
+  try {
+    await fetch(`/api/sekolah?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+  } catch (err) {
+    console.warn('Delete from cloud error:', err);
   }
+
+  await fetchSekolahRecordsFromCloud();
+  showToast(`Data ${namaSiswa} berhasil dihapus dari Cloud Database.`, 'info');
 }
 
 async function confirmDeleteAllSekolahRecords() {
@@ -10660,16 +10682,14 @@ async function confirmDeleteAllSekolahRecords() {
 
   if (!result.isConfirmed) return;
 
-  sekolahRecords = [];
-  localStorage.removeItem('ckg_sekolah_records_v1');
-
   try {
     await fetch('/api/sekolah', { method: 'DELETE' });
-  } catch (_) {}
+  } catch (err) {
+    console.warn('Delete all from cloud error:', err);
+  }
 
-  populateSekolahFilterDropdowns();
-  renderSekolahView();
-  showToast('Seluruh database CKG Sekolah berhasil dihapus.', 'info');
+  await fetchSekolahRecordsFromCloud();
+  showToast('Seluruh database CKG Sekolah berhasil dihapus dari Cloud Database.', 'info');
 }
 
 // --------------------------------------------------------------------------
@@ -10969,21 +10989,46 @@ function handleSekolahImportFileSelect(event) {
 async function executeSekolahXLSXImport() {
   if (!pendingSekolahImportData || pendingSekolahImportData.length === 0) return;
 
-  const newItems = pendingSekolahImportData;
-  sekolahRecords = [...newItems, ...sekolahRecords];
-  sekolahRecords.forEach((r, idx) => { r.no = idx + 1; });
-
-  saveSekolahRecordsToStorage();
-  closeImportSekolahModal();
-  populateSekolahFilterDropdowns();
-  renderSekolahView();
-
+  const total = pendingSekolahImportData.length;
   Swal.fire({
-    icon: 'success',
-    title: 'Import Data Berhasil!',
-    text: `Berhasil menambahkan ${newItems.length} data siswa ke database CKG Sekolah.`,
-    confirmButtonColor: '#7c3aed'
+    title: 'Mengunggah ke Cloud Database...',
+    html: `Sedang mengunggah <strong>${total}</strong> data siswa langsung ke server Cloudflare D1...`,
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
   });
+
+  try {
+    // Send in chunks of 50 to prevent large payload timeouts
+    const chunkSize = 50;
+    for (let i = 0; i < total; i += chunkSize) {
+      const chunk = pendingSekolahImportData.slice(i, i + chunkSize);
+      await fetch('/api/sekolah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chunk)
+      });
+    }
+
+    await fetchSekolahRecordsFromCloud();
+    closeImportSekolahModal();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Import ke Cloud Berhasil!',
+      html: `Sebanyak <strong>${total}</strong> data siswa berhasil diunggah langsung ke Cloud Database.`,
+      confirmButtonColor: '#4f46e5'
+    });
+  } catch (err) {
+    console.error('Import error:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Mengunggah',
+      text: err.message || 'Terjadi kesalahan saat mengunggah ke Cloud Database.',
+      confirmButtonColor: '#dc2626'
+    });
+  }
 }
 
 // ==========================================================================
