@@ -2148,52 +2148,52 @@
     </div>
   </div>
 
-  <!-- MODAL 1: POP-UP IDENTITAS & PEMERIKSAAN KESEHATAN SISWA DENGAN TAB KATEGORI & TOMBOL SIMPAN TIAP FORMAT -->
+  <!-- MODAL 1: POP-UP IDENTITAS & PEMERIKSAAN KESEHATAN SISWA DENGAN TAB KATEGORI & DEGRADASI HIJAU-PUTIH -->
   <div id="modalPemeriksaanSiswa" class="modal-overlay">
-    <div class="modal-container" style="max-width: 860px; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
-      <div class="modal-header" style="background: linear-gradient(135deg, #4f46e5, #4338ca); color: #ffffff; padding: 18px 24px;">
-        <div class="modal-title" style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+    <div class="modal-container sekolah-modal-container" style="max-width: 860px; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #a7f3d0; box-shadow: 0 20px 40px rgba(5, 150, 105, 0.15);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; padding: 16px 22px;">
+        <div class="modal-title" style="font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
           <i class="bi bi-heart-pulse-fill"></i> Pemeriksaan Kesehatan Siswa (CKG Sekolah)
         </div>
-        <button class="modal-close" onclick="closePemeriksaanModal()" style="color: #ffffff;">&times;</button>
+        <button class="modal-close" onclick="closePemeriksaanModal()" style="color: #ffffff; opacity: 0.9;">&times;</button>
       </div>
 
-      <div class="modal-body" style="padding: 20px 24px; max-height: 80vh; overflow-y: auto;">
+      <div class="modal-body sekolah-modal-body" style="padding: 18px 22px; max-height: 82vh; overflow-y: auto;">
         <input type="hidden" id="periksaSiswaId" value="">
 
-        <!-- HEADER CARD: RINGKASAN PROFIL SISWA -->
-        <div style="background: #eef2ff; border: 1.5px solid #c7d2fe; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <div style="width: 46px; height: 46px; border-radius: 50%; background: #4f46e5; color: #fff; font-weight: 800; font-size: 19px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);" id="badgeAvatarSiswa">
+        <!-- HEADER CARD: RINGKASAN PROFIL SISWA (HIJAU & PUTIH) -->
+        <div class="sekolah-profile-summary-card" style="background: #f0fdf4; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <div style="width: 44px; height: 44px; min-width: 44px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);" id="badgeAvatarSiswa">
               S
             </div>
-            <div>
-              <h3 id="displayNamaSiswa" style="font-size: 15.5px; font-weight: 800; color: #1e1b4b; margin: 0;">Nama Siswa</h3>
-              <div style="font-size: 12px; color: #4338ca; font-weight: 600; margin-top: 2px;">
+            <div style="min-width: 0;">
+              <h3 id="displayNamaSiswa" style="font-size: 15px; font-weight: 800; color: #064e3b; margin: 0; word-break: break-word;">Nama Siswa</h3>
+              <div style="font-size: 11.5px; color: #047857; font-weight: 600; margin-top: 2px;">
                 <span id="displaySekolahSiswa">Nama Sekolah</span> &bull; <span id="displayKelasSiswa">Kelas</span> &bull; <span id="displayJkSiswa">L</span>
               </div>
             </div>
           </div>
           <div style="text-align: right;">
-            <span id="badgeStatusSkrining" class="badge badge-amber" style="font-size: 11px; padding: 4px 12px; border-radius: 20px; font-weight: 800;">BELUM DIPERIKSA</span>
+            <span id="badgeStatusSkrining" class="badge" style="font-size: 11px; padding: 4px 12px; border-radius: 20px; font-weight: 800; background: #ecfdf5; border: 1.5px solid #6ee7b7; color: #047857;">BELUM DIPERIKSA</span>
           </div>
         </div>
 
         <!-- CATEGORY TAB SELECTOR (KLIK UNTUK MEMILIH FORMAT PENGISIAN) -->
-        <div class="ckg-category-tab-bar" style="display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin;">
-          <button type="button" class="sekolah-cat-tab active" id="tabBtnIdentitas" onclick="switchSekolahModalTab('identitas')" style="flex: 1; min-width: 140px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #4f46e5; background: #4f46e5; color: #ffffff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);">
+        <div class="ckg-category-tab-bar" style="display: flex; gap: 8px; margin-bottom: 18px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; -webkit-overflow-scrolling: touch;">
+          <button type="button" class="sekolah-cat-tab active" id="tabBtnIdentitas" onclick="switchSekolahModalTab('identitas')" style="flex: 1; min-width: 130px; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #047857; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
             <i class="bi bi-person-vcard-fill"></i> 1. Identitas
           </button>
-          <button type="button" class="sekolah-cat-tab" id="tabBtnAntro" onclick="switchSekolahModalTab('antro')" style="flex: 1; min-width: 155px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s ease;">
+          <button type="button" class="sekolah-cat-tab" id="tabBtnAntro" onclick="switchSekolahModalTab('antro')" style="flex: 1; min-width: 145px; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s ease;">
             <i class="bi bi-activity"></i> 2. Antropometri & Vital
           </button>
-          <button type="button" class="sekolah-cat-tab" id="tabBtnOrgan" onclick="switchSekolahModalTab('organ')" style="flex: 1; min-width: 155px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s ease;">
+          <button type="button" class="sekolah-cat-tab" id="tabBtnOrgan" onclick="switchSekolahModalTab('organ')" style="flex: 1; min-width: 145px; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s ease;">
             <i class="bi bi-eye-fill"></i> 3. Organ Indera & UKS
           </button>
-          <button type="button" class="sekolah-cat-tab" id="tabBtnKesimpulan" onclick="switchSekolahModalTab('kesimpulan')" style="flex: 1; min-width: 155px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s ease;">
+          <button type="button" class="sekolah-cat-tab" id="tabBtnKesimpulan" onclick="switchSekolahModalTab('kesimpulan')" style="flex: 1; min-width: 145px; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s ease;">
             <i class="bi bi-clipboard2-check-fill"></i> 4. Kesimpulan & Rujukan
           </button>
-          <button type="button" class="sekolah-cat-tab" id="tabBtnSemua" onclick="switchSekolahModalTab('semua')" style="min-width: 100px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s ease;">
+          <button type="button" class="sekolah-cat-tab" id="tabBtnSemua" onclick="switchSekolahModalTab('semua')" style="min-width: 90px; padding: 9px 12px; border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: all 0.2s ease;">
             <i class="bi bi-card-checklist"></i> Semua
           </button>
         </div>
@@ -2201,17 +2201,17 @@
         <!-- =================================================================== -->
         <!-- FORMAT 1: IDENTITAS & DOMISILI SISWA -->
         <!-- =================================================================== -->
-        <div id="panelPemeriksaanIdentitas" class="sekolah-form-panel" style="background: #ffffff; border: 1.5px solid #e0e7ff; border-radius: 14px; padding: 18px; margin-bottom: 16px;">
-          <div style="font-size: 14px; font-weight: 800; color: #4338ca; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #e0e7ff; padding-bottom: 8px;">
+        <div id="panelPemeriksaanIdentitas" class="sekolah-form-panel" style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          <div style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-person-vcard-fill"></i> 1. Format Identitas & Domisili Siswa
             </div>
-            <span style="font-size: 11px; color: #6366f1; font-weight: 600;">Data Diri Siswa</span>
+            <span style="font-size: 11px; color: #059669; font-weight: 600;">Data Diri Siswa</span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="sekolah-grid-3" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
-              <label class="form-label" for="periksaNama">Nama Lengkap Siswa <span class="required" style="color: #dc2626;">*</span></label>
+              <label class="form-label" for="periksaNama">Nama Lengkap Siswa <span class="required" style="color: #059669;">*</span></label>
               <input type="text" id="periksaNama" class="form-control" required style="font-weight: 700; text-transform: uppercase;">
             </div>
             <div class="form-group">
@@ -2219,7 +2219,7 @@
               <input type="text" id="periksaNik" class="form-control" inputmode="numeric" placeholder="16 Digit NIK / NISN" maxlength="16" style="font-family: monospace; font-weight: 700;">
             </div>
             <div class="form-group">
-              <label class="form-label" for="periksaJk">Jenis Kelamin <span class="required" style="color: #dc2626;">*</span></label>
+              <label class="form-label" for="periksaJk">Jenis Kelamin <span class="required" style="color: #059669;">*</span></label>
               <select id="periksaJk" class="form-control" required style="font-weight: 700;">
                 <option value="L">Laki-laki (L)</option>
                 <option value="P">Perempuan (P)</option>
@@ -2227,15 +2227,15 @@
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr; gap: 12px; margin-bottom: 12px;">
+          <div class="sekolah-grid-3" style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
-              <label class="form-label" for="periksaSekolah">Nama Sekolah <span class="required" style="color: #dc2626;">*</span></label>
+              <label class="form-label" for="periksaSekolah">Nama Sekolah <span class="required" style="color: #059669;">*</span></label>
               <select id="periksaSekolah" class="form-control" onchange="updatePeriksaSiswaKelasDropdown()" required style="font-weight: 700;">
                 <option value="">-- Pilih Sekolah --</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" for="periksaKelas">Kelas <span class="required" style="color: #dc2626;">*</span></label>
+              <label class="form-label" for="periksaKelas">Kelas <span class="required" style="color: #059669;">*</span></label>
               <select id="periksaKelas" class="form-control" required style="font-weight: 700;">
                 <option value="">-- Pilih Kelas --</option>
               </select>
@@ -2246,7 +2246,7 @@
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1.5fr 2.5fr; gap: 12px; margin-bottom: 16px;">
+          <div class="sekolah-grid-2" style="display: grid; grid-template-columns: 1.5fr 2.5fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
               <label class="form-label" for="periksaWa">No. WhatsApp Siswa/Ortu</label>
               <input type="tel" id="periksaWa" class="form-control" inputmode="tel" placeholder="08xxxxxxxxxx">
@@ -2258,15 +2258,15 @@
           </div>
 
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 1 -->
-          <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
-            <button type="button" class="btn btn-secondary" onclick="closePemeriksaanModal()">
+          <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
+            <button type="button" class="btn btn-sekolah-secondary" onclick="closePemeriksaanModal()" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
               Tutup
             </button>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-primary" onclick="saveSekolahCategory('identitas')" style="padding: 9px 20px; font-weight: 800;">
+            <div class="panel-btn-group" style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('identitas')" style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Data Identitas
               </button>
-              <button type="button" class="btn btn-slate" onclick="switchSekolahModalTab('antro')" style="padding: 9px 16px; font-weight: 700;">
+              <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('antro')" style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Antropometri &rarr;
               </button>
             </div>
@@ -2276,21 +2276,21 @@
         <!-- =================================================================== -->
         <!-- FORMAT 2: ANTROPOMETRI, TANDA VITAL & LABORATORIUM -->
         <!-- =================================================================== -->
-        <div id="panelPemeriksaanAntro" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #dbeafe; border-radius: 14px; padding: 18px; margin-bottom: 16px;">
-          <div style="font-size: 14px; font-weight: 800; color: #2563eb; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #dbeafe; padding-bottom: 8px;">
+        <div id="panelPemeriksaanAntro" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          <div style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-activity"></i> 2. Format Pengisian Antropometri, Tanda Vital & Lab
             </div>
-            <span style="font-size: 11px; color: #3b82f6; font-weight: 600;">Fisik & Laboratorium</span>
+            <span style="font-size: 11px; color: #059669; font-weight: 600;">Fisik & Laboratorium</span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.3fr; gap: 12px; margin-bottom: 12px;">
+          <div class="sekolah-grid-4" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.3fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
-              <label class="form-label" for="periksaBb">BB (kg) <span class="required" style="color: #dc2626;">*</span></label>
+              <label class="form-label" for="periksaBb">BB (kg) <span class="required" style="color: #059669;">*</span></label>
               <input type="number" step="0.1" id="periksaBb" class="form-control" inputmode="decimal" placeholder="Contoh: 45" oninput="calculateSiswaIMT()" required>
             </div>
             <div class="form-group">
-              <label class="form-label" for="periksaTb">TB (cm) <span class="required" style="color: #dc2626;">*</span></label>
+              <label class="form-label" for="periksaTb">TB (cm) <span class="required" style="color: #059669;">*</span></label>
               <input type="number" step="0.1" id="periksaTb" class="form-control" inputmode="decimal" placeholder="Contoh: 155" oninput="calculateSiswaIMT()" required>
             </div>
             <div class="form-group">
@@ -2299,13 +2299,13 @@
             </div>
             <div class="form-group">
               <label class="form-label" for="periksaImt">
-                IMT & Status Gizi <span id="badgeImtSiswa" class="badge badge-cyan" style="font-size: 9.5px; padding: 2px 6px;">Auto</span>
+                IMT & Status Gizi <span id="badgeImtSiswa" class="badge" style="font-size: 9.5px; padding: 2px 6px; background: #10b981; color: #ffffff;">Auto</span>
               </label>
-              <input type="number" step="0.01" id="periksaImt" class="form-control" readonly placeholder="Otomatis" style="font-weight: 800; background: #f8fafc;">
+              <input type="number" step="0.01" id="periksaImt" class="form-control" readonly placeholder="Otomatis" style="font-weight: 800; background: #f0fdf4; border-color: #a7f3d0; color: #065f46;">
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr 1.2fr; gap: 12px; margin-bottom: 16px;">
+          <div class="sekolah-grid-4" style="display: grid; grid-template-columns: 1fr 1fr 1.2fr 1.2fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
               <label class="form-label" for="periksaSistol">TD Sistolik (mmHg)</label>
               <input type="number" id="periksaSistol" class="form-control" inputmode="numeric" placeholder="110">
@@ -2319,21 +2319,21 @@
               <input type="number" id="periksaGula" class="form-control" inputmode="numeric" placeholder="100">
             </div>
             <div class="form-group">
-              <label class="form-label" for="periksaHb">Hemoglobin (g/dL) <span style="font-size: 10px; color: var(--text-muted);">(Anemia)</span></label>
+              <label class="form-label" for="periksaHb">Hemoglobin (g/dL) <span style="font-size: 10px; color: #047857;">(Anemia)</span></label>
               <input type="number" step="0.1" id="periksaHb" class="form-control" inputmode="decimal" placeholder="13.5">
             </div>
           </div>
 
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 2 -->
-          <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
-            <button type="button" class="btn btn-secondary" onclick="switchSekolahModalTab('identitas')">
+          <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
+            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('identitas')" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
               &larr; Identitas
             </button>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-primary" onclick="saveSekolahCategory('antro')" style="padding: 9px 20px; font-weight: 800;">
+            <div class="panel-btn-group" style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('antro')" style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Antropometri & Vital
               </button>
-              <button type="button" class="btn btn-slate" onclick="switchSekolahModalTab('organ')" style="padding: 9px 16px; font-weight: 700;">
+              <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('organ')" style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Organ Indera &rarr;
               </button>
             </div>
@@ -2343,19 +2343,19 @@
         <!-- =================================================================== -->
         <!-- FORMAT 3: ORGAN INDERA & KESEHATAN KHUSUS UKS -->
         <!-- =================================================================== -->
-        <div id="panelPemeriksaanOrgan" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #d1fae5; border-radius: 14px; padding: 18px; margin-bottom: 16px;">
-          <div style="font-size: 14px; font-weight: 800; color: #059669; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
+        <div id="panelPemeriksaanOrgan" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          <div style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-eye-fill"></i> 3. Format Pengisian Organ Indera & Spesifik UKS
             </div>
-            <span style="font-size: 11px; color: #10b981; font-weight: 600;">Pemeriksaan Khusus UKS</span>
+            <span style="font-size: 11px; color: #059669; font-weight: 600;">Pemeriksaan Khusus UKS</span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 12px; margin-bottom: 12px;">
+          <div class="sekolah-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 12px; margin-bottom: 12px;">
             <!-- 1. TELINGA -->
             <div class="form-group">
               <label class="form-label" for="periksaTelinga">
-                <i class="bi bi-ear-fill" style="color: #d97706;"></i> Telinga (Serumen)
+                <i class="bi bi-ear-fill" style="color: #059669;"></i> Telinga (Serumen)
               </label>
               <select id="periksaTelinga" class="form-control" style="font-weight: 700;">
                 <option value="Tidak ada serumen" selected>Normal (Tidak ada serumen)</option>
@@ -2387,7 +2387,7 @@
             <!-- 3. MATA -->
             <div class="form-group">
               <label class="form-label" for="periksaMata">
-                <i class="bi bi-eyeglasses" style="color: #2563eb;"></i> Penglihatan Mata
+                <i class="bi bi-eyeglasses" style="color: #059669;"></i> Penglihatan Mata
               </label>
               <select id="periksaMata" class="form-control" style="font-weight: 700;">
                 <option value="Normal" selected>Normal</option>
@@ -2413,11 +2413,11 @@
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div class="sekolah-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
             <!-- 4. KEBUGARAN -->
             <div class="form-group">
               <label class="form-label" for="periksaKebugaran">
-                <i class="bi bi-lightning-charge-fill" style="color: #eab308;"></i> Kebugaran Jasmani
+                <i class="bi bi-lightning-charge-fill" style="color: #059669;"></i> Kebugaran Jasmani
               </label>
               <select id="periksaKebugaran" class="form-control" style="font-weight: 700;">
                 <option value="Baik" selected>Baik (Bugar)</option>
@@ -2429,7 +2429,7 @@
             <!-- 5. MENSTRUASI (REMAJA) -->
             <div class="form-group">
               <label class="form-label" for="periksaMenstruasi">
-                <i class="bi bi-gender-female" style="color: #ec4899;"></i> Status Menstruasi (Remaja Putri)
+                <i class="bi bi-gender-female" style="color: #059669;"></i> Status Menstruasi (Remaja Putri)
               </label>
               <select id="periksaMenstruasi" class="form-control" style="font-weight: 700;">
                 <option value="Belum" selected>Belum Menstruasi</option>
@@ -2441,15 +2441,15 @@
           </div>
 
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 3 -->
-          <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
-            <button type="button" class="btn btn-secondary" onclick="switchSekolahModalTab('antro')">
+          <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
+            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('antro')" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
               &larr; Antropometri
             </button>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-primary" onclick="saveSekolahCategory('organ')" style="padding: 9px 20px; font-weight: 800;">
+            <div class="panel-btn-group" style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('organ')" style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Organ Indera & UKS
               </button>
-              <button type="button" class="btn btn-slate" onclick="switchSekolahModalTab('kesimpulan')" style="padding: 9px 16px; font-weight: 700;">
+              <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('kesimpulan')" style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Kesimpulan &rarr;
               </button>
             </div>
@@ -2459,17 +2459,17 @@
         <!-- =================================================================== -->
         <!-- FORMAT 4: KESIMPULAN & REKOMENDASI RUJUKAN -->
         <!-- =================================================================== -->
-        <div id="panelPemeriksaanKesimpulan" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #fee2e2; border-radius: 14px; padding: 18px; margin-bottom: 16px;">
-          <div style="font-size: 14px; font-weight: 800; color: #dc2626; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #fee2e2; padding-bottom: 8px;">
+        <div id="panelPemeriksaanKesimpulan" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          <div style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-clipboard2-check-fill"></i> 4. Format Kesimpulan & Rekomendasi Rujukan
             </div>
-            <span style="font-size: 11px; color: #ef4444; font-weight: 600;">Status & Tindak Lanjut</span>
+            <span style="font-size: 11px; color: #059669; font-weight: 600;">Status & Tindak Lanjut</span>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1.2fr 2fr; gap: 12px; margin-bottom: 16px;">
+          <div class="sekolah-grid-2" style="display: grid; grid-template-columns: 1.2fr 2fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
-              <label class="form-label" for="periksaStatusKesehatan">Status Kesehatan Siswa <span class="required" style="color: #dc2626;">*</span></label>
+              <label class="form-label" for="periksaStatusKesehatan">Status Kesehatan Siswa <span class="required" style="color: #059669;">*</span></label>
               <select id="periksaStatusKesehatan" class="form-control" required style="font-weight: 800;">
                 <option value="Sehat" selected>🟢 Sehat (Normal)</option>
                 <option value="Perlu Perhatian">🟡 Perlu Perhatian / Konseling</option>
@@ -2483,12 +2483,12 @@
           </div>
 
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 4 -->
-          <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
-            <button type="button" class="btn btn-secondary" onclick="switchSekolahModalTab('organ')">
+          <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
+            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('organ')" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
               &larr; Organ Indera
             </button>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-primary" onclick="saveSekolahCategory('kesimpulan')" style="padding: 9px 20px; font-weight: 800;">
+            <div class="panel-btn-group" style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('kesimpulan')" style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-check-circle-fill"></i> Simpan Kesimpulan & Selesai
               </button>
             </div>
@@ -2496,11 +2496,11 @@
         </div>
 
         <!-- GLOBAL FOOTER (SHOWN WHEN 'SEMUA' TAB IS SELECTED) -->
-        <div id="panelPemeriksaanSemuaFooter" style="display: none; align-items: center; justify-content: space-between; padding: 14px 0 0 0; border-top: 1px solid #e2e8f0;">
-          <button type="button" class="btn btn-secondary" onclick="closePemeriksaanModal()">
+        <div id="panelPemeriksaanSemuaFooter" class="panel-action-footer" style="display: none; align-items: center; justify-content: space-between; padding: 14px 0 0 0; border-top: 1px solid #d1fae5;">
+          <button type="button" class="btn btn-sekolah-secondary" onclick="closePemeriksaanModal()" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
             Tutup
           </button>
-          <button type="button" class="btn btn-primary" onclick="savePemeriksaanSiswa(event)" style="padding: 10px 24px; font-weight: 800;">
+          <button type="button" class="btn btn-sekolah-primary" onclick="savePemeriksaanSiswa(event)" style="padding: 10px 24px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
             <i class="bi bi-floppy-fill"></i> Simpan Seluruh Pemeriksaan Siswa
           </button>
         </div>
@@ -2509,30 +2509,30 @@
     </div>
   </div>
 
-  <!-- MODAL 2: TAMBAH SISWA BARU -->
+  <!-- MODAL 2: TAMBAH SISWA BARU (DEGRADASI HIJAU & PUTIH) -->
   <div id="modalTambahSiswa" class="modal-overlay">
-    <div class="modal-container" style="max-width: 580px; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1px solid #cbd5e1;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; padding: 18px 24px;">
-        <div class="modal-title" style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-          <i class="bi bi-person-plus-fill"></i> Tambah Siswa Baru
+    <div class="modal-container sekolah-modal-container" style="max-width: 580px; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #a7f3d0; box-shadow: 0 20px 40px rgba(5, 150, 105, 0.15);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; padding: 16px 22px;">
+        <div class="modal-title" style="font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-person-plus-fill"></i> Tambah Siswa Baru (CKG Sekolah)
         </div>
-        <button class="modal-close" onclick="closeTambahSiswaModal()" style="color: #ffffff;">&times;</button>
+        <button class="modal-close" onclick="closeTambahSiswaModal()" style="color: #ffffff; opacity: 0.9;">&times;</button>
       </div>
 
-      <div class="modal-body" style="padding: 22px; max-height: 75vh; overflow-y: auto;">
+      <div class="modal-body sekolah-modal-body" style="padding: 18px 22px; max-height: 80vh; overflow-y: auto;">
         <form id="formTambahSiswa" onsubmit="saveTambahSiswa(event)">
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label" for="tambahSiswaNama">Nama Lengkap Siswa <span class="required" style="color: #dc2626;">*</span></label>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" for="tambahSiswaNama">Nama Lengkap Siswa <span class="required" style="color: #059669;">*</span></label>
             <input type="text" id="tambahSiswaNama" class="form-control" required placeholder="Contoh: AHMAD FAUZI" style="font-weight: 700; text-transform: uppercase;">
           </div>
 
-          <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div class="sekolah-grid-2" style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
               <label class="form-label" for="tambahSiswaNik">NISN / NIK Siswa</label>
               <input type="text" id="tambahSiswaNik" class="form-control" inputmode="numeric" placeholder="16 Digit NIK" maxlength="16" style="font-family: monospace; font-weight: 700;">
             </div>
             <div class="form-group">
-              <label class="form-label" for="tambahSiswaJk">Jenis Kelamin <span class="required" style="color: #dc2626;">*</span></label>
+              <label class="form-label" for="tambahSiswaJk">Jenis Kelamin <span class="required" style="color: #059669;">*</span></label>
               <select id="tambahSiswaJk" class="form-control" required style="font-weight: 700;">
                 <option value="L">Laki-laki (L)</option>
                 <option value="P">Perempuan (P)</option>
@@ -2540,22 +2540,22 @@
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1.8fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div class="sekolah-grid-2" style="display: grid; grid-template-columns: 1.8fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
-              <label class="form-label" for="tambahSiswaSekolah">Nama Sekolah <span class="required" style="color: #dc2626;">*</span></label>
+              <label class="form-label" for="tambahSiswaSekolah">Nama Sekolah <span class="required" style="color: #059669;">*</span></label>
               <select id="tambahSiswaSekolah" class="form-control" onchange="updateTambahSiswaKelasDropdown()" required style="font-weight: 700;">
                 <option value="">-- Pilih Sekolah --</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" for="tambahSiswaKelas">Kelas <span class="required" style="color: #dc2626;">*</span></label>
+              <label class="form-label" for="tambahSiswaKelas">Kelas <span class="required" style="color: #059669;">*</span></label>
               <select id="tambahSiswaKelas" class="form-control" required style="font-weight: 700;">
                 <option value="">-- Pilih Kelas --</option>
               </select>
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1.2fr 1.4fr; gap: 12px; margin-bottom: 14px;">
+          <div class="sekolah-grid-2" style="display: grid; grid-template-columns: 1.2fr 1.4fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
               <label class="form-label" for="tambahSiswaTglLahir">Tanggal Lahir</label>
               <input type="date" id="tambahSiswaTglLahir" class="form-control">
@@ -2571,9 +2571,9 @@
             <input type="text" id="tambahSiswaAlamat" class="form-control" placeholder="Kp / Jalan, RT/RW, Desa" style="text-transform: uppercase;">
           </div>
 
-          <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 16px 0 0 0; margin-top: 18px; border-top: 1px solid #e2e8f0;">
-            <button type="button" class="btn btn-secondary" onclick="closeTambahSiswaModal()" style="border-radius: 10px; padding: 9px 20px; font-weight: 700;">Batal</button>
-            <button type="submit" class="btn btn-primary" style="border-radius: 10px; padding: 9px 24px; font-weight: 800; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border: none;">
+          <div class="modal-footer panel-action-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 14px 0 0 0; margin-top: 16px; border-top: 1px solid #d1fae5;">
+            <button type="button" class="btn btn-sekolah-secondary" onclick="closeTambahSiswaModal()" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 10px; padding: 9px 20px; font-weight: 700;">Batal</button>
+            <button type="submit" class="btn btn-sekolah-primary" style="border-radius: 10px; padding: 9px 24px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #fff; border: none; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
               <i class="bi bi-person-plus-fill"></i> Simpan Data Siswa
             </button>
           </div>
@@ -2582,49 +2582,49 @@
     </div>
   </div>
 
-  <!-- Modal Import Data CKG Sekolah (Excel XLSX / CSV) -->
+  <!-- Modal Import Data CKG Sekolah (DEGRADASI HIJAU & PUTIH) -->
   <div id="modalImportSekolah" class="modal-overlay">
-    <div class="modal-container" style="max-width: 620px;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white;">
-        <h3 class="modal-title" style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-          <i class="bi bi-file-earmark-arrow-up-fill" style="font-size: 22px;"></i> Import Data CKG Sekolah (.xlsx / .csv)
+    <div class="modal-container sekolah-modal-container" style="max-width: 620px; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #a7f3d0; box-shadow: 0 20px 40px rgba(5, 150, 105, 0.15);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: white; padding: 16px 22px;">
+        <h3 class="modal-title" style="font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-file-earmark-arrow-up-fill" style="font-size: 20px;"></i> Import Data CKG Sekolah (.xlsx / .csv)
         </h3>
-        <button class="modal-close" onclick="closeImportSekolahModal()" style="color: #ffffff;">&times;</button>
+        <button class="modal-close" onclick="closeImportSekolahModal()" style="color: #ffffff; opacity: 0.9;">&times;</button>
       </div>
-      <div class="modal-body" style="padding: 24px; max-height: 75vh; overflow-y: auto;">
+      <div class="modal-body sekolah-modal-body" style="padding: 18px 22px; max-height: 80vh; overflow-y: auto;">
         
-        <div style="background: linear-gradient(135deg, #f5f3ff, #ede9fe); border: 1.5px dashed #a78bfa; border-radius: 14px; padding: 18px; margin-bottom: 20px;">
-          <div style="font-weight: 800; color: #5b21b6; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-            <i class="bi bi-info-circle-fill" style="color: #7c3aed; font-size: 20px;"></i> Petunjuk Import Data CKG Sekolah
+        <div style="background: #f0fdf4; border: 1.5px dashed #6ee7b7; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          <div style="font-weight: 800; color: #064e3b; font-size: 13.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-info-circle-fill" style="color: #059669; font-size: 18px;"></i> Petunjuk Import Data CKG Sekolah
           </div>
-          <ul style="font-size: 12.5px; color: #4c1d95; margin: 0; padding-left: 20px; line-height: 1.6; font-weight: 600;">
+          <ul style="font-size: 12px; color: #047857; margin: 0; padding-left: 18px; line-height: 1.6; font-weight: 600;">
             <li>Gunakan format 24 kolom standar CKG Sekolah.</li>
             <li>Kolom: <strong>NO, NAMA, KELAS, SEKOLAH, JK, NIK, TANGGAL LAHIR, NO WHATSAPP, PROVINSI, KAB/KOTA, KECAMATAN, KELURAHAN, ALAMAT, BB, TB, LP, TD SISTOLIK, TD DIASTOLIK, GULA DARAH, HB, KARIES, KEBUGARAN, MENSTRUASI, KACAMATA</strong>.</li>
-            <li>Data yang diimport terpisah sepenuhnya dari record CKG & SIMPUS (tidak menambah hitungan entri CKG utama).</li>
+            <li>Data yang diimport terpisah sepenuhnya dan langsung disinkronkan ke Cloudflare D1.</li>
           </ul>
           
-          <button class="btn btn-purple btn-sm" onclick="downloadSekolahXLSXTemplate()" style="margin-top: 14px; font-weight: 700; width: 100%; justify-content: center; padding: 10px 18px; border-radius: 10px; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none;">
-            <i class="bi bi-file-earmark-arrow-down-fill" style="font-size: 16px;"></i> Download Template Excel CKG Sekolah (.xlsx)
+          <button class="btn btn-sekolah-primary btn-sm" onclick="downloadSekolahXLSXTemplate()" style="margin-top: 12px; font-weight: 700; width: 100%; justify-content: center; padding: 9px 16px; border-radius: 10px; background: linear-gradient(135deg, #059669, #047857); color: #fff; border: none; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);">
+            <i class="bi bi-file-earmark-arrow-down-fill" style="font-size: 15px;"></i> Download Template Excel CKG Sekolah (.xlsx)
           </button>
         </div>
 
-        <div class="import-dropzone" id="sekolahImportDropzone" onclick="document.getElementById('sekolahImportFileInput').click()" style="border: 2px dashed #a78bfa; border-radius: 16px; background: #faf5ff; padding: 26px 20px; text-align: center; cursor: pointer; transition: all 0.25s ease;">
-          <i class="bi bi-cloud-arrow-up-fill import-dropzone-icon" style="font-size: 42px; color: #7c3aed; margin-bottom: 10px; display: inline-block;"></i>
-          <div class="import-dropzone-text" id="sekolahImportDropzoneText" style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">
+        <div class="import-dropzone" id="sekolahImportDropzone" onclick="document.getElementById('sekolahImportFileInput').click()" style="border: 2px dashed #34d399; border-radius: 14px; background: #f0fdf4; padding: 22px 16px; text-align: center; cursor: pointer; transition: all 0.25s ease;">
+          <i class="bi bi-cloud-arrow-up-fill import-dropzone-icon" style="font-size: 38px; color: #059669; margin-bottom: 8px; display: inline-block;"></i>
+          <div class="import-dropzone-text" id="sekolahImportDropzoneText" style="font-size: 13px; font-weight: 700; color: #064e3b; margin-bottom: 4px;">
             Pilih atau Tarik File Excel CKG Sekolah (.xlsx / .csv)
           </div>
-          <div class="import-dropzone-hint" style="font-size: 12px; color: #64748b; font-weight: 500;">Format yang didukung: .xlsx, .xls, .csv</div>
+          <div class="import-dropzone-hint" style="font-size: 11.5px; color: #047857; font-weight: 500;">Format yang didukung: .xlsx, .xls, .csv</div>
           <input type="file" id="sekolahImportFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleSekolahImportFileSelect(event)">
         </div>
 
-        <div id="sekolahImportPreviewArea" style="display: none; margin-top: 20px;">
+        <div id="sekolahImportPreviewArea" style="display: none; margin-top: 16px;">
           <!-- Dynamically populated via JS -->
         </div>
 
       </div>
-      <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
-        <button class="btn btn-secondary" onclick="closeImportSekolahModal()" style="border-radius: 10px; padding: 9px 20px; font-weight: 700;">Batal</button>
-        <button class="btn btn-purple" id="btnExecuteSekolahImport" onclick="executeSekolahXLSXImport()" disabled style="border-radius: 10px; padding: 9px 24px; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border: none;">
+      <div class="modal-footer panel-action-footer" style="display: flex; gap: 10px; justify-content: flex-end; padding: 14px 22px; background: #f0fdf4; border-top: 1px solid #d1fae5;">
+        <button class="btn btn-sekolah-secondary" onclick="closeImportSekolahModal()" style="background: #ffffff; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 10px; padding: 9px 18px; font-weight: 700;">Batal</button>
+        <button class="btn btn-sekolah-primary" id="btnExecuteSekolahImport" onclick="executeSekolahXLSXImport()" disabled style="border-radius: 10px; padding: 9px 22px; font-weight: 700; background: linear-gradient(135deg, #059669, #047857); color: #fff; border: none; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
           <i class="bi bi-cloud-upload-fill"></i> Simpan & Direct Sync ke Cloud D1
         </button>
       </div>

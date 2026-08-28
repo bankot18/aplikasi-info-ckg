@@ -10159,15 +10159,15 @@ function switchSekolahModalTab(tabKey) {
     if (btn) {
       if (t === tabKey) {
         btn.classList.add('active');
-        btn.style.background = '#4f46e5';
+        btn.style.background = 'linear-gradient(135deg, #059669, #047857)';
         btn.style.color = '#ffffff';
-        btn.style.borderColor = '#4f46e5';
-        btn.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.25)';
+        btn.style.borderColor = '#047857';
+        btn.style.boxShadow = '0 4px 12px rgba(5, 150, 105, 0.25)';
       } else {
         btn.classList.remove('active');
-        btn.style.background = '#f8fafc';
-        btn.style.color = '#475569';
-        btn.style.borderColor = '#cbd5e1';
+        btn.style.background = '#f0fdf4';
+        btn.style.color = '#065f46';
+        btn.style.borderColor = '#a7f3d0';
         btn.style.boxShadow = 'none';
       }
     }
@@ -10206,17 +10206,25 @@ function openPemeriksaanModal(siswaId, defaultTab = 'identitas') {
   if (badgeStatus) {
     if (isExamined) {
       if (siswa.status_kesehatan === 'Perlu Rujukan') {
-        badgeStatus.className = 'badge badge-rose';
+        badgeStatus.style.background = '#ecfdf5';
+        badgeStatus.style.border = '1.5px solid #10b981';
+        badgeStatus.style.color = '#047857';
         badgeStatus.textContent = 'PERLU RUJUKAN';
       } else if (siswa.status_kesehatan === 'Perlu Perhatian') {
-        badgeStatus.className = 'badge badge-amber';
+        badgeStatus.style.background = '#ecfdf5';
+        badgeStatus.style.border = '1.5px solid #34d399';
+        badgeStatus.style.color = '#059669';
         badgeStatus.textContent = 'PERLU PERHATIAN';
       } else {
-        badgeStatus.className = 'badge badge-emerald';
+        badgeStatus.style.background = '#d1fae5';
+        badgeStatus.style.border = '1.5px solid #059669';
+        badgeStatus.style.color = '#065f46';
         badgeStatus.textContent = 'SUDAH DIPERIKSA (SEHAT)';
       }
     } else {
-      badgeStatus.className = 'badge badge-amber';
+      badgeStatus.style.background = '#f0fdf4';
+      badgeStatus.style.border = '1.5px solid #a7f3d0';
+      badgeStatus.style.color = '#047857';
       badgeStatus.textContent = 'BELUM DIPERIKSA';
     }
   }
@@ -10296,27 +10304,25 @@ function calculateSiswaIMT() {
     if (imtInput) imtInput.value = imtFixed;
 
     if (badgeImt) {
+      badgeImt.style.background = '#10b981';
+      badgeImt.style.color = '#ffffff';
       if (imt < 17.0) {
-        badgeImt.className = 'badge badge-rose';
         badgeImt.textContent = 'Sangat Kurus';
       } else if (imt < 18.5) {
-        badgeImt.className = 'badge badge-amber';
         badgeImt.textContent = 'Kurus';
       } else if (imt <= 25.0) {
-        badgeImt.className = 'badge badge-emerald';
         badgeImt.textContent = 'Normal';
       } else if (imt <= 27.0) {
-        badgeImt.className = 'badge badge-cyan';
         badgeImt.textContent = 'Gemuk';
       } else {
-        badgeImt.className = 'badge badge-rose';
         badgeImt.textContent = 'Obesitas';
       }
     }
   } else {
     if (imtInput) imtInput.value = '';
     if (badgeImt) {
-      badgeImt.className = 'badge badge-cyan';
+      badgeImt.style.background = '#10b981';
+      badgeImt.style.color = '#ffffff';
       badgeImt.textContent = 'Auto';
     }
   }
@@ -10418,13 +10424,19 @@ async function saveSekolahCategory(categoryKey) {
   if (badgeStatus) {
     if (updatedRecord.is_examined) {
       if (updatedRecord.status_kesehatan === 'Perlu Rujukan') {
-        badgeStatus.className = 'badge badge-rose';
+        badgeStatus.style.background = '#ecfdf5';
+        badgeStatus.style.border = '1.5px solid #10b981';
+        badgeStatus.style.color = '#047857';
         badgeStatus.textContent = 'PERLU RUJUKAN';
       } else if (updatedRecord.status_kesehatan === 'Perlu Perhatian') {
-        badgeStatus.className = 'badge badge-amber';
+        badgeStatus.style.background = '#ecfdf5';
+        badgeStatus.style.border = '1.5px solid #34d399';
+        badgeStatus.style.color = '#059669';
         badgeStatus.textContent = 'PERLU PERHATIAN';
       } else {
-        badgeStatus.className = 'badge badge-emerald';
+        badgeStatus.style.background = '#d1fae5';
+        badgeStatus.style.border = '1.5px solid #059669';
+        badgeStatus.style.color = '#065f46';
         badgeStatus.textContent = 'SUDAH DIPERIKSA (SEHAT)';
       }
     }
@@ -10434,7 +10446,7 @@ async function saveSekolahCategory(categoryKey) {
     icon: 'success',
     title: titleMsg,
     html: `Format data untuk <strong>${updatedRecord.nama}</strong> telah tersimpan langsung di Cloud Database.`,
-    confirmButtonColor: '#4f46e5',
+    confirmButtonColor: '#059669',
     timer: 2000
   });
 }
@@ -10519,7 +10531,7 @@ async function savePemeriksaanSiswa(event) {
     icon: 'success',
     title: 'Pemeriksaan Berhasil Disimpan!',
     html: `Seluruh data pemeriksaan untuk <strong>${updatedRecord.nama}</strong> (${statusKesehatan}) telah berhasil disimpan langsung ke Cloud Database.`,
-    confirmButtonColor: '#4f46e5',
+    confirmButtonColor: '#059669',
     timer: 2500
   });
 }
@@ -10626,7 +10638,7 @@ async function saveTambahSiswa(event) {
     icon: 'success',
     title: 'Siswa Berhasil Ditambahkan!',
     html: `Data siswa <strong>${newSiswa.nama}</strong> (${newSiswa.sekolah} - ${newSiswa.kelas}) telah tersimpan langsung di Cloud Database.`,
-    confirmButtonColor: '#2563eb',
+    confirmButtonColor: '#059669',
     timer: 2500
   });
 }
@@ -11018,7 +11030,7 @@ async function executeSekolahXLSXImport() {
       icon: 'success',
       title: 'Import ke Cloud Berhasil!',
       html: `Sebanyak <strong>${total}</strong> data siswa berhasil diunggah langsung ke Cloud Database.`,
-      confirmButtonColor: '#4f46e5'
+      confirmButtonColor: '#059669'
     });
   } catch (err) {
     console.error('Import error:', err);
