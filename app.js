@@ -1097,6 +1097,8 @@ function setupEventListeners() {
 }
 
 function switchView(viewId) {
+  closeUserProfileDropdown();
+
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
 
   if (role === 'petugas') {
@@ -1142,13 +1144,9 @@ function switchView(viewId) {
   document.querySelectorAll('.view-panel').forEach(panel => {
     const isTarget = panel.id === `view-${viewId}`;
     panel.classList.toggle('active', isTarget);
-    // Re-trigger fade animation on switch
-    if (isTarget) {
-      panel.style.animation = 'none';
-      panel.offsetHeight; // force reflow
-      panel.style.animation = '';
-    }
   });
+
+  window.scrollTo({ top: 0, behavior: 'instant' });
 
   if (viewId === 'dashboard' && typeof initDashboardCharts === 'function') {
     const officersData = typeof getOfficerPerformanceData === 'function' ? getOfficerPerformanceData() : OFFICERS_DATA;
@@ -9456,6 +9454,17 @@ document.addEventListener('click', (e) => {
     closeUserProfileDropdown();
   }
 });
+
+document.addEventListener('touchstart', (e) => {
+  const container = document.getElementById('userProfileDropdownContainer');
+  if (container && !container.contains(e.target)) {
+    closeUserProfileDropdown();
+  }
+}, { passive: true });
+
+window.addEventListener('scroll', () => {
+  closeUserProfileDropdown();
+}, { passive: true });
 
 /* ==========================================================================
    🔍 UNIVERSAL SEARCH & RENDERING LOGIC FOR LAPORAN & CKG SEKOLAH
