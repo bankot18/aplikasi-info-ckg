@@ -5011,11 +5011,30 @@ body.dark-mode .badge-purple {
 }
 
 .ckg-category-tab-bar {
-  scrollbar-width: thin;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  width: 100%;
 }
 
 .sekolah-cat-tab {
+  flex: 1;
+  min-width: 120px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.sekolah-cat-tab#tabBtnSemua {
+  flex: 0 0 auto;
+  min-width: 90px;
 }
 
 .sekolah-cat-tab:hover {
@@ -5149,24 +5168,40 @@ body.dark-mode .sekolah-cat-tab:not(.active) {
     text-align: left !important;
   }
 
-  /* Category Tab Bar on Mobile: Touch Scroll Pills */
+  /* Category Tab Bar on Mobile: 2x2 Grid + Full-Width Semua Format (100% Visible, No Clipping) */
   .ckg-category-tab-bar {
-    display: flex !important;
-    gap: 6px !important;
-    overflow-x: auto !important;
-    padding-bottom: 6px !important;
-    -webkit-overflow-scrolling: touch !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
 
   .sekolah-cat-tab {
-    flex: 0 0 auto !important;
-    min-width: auto !important;
-    padding: 7px 11px !important;
-    font-size: 11px !important;
-    border-radius: 8px !important;
-    white-space: nowrap !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 9px 6px !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    white-space: normal !important;
+    text-align: center !important;
+    justify-content: center !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    box-sizing: border-box !important;
+    min-height: 40px !important;
+  }
+
+  .sekolah-cat-tab#tabBtnSemua {
+    grid-column: 1 / -1 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    padding: 9px 12px !important;
+    min-height: 38px !important;
   }
 
   /* Action Buttons Footer on Mobile: Full-width stacked buttons */
