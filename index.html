@@ -230,25 +230,32 @@
     <!-- Horizontal Navigation Tabs Bar -->
     <nav class="nav-tabs-bar">
       <button class="nav-tab-btn active" data-view="dashboard">
-        <i class="bi bi-speedometer2"></i> Dashboard
+        <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
       </button>
       <button class="nav-tab-btn admin-koordinator-only" data-view="laporan">
-        <i class="bi bi-file-earmark-bar-graph"></i> Laporan Data
+        <i class="bi bi-file-earmark-bar-graph"></i>
+        <span>Laporan</span>
       </button>
       <button class="nav-tab-btn" data-view="data-records">
-        <i class="bi bi-folder-symlink-fill"></i> Data Records CKG
+        <i class="bi bi-folder-symlink-fill"></i>
+        <span>Records</span>
       </button>
       <button class="nav-tab-btn" data-view="simpus">
-        <i class="bi bi-hdd-network"></i> Data Entry CKG Dari SIMPUS
+        <i class="bi bi-hdd-network"></i>
+        <span>SIMPUS</span>
       </button>
       <button class="nav-tab-btn" data-view="sekolah">
-        <i class="bi bi-mortarboard-fill"></i> CKG Sekolah
+        <i class="bi bi-mortarboard-fill"></i>
+        <span>Sekolah</span>
       </button>
       <button class="nav-tab-btn admin-koordinator-only" data-view="recycle-data">
-        <i class="bi bi-trash3-fill"></i> Recycle Data
+        <i class="bi bi-trash3-fill"></i>
+        <span>Recycle</span>
       </button>
       <button class="nav-tab-btn admin-only" data-view="admin-panel">
-        <i class="bi bi-person-workspace"></i> Admin Panel & Database User
+        <i class="bi bi-person-workspace"></i>
+        <span>Admin</span>
       </button>
     </nav>
 
@@ -268,7 +275,7 @@
             </p>
           </div>
 
-          <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+          <div class="dashboard-filter-bar" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
             <div class="filter-item">
               <i class="bi bi-gear-fill"></i> Kategori:
               <select id="dashKategori" class="filter-control">
@@ -318,7 +325,7 @@
               </select>
             </div>
 
-            <button class="btn btn-secondary btn-sm" onclick="renderApp()">
+            <button class="btn btn-secondary btn-sm filter-btn-refresh" onclick="renderApp()">
               <i class="bi bi-arrow-clockwise"></i> Refresh
             </button>
           </div>
