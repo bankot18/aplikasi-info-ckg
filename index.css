@@ -4001,3 +4001,174 @@ body.dark-mode .badge-purple {
 }
 
 
+/* ==========================================================================
+   MOBILE RESPONSIVE OVERRIDES (index.css)
+   Desktop layout remains 100% untouched — only active on <= 768px
+   ========================================================================== */
+@media (max-width: 768px) {
+
+  /* --- LOGIN FORM PANEL: Full-width centered --- */
+  .split-form-panel {
+    padding: 28px 20px !important;
+  }
+
+  .form-panel-content {
+    max-width: 100% !important;
+  }
+
+  .auth-header-text h2 {
+    font-size: 20px !important;
+  }
+
+  .auth-header-text p {
+    font-size: 12px !important;
+  }
+
+  .quick-login-pills {
+    flex-wrap: wrap;
+  }
+
+  .btn-quick-login {
+    flex: 1 1 45%;
+    min-width: 0;
+    font-size: 10.5px !important;
+    padding: 7px 6px !important;
+  }
+
+  /* --- APP HEADER RESPONSIVE --- */
+  .app-header {
+    padding: 10px 14px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .brand-section {
+    gap: 8px !important;
+  }
+
+  .brand-logo {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 16px !important;
+  }
+
+  .brand-title h1 {
+    font-size: 14px !important;
+  }
+
+  .brand-title p {
+    font-size: 10px !important;
+  }
+
+  /* --- TAB NAVIGATION RESPONSIVE --- */
+  .tab-list {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .tab-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 11.5px !important;
+    padding: 8px 12px !important;
+  }
+
+  /* --- CARD GRIDS RESPONSIVE --- */
+  .card-grid,
+  .data-grid,
+  .simpus-cards-list {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* --- TABLE RESPONSIVE --- */
+  .table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 500px;
+  }
+
+  /* --- FORM CONTROLS RESPONSIVE --- */
+  .form-control-row,
+  .form-inline-group {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .form-control {
+    font-size: 13px !important;
+  }
+
+  /* --- MODAL RESPONSIVE --- */
+  .modal-content,
+  .modal-box {
+    width: 96vw !important;
+    max-width: none !important;
+    padding: 16px !important;
+    max-height: 92vh !important;
+  }
+
+  /* --- WIZARD STEPPER RESPONSIVE --- */
+  .wizard-stepper {
+    gap: 4px !important;
+  }
+
+  .stepper-circle {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 12px !important;
+  }
+
+  /* --- GENERAL SPACING & FONT ADJUSTMENTS --- */
+  .section-card {
+    padding: 14px !important;
+  }
+
+  .card-header-title {
+    font-size: 15px !important;
+  }
+
+  h2 {
+    font-size: 18px !important;
+  }
+
+  h3 {
+    font-size: 15px !important;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .split-form-panel {
+    padding: 20px 16px !important;
+  }
+
+  .auth-header-text h2 {
+    font-size: 18px !important;
+  }
+
+  .input-with-icon .form-control {
+    height: 42px !important;
+    font-size: 13px !important;
+  }
+
+  .btn-quick-login {
+    flex: 1 1 100%;
+  }
+
+  .app-header {
+    padding: 8px 12px !important;
+  }
+}
+

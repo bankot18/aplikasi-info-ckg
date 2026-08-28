@@ -3870,51 +3870,8 @@ input[type="date"].modal-input,
   }
 }
 
-@media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    left: -280px;
-    z-index: 1000;
-  }
-  .sidebar.mobile-open {
-    left: 0;
-  }
-  .topbar {
-    padding: 0 18px;
-  }
-  .content-body {
-    padding: 18px;
-  }
-  .kpi-grid {
-    grid-template-columns: 1fr;
-  }
-  .welcome-hero-right {
-    flex-direction: column;
-  }
-  .id-card-body {
-    flex-direction: column;
-    text-align: center;
-  }
-  .detail-columns-2 {
-    grid-template-columns: 1fr;
-  }
-  .filter-controls-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .calendar-days-header .day-head-cell {
-    font-size: 10px;
-    padding: 8px 2px;
-  }
-  .calendar-grid-body .cal-cell {
-    min-height: 75px;
-    padding: 4px;
-  }
-  .poa-task-badge {
-    font-size: 9.5px;
-    padding: 2px 4px;
-  }
-}
+/* (Mobile responsive rules for this section are handled in the comprehensive 
+   @media block at the end of this file — see "COMPREHENSIVE RESPONSIVE" section) */
 
 /* ==========================================================================
    SPPD & LPT STUDIO CONTROLS & LUXURY UI
@@ -8400,40 +8357,280 @@ body {
   }
 }
 
-/* 7. Mobile & Small Tablet Media Query (<= 768px) */
+/* 7. Mobile & Small Tablet Media Query (<= 768px) — COMPREHENSIVE RESPONSIVE */
 @media screen and (max-width: 768px) {
-  .sidebar {
-    width: 72px !important;
-    min-width: 72px !important;
+
+  /* --- MOBILE HAMBURGER BUTTON --- */
+  .mobile-hamburger-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--bg-card-inner);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    margin-right: 12px;
+    flex-shrink: 0;
   }
 
-  .sidebar .nav-label,
-  .sidebar .sidebar-brand-text,
-  .sidebar .sidebar-search-box,
-  .sidebar .badge-super-admin-nav,
-  .sidebar .sidebar-badge-counter {
+  .mobile-hamburger-btn:hover,
+  .mobile-hamburger-btn:active {
+    border-color: var(--border-teal-bright);
+    color: var(--accent-teal);
+    box-shadow: 0 0 14px rgba(45, 212, 191, 0.3);
+  }
+
+  /* --- SIDEBAR: Slide-in Overlay (Hidden by Default) --- */
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: var(--sidebar-width-expanded) !important;
+    height: 100vh;
+    z-index: 10000 !important;
+    transform: translateX(-100%);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: none !important;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0) !important;
+    box-shadow: 8px 0 40px rgba(0, 0, 0, 0.8) !important;
+  }
+
+  /* Reset collapsed state on mobile — always show full sidebar when open */
+  .sidebar.mobile-open.collapsed {
+    width: var(--sidebar-width-expanded) !important;
+  }
+  .sidebar.mobile-open.collapsed .nav-label,
+  .sidebar.mobile-open.collapsed .brand-text,
+  .sidebar.mobile-open.collapsed .sidebar-search,
+  .sidebar.mobile-open.collapsed .profile-info,
+  .sidebar.mobile-open.collapsed .profile-chevron,
+  .sidebar.mobile-open.collapsed .sidebar-badge-counter,
+  .sidebar.mobile-open.collapsed .badge-super-admin-nav {
+    display: flex !important;
+    opacity: 1 !important;
+  }
+  .sidebar.mobile-open.collapsed .nav-link {
+    justify-content: flex-start !important;
+    padding: 10px 12px !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+  .sidebar.mobile-open.collapsed .sidebar-brand {
+    display: flex !important;
+  }
+  .sidebar.mobile-open.collapsed .sidebar-header {
+    justify-content: space-between !important;
+    padding: 0 16px !important;
+  }
+  .sidebar.mobile-open.collapsed .sidebar-profile {
+    justify-content: flex-start !important;
+    padding: 8px 10px !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+  .sidebar.mobile-open.collapsed .search-input-wrapper {
+    justify-content: flex-start !important;
+    padding: 9px 12px !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+  .sidebar.mobile-open.collapsed .search-input-wrapper input {
+    display: block !important;
+  }
+  .sidebar.mobile-open.collapsed .search-icon {
+    margin-right: 8px !important;
+  }
+  .sidebar.mobile-open.collapsed .nav-section-title {
+    opacity: 1 !important;
+    height: auto !important;
+    padding: 14px 8px 6px 8px !important;
+    overflow: visible !important;
+  }
+
+  /* Hide desktop sidebar toggle on mobile */
+  .sidebar-toggle-btn {
     display: none !important;
   }
 
-  .sidebar .nav-link {
-    justify-content: center !important;
-    padding: 12px !important;
+  /* --- SIDEBAR OVERLAY BACKDROP --- */
+  .sidebar-mobile-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
 
-  .sidebar .nav-icon {
-    margin: 0 !important;
+  .sidebar-mobile-overlay.active {
+    display: block;
+    opacity: 1;
   }
 
-  .main-content {
-    padding: 12px !important;
+  /* --- TOPBAR RESPONSIVE --- */
+  .topbar {
+    padding: 0 14px !important;
+    height: auto !important;
+    min-height: 60px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .page-title-badge {
+    font-size: 9px !important;
+    width: 100%;
+    order: 2;
+  }
+
+  .page-title {
+    font-size: 16px !important;
+    width: 100%;
+    order: 3;
+  }
+
+  .page-subtitle {
+    font-size: 11px !important;
+    width: 100%;
+    order: 4;
+    display: none;
+  }
+
+  .topbar-right {
+    gap: 8px !important;
+  }
+
+  .datetime-badge {
+    font-size: 10.5px !important;
+    padding: 6px 10px !important;
+    display: none !important;
+  }
+
+  /* --- MAIN CONTENT BODY RESPONSIVE --- */
+  .content-body {
+    padding: 14px !important;
+    gap: 16px !important;
+  }
+
+  /* --- ALL GRID LAYOUTS: Single Column on Mobile --- */
+  .beranda-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .beranda-split-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
   }
 
   .poa-filter-grid {
     grid-template-columns: 1fr !important;
+    gap: 10px !important;
   }
 
+  /* --- BERANDA HERO BANNER RESPONSIVE --- */
+  .beranda-compact-hero {
+    flex-direction: column !important;
+    padding: 16px !important;
+    gap: 14px !important;
+    text-align: center;
+  }
+
+  .beranda-hero-left {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  .beranda-user-meta {
+    align-items: center !important;
+  }
+
+  .beranda-badge-tags {
+    justify-content: center !important;
+  }
+
+  .beranda-greeting {
+    font-size: 17px !important;
+    text-align: center !important;
+  }
+
+  .beranda-subtitle {
+    text-align: center !important;
+    font-size: 11.5px !important;
+  }
+
+  .beranda-hero-right {
+    width: 100%;
+  }
+
+  .btn-hero-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* --- KPI CARDS RESPONSIVE --- */
+  .beranda-kpi-card {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+  }
+
+  .kpi-val {
+    font-size: 18px !important;
+  }
+
+  .kpi-label {
+    font-size: 10.5px !important;
+  }
+
+  /* --- TABLE RESPONSIVE --- */
+  .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .custom-table {
+    min-width: 600px;
+  }
+
+  .table-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  /* --- MODAL RESPONSIVE --- */
   .modal-card {
     padding: 16px !important;
+    width: 96vw !important;
+    max-width: none !important;
+    max-height: 92vh !important;
   }
 
   .modal-card.modal-card-docviewer {
@@ -8464,6 +8661,160 @@ body {
     flex-direction: column !important;
     gap: 20px !important;
     align-items: center !important;
+  }
+
+  /* --- SPPD & POA HEADERS --- */
+  .poa-header-card,
+  .sppd-studio-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 14px !important;
+    gap: 12px !important;
+  }
+
+  .poa-header-right,
+  .sppd-studio-actions {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+  }
+
+  .sppd-studio-icon {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .sppd-studio-title {
+    font-size: 15px !important;
+  }
+
+  /* --- FILTER CONTROLS & ACTION BARS --- */
+  .filter-controls-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  /* --- PANEL CARDS --- */
+  .beranda-panel-card {
+    padding: 14px 16px !important;
+  }
+
+  /* --- WELCOME HERO --- */
+  .welcome-hero-content {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .welcome-hero-right {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  /* --- ID CARD --- */
+  .id-card-body {
+    flex-direction: column !important;
+    text-align: center !important;
+  }
+
+  .detail-columns-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* --- CALENDAR --- */
+  .calendar-days-header .day-head-cell {
+    font-size: 10px !important;
+    padding: 8px 2px !important;
+  }
+
+  .calendar-grid-body .cal-cell {
+    min-height: 65px !important;
+    padding: 4px !important;
+  }
+
+  .poa-task-badge {
+    font-size: 9px !important;
+    padding: 2px 4px !important;
+  }
+
+  /* --- BULK ENTRY TABLE --- */
+  .bulk-table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .bulk-entry-table {
+    min-width: 500px;
+  }
+
+  /* --- PROFILE POPOVER on Mobile --- */
+  .profile-popover {
+    position: fixed !important;
+    bottom: auto !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) scale(0.96) !important;
+    width: min(300px, 90vw) !important;
+  }
+
+  .profile-popover.active {
+    transform: translate(-50%, -50%) scale(1) !important;
+  }
+}
+
+/* Desktop: Hide mobile-only elements */
+@media screen and (min-width: 769px) {
+  .mobile-hamburger-btn {
+    display: none !important;
+  }
+  .sidebar-mobile-overlay {
+    display: none !important;
+  }
+}
+
+/* 7b. Extra Small Screens (<= 480px) — Further compacting */
+@media screen and (max-width: 480px) {
+  .beranda-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .topbar-left {
+    width: 100%;
+  }
+
+  .topbar-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .beranda-compact-hero {
+    padding: 12px !important;
+  }
+
+  .beranda-greeting {
+    font-size: 15px !important;
+  }
+
+  .beranda-user-avatar {
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+  }
+
+  .page-title {
+    font-size: 14px !important;
+  }
+
+  .kpi-icon-wrap,
+  .kpi-icon-box {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+  }
+
+  .btn-primary {
+    font-size: 12px !important;
+    padding: 8px 14px !important;
   }
 }
 

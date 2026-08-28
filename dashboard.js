@@ -614,6 +614,65 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================================
+  // 1b. MOBILE SIDEBAR TOGGLE (Hamburger Menu + Overlay)
+  // ==========================================================================
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const sidebarMobileOverlay = document.getElementById('sidebarMobileOverlay');
+
+  function openMobileSidebar() {
+    if (sidebar) {
+      sidebar.classList.add('mobile-open');
+    }
+    if (sidebarMobileOverlay) {
+      sidebarMobileOverlay.classList.add('active');
+    }
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeMobileSidebar() {
+    if (sidebar) {
+      sidebar.classList.remove('mobile-open');
+    }
+    if (sidebarMobileOverlay) {
+      sidebarMobileOverlay.classList.remove('active');
+    }
+    if (profilePopover) {
+      profilePopover.classList.remove('active');
+    }
+    document.body.style.overflow = '';
+  }
+
+  if (mobileMenuBtn) {
+    mobileMenuBtn.addEventListener('click', () => {
+      if (sidebar && sidebar.classList.contains('mobile-open')) {
+        closeMobileSidebar();
+      } else {
+        openMobileSidebar();
+      }
+    });
+  }
+
+  if (sidebarMobileOverlay) {
+    sidebarMobileOverlay.addEventListener('click', closeMobileSidebar);
+  }
+
+  // Close mobile sidebar when a nav link is clicked (for better UX)
+  navLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        closeMobileSidebar();
+      }
+    });
+  });
+
+  // Auto-close mobile sidebar on window resize to desktop
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      closeMobileSidebar();
+    }
+  });
+
+  // ==========================================================================
   // 2. USER PROFILE POPOVER TOGGLE (like @davidm_ai)
   // ==========================================================================
   if (profileTrigger && profilePopover) {

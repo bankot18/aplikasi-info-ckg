@@ -303,10 +303,21 @@
     <!-- ==========================================================================
          MAIN CONTENT AREA
          ========================================================================== -->
+    <!-- Mobile Sidebar Overlay Backdrop -->
+    <div class="sidebar-mobile-overlay" id="sidebarMobileOverlay"></div>
+
     <main class="main-content">
       <!-- Top Dashboard App Bar -->
       <header class="topbar">
         <div class="topbar-left">
+          <!-- Mobile Hamburger Menu Button (visible only on mobile) -->
+          <button class="mobile-hamburger-btn" id="mobileMenuBtn" title="Buka Menu">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
           <div class="page-title-badge" id="topbarCategory">PORTAL RESMI SICEKAS</div>
           <h1 class="page-title" id="topbarTitle">Beranda SICEKAS</h1>
           <p class="page-subtitle" id="topbarSubtitle">Sistem Informasi Catat Pelaporan Puskesmas Banjaran Kota</p>
