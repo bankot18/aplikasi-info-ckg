@@ -1,6 +1,12 @@
 _worker.js
 wrangler.toml
+.assetsignore
+.git
+.github
+node_modules
 schema.sql
+Rusak
 functions
 *.md
+server.ps1
 download
