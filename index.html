@@ -1002,14 +1002,41 @@
                 </div>
               </div>
 
-              <!-- 2. Pilih Kelas -->
+              <!-- 2. Pilih Kelas (Dropdown + Search) -->
               <div class="filter-group-col filter-col-kelas">
                 <label class="filter-label" for="filterSelectKelas">
                   <i class="bi bi-grid-fill"></i> Pilih Kelas:
                 </label>
-                <select id="filterSelectKelas" class="form-control filter-input-control" onchange="renderSekolahView()">
+
+                <!-- Native select kept hidden for compatibility -->
+                <select id="filterSelectKelas" class="form-control" style="display: none;">
                   <option value="">-- Semua Kelas --</option>
                 </select>
+
+                <!-- Searchable Combobox Kelas -->
+                <div class="searchable-combobox-wrapper" id="comboboxKelasWrapper">
+                  <div class="combobox-trigger" id="comboboxKelasTrigger" onclick="toggleKelasDropdown(event)">
+                    <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+                      <i class="bi bi-search combobox-icon-search"></i>
+                      <span class="combobox-label-text" id="comboboxKelasLabel">-- Semua Kelas --</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <button type="button" class="combobox-clear-btn" id="comboboxKelasClearBtn" onclick="clearKelasFilter(event)" title="Reset Kelas" style="display: none;">&times;</button>
+                      <i class="bi bi-chevron-down combobox-chevron"></i>
+                    </div>
+                  </div>
+
+                  <div class="combobox-dropdown-panel" id="comboboxKelasPanel" style="display: none;">
+                    <div class="combobox-search-box">
+                      <i class="bi bi-search"></i>
+                      <input type="text" id="inputSearchKelasDropdown" class="combobox-search-input" placeholder="Ketik kelas... (1, 7, 10...)" oninput="onFilterKelasSearchInput(this.value)" autocomplete="off">
+                      <span class="search-input-clear" onclick="clearSearchInputKelas()">&times;</span>
+                    </div>
+                    <div class="combobox-options-container" id="comboboxKelasOptions">
+                      <!-- Dynamically rendered -->
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- 3. Tombol Tampilkan -->

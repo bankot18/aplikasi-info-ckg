@@ -9888,6 +9888,7 @@ function toggleSekolahDropdown(event) {
   if (isOpen) {
     closeSekolahDropdown();
   } else {
+    closeKelasDropdown();
     panel.style.display = 'flex';
     trigger.classList.add('open');
     const searchInput = document.getElementById('inputSearchSekolahDropdown');
@@ -10025,11 +10026,155 @@ function renderSearchableSekolahOptions(filterKeyword = '') {
   container.innerHTML = html;
 }
 
+// ==========================================================================
+// 🔍 SEARCHABLE COMBOBOX LOGIC UNTUK FILTER KELAS
+// ==========================================================================
+function toggleKelasDropdown(event) {
+  if (event) event.stopPropagation();
+  const panel = document.getElementById('comboboxKelasPanel');
+  const trigger = document.getElementById('comboboxKelasTrigger');
+  if (!panel || !trigger) return;
+
+  const isOpen = panel.style.display === 'flex';
+  if (isOpen) {
+    closeKelasDropdown();
+  } else {
+    closeSekolahDropdown();
+    panel.style.display = 'flex';
+    trigger.classList.add('open');
+    const searchInput = document.getElementById('inputSearchKelasDropdown');
+    if (searchInput) {
+      searchInput.value = '';
+      setTimeout(() => searchInput.focus(), 50);
+    }
+    renderSearchableKelasOptions('');
+  }
+}
+
+function closeKelasDropdown() {
+  const panel = document.getElementById('comboboxKelasPanel');
+  const trigger = document.getElementById('comboboxKelasTrigger');
+  if (panel) panel.style.display = 'none';
+  if (trigger) trigger.classList.remove('open');
+}
+
+function onFilterKelasSearchInput(keyword) {
+  renderSearchableKelasOptions(keyword);
+}
+
+function clearSearchInputKelas() {
+  const searchInput = document.getElementById('inputSearchKelasDropdown');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.focus();
+  }
+  renderSearchableKelasOptions('');
+}
+
+function selectKelasComboboxOption(value, label) {
+  const selectKelas = document.getElementById('filterSelectKelas');
+  const labelEl = document.getElementById('comboboxKelasLabel');
+  const clearBtn = document.getElementById('comboboxKelasClearBtn');
+
+  if (selectKelas) {
+    selectKelas.value = value;
+  }
+  if (labelEl) {
+    labelEl.textContent = label || '-- Semua Kelas --';
+  }
+  if (clearBtn) {
+    clearBtn.style.display = value ? 'inline-block' : 'none';
+  }
+
+  closeKelasDropdown();
+  renderSekolahView();
+}
+
+function clearKelasFilter(event) {
+  if (event) event.stopPropagation();
+  selectKelasComboboxOption('', '-- Semua Kelas --');
+}
+
+function renderSearchableKelasOptions(filterKeyword = '') {
+  const container = document.getElementById('comboboxKelasOptions');
+  if (!container) return;
+
+  const selectSekolah = document.getElementById('filterSelectSekolah');
+  const selectKelas = document.getElementById('filterSelectKelas');
+  const selectedVal = (selectKelas?.value || '').trim().toUpperCase();
+  const kw = filterKeyword.trim().toLowerCase();
+
+  const chosenSekolah = (selectSekolah?.value || '').trim();
+  const standardClasses = getClassesForSchool(chosenSekolah);
+  const kelasSet = new Set(standardClasses.map(k => k.toUpperCase()));
+
+  sekolahRecords.forEach(r => {
+    if (!chosenSekolah || (r.sekolah || '').toUpperCase() === chosenSekolah.toUpperCase()) {
+      if (r.kelas && r.kelas.trim()) kelasSet.add(r.kelas.trim().toUpperCase());
+    }
+  });
+
+  const sortedKelas = Array.from(kelasSet).sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+    return numA - numB || a.localeCompare(b);
+  });
+
+  const filteredKelas = sortedKelas.filter(k => !kw || k.toLowerCase().includes(kw));
+
+  const totalMatches = (kw ? 0 : 1) + filteredKelas.length;
+
+  if (totalMatches === 0) {
+    container.innerHTML = `
+      <div style="padding: 18px 12px; text-align: center; color: #94a3b8; font-size: 12px;">
+        <i class="bi bi-search" style="font-size: 16px; display: block; margin-bottom: 4px;"></i>
+        Tidak ada kelas yang cocok dengan "<strong>${escapeHtml(filterKeyword)}</strong>"
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+
+  // Default / Semua Kelas
+  if (!kw || '-- semua kelas --'.includes(kw) || 'semua'.includes(kw)) {
+    const isSelected = !selectedVal;
+    html += `
+      <div class="combobox-option-item ${isSelected ? 'selected' : ''}" onclick="selectKelasComboboxOption('', '-- Semua Kelas --')">
+        <span style="display: flex; align-items: center; gap: 6px;">
+          <i class="bi bi-grid-fill" style="color: #6366f1;"></i>
+          <strong>-- Semua Kelas --</strong>
+        </span>
+        ${isSelected ? '<i class="bi bi-check2" style="font-weight: 800;"></i>' : ''}
+      </div>
+    `;
+  }
+
+  filteredKelas.forEach(item => {
+    const isSelected = selectedVal === item.toUpperCase();
+    html += `
+      <div class="combobox-option-item ${isSelected ? 'selected' : ''}" onclick="selectKelasComboboxOption('${escapeHtml(item)}', '${escapeHtml(item)}')">
+        <span style="display: flex; align-items: center; gap: 6px;">
+          <i class="bi bi-mortarboard" style="color: #059669;"></i>
+          ${escapeHtml(item)}
+        </span>
+        ${isSelected ? '<i class="bi bi-check2" style="font-weight: 800;"></i>' : ''}
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
 // Global click listener to close searchable combobox when clicking outside
 document.addEventListener('click', function (e) {
-  const wrapper = document.getElementById('comboboxSekolahWrapper');
-  if (wrapper && !wrapper.contains(e.target)) {
+  const wrapperSekolah = document.getElementById('comboboxSekolahWrapper');
+  if (wrapperSekolah && !wrapperSekolah.contains(e.target)) {
     closeSekolahDropdown();
+  }
+  const wrapperKelas = document.getElementById('comboboxKelasWrapper');
+  if (wrapperKelas && !wrapperKelas.contains(e.target)) {
+    closeKelasDropdown();
   }
 });
 
@@ -10084,6 +10229,16 @@ function updateKelasDropdownOptions() {
     sortedKelas.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
   
   if (savedKelas && kelasSet.has(savedKelas.toUpperCase())) selectKelas.value = savedKelas;
+
+  // Sync Kelas Combobox Label
+  const kelasLabelEl = document.getElementById('comboboxKelasLabel');
+  const kelasClearBtn = document.getElementById('comboboxKelasClearBtn');
+  if (kelasLabelEl) {
+    kelasLabelEl.textContent = selectKelas.value || '-- Semua Kelas --';
+  }
+  if (kelasClearBtn) {
+    kelasClearBtn.style.display = selectKelas.value ? 'inline-block' : 'none';
+  }
 }
 
 function updateTambahSiswaKelasDropdown() {
