@@ -9583,14 +9583,39 @@ function showMaintenanceScreen(message) {
         <i class="bi bi-clock-history"></i>
         Pencatatan CKG Puskesmas Banjaran Kota
       </div>
-      <div style="margin-top: 24px;">
-        <button onclick="location.reload()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-          <i class="bi bi-arrow-clockwise"></i> Coba Lagi
+      <div style="margin-top: 26px;">
+        <button onclick="exitMaintenanceToLogin()" style="background: linear-gradient(135deg, #0284c7, #2563eb); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 12px 26px; border-radius: 12px; font-size: 13.5px; font-weight: 800; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);">
+          <i class="bi bi-box-arrow-left" style="font-size: 16px;"></i> Kembali ke Halaman Login
         </button>
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
+}
+
+function exitMaintenanceToLogin() {
+  sendUserHeartbeat('offline');
+  sessionStorage.removeItem('ckg_logged_in');
+  sessionStorage.removeItem('ckg_user_name');
+  sessionStorage.removeItem('ckg_user_role');
+
+  const overlay = document.getElementById('maintenanceFullscreenOverlay');
+  if (overlay) overlay.remove();
+
+  if (window._heartbeatInterval) {
+    clearInterval(window._heartbeatInterval);
+    window._heartbeatInterval = null;
+  }
+  if (window._fetchSessionsInterval) {
+    clearInterval(window._fetchSessionsInterval);
+    window._fetchSessionsInterval = null;
+  }
+  if (window._cloudSyncInterval) {
+    clearInterval(window._cloudSyncInterval);
+    window._cloudSyncInterval = null;
+  }
+
+  checkAuthSession();
 }
 
 /* ==========================================================================
