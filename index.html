@@ -2150,7 +2150,7 @@
 
   <!-- MODAL 1: POP-UP IDENTITAS & PEMERIKSAAN KESEHATAN SISWA DENGAN TAB KATEGORI & DEGRADASI HIJAU-PUTIH -->
   <div id="modalPemeriksaanSiswa" class="modal-overlay">
-    <div class="modal-container sekolah-modal-container" style="max-width: 860px; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #a7f3d0; box-shadow: 0 20px 40px rgba(5, 150, 105, 0.15);">
+    <div class="modal-container sekolah-modal-container" style="max-width: 960px; width: 95vw; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #a7f3d0; box-shadow: 0 20px 40px rgba(5, 150, 105, 0.15);">
       <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; padding: 16px 22px;">
         <div class="modal-title" style="font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
           <i class="bi bi-heart-pulse-fill"></i> Pemeriksaan Kesehatan Siswa (CKG Sekolah)
@@ -2181,26 +2181,28 @@
 
         <!-- CATEGORY TAB SELECTOR (KLIK UNTUK MEMILIH FORMAT PENGISIAN) -->
         <div class="ckg-category-tab-bar" style="margin-bottom: 16px;">
-          <button type="button" class="sekolah-cat-tab active" id="tabBtnIdentitas" onclick="switchSekolahModalTab('identitas')" style="border-radius: 10px; border: 1.5px solid #047857; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
-            <i class="bi bi-person-vcard-fill"></i> 1. Identitas
-          </button>
-          <button type="button" class="sekolah-cat-tab" id="tabBtnAntro" onclick="switchSekolahModalTab('antro')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
-            <i class="bi bi-activity"></i> 2. Antropometri
-          </button>
-          <button type="button" class="sekolah-cat-tab" id="tabBtnVital" onclick="switchSekolahModalTab('vital')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
-            <i class="bi bi-heart-pulse-fill"></i> 3. Tanda Vital
-          </button>
-          <button type="button" class="sekolah-cat-tab" id="tabBtnLab" onclick="switchSekolahModalTab('lab')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
-            <i class="bi bi-droplet-fill"></i> 4. Laboratorium
-          </button>
-          <button type="button" class="sekolah-cat-tab" id="tabBtnOrgan" onclick="switchSekolahModalTab('organ')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
-            <i class="bi bi-eye-fill"></i> 5. Organ Indera
-          </button>
-          <button type="button" class="sekolah-cat-tab" id="tabBtnKesimpulan" onclick="switchSekolahModalTab('kesimpulan')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
-            <i class="bi bi-clipboard2-check-fill"></i> 6. Kesimpulan
-          </button>
-          <button type="button" class="sekolah-cat-tab" id="tabBtnSemua" onclick="switchSekolahModalTab('semua')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
-            <i class="bi bi-card-checklist"></i> 📑 Tampilkan Semua Format
+          <div class="ckg-tab-grid-6">
+            <button type="button" class="sekolah-cat-tab active" id="tabBtnIdentitas" onclick="switchSekolahModalTab('identitas')">
+              <i class="bi bi-person-vcard-fill"></i> 1. Identitas
+            </button>
+            <button type="button" class="sekolah-cat-tab" id="tabBtnAntro" onclick="switchSekolahModalTab('antro')">
+              <i class="bi bi-person-arms-up"></i> 2. Antropometri
+            </button>
+            <button type="button" class="sekolah-cat-tab" id="tabBtnVital" onclick="switchSekolahModalTab('vital')">
+              <i class="bi bi-heart-pulse-fill"></i> 3. Tanda Vital
+            </button>
+            <button type="button" class="sekolah-cat-tab" id="tabBtnLab" onclick="switchSekolahModalTab('lab')">
+              <i class="bi bi-droplet-fill"></i> 4. Laboratorium
+            </button>
+            <button type="button" class="sekolah-cat-tab" id="tabBtnOrgan" onclick="switchSekolahModalTab('organ')">
+              <i class="bi bi-eye-fill"></i> 5. Organ Indera
+            </button>
+            <button type="button" class="sekolah-cat-tab" id="tabBtnKesimpulan" onclick="switchSekolahModalTab('kesimpulan')">
+              <i class="bi bi-clipboard2-check-fill"></i> 6. Kesimpulan
+            </button>
+          </div>
+          <button type="button" class="sekolah-cat-tab sekolah-cat-tab-all" id="tabBtnSemua" onclick="switchSekolahModalTab('semua')">
+            <i class="bi bi-card-checklist"></i> 📑 Tampilkan Semua Format Sekaligus (Mode Formulir Lengkap)
           </button>
         </div>
 

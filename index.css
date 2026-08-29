@@ -5012,15 +5012,51 @@ body.dark-mode .badge-purple {
 
 .ckg-category-tab-bar {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-bottom: 16px;
   width: 100%;
+  box-sizing: border-box;
+}
+
+.ckg-tab-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sekolah-cat-tab {
-  flex: 1;
-  min-width: 120px;
-  padding: 9px 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  border: 1.5px solid #a7f3d0;
+  background: #f0fdf4;
+  color: #065f46;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.sekolah-cat-tab.active {
+  border-color: #047857 !important;
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25) !important;
+}
+
+.sekolah-cat-tab-all {
+  width: 100%;
+  padding: 8px 12px;
   border-radius: 10px;
   font-weight: 700;
   font-size: 12px;
@@ -5029,20 +5065,28 @@ body.dark-mode .badge-purple {
   justify-content: center;
   gap: 6px;
   cursor: pointer;
+  border: 1.5px dashed #10b981;
+  background: #f0fdf4;
+  color: #047857;
+  box-sizing: border-box;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.sekolah-cat-tab#tabBtnSemua {
-  flex: 0 0 auto;
-  min-width: 90px;
+.sekolah-cat-tab-all.active {
+  border: 1.5px solid #047857 !important;
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25) !important;
 }
 
-.sekolah-cat-tab:hover {
+.sekolah-cat-tab:hover,
+.sekolah-cat-tab-all:hover {
   transform: translateY(-1px);
-  filter: brightness(1.05);
+  filter: brightness(1.04);
 }
 
-.sekolah-cat-tab:active {
+.sekolah-cat-tab:active,
+.sekolah-cat-tab-all:active {
   transform: translateY(0);
 }
 
@@ -5055,10 +5099,23 @@ body.dark-mode .panel-action-footer {
   border-color: #065f46 !important;
 }
 
-body.dark-mode .sekolah-cat-tab:not(.active) {
+body.dark-mode .sekolah-cat-tab:not(.active),
+body.dark-mode .sekolah-cat-tab-all:not(.active) {
   background: #0f172a !important;
   border-color: #065f46 !important;
   color: #6ee7b7 !important;
+}
+
+/* Tablet Responsive for Modal Tabs (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .ckg-tab-grid-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  .sekolah-cat-tab {
+    font-size: 11.5px !important;
+    padding: 8px 6px !important;
+  }
 }
 
 /* ==========================================================================
@@ -5168,13 +5225,19 @@ body.dark-mode .sekolah-cat-tab:not(.active) {
     text-align: left !important;
   }
 
-  /* Category Tab Bar on Mobile: 2x2 Grid + Full-Width Semua Format (100% Visible, No Clipping) */
+  /* Category Tab Bar on Mobile: 2x3 Grid for Steps 1-6 + Full-Width Semua Format (100% Visible, No Clipping) */
   .ckg-category-tab-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .ckg-tab-grid-6 {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 8px !important;
-    overflow: visible !important;
-    padding-bottom: 0 !important;
+    gap: 6px !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
@@ -5196,12 +5259,17 @@ body.dark-mode .sekolah-cat-tab:not(.active) {
     min-height: 40px !important;
   }
 
-  .sekolah-cat-tab#tabBtnSemua {
-    grid-column: 1 / -1 !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
-    padding: 9px 12px !important;
+  .sekolah-cat-tab-all {
+    width: 100% !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    padding: 9px 10px !important;
     min-height: 38px !important;
+    text-align: center !important;
+    justify-content: center !important;
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
   }
 
   /* Action Buttons Footer on Mobile: Full-width stacked buttons */
