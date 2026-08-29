@@ -214,7 +214,7 @@ function populateUserDropdowns() {
   const filterSimpusSelect = document.getElementById('filterSimpusPetugas');
   const importTargetSelect = document.getElementById('importTargetPetugas');
 
-  if (loginSelect) {
+   if (loginSelect) {
     const prevVal = loginSelect.value;
     loginSelect.innerHTML = '<option value="">-- Pilih Nama Pegawai --</option>';
     usersDb.forEach((u) => {
@@ -226,6 +226,17 @@ function populateUserDropdowns() {
       if (prevVal && u.nama_user === prevVal) opt.selected = true;
       loginSelect.appendChild(opt);
     });
+
+    // Sync Pegawai Combobox Label
+    const pegawaiLabelEl = document.getElementById('comboboxPegawaiLabel');
+    const pegawaiClearBtn = document.getElementById('comboboxPegawaiClearBtn');
+    if (pegawaiLabelEl) {
+      const selectedOpt = loginSelect.options[loginSelect.selectedIndex];
+      pegawaiLabelEl.textContent = loginSelect.value ? (selectedOpt?.textContent || loginSelect.value) : '-- Pilih Nama Pegawai --';
+    }
+    if (pegawaiClearBtn) {
+      pegawaiClearBtn.style.display = loginSelect.value ? 'inline-block' : 'none';
+    }
   }
 
   if (targetSelect) {
@@ -739,7 +750,160 @@ function selectPegawaiQuick(namaPegawai) {
       break;
     }
   }
+  // Sync combobox label
+  const labelEl = document.getElementById('comboboxPegawaiLabel');
+  const clearBtn = document.getElementById('comboboxPegawaiClearBtn');
+  if (labelEl) {
+    const selectedOpt = selectEl.options[selectEl.selectedIndex];
+    labelEl.textContent = selectEl.value ? (selectedOpt?.textContent || selectEl.value) : '-- Pilih Nama Pegawai --';
+  }
+  if (clearBtn) {
+    clearBtn.style.display = selectEl.value ? 'inline-block' : 'none';
+  }
 }
+
+// ==========================================================================
+// 🔍 SEARCHABLE COMBOBOX LOGIC UNTUK LOGIN PEGAWAI
+// ==========================================================================
+function togglePegawaiDropdown(event) {
+  if (event) event.stopPropagation();
+  const panel = document.getElementById('comboboxPegawaiPanel');
+  const trigger = document.getElementById('comboboxPegawaiTrigger');
+  if (!panel || !trigger) return;
+
+  const isOpen = panel.style.display === 'flex';
+  if (isOpen) {
+    closePegawaiDropdown();
+  } else {
+    panel.style.display = 'flex';
+    trigger.classList.add('open');
+    const searchInput = document.getElementById('inputSearchPegawaiDropdown');
+    if (searchInput) {
+      searchInput.value = '';
+      setTimeout(() => searchInput.focus(), 50);
+    }
+    renderSearchablePegawaiOptions('');
+  }
+}
+
+function closePegawaiDropdown() {
+  const panel = document.getElementById('comboboxPegawaiPanel');
+  const trigger = document.getElementById('comboboxPegawaiTrigger');
+  if (panel) panel.style.display = 'none';
+  if (trigger) trigger.classList.remove('open');
+}
+
+function onFilterPegawaiSearchInput(keyword) {
+  renderSearchablePegawaiOptions(keyword);
+}
+
+function clearSearchInputPegawai() {
+  const searchInput = document.getElementById('inputSearchPegawaiDropdown');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.focus();
+  }
+  renderSearchablePegawaiOptions('');
+}
+
+function selectPegawaiComboboxOption(value, label) {
+  const selectEl = document.getElementById('loginPegawaiSelect');
+  const labelEl = document.getElementById('comboboxPegawaiLabel');
+  const clearBtn = document.getElementById('comboboxPegawaiClearBtn');
+
+  if (selectEl) {
+    selectEl.value = value;
+  }
+  if (labelEl) {
+    labelEl.textContent = label || '-- Pilih Nama Pegawai --';
+  }
+  if (clearBtn) {
+    clearBtn.style.display = value ? 'inline-block' : 'none';
+  }
+
+  closePegawaiDropdown();
+}
+
+function clearPegawaiFilter(event) {
+  if (event) event.stopPropagation();
+  selectPegawaiComboboxOption('', '-- Pilih Nama Pegawai --');
+}
+
+function renderSearchablePegawaiOptions(filterKeyword = '') {
+  const container = document.getElementById('comboboxPegawaiOptions');
+  if (!container) return;
+
+  const selectEl = document.getElementById('loginPegawaiSelect');
+  const selectedVal = (selectEl?.value || '').trim();
+  const kw = filterKeyword.trim().toLowerCase();
+
+  // Group users by role
+  const roleGroups = {};
+  const roleOrder = ['Admin', 'Koordinator', 'Petugas'];
+  const roleIcons = {
+    'Admin': 'bi-shield-lock-fill',
+    'Koordinator': 'bi-person-fill-gear',
+    'Petugas': 'bi-person-fill'
+  };
+  const roleColors = {
+    'Admin': '#dc2626',
+    'Koordinator': '#d97706',
+    'Petugas': '#2563eb'
+  };
+
+  usersDb.forEach(u => {
+    const role = u.role || 'Petugas';
+    if (!roleGroups[role]) roleGroups[role] = [];
+    const displayName = `${u.nama_user}${role !== 'Petugas' ? ' (' + role + ')' : ''}`;
+    if (!kw || u.nama_user.toLowerCase().includes(kw) || displayName.toLowerCase().includes(kw)) {
+      roleGroups[role].push({ value: u.nama_user, display: displayName, role });
+    }
+  });
+
+  const totalMatches = roleOrder.reduce((sum, r) => sum + (roleGroups[r]?.length || 0), 0);
+
+  if (totalMatches === 0) {
+    container.innerHTML = `
+      <div style="padding: 18px 12px; text-align: center; color: #94a3b8; font-size: 12px;">
+        <i class="bi bi-search" style="font-size: 16px; display: block; margin-bottom: 4px;"></i>
+        Tidak ada pegawai yang cocok dengan "<strong>${escapeHtml(filterKeyword)}</strong>"
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+
+  roleOrder.forEach(role => {
+    const users = roleGroups[role];
+    if (!users || users.length === 0) return;
+
+    html += `<div class="combobox-group-header"><span><i class="${roleIcons[role]}" style="color: ${roleColors[role]};"></i> ${role}</span><span>(${users.length})</span></div>`;
+
+    users.forEach(u => {
+      const isSelected = selectedVal === u.value;
+      html += `
+        <div class="combobox-option-item ${isSelected ? 'selected' : ''}" onclick="selectPegawaiComboboxOption('${escapeHtml(u.value)}', '${escapeHtml(u.display)}')">
+          <span style="display: flex; align-items: center; gap: 6px;">
+            <i class="${roleIcons[u.role]}" style="color: ${roleColors[u.role]};"></i>
+            ${escapeHtml(u.display)}
+          </span>
+          ${isSelected ? '<i class="bi bi-check2" style="font-weight: 800;"></i>' : ''}
+        </div>
+      `;
+    });
+  });
+
+  container.innerHTML = html;
+}
+
+// Global click listener to close pegawai combobox
+document.addEventListener('click', function (e) {
+  const wrapperPegawai = document.getElementById('comboboxPegawaiWrapper');
+  if (wrapperPegawai && !wrapperPegawai.contains(e.target)) {
+    closePegawaiDropdown();
+  }
+});
 
 /* ==========================================================================
    📊 LOADING OVERLAY HELPERS
