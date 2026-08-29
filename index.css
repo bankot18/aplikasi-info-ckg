@@ -4052,6 +4052,382 @@ body.dark-mode .badge-purple {
   .split-visual-panel {
     display: none !important;
   }
+/* ==========================================================================
+   CKG SEKOLAH FILTER CARD & SEARCHABLE COMBOBOX (GLOBAL / DESKTOP)
+   ========================================================================== */
+.sekolah-filter-card {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+body.dark-mode .sekolah-filter-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.sekolah-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sekolah-filter-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #4338ca;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+body.dark-mode .sekolah-filter-title {
+  color: #a5b4fc;
+}
+
+/* Horizontal Row for Desktop (Sejajar) */
+.sekolah-filter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.filter-group-col {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.filter-col-sekolah {
+  flex: 3;
+  min-width: 260px;
+}
+
+.filter-col-kelas {
+  flex: 1.5;
+  min-width: 140px;
+}
+
+.filter-col-btn {
+  flex: 0 0 auto;
+}
+
+.filter-col-search {
+  flex: 2.5;
+  min-width: 220px;
+}
+
+.filter-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+body.dark-mode .filter-label {
+  color: #94a3b8;
+}
+
+.filter-label-spacer {
+  visibility: hidden;
+}
+
+.filter-input-control {
+  height: 42px !important;
+  border-radius: 10px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+}
+
+body.dark-mode .filter-input-control {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.filter-input-control:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+  outline: none !important;
+}
+
+.btn-tampilkan-sekolah {
+  height: 42px !important;
+  padding: 0 20px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, #4f46e5, #4338ca) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-tampilkan-sekolah:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35) !important;
+}
+
+.filter-search-box-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.search-box-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.filter-search-input {
+  padding-left: 36px !important;
+  width: 100% !important;
+}
+
+/* SEARCHABLE COMBOBOX COMPONENT */
+.searchable-combobox-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.combobox-trigger {
+  height: 42px;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+body.dark-mode .combobox-trigger {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.combobox-trigger:hover,
+.combobox-trigger.open {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.combobox-icon-search {
+  color: #6366f1;
+  font-size: 13px;
+}
+
+.combobox-label-text {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.dark-mode .combobox-label-text {
+  color: #f8fafc;
+}
+
+.combobox-clear-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.combobox-clear-btn:hover {
+  color: #ef4444;
+}
+
+.combobox-chevron {
+  color: #64748b;
+  font-size: 11px;
+  transition: transform 0.2s ease;
+}
+
+.combobox-trigger.open .combobox-chevron {
+  transform: rotate(180deg);
+}
+
+/* Floating Dropdown Panel */
+.combobox-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+  max-height: 340px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+body.dark-mode .combobox-dropdown-panel {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.combobox-search-box {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+}
+
+body.dark-mode .combobox-search-box {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.combobox-search-box i {
+  color: #6366f1;
+  font-size: 13px;
+}
+
+.combobox-search-input {
+  flex: 1;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  background: #ffffff;
+  outline: none;
+}
+
+body.dark-mode .combobox-search-input {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.combobox-search-input:focus {
+  border-color: #6366f1;
+}
+
+.search-input-clear {
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+.search-input-clear:hover {
+  color: #ef4444;
+}
+
+.combobox-options-container {
+  overflow-y: auto;
+  max-height: 270px;
+  padding: 4px 0;
+}
+
+.combobox-group-header {
+  padding: 6px 12px;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #6366f1;
+  background: #f1f5f9;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+body.dark-mode .combobox-group-header {
+  background: #0f172a;
+  color: #a5b4fc;
+}
+
+.combobox-option-item {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.15s ease;
+}
+
+body.dark-mode .combobox-option-item {
+  color: #e2e8f0;
+}
+
+.combobox-option-item:hover,
+.combobox-option-item.highlighted {
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 700;
+}
+
+body.dark-mode .combobox-option-item:hover,
+body.dark-mode .combobox-option-item.highlighted {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+.combobox-option-item.selected {
+  background: #e0e7ff;
+  color: #3730a3;
+  font-weight: 800;
+}
+
+body.dark-mode .combobox-option-item.selected {
+  background: rgba(99, 102, 241, 0.35);
+  color: #c7d2fe;
 }
 
 @media (max-width: 768px) {
@@ -4697,91 +5073,58 @@ body.dark-mode .badge-purple {
   .sekolah-filter-title {
     font-size: 12.5px !important;
     font-weight: 800 !important;
-    color: #7c3aed !important;
-    margin-bottom: 10px !important;
+    color: #4338ca !important;
+    margin-bottom: 8px !important;
     display: flex !important;
     align-items: center !important;
     gap: 6px !important;
   }
 
   body.dark-mode .sekolah-filter-title {
-    color: #a78bfa !important;
+    color: #a5b4fc !important;
   }
 
-  .sekolah-filter-grid {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
+  .sekolah-filter-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
 
-  .filter-item-sekolah,
-  .filter-item-kelas {
+  .filter-group-col {
     width: 100% !important;
     min-width: 0 !important;
     box-sizing: border-box !important;
   }
 
-  .filter-item-sekolah label,
-  .filter-item-kelas label,
-  .filter-item-search label {
+  .filter-label {
     font-size: 10.5px !important;
     font-weight: 700 !important;
     color: #64748b !important;
-    margin-bottom: 3px !important;
-    display: block !important;
+    margin-bottom: 4px !important;
+    display: flex !important;
   }
 
-  body.dark-mode .filter-item-sekolah label,
-  body.dark-mode .filter-item-kelas label,
-  body.dark-mode .filter-item-search label {
+  body.dark-mode .filter-label {
     color: #94a3b8 !important;
   }
 
-  .filter-item-sekolah .form-control,
-  .filter-item-kelas .form-control,
-  .filter-item-search .form-control {
+  .filter-label-spacer {
+    display: none !important;
+  }
+
+  .filter-input-control,
+  .combobox-trigger {
     width: 100% !important;
     height: 40px !important;
-    border-radius: 10px !important;
-    border: 1px solid #cbd5e1 !important;
-    background: #ffffff !important;
-    font-size: 11.5px !important;
-    font-weight: 700 !important;
-    color: #1e293b !important;
-    padding: 6px 8px !important;
-    box-sizing: border-box !important;
-  }
-
-  body.dark-mode .filter-item-sekolah .form-control,
-  body.dark-mode .filter-item-kelas .form-control,
-  body.dark-mode .filter-item-search .form-control {
-    background: #0f172a !important;
-    border-color: #334155 !important;
-    color: #f8fafc !important;
-  }
-
-  .filter-item-btn {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
+    font-size: 12px !important;
   }
 
   .btn-tampilkan-sekolah {
     width: 100% !important;
     height: 40px !important;
-    border-radius: 10px !important;
-    background: linear-gradient(135deg, #4f46e5, #4338ca) !important;
-    color: #ffffff !important;
-    font-weight: 800 !important;
-    font-size: 13px !important;
-    border: none !important;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important;
-    box-sizing: border-box !important;
+    font-size: 12.5px !important;
   }
 
   .filter-item-search {

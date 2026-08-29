@@ -9852,6 +9852,16 @@ function populateSekolahFilterDropdowns() {
     }
     selectSekolah.innerHTML = html;
     if (savedSekolah) selectSekolah.value = savedSekolah;
+
+    // Sync Searchable Combobox Trigger Label
+    const labelEl = document.getElementById('comboboxSekolahLabel');
+    const clearBtn = document.getElementById('comboboxSekolahClearBtn');
+    if (labelEl) {
+      labelEl.textContent = selectSekolah.value || '-- Semua Sekolah --';
+    }
+    if (clearBtn) {
+      clearBtn.style.display = selectSekolah.value ? 'inline-block' : 'none';
+    }
   }
 
   if (datalistTambah) {
@@ -9864,6 +9874,164 @@ function populateSekolahFilterDropdowns() {
 
   updateKelasDropdownOptions();
 }
+
+// ==========================================================================
+// 🔍 SEARCHABLE COMBOBOX LOGIC UNTUK FILTER SEKOLAH
+// ==========================================================================
+function toggleSekolahDropdown(event) {
+  if (event) event.stopPropagation();
+  const panel = document.getElementById('comboboxSekolahPanel');
+  const trigger = document.getElementById('comboboxSekolahTrigger');
+  if (!panel || !trigger) return;
+
+  const isOpen = panel.style.display === 'flex';
+  if (isOpen) {
+    closeSekolahDropdown();
+  } else {
+    panel.style.display = 'flex';
+    trigger.classList.add('open');
+    const searchInput = document.getElementById('inputSearchSekolahDropdown');
+    if (searchInput) {
+      searchInput.value = '';
+      setTimeout(() => searchInput.focus(), 50);
+    }
+    renderSearchableSekolahOptions('');
+  }
+}
+
+function closeSekolahDropdown() {
+  const panel = document.getElementById('comboboxSekolahPanel');
+  const trigger = document.getElementById('comboboxSekolahTrigger');
+  if (panel) panel.style.display = 'none';
+  if (trigger) trigger.classList.remove('open');
+}
+
+function onFilterSekolahSearchInput(keyword) {
+  renderSearchableSekolahOptions(keyword);
+}
+
+function clearSearchInputSekolah() {
+  const searchInput = document.getElementById('inputSearchSekolahDropdown');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.focus();
+  }
+  renderSearchableSekolahOptions('');
+}
+
+function selectSekolahComboboxOption(value, label) {
+  const selectSekolah = document.getElementById('filterSelectSekolah');
+  const labelEl = document.getElementById('comboboxSekolahLabel');
+  const clearBtn = document.getElementById('comboboxSekolahClearBtn');
+
+  if (selectSekolah) {
+    selectSekolah.value = value;
+  }
+  if (labelEl) {
+    labelEl.textContent = label || '-- Semua Sekolah --';
+  }
+  if (clearBtn) {
+    clearBtn.style.display = value ? 'inline-block' : 'none';
+  }
+
+  closeSekolahDropdown();
+  updateKelasDropdownOptions();
+  renderSekolahView();
+}
+
+function clearSekolahFilter(event) {
+  if (event) event.stopPropagation();
+  selectSekolahComboboxOption('', '-- Semua Sekolah --');
+}
+
+function renderSearchableSekolahOptions(filterKeyword = '') {
+  const container = document.getElementById('comboboxSekolahOptions');
+  if (!container) return;
+
+  const selectSekolah = document.getElementById('filterSelectSekolah');
+  const selectedVal = (selectSekolah?.value || '').trim().toUpperCase();
+  const kw = filterKeyword.trim().toLowerCase();
+
+  const sdList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SD').map(s => s.nama);
+  const smpList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMP').map(s => s.nama);
+  const smaList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMA').map(s => s.nama);
+
+  const masterSet = new Set(MASTER_SARANA_SEKOLAH.map(s => s.nama.toUpperCase()));
+  const extraSchools = [];
+  sekolahRecords.forEach(r => {
+    if (r.sekolah && r.sekolah.trim()) {
+      const up = r.sekolah.trim().toUpperCase();
+      if (!masterSet.has(up) && !extraSchools.includes(up)) extraSchools.push(up);
+    }
+  });
+
+  const filterFn = name => !kw || name.toLowerCase().includes(kw);
+
+  const filteredSD = sdList.filter(filterFn);
+  const filteredSMP = smpList.filter(filterFn);
+  const filteredSMA = smaList.filter(filterFn);
+  const filteredExtra = extraSchools.filter(filterFn);
+
+  const totalMatches = (kw ? 0 : 1) + filteredSD.length + filteredSMP.length + filteredSMA.length + filteredExtra.length;
+
+  if (totalMatches === 0) {
+    container.innerHTML = `
+      <div style="padding: 18px 12px; text-align: center; color: #94a3b8; font-size: 12px;">
+        <i class="bi bi-search" style="font-size: 16px; display: block; margin-bottom: 4px;"></i>
+        Tidak ada sekolah yang cocok dengan "<strong>${escapeHtml(filterKeyword)}</strong>"
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+
+  // Default / Semua Sekolah
+  if (!kw || '-- semua sekolah --'.includes(kw) || 'semua'.includes(kw)) {
+    const isSelected = !selectedVal;
+    html += `
+      <div class="combobox-option-item ${isSelected ? 'selected' : ''}" onclick="selectSekolahComboboxOption('', '-- Semua Sekolah --')">
+        <span style="display: flex; align-items: center; gap: 6px;">
+          <i class="bi bi-building-check" style="color: #6366f1;"></i>
+          <strong>-- Semua Sekolah --</strong>
+        </span>
+        ${isSelected ? '<i class="bi bi-check2" style="font-weight: 800;"></i>' : ''}
+      </div>
+    `;
+  }
+
+  const renderGroup = (title, icon, items) => {
+    if (items.length === 0) return '';
+    let groupHtml = `<div class="combobox-group-header"><span><i class="${icon}"></i> ${title}</span><span>(${items.length})</span></div>`;
+    items.forEach(item => {
+      const isSelected = selectedVal === item.toUpperCase();
+      groupHtml += `
+        <div class="combobox-option-item ${isSelected ? 'selected' : ''}" onclick="selectSekolahComboboxOption('${escapeHtml(item)}', '${escapeHtml(item)}')">
+          <span>${escapeHtml(item)}</span>
+          ${isSelected ? '<i class="bi bi-check2" style="font-weight: 800;"></i>' : ''}
+        </div>
+      `;
+    });
+    return groupHtml;
+  };
+
+  html += renderGroup('SD / MI (Kelas 1 - 6)', 'bi bi-mortarboard-fill', filteredSD);
+  html += renderGroup('SMP / MTs (Kelas 7 - 9)', 'bi bi-buildings-fill', filteredSMP);
+  html += renderGroup('SMA / SMK / MA (Kelas 10 - 12)', 'bi bi-award-fill', filteredSMA);
+  if (filteredExtra.length > 0) {
+    html += renderGroup('Sekolah Lainnya', 'bi bi-pin-map-fill', filteredExtra);
+  }
+
+  container.innerHTML = html;
+}
+
+// Global click listener to close searchable combobox when clicking outside
+document.addEventListener('click', function (e) {
+  const wrapper = document.getElementById('comboboxSekolahWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    closeSekolahDropdown();
+  }
+});
 
 function populateSchoolSelectElement(elementId) {
   const el = document.getElementById(elementId);

@@ -955,42 +955,80 @@
             </div>
           </div>
 
-          <!-- Filter Bar CKG Sekolah (Dropdown Sekolah, Kelas, Tombol Tampilkan & Search) -->
+          <!-- Filter Bar CKG Sekolah (Sejajar & Searchable Dropdown + Search Sekolah) -->
           <div class="sekolah-filter-card">
-            <div class="sekolah-filter-title">
-              <i class="bi bi-funnel-fill"></i> Filter & Pilih Data Siswa Sekolah
+            <div class="sekolah-filter-header">
+              <div class="sekolah-filter-title">
+                <i class="bi bi-funnel-fill"></i> Filter & Pilih Data Siswa Sekolah
+              </div>
             </div>
             
-            <div class="sekolah-filter-grid">
-              <div class="filter-item-sekolah">
-                <label class="form-label" for="filterSelectSekolah">
+            <div class="sekolah-filter-row">
+              <!-- 1. Pilih Sekolah (Dropdown + Search) -->
+              <div class="filter-group-col filter-col-sekolah">
+                <label class="filter-label" for="filterSelectSekolah">
                   <i class="bi bi-building"></i> Pilih Sekolah:
                 </label>
-                <select id="filterSelectSekolah" class="form-control" onchange="updateKelasDropdownOptions()">
+                
+                <!-- Native select kept hidden for seamless compatibility -->
+                <select id="filterSelectSekolah" class="form-control" style="display: none;" onchange="updateKelasDropdownOptions()">
                   <option value="">-- Semua Sekolah --</option>
                 </select>
+
+                <!-- Searchable Combobox Component -->
+                <div class="searchable-combobox-wrapper" id="comboboxSekolahWrapper">
+                  <div class="combobox-trigger" id="comboboxSekolahTrigger" onclick="toggleSekolahDropdown(event)">
+                    <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+                      <i class="bi bi-search combobox-icon-search"></i>
+                      <span class="combobox-label-text" id="comboboxSekolahLabel">-- Semua Sekolah --</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <button type="button" class="combobox-clear-btn" id="comboboxSekolahClearBtn" onclick="clearSekolahFilter(event)" title="Reset Sekolah" style="display: none;">&times;</button>
+                      <i class="bi bi-chevron-down combobox-chevron"></i>
+                    </div>
+                  </div>
+
+                  <!-- Dropdown Menu with Live Search Filter -->
+                  <div class="combobox-dropdown-panel" id="comboboxSekolahPanel" style="display: none;">
+                    <div class="combobox-search-box">
+                      <i class="bi bi-search"></i>
+                      <input type="text" id="inputSearchSekolahDropdown" class="combobox-search-input" placeholder="Ketik nama sekolah / SD / SMP / SMA..." oninput="onFilterSekolahSearchInput(this.value)" autocomplete="off">
+                      <span class="search-input-clear" onclick="clearSearchInputSekolah()">&times;</span>
+                    </div>
+                    <div class="combobox-options-container" id="comboboxSekolahOptions">
+                      <!-- Dynamically rendered options with categories -->
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div class="filter-item-kelas">
-                <label class="form-label" for="filterSelectKelas">
+              <!-- 2. Pilih Kelas -->
+              <div class="filter-group-col filter-col-kelas">
+                <label class="filter-label" for="filterSelectKelas">
                   <i class="bi bi-grid-fill"></i> Pilih Kelas:
                 </label>
-                <select id="filterSelectKelas" class="form-control">
+                <select id="filterSelectKelas" class="form-control filter-input-control" onchange="renderSekolahView()">
                   <option value="">-- Semua Kelas --</option>
                 </select>
               </div>
 
-              <div class="filter-item-btn">
+              <!-- 3. Tombol Tampilkan -->
+              <div class="filter-group-col filter-col-btn">
+                <label class="filter-label filter-label-spacer">&nbsp;</label>
                 <button type="button" class="btn btn-primary btn-tampilkan-sekolah" onclick="renderSekolahView()">
                   <i class="bi bi-search"></i> Tampilkan
                 </button>
               </div>
 
-              <div class="filter-item-search">
-                <label class="form-label" for="searchSekolahRecords">
+              <!-- 4. Cari Siswa / NISN -->
+              <div class="filter-group-col filter-col-search">
+                <label class="filter-label" for="searchSekolahRecords">
                   <i class="bi bi-person-search"></i> Cari Nama Siswa / NISN:
                 </label>
-                <input type="text" id="searchSekolahRecords" class="form-control" placeholder="Ketik nama / NISN / NIK..." oninput="renderSekolahView()">
+                <div class="filter-search-box-wrap">
+                  <i class="bi bi-search search-box-icon"></i>
+                  <input type="text" id="searchSekolahRecords" class="form-control filter-input-control filter-search-input" placeholder="Ketik nama / NISN / NIK..." oninput="renderSekolahView()">
+                </div>
               </div>
             </div>
           </div>
