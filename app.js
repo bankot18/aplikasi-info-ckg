@@ -10150,7 +10150,7 @@ function renderSekolahView() {
 // --------------------------------------------------------------------------
 
 function switchSekolahModalTab(tabKey) {
-  const tabs = ['identitas', 'antro', 'organ', 'kesimpulan', 'semua'];
+  const tabs = ['identitas', 'antro', 'vital', 'lab', 'organ', 'kesimpulan', 'semua'];
   
   tabs.forEach(t => {
     const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -10377,12 +10377,18 @@ async function saveSekolahCategory(categoryKey) {
     updatedRecord.lp = parseFloat(document.getElementById('periksaLp')?.value) || 0;
     updatedRecord.imt = imtVal;
     updatedRecord.status_imt = statusImt;
+    updatedRecord.is_examined = true;
+    titleMsg = 'Data Antropometri Berhasil Disimpan!';
+  } else if (categoryKey === 'vital') {
     updatedRecord.td_sistolik = parseInt(document.getElementById('periksaSistol')?.value, 10) || 0;
     updatedRecord.td_diastolik = parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0;
+    updatedRecord.is_examined = true;
+    titleMsg = 'Data Tanda Vital (Tekanan Darah) Berhasil Disimpan!';
+  } else if (categoryKey === 'lab') {
     updatedRecord.gula_darah = document.getElementById('periksaGula')?.value.trim() || '-';
     updatedRecord.hb = document.getElementById('periksaHb')?.value.trim() || '-';
     updatedRecord.is_examined = true;
-    titleMsg = 'Data Antropometri & Tanda Vital Berhasil Disimpan!';
+    titleMsg = 'Data Pemeriksaan Laboratorium Berhasil Disimpan!';
   } else if (categoryKey === 'organ') {
     updatedRecord.telinga = document.getElementById('periksaTelinga')?.value || 'Tidak ada serumen';
     updatedRecord.gigi = document.getElementById('periksaGigi')?.value || 'Tidak ada';

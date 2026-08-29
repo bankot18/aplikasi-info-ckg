@@ -2187,11 +2187,17 @@
           <button type="button" class="sekolah-cat-tab" id="tabBtnAntro" onclick="switchSekolahModalTab('antro')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
             <i class="bi bi-activity"></i> 2. Antropometri
           </button>
+          <button type="button" class="sekolah-cat-tab" id="tabBtnVital" onclick="switchSekolahModalTab('vital')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
+            <i class="bi bi-heart-pulse-fill"></i> 3. Tanda Vital
+          </button>
+          <button type="button" class="sekolah-cat-tab" id="tabBtnLab" onclick="switchSekolahModalTab('lab')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
+            <i class="bi bi-droplet-fill"></i> 4. Laboratorium
+          </button>
           <button type="button" class="sekolah-cat-tab" id="tabBtnOrgan" onclick="switchSekolahModalTab('organ')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
-            <i class="bi bi-eye-fill"></i> 3. Organ Indera
+            <i class="bi bi-eye-fill"></i> 5. Organ Indera
           </button>
           <button type="button" class="sekolah-cat-tab" id="tabBtnKesimpulan" onclick="switchSekolahModalTab('kesimpulan')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
-            <i class="bi bi-clipboard2-check-fill"></i> 4. Kesimpulan
+            <i class="bi bi-clipboard2-check-fill"></i> 6. Kesimpulan
           </button>
           <button type="button" class="sekolah-cat-tab" id="tabBtnSemua" onclick="switchSekolahModalTab('semua')" style="border-radius: 10px; border: 1.5px solid #a7f3d0; background: #f0fdf4; color: #065f46; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
             <i class="bi bi-card-checklist"></i> 📑 Tampilkan Semua Format
@@ -2274,17 +2280,17 @@
         </div>
 
         <!-- =================================================================== -->
-        <!-- FORMAT 2: ANTROPOMETRI, TANDA VITAL & LABORATORIUM -->
+        <!-- FORMAT 2: ANTROPOMETRI & STATUS GIZI -->
         <!-- =================================================================== -->
         <div id="panelPemeriksaanAntro" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
           <div style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
-              <i class="bi bi-activity"></i> 2. Format Pengisian Antropometri, Tanda Vital & Lab
+              <i class="bi bi-activity"></i> 2. Format Pengisian Antropometri & Status Gizi
             </div>
-            <span style="font-size: 11px; color: #059669; font-weight: 600;">Fisik & Laboratorium</span>
+            <span style="font-size: 11px; color: #059669; font-weight: 600;">Pengukuran Fisik</span>
           </div>
 
-          <div class="sekolah-grid-4" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.3fr; gap: 12px; margin-bottom: 12px;">
+          <div class="sekolah-grid-4" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.3fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
               <label class="form-label" for="periksaBb">BB (kg) <span class="required" style="color: #059669;">*</span></label>
               <input type="number" step="0.1" id="periksaBb" class="form-control" inputmode="decimal" placeholder="Contoh: 45" oninput="calculateSiswaIMT()" required>
@@ -2305,25 +2311,6 @@
             </div>
           </div>
 
-          <div class="sekolah-grid-4" style="display: grid; grid-template-columns: 1fr 1fr 1.2fr 1.2fr; gap: 12px; margin-bottom: 16px;">
-            <div class="form-group">
-              <label class="form-label" for="periksaSistol">TD Sistolik (mmHg)</label>
-              <input type="number" id="periksaSistol" class="form-control" inputmode="numeric" placeholder="110">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="periksaDiastol">TD Diastolik (mmHg)</label>
-              <input type="number" id="periksaDiastol" class="form-control" inputmode="numeric" placeholder="70">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="periksaGula">Gula Darah (mg/dL)</label>
-              <input type="number" id="periksaGula" class="form-control" inputmode="numeric" placeholder="100">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="periksaHb">Hemoglobin (g/dL) <span style="font-size: 10px; color: #047857;">(Anemia)</span></label>
-              <input type="number" step="0.1" id="periksaHb" class="form-control" inputmode="decimal" placeholder="13.5">
-            </div>
-          </div>
-
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 2 -->
           <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
             <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('identitas')" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
@@ -2331,7 +2318,83 @@
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
               <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('antro')" style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
-                <i class="bi bi-floppy-fill"></i> Simpan Antropometri & Vital
+                <i class="bi bi-floppy-fill"></i> Simpan Antropometri
+              </button>
+              <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('vital')" style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
+                Lanjut: Tanda Vital &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- FORMAT 3: TANDA VITAL (TEKANAN DARAH) -->
+        <!-- =================================================================== -->
+        <div id="panelPemeriksaanVital" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          <div style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="bi bi-heart-pulse-fill"></i> 3. Format Pengisian Tanda Vital (Tekanan Darah)
+            </div>
+            <span style="font-size: 11px; color: #059669; font-weight: 600;">Hemodinamik</span>
+          </div>
+
+          <div class="sekolah-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label" for="periksaSistol">TD Sistolik (mmHg)</label>
+              <input type="number" id="periksaSistol" class="form-control" inputmode="numeric" placeholder="Contoh: 110">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="periksaDiastol">TD Diastolik (mmHg)</label>
+              <input type="number" id="periksaDiastol" class="form-control" inputmode="numeric" placeholder="Contoh: 70">
+            </div>
+          </div>
+
+          <!-- TOMBOL SIMPAN KHUSUS FORMAT 3 -->
+          <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
+            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('antro')" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
+              &larr; Antropometri
+            </button>
+            <div class="panel-btn-group" style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('vital')" style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
+                <i class="bi bi-floppy-fill"></i> Simpan Tanda Vital
+              </button>
+              <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('lab')" style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
+                Lanjut: Laboratorium &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- FORMAT 4: PEMERIKSAAN LABORATORIUM SEDERHANA -->
+        <!-- =================================================================== -->
+        <div id="panelPemeriksaanLab" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          <div style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="bi bi-droplet-fill"></i> 4. Format Pengisian Laboratorium Sederhana
+            </div>
+            <span style="font-size: 11px; color: #059669; font-weight: 600;">Gula Darah & Hb Anemia</span>
+          </div>
+
+          <div class="sekolah-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label" for="periksaGula">Gula Darah (mg/dL)</label>
+              <input type="number" id="periksaGula" class="form-control" inputmode="numeric" placeholder="Contoh: 100">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="periksaHb">Hemoglobin (g/dL) <span style="font-size: 10px; color: #047857;">(Skrining Anemia)</span></label>
+              <input type="number" step="0.1" id="periksaHb" class="form-control" inputmode="decimal" placeholder="Contoh: 13.5">
+            </div>
+          </div>
+
+          <!-- TOMBOL SIMPAN KHUSUS FORMAT 4 -->
+          <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
+            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('vital')" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
+              &larr; Tanda Vital
+            </button>
+            <div class="panel-btn-group" style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('lab')" style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
+                <i class="bi bi-floppy-fill"></i> Simpan Laboratorium
               </button>
               <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('organ')" style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Organ Indera &rarr;
@@ -2341,12 +2404,12 @@
         </div>
 
         <!-- =================================================================== -->
-        <!-- FORMAT 3: ORGAN INDERA & KESEHATAN KHUSUS UKS -->
+        <!-- FORMAT 5: ORGAN INDERA & KESEHATAN KHUSUS UKS -->
         <!-- =================================================================== -->
         <div id="panelPemeriksaanOrgan" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
           <div style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
-              <i class="bi bi-eye-fill"></i> 3. Format Pengisian Organ Indera & Spesifik UKS
+              <i class="bi bi-eye-fill"></i> 5. Format Pengisian Organ Indera & Spesifik UKS
             </div>
             <span style="font-size: 11px; color: #059669; font-weight: 600;">Pemeriksaan Khusus UKS</span>
           </div>
@@ -2440,10 +2503,10 @@
             </div>
           </div>
 
-          <!-- TOMBOL SIMPAN KHUSUS FORMAT 3 -->
+          <!-- TOMBOL SIMPAN KHUSUS FORMAT 5 -->
           <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
-            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('antro')" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
-              &larr; Antropometri
+            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('lab')" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
+              &larr; Laboratorium
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
               <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('organ')" style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
@@ -2457,12 +2520,12 @@
         </div>
 
         <!-- =================================================================== -->
-        <!-- FORMAT 4: KESIMPULAN & REKOMENDASI RUJUKAN -->
+        <!-- FORMAT 6: KESIMPULAN & REKOMENDASI RUJUKAN -->
         <!-- =================================================================== -->
         <div id="panelPemeriksaanKesimpulan" class="sekolah-form-panel" style="display: none; background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
           <div style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
-              <i class="bi bi-clipboard2-check-fill"></i> 4. Format Kesimpulan & Rekomendasi Rujukan
+              <i class="bi bi-clipboard2-check-fill"></i> 6. Format Kesimpulan & Rekomendasi Rujukan
             </div>
             <span style="font-size: 11px; color: #059669; font-weight: 600;">Status & Tindak Lanjut</span>
           </div>
@@ -2482,7 +2545,7 @@
             </div>
           </div>
 
-          <!-- TOMBOL SIMPAN KHUSUS FORMAT 4 -->
+          <!-- TOMBOL SIMPAN KHUSUS FORMAT 6 -->
           <div class="panel-action-footer" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
             <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('organ')" style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
               &larr; Organ Indera
