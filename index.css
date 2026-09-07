@@ -5791,48 +5791,92 @@ body.dark-mode .sekolah-cat-tab-all:not(.active) {
 
   #modalPemeriksaanSiswa .modal-title,
   #modalTambahSiswa .modal-title,
-  #modalImportSekolah .modal-title {
+  #modalImportSekolah .modal-title,
+  #modalFormPosSiswa .modal-title {
     font-size: 14px !important;
   }
 
   #modalPemeriksaanSiswa .modal-body,
   #modalTambahSiswa .modal-body,
   #modalImportSekolah .modal-body,
+  #modalFormPosSiswa .modal-body,
   .sekolah-modal-body {
     padding: 12px 12px !important;
-    max-height: 80vh !important;
+    max-height: 82vh !important;
     box-sizing: border-box !important;
+    overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
   }
 
-  /* Force Clean 1 Column on Mobile Forms (No clipping) */
+  /* Modal Container Mobile Optimization */
+  #modalFormPosSiswa .sekolah-modal-container {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 8px auto !important;
+    border-radius: 16px !important;
+  }
+
+  /* Force Clean 1 Column on Mobile Forms (No clipping or overflow) */
   #modalPemeriksaanSiswa .sekolah-grid-2,
   #modalPemeriksaanSiswa .sekolah-grid-3,
   #modalPemeriksaanSiswa .sekolah-grid-4,
   #modalPemeriksaanSiswa [style*="grid-template-columns"],
   #modalTambahSiswa .sekolah-grid-2,
-  #modalTambahSiswa [style*="grid-template-columns"] {
+  #modalTambahSiswa .sekolah-grid-3,
+  #modalTambahSiswa .sekolah-grid-4,
+  #modalTambahSiswa [style*="grid-template-columns"],
+  #modalFormPosSiswa .sekolah-grid-2,
+  #modalFormPosSiswa .sekolah-grid-3,
+  #modalFormPosSiswa .sekolah-grid-4,
+  #modalFormPosSiswa [style*="grid-template-columns"],
+  .sekolah-form-panel .sekolah-grid-2,
+  .sekolah-form-panel .sekolah-grid-3,
+  .sekolah-form-panel .sekolah-grid-4,
+  .sekolah-form-panel [style*="grid-template-columns"] {
     display: flex !important;
     flex-direction: column !important;
-    gap: 10px !important;
+    gap: 12px !important;
     width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box !important;
   }
 
   #modalPemeriksaanSiswa .form-group,
-  #modalTambahSiswa .form-group {
+  #modalTambahSiswa .form-group,
+  #modalFormPosSiswa .form-group,
+  .sekolah-form-panel .form-group {
     width: 100% !important;
+    max-width: 100% !important;
     margin-bottom: 0 !important;
     box-sizing: border-box !important;
   }
 
   #modalPemeriksaanSiswa .form-control,
-  #modalTambahSiswa .form-control {
+  #modalTambahSiswa .form-control,
+  #modalFormPosSiswa .form-control,
+  .sekolah-form-panel .form-control {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    height: 42px !important;
-    font-size: 13px !important;
+    height: 44px !important;
+    font-size: 13.5px !important;
+  }
+
+  #modalFormPosSiswa textarea.form-control,
+  .sekolah-form-panel textarea.form-control {
+    height: auto !important;
+    min-height: 75px !important;
+  }
+
+  #modalFormPosSiswa label.form-label,
+  .sekolah-form-panel label.form-label {
+    display: block !important;
+    width: 100% !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    margin-bottom: 4px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
   }
 
   .sekolah-form-panel {
@@ -5905,12 +5949,28 @@ body.dark-mode .sekolah-cat-tab-all:not(.active) {
 
   /* Action Buttons Footer on Mobile: Full-width stacked buttons */
   .panel-action-footer {
-    display: flex !important;
+    display: flex;
     flex-direction: column-reverse !important;
     width: 100% !important;
     gap: 8px !important;
     padding-top: 12px !important;
     box-sizing: border-box !important;
+  }
+
+  /* Strictly prevent inactive/hidden footers from being displayed on mobile */
+  .panel-action-footer[style*="display: none"],
+  .panel-action-footer.d-none,
+  #panelPemeriksaanSemuaFooter {
+    display: none !important;
+  }
+
+  #panelPemeriksaanSemuaFooter.is-active-semua {
+    display: flex !important;
+  }
+
+  /* Hide redundant "Pilihan Bagian" button inside panel header on mobile */
+  .sekolah-header-subbtn {
+    display: none !important;
   }
 
   .panel-btn-group {
@@ -6183,6 +6243,32 @@ body.dark-mode .pos-menu-button {
 body.dark-mode .pos-menu-button:hover {
   background: #0f172a !important;
   border-color: #10b981 !important;
+}
+
+/* =================================================================== */
+/* SPINNER & LOADING FEEDBACK FOR SAVE ACTIONS                         */
+/* =================================================================== */
+@keyframes sekolahSpinnerRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.sekolah-spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: sekolahSpinnerRotate 0.75s linear infinite;
+  vertical-align: -2px;
+  margin-right: 8px;
+  box-sizing: border-box;
+}
+
+button:disabled,
+button[disabled] {
+  cursor: not-allowed !important;
 }
 
 

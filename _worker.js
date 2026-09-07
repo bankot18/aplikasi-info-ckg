@@ -669,6 +669,8 @@ export default {
             const organDone = item.organ_done ? 1 : 0;
             const kesimpulanDone = item.kesimpulan_done ? 1 : 0;
             const identitasDone = (item.identitas_done || item.nama) ? 1 : 0;
+            // PENTING: Identitas BUKAN pemeriksaan!
+            const isExamined = (antroDone || vitalDone || labDone || organDone || kesimpulanDone) ? 1 : 0;
 
             return stmt.bind(
               String(item.id || item.nik || `SCH-${Date.now()}-${idx}`),
@@ -701,7 +703,7 @@ export default {
               String(item.menstruasi || 'Belum'),
               String(item.status_kesehatan || 'Sehat'),
               String(item.catatan_rujukan || '-'),
-              item.is_examined ? 1 : 0,
+              isExamined,
               String(item.petugas_entry || 'Admin'),
               String(item.tanggal_entry || new Date().toISOString().substring(0, 10)),
               antroDone,

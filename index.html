@@ -2685,7 +2685,7 @@
 
       <div class="modal-body sekolah-modal-body" style="padding: 16px 20px; max-height: 82vh; overflow-y: auto;">
         <!-- INFORMASI SINGKAT SISWA DI DALAM FORM -->
-        <div
+        <div class="sekolah-student-summary-banner"
           style="background: #f0fdf4; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
             <div
@@ -2714,7 +2714,7 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-person-vcard-fill"></i> 1. Format Identitas & Domisili Siswa
             </div>
-            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
               style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
               <i class="bi bi-grid-fill"></i> Pilihan Bagian
             </button>
@@ -2787,7 +2787,7 @@
               <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('identitas')"
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('identitas', this)"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Data Identitas
               </button>
@@ -2809,7 +2809,7 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-activity"></i> 2. Format Pengisian Antropometri & Status Gizi
             </div>
-            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
               style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
               <i class="bi bi-grid-fill"></i> Pilihan Bagian
             </button>
@@ -2852,7 +2852,7 @@
               <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('antro')"
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('antro', this)"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Antropometri
               </button>
@@ -2874,7 +2874,7 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-heart-pulse-fill"></i> 3. Format Pengisian Tanda Vital (Tekanan Darah)
             </div>
-            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
               style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
               <i class="bi bi-grid-fill"></i> Pilihan Bagian
             </button>
@@ -2902,7 +2902,7 @@
               <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('vital')"
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('vital', this)"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Tanda Vital
               </button>
@@ -2924,7 +2924,7 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-droplet-fill"></i> 4. Format Pengisian Laboratorium Sederhana
             </div>
-            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
               style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
               <i class="bi bi-grid-fill"></i> Pilihan Bagian
             </button>
@@ -2952,7 +2952,7 @@
               <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('lab')"
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('lab', this)"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Laboratorium
               </button>
@@ -2974,7 +2974,7 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-eye-fill"></i> 5. Format Pengisian Organ Indera & Spesifik UKS
             </div>
-            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
               style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
               <i class="bi bi-grid-fill"></i> Pilihan Bagian
             </button>
@@ -3079,7 +3079,7 @@
               <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('organ')"
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('organ', this)"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Organ Indera & UKS
               </button>
@@ -3101,7 +3101,7 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-clipboard2-check-fill"></i> 6. Format Kesimpulan & Rekomendasi Rujukan
             </div>
-            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
               style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
               <i class="bi bi-grid-fill"></i> Pilihan Bagian
             </button>
@@ -3133,7 +3133,7 @@
               <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('kesimpulan')"
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('kesimpulan', this)"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-check-circle-fill"></i> Simpan Kesimpulan & Selesai
               </button>

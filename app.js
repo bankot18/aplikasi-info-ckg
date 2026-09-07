@@ -9875,7 +9875,16 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
           const bbNum = r.bb !== undefined ? Number(r.bb) : 0;
           const tbNum = r.tb !== undefined ? Number(r.tb) : 0;
           const sistolNum = r.td_sistolik !== undefined ? Number(r.td_sistolik) : 0;
-          const isExamined = r.is_examined !== undefined ? !!r.is_examined : (bbNum > 0 || tbNum > 0 || sistolNum > 0);
+
+          const antroDoneVal = r.antro_done !== undefined ? Number(r.antro_done) : ((bbNum > 0 && tbNum > 0) ? 1 : 0);
+          const vitalDoneVal = r.vital_done !== undefined ? Number(r.vital_done) : (sistolNum > 0 ? 1 : 0);
+          const labDoneVal = r.lab_done !== undefined ? Number(r.lab_done) : (((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')) ? 1 : 0);
+          const organDoneVal = r.organ_done !== undefined ? Number(r.organ_done) : 0;
+          const kesimpulanDoneVal = r.kesimpulan_done !== undefined ? Number(r.kesimpulan_done) : ((r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== '') ? 1 : 0);
+
+          // PENTING: Identitas TIDAK terhitung sebagai pemeriksaan!
+          // is_examined hanya true jika minimal satu stasiun pemeriksaan medis (antro, vital, lab, organ, kesimpulan) telah dilakukan
+          const isExamined = !!(antroDoneVal || vitalDoneVal || labDoneVal || organDoneVal || kesimpulanDoneVal);
 
           let imtVal = r.imt !== undefined ? Number(r.imt) : 0;
           let statusImt = r.status_imt || 'Normal';
@@ -9923,11 +9932,11 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
             is_examined: isExamined,
             petugas_entry: r.petugas_entry || 'Admin',
             tanggal_entry: r.tanggal_entry || new Date().toISOString().substring(0, 10),
-            antro_done: r.antro_done !== undefined ? Number(r.antro_done) : ((bbNum > 0 && tbNum > 0) ? 1 : 0),
-            vital_done: r.vital_done !== undefined ? Number(r.vital_done) : (sistolNum > 0 ? 1 : 0),
-            lab_done: r.lab_done !== undefined ? Number(r.lab_done) : (((r.hb && r.hb !== '-') || (r.gula_darah && r.gula_darah !== '-')) ? 1 : 0),
-            organ_done: r.organ_done !== undefined ? Number(r.organ_done) : 0,
-            kesimpulan_done: r.kesimpulan_done !== undefined ? Number(r.kesimpulan_done) : 0,
+            antro_done: antroDoneVal,
+            vital_done: vitalDoneVal,
+            lab_done: labDoneVal,
+            organ_done: organDoneVal,
+            kesimpulan_done: kesimpulanDoneVal,
             identitas_done: r.identitas_done !== undefined ? Number(r.identitas_done) : 1
           };
         });
@@ -10518,12 +10527,19 @@ let currentSekolahStatusFilter = 'all';
 
 function isSekolahRecordExamined(r) {
   if (!r) return false;
-  const hasAntro = !!(r.antro_done || (r.bb > 0 && r.tb > 0));
-  const hasVital = !!(r.vital_done || (r.td_sistolik && Number(r.td_sistolik) > 0));
-  const hasLab = !!(r.lab_done || ((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')));
-  const hasOrgan = !!(r.organ_done);
-  const hasKesimpulan = !!(r.kesimpulan_done || (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== ''));
-  return hasAntro || hasVital || hasLab || hasOrgan || hasKesimpulan || !!r.is_examined;
+  const bbNum = Number(r.bb) || 0;
+  const tbNum = Number(r.tb) || 0;
+  const sistolNum = Number(r.td_sistolik) || 0;
+
+  const hasAntro = !!(Number(r.antro_done) === 1 || (bbNum > 0 && tbNum > 0));
+  const hasVital = !!(Number(r.vital_done) === 1 || sistolNum > 0);
+  const hasLab = !!(Number(r.lab_done) === 1 || ((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')));
+  const hasOrgan = !!(Number(r.organ_done) === 1);
+  const hasKesimpulan = !!(Number(r.kesimpulan_done) === 1 || (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== ''));
+
+  // PENTING: Identitas (nama, nik, tgl lahir, dll) TIDAK terhitung sebagai pemeriksaan!
+  // Siswa hanya dianggap sudah diperiksa jika minimal 1 stasiun skrining medis telah dilakukan.
+  return hasAntro || hasVital || hasLab || hasOrgan || hasKesimpulan;
 }
 
 function isSekolahRecordPerluRujukan(r) {
@@ -10669,11 +10685,15 @@ function renderSekolahView() {
   }
 
   tbody.innerHTML = dataset.map((r, idx) => {
-    const hasAntro = !!(r.antro_done || (r.bb > 0 && r.tb > 0));
-    const hasVital = !!(r.vital_done || (r.td_sistolik && Number(r.td_sistolik) > 0));
-    const hasLab = !!(r.lab_done || ((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')));
-    const hasOrgan = !!(r.organ_done);
-    const hasKesimpulan = !!(r.kesimpulan_done || (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== ''));
+    const bbNum = Number(r.bb) || 0;
+    const tbNum = Number(r.tb) || 0;
+    const sistolNum = Number(r.td_sistolik) || 0;
+
+    const hasAntro = !!(Number(r.antro_done) === 1 || (bbNum > 0 && tbNum > 0));
+    const hasVital = !!(Number(r.vital_done) === 1 || sistolNum > 0);
+    const hasLab = !!(Number(r.lab_done) === 1 || ((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')));
+    const hasOrgan = !!(Number(r.organ_done) === 1);
+    const hasKesimpulan = !!(Number(r.kesimpulan_done) === 1 || (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== ''));
     const isExamined = isSekolahRecordExamined(r);
 
     const safeId = escapeHtml(r.id || '');
@@ -10684,7 +10704,7 @@ function renderSekolahView() {
     const safeJk = r.jk === 'P' ? 'Perempuan' : 'Laki-laki';
     const jkColor = r.jk === 'P' ? '#ec4899' : '#4f46e5';
 
-    // Status Badge: Vertical Checklist showing only completed screening stations
+    // Status Badge: Tampilkan Belum Diperiksa kecuali jika ada stasiun skrining medis yang telah selesai
     let statusBadge = `<span class="badge badge-amber" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-clock-history"></i> Belum Diperiksa</span>`;
     if (isExamined) {
       const checklistItems = [];
@@ -10709,7 +10729,9 @@ function renderSekolahView() {
           checklistItems.push(`<span class="status-check-badge kesimpulan"><i class="bi bi-check-circle-fill" style="color: #eab308;"></i> Kesimpulan</span>`);
         }
       }
-      statusBadge = `<div class="status-checklist">${checklistItems.length ? checklistItems.join('') : '<span class="status-check-badge antro"><i class="bi bi-check-circle-fill"></i> Diperiksa</span>'}</div>`;
+      if (checklistItems.length > 0) {
+        statusBadge = `<div class="status-checklist">${checklistItems.join('')}</div>`;
+      }
     }
 
     // Column Hasil Pemeriksaan: ONLY show chips for categories that have ACTUALLY been filled!
@@ -10885,7 +10907,12 @@ function openFormPosPopup(posKey) {
   if (namaEl) namaEl.textContent = siswa.nama || 'Nama Siswa';
   if (subInfoEl) {
     const safeJk = siswa.jk === 'P' ? 'Perempuan' : 'Laki-laki';
-    subInfoEl.textContent = `${siswa.sekolah || 'Nama Sekolah'} • KELAS ${siswa.kelas || '-'} • ${safeJk}`;
+    let cleanKelas = String(siswa.kelas || '-').trim();
+    if (/^kelas\s+/i.test(cleanKelas)) {
+      cleanKelas = cleanKelas.replace(/^kelas\s+/i, '').trim();
+    }
+    const safeKelas = (!cleanKelas || cleanKelas === '-') ? '-' : `KELAS ${cleanKelas}`;
+    subInfoEl.textContent = `${siswa.sekolah || 'Nama Sekolah'} • ${safeKelas} • ${safeJk}`;
   }
   if (avatarEl) avatarEl.textContent = (siswa.nama || 'S').charAt(0).toUpperCase();
 
@@ -10910,7 +10937,13 @@ function openFormPosPopup(posKey) {
 
   const globalFooter = document.getElementById('panelPemeriksaanSemuaFooter');
   if (globalFooter) {
-    globalFooter.style.display = (posKey === 'semua') ? 'flex' : 'none';
+    if (posKey === 'semua') {
+      globalFooter.classList.add('is-active-semua');
+      globalFooter.style.setProperty('display', 'flex', 'important');
+    } else {
+      globalFooter.classList.remove('is-active-semua');
+      globalFooter.style.setProperty('display', 'none', 'important');
+    }
   }
 
   // Hide Menu Popup, Show Form Popup
@@ -10928,6 +10961,12 @@ function openFormPosPopup(posKey) {
 }
 
 function closeFormPosPopup() {
+  const globalFooter = document.getElementById('panelPemeriksaanSemuaFooter');
+  if (globalFooter) {
+    globalFooter.classList.remove('is-active-semua');
+    globalFooter.style.setProperty('display', 'none', 'important');
+  }
+
   // Hide Form Popup, Re-open Menu Popup
   const mForm = document.getElementById('modalFormPosSiswa');
   if (mForm) {
@@ -11071,7 +11110,7 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
   document.getElementById('displayJkSiswa').textContent = siswa.jk === 'P' ? 'Perempuan' : 'Laki-laki';
   document.getElementById('badgeAvatarSiswa').textContent = (siswa.nama || 'S').charAt(0).toUpperCase();
 
-  const isExamined = !!(siswa.is_examined || siswa.bb > 0 || siswa.tb > 0 || siswa.td_sistolik > 0);
+  const isExamined = isSekolahRecordExamined(siswa);
   const badgeStatus = document.getElementById('badgeStatusSkrining');
   if (badgeStatus) {
     if (isExamined) {
@@ -11239,7 +11278,14 @@ function calculateSiswaIMT() {
   }
 }
 
-async function saveSekolahCategory(categoryKey) {
+let isSavingSekolahCategory = false;
+
+async function saveSekolahCategory(categoryKey, triggerBtn) {
+  if (isSavingSekolahCategory) {
+    console.warn(`[saveSekolahCategory] Penyimpanan sedang berlangsung untuk ${categoryKey}. Permintaan kedua diabaikan.`);
+    return;
+  }
+
   const id = document.getElementById('periksaSiswaId')?.value;
   const idx = sekolahRecords.findIndex(r => r.id === id);
   if (idx < 0) {
@@ -11247,39 +11293,252 @@ async function saveSekolahCategory(categoryKey) {
     return;
   }
 
-  const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
-  const existing = sekolahRecords[idx];
+  // Cari elemen tombol simpan untuk memberikan feedback loading spinner & disabled
+  let btn = triggerBtn;
+  if (!btn && window.event) {
+    const t = window.event.currentTarget || window.event.target;
+    if (t) btn = t.tagName === 'BUTTON' ? t : t.closest('button');
+  }
+  if (!btn) {
+    btn = document.querySelector(`#panelPemeriksaan${categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1)} button[onclick*="saveSekolahCategory"]`);
+  }
 
-  let titleMsg = '';
-  let categoryName = '';
-  let fieldsToUpdate = {
-    petugas_entry: currentUserName,
-    tanggal_entry: new Date().toISOString().substring(0, 10),
-    is_examined: 1
-  };
+  let originalBtnHtml = '';
+  if (btn) {
+    originalBtnHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.style.pointerEvents = 'none';
+    btn.style.opacity = '0.85';
+    btn.innerHTML = `<span class="sekolah-spinner" aria-hidden="true"></span> Sedang Menyimpan...`;
+  }
+  isSavingSekolahCategory = true;
 
-  if (categoryKey === 'identitas') {
-    const nama = document.getElementById('periksaNama')?.value.trim().toUpperCase();
-    if (!nama) {
-      showToast('Nama Lengkap Siswa wajib diisi!', 'warning');
-      return;
+  try {
+    const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
+    const existing = sekolahRecords[idx];
+
+    let titleMsg = '';
+    let categoryName = '';
+    let fieldsToUpdate = {
+      petugas_entry: currentUserName,
+      tanggal_entry: new Date().toISOString().substring(0, 10)
+    };
+
+    // Hanya set is_examined: 1 jika kategori adalah pemeriksaan medis/skrining (BUKAN identitas)
+    if (categoryKey !== 'identitas') {
+      fieldsToUpdate.is_examined = 1;
     }
-    fieldsToUpdate.nama = nama;
-    fieldsToUpdate.nik = document.getElementById('periksaNik')?.value.trim() || '';
-    fieldsToUpdate.jk = document.getElementById('periksaJk')?.value || 'L';
-    fieldsToUpdate.sekolah = document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || existing.sekolah;
-    fieldsToUpdate.kelas = document.getElementById('periksaKelas')?.value.trim().toUpperCase() || existing.kelas;
-    fieldsToUpdate.tanggal_lahir = document.getElementById('periksaTglLahir')?.value || '';
-    fieldsToUpdate.no_whatsapp = document.getElementById('periksaWa')?.value.trim() || '';
-    fieldsToUpdate.alamat = document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '';
-    fieldsToUpdate.identitas_done = 1;
-    categoryName = 'Identitas Siswa';
-    titleMsg = 'Data Identitas Siswa Berhasil Disimpan!';
-  } else if (categoryKey === 'antro') {
-    const bbVal = parseFloat(document.getElementById('periksaBb')?.value) || 0;
-    const tbVal = parseFloat(document.getElementById('periksaTb')?.value) || 0;
+
+    if (categoryKey === 'identitas') {
+      const nama = document.getElementById('periksaNama')?.value.trim().toUpperCase();
+      if (!nama) {
+        showToast('Nama Lengkap Siswa wajib diisi!', 'warning');
+        return;
+      }
+      fieldsToUpdate.nama = nama;
+      fieldsToUpdate.nik = document.getElementById('periksaNik')?.value.trim() || '';
+      fieldsToUpdate.jk = document.getElementById('periksaJk')?.value || 'L';
+      fieldsToUpdate.sekolah = document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || existing.sekolah;
+      fieldsToUpdate.kelas = document.getElementById('periksaKelas')?.value.trim().toUpperCase() || existing.kelas;
+      fieldsToUpdate.tanggal_lahir = document.getElementById('periksaTglLahir')?.value || '';
+      fieldsToUpdate.no_whatsapp = document.getElementById('periksaWa')?.value.trim() || '';
+      fieldsToUpdate.alamat = document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '';
+      fieldsToUpdate.identitas_done = 1;
+      categoryName = 'Identitas Siswa';
+      titleMsg = 'Data Identitas Siswa Berhasil Disimpan!';
+    } else if (categoryKey === 'antro') {
+      const bbVal = parseFloat(document.getElementById('periksaBb')?.value) || 0;
+      const tbVal = parseFloat(document.getElementById('periksaTb')?.value) || 0;
+      let imtVal = 0;
+      let statusImt = 'Normal';
+      if (bbVal > 0 && tbVal > 0) {
+        const tbM = tbVal / 100;
+        imtVal = parseFloat((bbVal / (tbM * tbM)).toFixed(2));
+        if (imtVal < 17.0) statusImt = 'Sangat Kurus';
+        else if (imtVal < 18.5) statusImt = 'Kurus';
+        else if (imtVal <= 25.0) statusImt = 'Normal';
+        else if (imtVal <= 27.0) statusImt = 'Gemuk';
+        else statusImt = 'Obesitas';
+      }
+
+      fieldsToUpdate.bb = bbVal;
+      fieldsToUpdate.tb = tbVal;
+      fieldsToUpdate.lp = parseFloat(document.getElementById('periksaLp')?.value) || 0;
+      fieldsToUpdate.imt = imtVal;
+      fieldsToUpdate.status_imt = statusImt;
+      fieldsToUpdate.antro_done = 1;
+      categoryName = 'Antropometri';
+      titleMsg = 'Data Antropometri Berhasil Disimpan!';
+    } else if (categoryKey === 'vital') {
+      fieldsToUpdate.td_sistolik = parseInt(document.getElementById('periksaSistol')?.value, 10) || 0;
+      fieldsToUpdate.td_diastolik = parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0;
+      fieldsToUpdate.vital_done = 1;
+      categoryName = 'Tanda Vital (Tekanan Darah)';
+      titleMsg = 'Data Tanda Vital Berhasil Disimpan!';
+    } else if (categoryKey === 'lab') {
+      fieldsToUpdate.gula_darah = document.getElementById('periksaGula')?.value.trim() || '-';
+      fieldsToUpdate.hb = document.getElementById('periksaHb')?.value.trim() || '-';
+      fieldsToUpdate.lab_done = 1;
+      categoryName = 'Laboratorium';
+      titleMsg = 'Data Laboratorium Berhasil Disimpan!';
+    } else if (categoryKey === 'organ') {
+      fieldsToUpdate.telinga = document.getElementById('periksaTelinga')?.value || 'Tidak ada serumen';
+      fieldsToUpdate.gigi = document.getElementById('periksaGigi')?.value || 'Tidak ada';
+      fieldsToUpdate.mata = document.getElementById('periksaMata')?.value || 'Normal';
+      fieldsToUpdate.kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
+      fieldsToUpdate.menstruasi = document.getElementById('periksaMenstruasi')?.value || 'Belum';
+      fieldsToUpdate.organ_done = 1;
+      categoryName = 'Organ Indera & UKS';
+      titleMsg = 'Data Organ Indera Berhasil Disimpan!';
+    } else if (categoryKey === 'kesimpulan') {
+      fieldsToUpdate.status_kesehatan = document.getElementById('periksaStatusKesehatan')?.value || 'Sehat';
+      fieldsToUpdate.catatan_rujukan = document.getElementById('periksaCatatanRujukan')?.value.trim() || '-';
+      fieldsToUpdate.kesimpulan_done = 1;
+      categoryName = 'Kesimpulan & Rujukan';
+      titleMsg = 'Data Kesimpulan Berhasil Disimpan!';
+    }
+
+    // ATOMIC PARTIAL UPDATE: Only sends fields for this category to prevent overwriting others
+    let freshRecord = null;
+    try {
+      let patchRes = await fetch('/api/sekolah', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, category: categoryKey, fields: fieldsToUpdate })
+      });
+      if (!patchRes.ok) {
+        patchRes = await fetch('/api/sekolah', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'partial_update', id, category: categoryKey, fields: fieldsToUpdate })
+        });
+      }
+      if (patchRes.ok) {
+        const resJson = await patchRes.json();
+        if (resJson.data) freshRecord = resJson.data;
+      }
+    } catch (err) {
+      console.warn('Partial update notice:', err);
+    }
+
+    // Update local memory without overwriting other categories
+    if (freshRecord) {
+      sekolahRecords[idx] = { ...sekolahRecords[idx], ...freshRecord };
+    } else {
+      sekolahRecords[idx] = { ...sekolahRecords[idx], ...fieldsToUpdate };
+    }
+    localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+
+    const currentSiswa = sekolahRecords[idx];
+
+    // Update modal header display in real-time
+    document.getElementById('displayNamaSiswa').textContent = currentSiswa.nama || 'Nama Siswa';
+    document.getElementById('displaySekolahSiswa').textContent = currentSiswa.sekolah || 'Nama Sekolah';
+    let cleanKelasDisp = String(currentSiswa.kelas || 'Kelas').replace(/^kelas\s+/i, '').trim();
+    document.getElementById('displayKelasSiswa').textContent = cleanKelasDisp ? `Kelas ${cleanKelasDisp}` : 'Kelas';
+    document.getElementById('displayJkSiswa').textContent = currentSiswa.jk === 'P' ? 'Perempuan' : 'Laki-laki';
+
+    // Update menu buttons checkmarks in modal
+    updateSekolahMenuBadges(currentSiswa);
+
+    // Update header badge status
+    const badgeStatus = document.getElementById('badgeStatusSkrining');
+    if (badgeStatus) {
+      if (currentSiswa.status_kesehatan === 'Perlu Rujukan') {
+        badgeStatus.style.background = '#fef2f2';
+        badgeStatus.style.border = '1.5px solid #ef4444';
+        badgeStatus.style.color = '#dc2626';
+        badgeStatus.textContent = 'PERLU RUJUKAN';
+      } else if (currentSiswa.status_kesehatan === 'Perlu Perhatian') {
+        badgeStatus.style.background = '#fffbeb';
+        badgeStatus.style.border = '1.5px solid #f59e0b';
+        badgeStatus.style.color = '#d97706';
+        badgeStatus.textContent = 'PERLU PERHATIAN';
+      } else {
+        badgeStatus.style.background = '#d1fae5';
+        badgeStatus.style.border = '1.5px solid #059669';
+        badgeStatus.style.color = '#065f46';
+        badgeStatus.textContent = 'SUDAH DIPERIKSA';
+      }
+    }
+
+    // Refresh table background view
+    renderSekolahView();
+
+    Swal.fire({
+      icon: 'success',
+      title: titleMsg,
+      html: `Format data <strong>${categoryName}</strong> untuk <strong>${currentSiswa.nama}</strong> berhasil disimpan ke Cloud Database.<br><span style="font-size: 12px; color: #059669; font-weight: 600;">Data bagian lain tetap aman dan tidak terganggu.</span>`,
+      confirmButtonColor: '#059669',
+      showCancelButton: true,
+      confirmButtonText: '<i class="bi bi-grid-fill"></i> Menu Bagian',
+      cancelButtonText: 'Tetap di Form Ini',
+      cancelButtonColor: '#64748b'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        switchSekolahModalTab('menu');
+      }
+    });
+  } catch (err) {
+    console.error('Error in saveSekolahCategory:', err);
+    showToast('Gagal menyimpan: ' + (err.message || 'Terjadi kesalahan'), 'danger');
+  } finally {
+    isSavingSekolahCategory = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.style.pointerEvents = '';
+      btn.style.opacity = '';
+      if (originalBtnHtml) btn.innerHTML = originalBtnHtml;
+    }
+  }
+}
+
+let isSavingPemeriksaanSiswa = false;
+
+async function savePemeriksaanSiswa(event) {
+  if (event && event.preventDefault) event.preventDefault();
+  if (isSavingPemeriksaanSiswa) {
+    console.warn('[savePemeriksaanSiswa] Sedang menyimpan seluruh pemeriksaan. Permintaan kedua diabaikan.');
+    return;
+  }
+
+  const id = document.getElementById('periksaSiswaId')?.value;
+  const idx = sekolahRecords.findIndex(r => r.id === id);
+  if (idx < 0) {
+    showToast('Data siswa tidak valid.', 'danger');
+    return;
+  }
+
+  let btn = null;
+  if (event) {
+    const t = event.currentTarget || event.target;
+    if (t) btn = t.tagName === 'BUTTON' ? t : t.closest('button');
+  }
+  if (!btn && window.event) {
+    const t = window.event.currentTarget || window.event.target;
+    if (t) btn = t.tagName === 'BUTTON' ? t : t.closest('button');
+  }
+  if (!btn) {
+    btn = document.querySelector('#panelPemeriksaanSemuaFooter button[onclick*="savePemeriksaanSiswa"]');
+  }
+
+  let originalBtnHtml = '';
+  if (btn) {
+    originalBtnHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.style.pointerEvents = 'none';
+    btn.style.opacity = '0.85';
+    btn.innerHTML = `<span class="sekolah-spinner" aria-hidden="true"></span> Menyimpan Seluruh Data...`;
+  }
+  isSavingPemeriksaanSiswa = true;
+
+  try {
+    const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
+
     let imtVal = 0;
     let statusImt = 'Normal';
+    const bbVal = parseFloat(document.getElementById('periksaBb')?.value) || 0;
+    const tbVal = parseFloat(document.getElementById('periksaTb')?.value) || 0;
     if (bbVal > 0 && tbVal > 0) {
       const tbM = tbVal / 100;
       imtVal = parseFloat((bbVal / (tbM * tbM)).toFixed(2));
@@ -11290,214 +11549,88 @@ async function saveSekolahCategory(categoryKey) {
       else statusImt = 'Obesitas';
     }
 
-    fieldsToUpdate.bb = bbVal;
-    fieldsToUpdate.tb = tbVal;
-    fieldsToUpdate.lp = parseFloat(document.getElementById('periksaLp')?.value) || 0;
-    fieldsToUpdate.imt = imtVal;
-    fieldsToUpdate.status_imt = statusImt;
-    fieldsToUpdate.antro_done = 1;
-    categoryName = 'Antropometri';
-    titleMsg = 'Data Antropometri Berhasil Disimpan!';
-  } else if (categoryKey === 'vital') {
-    fieldsToUpdate.td_sistolik = parseInt(document.getElementById('periksaSistol')?.value, 10) || 0;
-    fieldsToUpdate.td_diastolik = parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0;
-    fieldsToUpdate.vital_done = 1;
-    categoryName = 'Tanda Vital (Tekanan Darah)';
-    titleMsg = 'Data Tanda Vital Berhasil Disimpan!';
-  } else if (categoryKey === 'lab') {
-    fieldsToUpdate.gula_darah = document.getElementById('periksaGula')?.value.trim() || '-';
-    fieldsToUpdate.hb = document.getElementById('periksaHb')?.value.trim() || '-';
-    fieldsToUpdate.lab_done = 1;
-    categoryName = 'Laboratorium';
-    titleMsg = 'Data Laboratorium Berhasil Disimpan!';
-  } else if (categoryKey === 'organ') {
-    fieldsToUpdate.telinga = document.getElementById('periksaTelinga')?.value || 'Tidak ada serumen';
-    fieldsToUpdate.gigi = document.getElementById('periksaGigi')?.value || 'Tidak ada';
-    fieldsToUpdate.mata = document.getElementById('periksaMata')?.value || 'Normal';
-    fieldsToUpdate.kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
-    fieldsToUpdate.menstruasi = document.getElementById('periksaMenstruasi')?.value || 'Belum';
-    fieldsToUpdate.organ_done = 1;
-    categoryName = 'Organ Indera & UKS';
-    titleMsg = 'Data Organ Indera Berhasil Disimpan!';
-  } else if (categoryKey === 'kesimpulan') {
-    fieldsToUpdate.status_kesehatan = document.getElementById('periksaStatusKesehatan')?.value || 'Sehat';
-    fieldsToUpdate.catatan_rujukan = document.getElementById('periksaCatatanRujukan')?.value.trim() || '-';
-    fieldsToUpdate.kesimpulan_done = 1;
-    categoryName = 'Kesimpulan & Rujukan';
-    titleMsg = 'Data Kesimpulan Berhasil Disimpan!';
-  }
+    const statusKesehatan = document.getElementById('periksaStatusKesehatan')?.value || 'Sehat';
+    const catatanRujukan = document.getElementById('periksaCatatanRujukan')?.value.trim() || '-';
+    const kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
+    const menstruasi = document.getElementById('periksaMenstruasi')?.value || 'Belum';
 
-  // ATOMIC PARTIAL UPDATE: Only sends fields for this category to prevent overwriting others
-  let freshRecord = null;
-  try {
-    let patchRes = await fetch('/api/sekolah', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, category: categoryKey, fields: fieldsToUpdate })
-    });
-    if (!patchRes.ok) {
-      patchRes = await fetch('/api/sekolah', {
+    const updatedRecord = {
+      ...sekolahRecords[idx],
+      nama: document.getElementById('periksaNama')?.value.trim().toUpperCase() || sekolahRecords[idx].nama,
+      nik: document.getElementById('periksaNik')?.value.trim() || '',
+      jk: document.getElementById('periksaJk')?.value || 'L',
+      sekolah: document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || sekolahRecords[idx].sekolah,
+      kelas: document.getElementById('periksaKelas')?.value.trim().toUpperCase() || sekolahRecords[idx].kelas,
+      tanggal_lahir: document.getElementById('periksaTglLahir')?.value || '',
+      no_whatsapp: document.getElementById('periksaWa')?.value.trim() || '',
+      alamat: document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '',
+      bb: bbVal,
+      tb: tbVal,
+      lp: parseFloat(document.getElementById('periksaLp')?.value) || 0,
+      imt: imtVal,
+      status_imt: statusImt,
+      td_sistolik: parseInt(document.getElementById('periksaSistol')?.value, 10) || 0,
+      td_diastolik: parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0,
+      gula_darah: document.getElementById('periksaGula')?.value.trim() || '-',
+      hb: document.getElementById('periksaHb')?.value.trim() || '-',
+      telinga: document.getElementById('periksaTelinga')?.value || sekolahRecords[idx].telinga || 'Tidak ada serumen',
+      gigi: document.getElementById('periksaGigi')?.value || sekolahRecords[idx].gigi || 'Tidak ada',
+      mata: document.getElementById('periksaMata')?.value || sekolahRecords[idx].mata || 'Normal',
+      kebugaran: kebugaran || sekolahRecords[idx].kebugaran || 'Baik',
+      menstruasi: menstruasi || sekolahRecords[idx].menstruasi || 'Belum',
+      status_kesehatan: statusKesehatan || sekolahRecords[idx].status_kesehatan || 'Sehat',
+      catatan_rujukan: (catatanRujukan && catatanRujukan !== '-') ? catatanRujukan : (sekolahRecords[idx].catatan_rujukan || '-'),
+      antro_done: (bbVal > 0 && tbVal > 0) ? 1 : (sekolahRecords[idx].antro_done || 0),
+      vital_done: (parseInt(document.getElementById('periksaSistol')?.value, 10) > 0) ? 1 : (sekolahRecords[idx].vital_done || 0),
+      lab_done: ((document.getElementById('periksaHb')?.value.trim() && document.getElementById('periksaHb')?.value.trim() !== '-') || (document.getElementById('periksaGula')?.value.trim() && document.getElementById('periksaGula')?.value.trim() !== '-')) ? 1 : (sekolahRecords[idx].lab_done || 0),
+      organ_done: (sekolahRecords[idx].organ_done || 0),
+      kesimpulan_done: (statusKesehatan && statusKesehatan !== 'Sehat' && statusKesehatan !== '') || (catatanRujukan && catatanRujukan !== '-' && catatanRujukan.trim() !== '') ? 1 : (sekolahRecords[idx].kesimpulan_done || 0),
+      identitas_done: (sekolahRecords[idx].identitas_done || 1),
+      // PENTING: Identitas TIDAK dihitung sebagai pemeriksaan!
+      is_examined: !!(
+        (bbVal > 0 && tbVal > 0) ||
+        (parseInt(document.getElementById('periksaSistol')?.value, 10) > 0) ||
+        ((document.getElementById('periksaHb')?.value.trim() && document.getElementById('periksaHb')?.value.trim() !== '-') || (document.getElementById('periksaGula')?.value.trim() && document.getElementById('periksaGula')?.value.trim() !== '-')) ||
+        Number(sekolahRecords[idx].organ_done) === 1 ||
+        (Number(sekolahRecords[idx].kesimpulan_done) === 1 || (catatanRujukan && catatanRujukan !== '-' && catatanRujukan.trim() !== ''))
+      ),
+      petugas_entry: currentUserName,
+      tanggal_entry: new Date().toISOString().substring(0, 10)
+    };
+
+    // Directly POST to Cloud Database
+    try {
+      await fetch('/api/sekolah', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'partial_update', id, category: categoryKey, fields: fieldsToUpdate })
+        body: JSON.stringify([updatedRecord])
       });
+    } catch (err) {
+      console.warn('Sync to cloud error:', err);
     }
-    if (patchRes.ok) {
-      const resJson = await patchRes.json();
-      if (resJson.data) freshRecord = resJson.data;
-    }
-  } catch (err) {
-    console.warn('Partial update notice:', err);
-  }
 
-  // Update local memory without overwriting other categories
-  if (freshRecord) {
-    sekolahRecords[idx] = { ...sekolahRecords[idx], ...freshRecord };
-  } else {
-    sekolahRecords[idx] = { ...sekolahRecords[idx], ...fieldsToUpdate };
-  }
-  localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+    await fetchSekolahRecordsFromCloud();
+    closePemeriksaanModal();
 
-  const currentSiswa = sekolahRecords[idx];
-
-  // Update modal header display in real-time
-  document.getElementById('displayNamaSiswa').textContent = currentSiswa.nama || 'Nama Siswa';
-  document.getElementById('displaySekolahSiswa').textContent = currentSiswa.sekolah || 'Nama Sekolah';
-  document.getElementById('displayKelasSiswa').textContent = currentSiswa.kelas || 'Kelas';
-  document.getElementById('displayJkSiswa').textContent = currentSiswa.jk === 'P' ? 'Perempuan' : 'Laki-laki';
-
-  // Update menu buttons checkmarks in modal
-  updateSekolahMenuBadges(currentSiswa);
-
-  // Update header badge status
-  const badgeStatus = document.getElementById('badgeStatusSkrining');
-  if (badgeStatus) {
-    if (currentSiswa.status_kesehatan === 'Perlu Rujukan') {
-      badgeStatus.style.background = '#fef2f2';
-      badgeStatus.style.border = '1.5px solid #ef4444';
-      badgeStatus.style.color = '#dc2626';
-      badgeStatus.textContent = 'PERLU RUJUKAN';
-    } else if (currentSiswa.status_kesehatan === 'Perlu Perhatian') {
-      badgeStatus.style.background = '#fffbeb';
-      badgeStatus.style.border = '1.5px solid #f59e0b';
-      badgeStatus.style.color = '#d97706';
-      badgeStatus.textContent = 'PERLU PERHATIAN';
-    } else {
-      badgeStatus.style.background = '#d1fae5';
-      badgeStatus.style.border = '1.5px solid #059669';
-      badgeStatus.style.color = '#065f46';
-      badgeStatus.textContent = 'SUDAH DIPERIKSA';
-    }
-  }
-
-  // Refresh table background view
-  renderSekolahView();
-
-  Swal.fire({
-    icon: 'success',
-    title: titleMsg,
-    html: `Format data <strong>${categoryName}</strong> untuk <strong>${currentSiswa.nama}</strong> berhasil disimpan ke Cloud Database.<br><span style="font-size: 12px; color: #059669; font-weight: 600;">Data bagian lain tetap aman dan tidak terganggu.</span>`,
-    confirmButtonColor: '#059669',
-    showCancelButton: true,
-    confirmButtonText: '<i class="bi bi-grid-fill"></i> Menu Bagian',
-    cancelButtonText: 'Tetap di Form Ini',
-    cancelButtonColor: '#64748b'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      switchSekolahModalTab('menu');
-    }
-  });
-}
-
-async function savePemeriksaanSiswa(event) {
-  if (event && event.preventDefault) event.preventDefault();
-
-  const id = document.getElementById('periksaSiswaId')?.value;
-  const idx = sekolahRecords.findIndex(r => r.id === id);
-  if (idx < 0) {
-    showToast('Data siswa tidak valid.', 'danger');
-    return;
-  }
-
-  const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
-
-  let imtVal = 0;
-  let statusImt = 'Normal';
-  const bbVal = parseFloat(document.getElementById('periksaBb')?.value) || 0;
-  const tbVal = parseFloat(document.getElementById('periksaTb')?.value) || 0;
-  if (bbVal > 0 && tbVal > 0) {
-    const tbM = tbVal / 100;
-    imtVal = parseFloat((bbVal / (tbM * tbM)).toFixed(2));
-    if (imtVal < 17.0) statusImt = 'Sangat Kurus';
-    else if (imtVal < 18.5) statusImt = 'Kurus';
-    else if (imtVal <= 25.0) statusImt = 'Normal';
-    else if (imtVal <= 27.0) statusImt = 'Gemuk';
-    else statusImt = 'Obesitas';
-  }
-
-  const statusKesehatan = document.getElementById('periksaStatusKesehatan')?.value || 'Sehat';
-  const catatanRujukan = document.getElementById('periksaCatatanRujukan')?.value.trim() || '-';
-  const kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
-  const menstruasi = document.getElementById('periksaMenstruasi')?.value || 'Belum';
-
-  const updatedRecord = {
-    ...sekolahRecords[idx],
-    nama: document.getElementById('periksaNama')?.value.trim().toUpperCase() || sekolahRecords[idx].nama,
-    nik: document.getElementById('periksaNik')?.value.trim() || '',
-    jk: document.getElementById('periksaJk')?.value || 'L',
-    sekolah: document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || sekolahRecords[idx].sekolah,
-    kelas: document.getElementById('periksaKelas')?.value.trim().toUpperCase() || sekolahRecords[idx].kelas,
-    tanggal_lahir: document.getElementById('periksaTglLahir')?.value || '',
-    no_whatsapp: document.getElementById('periksaWa')?.value.trim() || '',
-    alamat: document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '',
-    bb: bbVal,
-    tb: tbVal,
-    lp: parseFloat(document.getElementById('periksaLp')?.value) || 0,
-    imt: imtVal,
-    status_imt: statusImt,
-    td_sistolik: parseInt(document.getElementById('periksaSistol')?.value, 10) || 0,
-    td_diastolik: parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0,
-    gula_darah: document.getElementById('periksaGula')?.value.trim() || '-',
-    hb: document.getElementById('periksaHb')?.value.trim() || '-',
-    telinga: document.getElementById('periksaTelinga')?.value || sekolahRecords[idx].telinga || 'Tidak ada serumen',
-    gigi: document.getElementById('periksaGigi')?.value || sekolahRecords[idx].gigi || 'Tidak ada',
-    mata: document.getElementById('periksaMata')?.value || sekolahRecords[idx].mata || 'Normal',
-    kebugaran: kebugaran || sekolahRecords[idx].kebugaran || 'Baik',
-    menstruasi: menstruasi || sekolahRecords[idx].menstruasi || 'Belum',
-    status_kesehatan: statusKesehatan || sekolahRecords[idx].status_kesehatan || 'Sehat',
-    catatan_rujukan: (catatanRujukan && catatanRujukan !== '-') ? catatanRujukan : (sekolahRecords[idx].catatan_rujukan || '-'),
-    is_examined: true,
-    petugas_entry: currentUserName,
-    tanggal_entry: new Date().toISOString().substring(0, 10),
-    antro_done: (bbVal > 0 && tbVal > 0) ? 1 : (sekolahRecords[idx].antro_done || 0),
-    vital_done: (parseInt(document.getElementById('periksaSistol')?.value, 10) > 0) ? 1 : (sekolahRecords[idx].vital_done || 0),
-    lab_done: ((document.getElementById('periksaHb')?.value.trim() && document.getElementById('periksaHb')?.value.trim() !== '-') || (document.getElementById('periksaGula')?.value.trim() && document.getElementById('periksaGula')?.value.trim() !== '-')) ? 1 : (sekolahRecords[idx].lab_done || 0),
-    organ_done: (sekolahRecords[idx].organ_done || 0),
-    kesimpulan_done: (statusKesehatan && statusKesehatan !== 'Sehat' && statusKesehatan !== '') || (catatanRujukan && catatanRujukan !== '-' && catatanRujukan.trim() !== '') ? 1 : (sekolahRecords[idx].kesimpulan_done || 0),
-    identitas_done: (sekolahRecords[idx].identitas_done || 1)
-  };
-
-  // Directly POST to Cloud Database
-  try {
-    await fetch('/api/sekolah', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([updatedRecord])
+    Swal.fire({
+      icon: 'success',
+      title: 'Pemeriksaan Berhasil Disimpan!',
+      html: `Seluruh data pemeriksaan untuk <strong>${updatedRecord.nama}</strong> (${statusKesehatan}) telah berhasil disimpan langsung ke Cloud Database.`,
+      confirmButtonColor: '#059669',
+      timer: 2500
     });
   } catch (err) {
-    console.warn('Sync to cloud error:', err);
+    console.error('Error saving all pemeriksaan:', err);
+    showToast('Gagal menyimpan data: ' + (err.message || 'Terjadi kesalahan'), 'danger');
+  } finally {
+    isSavingPemeriksaanSiswa = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.style.pointerEvents = '';
+      btn.style.opacity = '';
+      if (originalBtnHtml) btn.innerHTML = originalBtnHtml;
+    }
   }
-
-  await fetchSekolahRecordsFromCloud();
-  closePemeriksaanModal();
-
-  Swal.fire({
-    icon: 'success',
-    title: 'Pemeriksaan Berhasil Disimpan!',
-    html: `Seluruh data pemeriksaan untuk <strong>${updatedRecord.nama}</strong> (${statusKesehatan}) telah berhasil disimpan langsung ke Cloud Database.`,
-    confirmButtonColor: '#059669',
-    timer: 2500
-  });
 }
 
 // --------------------------------------------------------------------------
@@ -11534,8 +11667,14 @@ function closeTambahSiswaModal() {
   }
 }
 
+let isSavingTambahSiswa = false;
+
 async function saveTambahSiswa(event) {
-  event.preventDefault();
+  if (event && event.preventDefault) event.preventDefault();
+  if (isSavingTambahSiswa) {
+    console.warn('[saveTambahSiswa] Sedang menambahkan siswa baru. Permintaan kedua diabaikan.');
+    return;
+  }
 
   const nama = document.getElementById('tambahSiswaNama').value.trim().toUpperCase();
   const sekolah = document.getElementById('tambahSiswaSekolah').value.trim().toUpperCase();
@@ -11584,65 +11723,89 @@ async function saveTambahSiswa(event) {
   }
   // PENTING: Jika NIK kosong / belum ada, TIDAK di anggap duplikat data (langsung disimpan)
 
-  const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
+  let submitBtn = event?.target?.querySelector?.('button[type="submit"]') || document.querySelector('#formTambahSiswa button[type="submit"]');
+  let originalBtnHtml = '';
+  if (submitBtn) {
+    originalBtnHtml = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.style.pointerEvents = 'none';
+    submitBtn.style.opacity = '0.85';
+    submitBtn.innerHTML = `<span class="sekolah-spinner" aria-hidden="true"></span> Menyimpan Siswa...`;
+  }
+  isSavingTambahSiswa = true;
 
-  const newSiswa = {
-    id: `SCH-${Date.now()}`,
-    no: sekolahRecords.length + 1,
-    nama: nama,
-    nik: nikInput,
-    jk: document.getElementById('tambahSiswaJk').value,
-    sekolah: sekolah,
-    kelas: kelas,
-    tanggal_lahir: document.getElementById('tambahSiswaTglLahir').value,
-    no_whatsapp: document.getElementById('tambahSiswaWa').value.trim(),
-    alamat: document.getElementById('tambahSiswaAlamat').value.trim().toUpperCase(),
-    provinsi: 'Jawa Barat',
-    kab_kota: 'Kab. Bandung',
-    kecamatan: 'Banjaran',
-    kelurahan: 'Tarajusari',
-    bb: 0,
-    tb: 0,
-    lp: 0,
-    imt: 0,
-    status_imt: 'Normal',
-    td_sistolik: 0,
-    td_diastolik: 0,
-    gula_darah: '-',
-    hb: '-',
-    telinga: 'Tidak ada serumen',
-    gigi: 'Tidak ada',
-    mata: 'Normal',
-    kebugaran: 'Baik',
-    menstruasi: 'Belum',
-    status_kesehatan: 'Sehat',
-    catatan_rujukan: '-',
-    is_examined: false,
-    petugas_entry: currentUserName,
-    tanggal_entry: new Date().toISOString().substring(0, 10)
-  };
-
-  // Directly POST to Cloud Database
   try {
-    await fetch('/api/sekolah', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([newSiswa])
+    const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
+
+    const newSiswa = {
+      id: `SCH-${Date.now()}`,
+      no: sekolahRecords.length + 1,
+      nama: nama,
+      nik: nikInput,
+      jk: document.getElementById('tambahSiswaJk').value,
+      sekolah: sekolah,
+      kelas: kelas,
+      tanggal_lahir: document.getElementById('tambahSiswaTglLahir').value,
+      no_whatsapp: document.getElementById('tambahSiswaWa').value.trim(),
+      alamat: document.getElementById('tambahSiswaAlamat').value.trim().toUpperCase(),
+      provinsi: 'Jawa Barat',
+      kab_kota: 'Kab. Bandung',
+      kecamatan: 'Banjaran',
+      kelurahan: 'Tarajusari',
+      bb: 0,
+      tb: 0,
+      lp: 0,
+      imt: 0,
+      status_imt: 'Normal',
+      td_sistolik: 0,
+      td_diastolik: 0,
+      gula_darah: '-',
+      hb: '-',
+      telinga: 'Tidak ada serumen',
+      gigi: 'Tidak ada',
+      mata: 'Normal',
+      kebugaran: 'Baik',
+      menstruasi: 'Belum',
+      status_kesehatan: 'Sehat',
+      catatan_rujukan: '-',
+      is_examined: false,
+      petugas_entry: currentUserName,
+      tanggal_entry: new Date().toISOString().substring(0, 10)
+    };
+
+    // Directly POST to Cloud Database
+    try {
+      await fetch('/api/sekolah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([newSiswa])
+      });
+    } catch (err) {
+      console.warn('Sync to cloud error:', err);
+    }
+
+    await fetchSekolahRecordsFromCloud();
+    closeTambahSiswaModal();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Siswa Berhasil Ditambahkan!',
+      html: `Data siswa <strong>${newSiswa.nama}</strong> (${newSiswa.sekolah} - ${newSiswa.kelas}) telah tersimpan langsung di Cloud Database.`,
+      confirmButtonColor: '#059669',
+      timer: 2500
     });
   } catch (err) {
-    console.warn('Sync to cloud error:', err);
+    console.error('Error saving tambah siswa:', err);
+    showToast('Gagal menambahkan siswa: ' + (err.message || 'Terjadi kesalahan'), 'danger');
+  } finally {
+    isSavingTambahSiswa = false;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.style.pointerEvents = '';
+      submitBtn.style.opacity = '';
+      if (originalBtnHtml) submitBtn.innerHTML = originalBtnHtml;
+    }
   }
-
-  await fetchSekolahRecordsFromCloud();
-  closeTambahSiswaModal();
-
-  Swal.fire({
-    icon: 'success',
-    title: 'Siswa Berhasil Ditambahkan!',
-    html: `Data siswa <strong>${newSiswa.nama}</strong> (${newSiswa.sekolah} - ${newSiswa.kelas}) telah tersimpan langsung di Cloud Database.`,
-    confirmButtonColor: '#059669',
-    timer: 2500
-  });
 }
 
 // --------------------------------------------------------------------------
