@@ -678,7 +678,7 @@
                 onclick="openBulkUpdateDateModal()" title="Ubah Tanggal Entry Massal Bulan & Tahun Target">
                 <i class="bi bi-calendar-range-fill"></i> Ubah Tgl Massal
               </button>
-              <button class="btn btn-danger admin-only" id="btnHapusSemuaDataCkg"
+              <button class="btn btn-danger admin-koordinator-only" id="btnHapusSemuaDataCkg"
                 onclick="confirmDeleteAllCkgRecords()">
                 <i class="bi bi-trash3-fill"></i> Hapus Semua
               </button>
@@ -836,7 +836,7 @@
               <button class="btn btn-secondary" onclick="renderSimpusView()">
                 <i class="bi bi-arrow-clockwise"></i> Refresh Data
               </button>
-              <button class="btn btn-danger admin-only" onclick="deleteAllSimpusData()">
+              <button class="btn btn-danger admin-koordinator-only" onclick="deleteAllSimpusData()">
                 <i class="bi bi-trash3-fill"></i> Hapus Semua
               </button>
             </div>
@@ -1017,10 +1017,10 @@
               <button class="btn btn-secondary" onclick="fetchSekolahRecordsFromCloud(true)">
                 <i class="bi bi-arrow-clockwise"></i> Refresh Data
               </button>
-              <button class="btn btn-rose" onclick="openDuplicateFinderModal()" title="Cari data ganda / NIK sama yang sudah terlanjur ada di database">
+              <button class="btn btn-rose admin-koordinator-only" onclick="openDuplicateFinderModal()" title="Cari data ganda / NIK sama yang sudah terlanjur ada di database">
                 <i class="bi bi-copy"></i> Cek Duplikat
               </button>
-              <button class="btn btn-danger admin-only" id="btnHapusSemuaDataSekolah"
+              <button class="btn btn-danger admin-koordinator-only" id="btnHapusSemuaDataSekolah"
                 onclick="confirmDeleteAllSekolahRecords()">
                 <i class="bi bi-trash3-fill"></i> Hapus Semua
               </button>
@@ -1089,13 +1089,13 @@
               <!-- 1. Pilih Sekolah (Dropdown + Search) -->
               <div class="filter-group-col filter-col-sekolah">
                 <label class="filter-label" for="filterSelectSekolah">
-                  <i class="bi bi-building"></i> Pilih Sekolah:
+                  <i class="bi bi-building"></i> Pilih Sekolah <span style="color: #ef4444; font-weight: 800;">*</span>:
                 </label>
 
                 <!-- Native select kept hidden for seamless compatibility -->
                 <select id="filterSelectSekolah" class="form-control" style="display: none;"
                   onchange="updateKelasDropdownOptions()">
-                  <option value="">-- Semua Sekolah --</option>
+                  <option value="">-- Pilih Sekolah (Wajib) --</option>
                 </select>
 
                 <!-- Searchable Combobox Component -->
@@ -1103,7 +1103,7 @@
                   <div class="combobox-trigger" id="comboboxSekolahTrigger" onclick="toggleSekolahDropdown(event)">
                     <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
                       <i class="bi bi-search combobox-icon-search"></i>
-                      <span class="combobox-label-text" id="comboboxSekolahLabel">-- Semua Sekolah --</span>
+                      <span class="combobox-label-text" id="comboboxSekolahLabel">-- Pilih Sekolah (Wajib) --</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
                       <button type="button" class="combobox-clear-btn" id="comboboxSekolahClearBtn"

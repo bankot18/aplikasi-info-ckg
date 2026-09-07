@@ -4035,8 +4035,8 @@ async function handleBagiPetugasSubmit(e) {
 
 async function deleteAllSimpusData() {
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
-  if (role !== 'admin') {
-    showToast('Akses khusus Admin!', 'error');
+  if (role !== 'admin' && role !== 'koordinator') {
+    showToast('Akses khusus Koordinator dan Admin!', 'error');
     return;
   }
 
@@ -6371,8 +6371,9 @@ function processBulkUpdateDate(monthVal, yearVal, petugasVal, newDateVal) {
 }
 
 function confirmDeleteAllCkgRecords() {
-  if (currentRole !== 'Admin' && currentRole !== 'admin') {
-    showToast('Hanya Admin yang dapat menghapus semua data.', 'error');
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  if (role !== 'admin' && role !== 'koordinator') {
+    showToast('Hanya Koordinator dan Admin yang dapat menghapus semua data.', 'error');
     return;
   }
 
@@ -10089,7 +10090,7 @@ function populateSekolahFilterDropdowns() {
 
   if (selectSekolah) {
     const savedSekolah = selectSekolah.value;
-    let html = '<option value="">-- Semua Sekolah --</option>';
+    let html = '<option value="">-- Pilih Sekolah (Wajib) --</option>';
     html += '<optgroup label="📚 SD / MI (Kelas 1 - 6)">';
     html += sdList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
@@ -10111,7 +10112,7 @@ function populateSekolahFilterDropdowns() {
     const labelEl = document.getElementById('comboboxSekolahLabel');
     const clearBtn = document.getElementById('comboboxSekolahClearBtn');
     if (labelEl) {
-      labelEl.textContent = selectSekolah.value || '-- Semua Sekolah --';
+      labelEl.textContent = selectSekolah.value || '-- Pilih Sekolah (Wajib) --';
     }
     if (clearBtn) {
       clearBtn.style.display = selectSekolah.value ? 'inline-block' : 'none';
@@ -10183,7 +10184,7 @@ function selectSekolahComboboxOption(value, label) {
     selectSekolah.value = value;
   }
   if (labelEl) {
-    labelEl.textContent = label || '-- Semua Sekolah --';
+    labelEl.textContent = label || '-- Pilih Sekolah (Wajib) --';
   }
   if (clearBtn) {
     clearBtn.style.display = value ? 'inline-block' : 'none';
@@ -10196,7 +10197,7 @@ function selectSekolahComboboxOption(value, label) {
 
 function clearSekolahFilter(event) {
   if (event) event.stopPropagation();
-  selectSekolahComboboxOption('', '-- Semua Sekolah --');
+  selectSekolahComboboxOption('', '-- Pilih Sekolah (Wajib) --');
 }
 
 function renderSearchableSekolahOptions(filterKeyword = '') {
@@ -10227,7 +10228,7 @@ function renderSearchableSekolahOptions(filterKeyword = '') {
   const filteredSMA = smaList.filter(filterFn);
   const filteredExtra = extraSchools.filter(filterFn);
 
-  const totalMatches = (kw ? 0 : 1) + filteredSD.length + filteredSMP.length + filteredSMA.length + filteredExtra.length;
+  const totalMatches = filteredSD.length + filteredSMP.length + filteredSMA.length + filteredExtra.length;
 
   if (totalMatches === 0) {
     container.innerHTML = `
@@ -10240,20 +10241,6 @@ function renderSearchableSekolahOptions(filterKeyword = '') {
   }
 
   let html = '';
-
-  // Default / Semua Sekolah
-  if (!kw || '-- semua sekolah --'.includes(kw) || 'semua'.includes(kw)) {
-    const isSelected = !selectedVal;
-    html += `
-      <div class="combobox-option-item ${isSelected ? 'selected' : ''}" onclick="selectSekolahComboboxOption('', '-- Semua Sekolah --')">
-        <span style="display: flex; align-items: center; gap: 6px;">
-          <i class="bi bi-building-check" style="color: #6366f1;"></i>
-          <strong>-- Semua Sekolah --</strong>
-        </span>
-        ${isSelected ? '<i class="bi bi-check2" style="font-weight: 800;"></i>' : ''}
-      </div>
-    `;
-  }
 
   const renderGroup = (title, icon, items) => {
     if (items.length === 0) return '';
@@ -10603,6 +10590,34 @@ function renderSekolahView() {
   const chosenSekolah = (document.getElementById('filterSelectSekolah')?.value || '').trim().toUpperCase();
   const chosenKelas = (document.getElementById('filterSelectKelas')?.value || '').trim().toUpperCase();
   const searchQuery = (document.getElementById('searchSekolahRecords')?.value || '').trim().toLowerCase();
+
+  // WAJIB PILIH SEKOLAH: Jika belum ada sekolah yang dipilih, data siswa TIDAK ditampilkan
+  if (!chosenSekolah) {
+    // Reset KPI Summary Metrics & Pill Counts ke 0
+    ['metricSekolahTotal', 'metricSekolahSudah', 'metricSekolahBelum', 'metricSekolahRujukan',
+     'pillCountTotal', 'pillCountSudah', 'pillCountBelum', 'pillCountRujukan'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '0';
+    });
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 60px 20px; color: #64748b;">
+          <div style="width: 72px; height: 72px; margin: 0 auto 16px auto; background: linear-gradient(135deg, #ecfdf5, #d1fae5); color: #059669; border: 2px dashed #34d399; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 4px 14px rgba(5,150,105,0.12);">
+            <i class="bi bi-building"></i>
+          </div>
+          <div style="font-size: 17px; font-weight: 800; color: #064e3b; margin-bottom: 6px;">Silakan Pilih Sekolah Terlebih Dahulu</div>
+          <p style="font-size: 13.5px; color: #64748b; max-width: 500px; margin: 0 auto 16px auto; line-height: 1.6;">
+            Data siswa tidak ditampilkan sebelum nama sekolah dipilih. Silakan pilih nama sekolah pada menu filter <strong>"Pilih Sekolah"</strong> di atas.
+          </p>
+          <button type="button" class="btn-modern-sm" onclick="toggleSekolahDropdown(event)" style="display: inline-flex; align-items: center; gap: 8px; padding: 9px 22px; font-size: 13.5px; font-weight: 700; background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 12px rgba(16,185,129,0.3); transition: all 0.2s ease;">
+            <i class="bi bi-search"></i> Pilih Sekolah Sekarang
+          </button>
+        </td>
+      </tr>
+    `;
+    return;
+  }
 
   let dataset = [...sekolahRecords];
 
@@ -11840,9 +11855,9 @@ async function deleteSiswaSekolah(id) {
 }
 
 async function confirmDeleteAllSekolahRecords() {
-  const currentUserRole = sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Admin');
-  if (currentUserRole !== 'Admin') {
-    showToast('Hanya Admin yang dapat menghapus seluruh database CKG Sekolah.', 'warning');
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (currentUserRole !== 'admin' && currentUserRole !== 'koordinator') {
+    showToast('Hanya Koordinator dan Admin yang dapat menghapus seluruh database CKG Sekolah.', 'warning');
     return;
   }
 
@@ -11876,6 +11891,12 @@ async function confirmDeleteAllSekolahRecords() {
 let currentDuplicateGroups = [];
 
 function openDuplicateFinderModal() {
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (currentUserRole !== 'admin' && currentUserRole !== 'koordinator') {
+    showToast('Fitur Cek Duplikat hanya dapat digunakan oleh Koordinator dan Admin.', 'warning');
+    return;
+  }
+
   if (!sekolahRecords || sekolahRecords.length === 0) {
     showToast('Belum ada data siswa di Cloud Database.', 'info');
     return;
@@ -12114,6 +12135,12 @@ function renderDuplicateFinderContent() {
 }
 
 async function deleteSingleDuplicateRecord(id, nama, nik) {
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (currentUserRole !== 'admin' && currentUserRole !== 'koordinator') {
+    showToast('Hanya Koordinator dan Admin yang dapat menghapus data duplikat.', 'warning');
+    return;
+  }
+
   const result = await Swal.fire({
     icon: 'warning',
     title: 'Hapus Record Duplikat?',
@@ -12148,6 +12175,12 @@ async function deleteSingleDuplicateRecord(id, nama, nik) {
 }
 
 async function autoResolveAllDuplicates() {
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (currentUserRole !== 'admin' && currentUserRole !== 'koordinator') {
+    showToast('Hanya Koordinator dan Admin yang dapat menghapus data duplikat.', 'warning');
+    return;
+  }
+
   if (!currentDuplicateGroups || currentDuplicateGroups.length === 0) return;
 
   // Gather all redundant IDs (all records in each group except the one with highest score)
@@ -12234,6 +12267,10 @@ function exportSekolahToXLSX() {
   }
 
   const chosenSekolah = (document.getElementById('filterSelectSekolah')?.value || '').trim().toUpperCase();
+  if (!chosenSekolah) {
+    showToast('Silakan pilih sekolah terlebih dahulu sebelum mengekspor data.', 'warning');
+    return;
+  }
   const chosenKelas = (document.getElementById('filterSelectKelas')?.value || '').trim().toUpperCase();
   const searchQuery = (document.getElementById('searchSekolahRecords')?.value || '').trim().toLowerCase();
 
