@@ -1,5 +1,11 @@
 // Main Application Logic for Pencatatan CKG Puskesmas Banjaran Kota
 
+// Utility: Escape HTML to prevent XSS
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // Initial User Database matching user specifications
 const INITIAL_USERS_DB = [
   { nama_user: "Mochamad Fauzie, S.Gz", password: "213", role: "Admin" },
@@ -9808,6 +9814,38 @@ function escapeHtml(str) {
 
 let sekolahRecords = [];
 let pendingSekolahImportData = null;
+let pendingSekolahImportSkipDuplicates = true;
+let pendingSekolahImportNewOnly = [];
+
+// Utility: Cek apakah NIK valid dan terisi untuk pengecekan duplikat.
+// NIK kosong, strip '-', '0', atau panjang < 6 karakter TIDAK dianggap duplikat.
+function isNikValidForDuplicate(nik) {
+  if (nik === null || nik === undefined) return false;
+  const s = String(nik).trim();
+  if (s === '' || s === '-' || s === '0' || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined' || s.length < 6) {
+    return false;
+  }
+  return true;
+}
+
+function setImportDupMode(skip) {
+  pendingSekolahImportSkipDuplicates = skip;
+  const btnSkip = document.getElementById('btnImportSkipDup');
+  const btnAll = document.getElementById('btnImportAllDup');
+  if (btnSkip && btnAll) {
+    if (skip) {
+      btnSkip.style.boxShadow = '0 0 0 3px rgba(5, 150, 105, 0.4)';
+      btnSkip.style.transform = 'scale(1.02)';
+      btnAll.style.boxShadow = 'none';
+      btnAll.style.transform = 'scale(1)';
+    } else {
+      btnAll.style.boxShadow = '0 0 0 3px rgba(217, 119, 6, 0.4)';
+      btnAll.style.transform = 'scale(1.02)';
+      btnSkip.style.boxShadow = 'none';
+      btnSkip.style.transform = 'scale(1)';
+    }
+  }
+}
 
 function loadStoredSekolahRecords() {
   fetchSekolahRecordsFromCloud(false);
@@ -11508,13 +11546,51 @@ async function saveTambahSiswa(event) {
     return;
   }
 
+  const nikInput = document.getElementById('tambahSiswaNik').value.trim();
+
+  // Anti-Duplikat NIK: Cek apakah NIK sudah ada di database (hanya jika NIK valid & terisi)
+  if (isNikValidForDuplicate(nikInput)) {
+    const existingByNik = sekolahRecords.filter(r => isNikValidForDuplicate(r.nik) && String(r.nik).trim() === nikInput);
+    if (existingByNik.length > 0) {
+      const existList = existingByNik.map(r =>
+        `• <strong>${escapeHtml(r.nama)}</strong> — ${escapeHtml(r.sekolah || '-')} / ${escapeHtml(r.kelas || '-')}`
+      ).join('<br>');
+
+      const dupResult = await Swal.fire({
+        icon: 'warning',
+        title: '⚠️ NIK Sudah Terdaftar!',
+        html: `
+          <div style="text-align: left; font-size: 13px; line-height: 1.6;">
+            <p>NIK <strong>${escapeHtml(nikInput)}</strong> sudah ditemukan pada data siswa berikut:</p>
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 14px; margin: 8px 0; color: #991b1b;">
+              ${existList}
+            </div>
+            <p style="color: #64748b; font-size: 12px;">Apakah Anda yakin ingin menambahkan <strong>${escapeHtml(nama)}</strong> sebagai data baru? Data duplikat bisa menyulitkan proses skrining.</p>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Tetap Simpan (Duplikat)',
+        cancelButtonText: 'Batal, Jangan Simpan',
+        confirmButtonColor: '#d97706',
+        cancelButtonColor: '#64748b',
+        reverseButtons: true
+      });
+
+      if (!dupResult.isConfirmed) {
+        showToast('Penyimpanan dibatalkan. Siswa tidak ditambahkan.', 'info');
+        return;
+      }
+    }
+  }
+  // PENTING: Jika NIK kosong / belum ada, TIDAK di anggap duplikat data (langsung disimpan)
+
   const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
 
   const newSiswa = {
     id: `SCH-${Date.now()}`,
     no: sekolahRecords.length + 1,
     nama: nama,
-    nik: document.getElementById('tambahSiswaNik').value.trim(),
+    nik: nikInput,
     jk: document.getElementById('tambahSiswaJk').value,
     sekolah: sekolah,
     kelas: kelas,
@@ -11628,6 +11704,360 @@ async function confirmDeleteAllSekolahRecords() {
 
   await fetchSekolahRecordsFromCloud();
   showToast('Seluruh database CKG Sekolah berhasil dihapus dari Cloud Database.', 'info');
+}
+
+// ==========================================================================
+// 🔍 DUPLICATE FINDER: PENGELOLA & PEMBERSIH DATA DUPLIKAT CKG SEKOLAH
+// ==========================================================================
+
+let currentDuplicateGroups = [];
+
+function openDuplicateFinderModal() {
+  if (!sekolahRecords || sekolahRecords.length === 0) {
+    showToast('Belum ada data siswa di Cloud Database.', 'info');
+    return;
+  }
+
+  // Scan & kelompokkan berdasarkan NIK yang sama
+  // PENTING: Siswa dengan NIK kosong/tidak valid TIDAK dianggap duplikat!
+  const nikMap = {};
+  sekolahRecords.forEach(r => {
+    if (isNikValidForDuplicate(r.nik)) {
+      const cleanNik = String(r.nik).trim();
+      if (!nikMap[cleanNik]) nikMap[cleanNik] = [];
+      nikMap[cleanNik].push(r);
+    }
+  });
+
+  currentDuplicateGroups = Object.keys(nikMap)
+    .filter(k => nikMap[k].length > 1)
+    .map(nik => ({
+      nik: nik,
+      records: nikMap[nik]
+    }));
+
+  if (currentDuplicateGroups.length === 0) {
+    Swal.fire({
+      icon: 'success',
+      title: 'Tidak Ada Data Duplikat!',
+      html: `
+        <div style="text-align: left; font-size: 13.5px; line-height: 1.6; color: #334155;">
+          <p>Seluruh <strong>${sekolahRecords.length}</strong> data siswa telah diperiksa berdasarkan NIK.</p>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px 16px; margin: 12px 0; color: #166534;">
+            <div style="font-weight: 800; font-size: 13.5px; display: flex; align-items: center; gap: 8px;">
+              <i class="bi bi-shield-check" style="color: #16a34a; font-size: 18px;"></i> Semua NIK Siswa Unik
+            </div>
+            <div style="font-size: 12px; color: #15803d; margin-top: 4px;">
+              Tidak ditemukan data ganda. Database CKG Sekolah Anda dalam kondisi bersih dan teratur.
+            </div>
+          </div>
+          <div style="font-size: 12px; color: #64748b; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px dashed #cbd5e1;">
+            💡 <em>Catatan: Data siswa yang NIK-nya kosong tidak dianggap sebagai duplikat.</em>
+          </div>
+        </div>
+      `,
+      confirmButtonText: 'Tutup',
+      confirmButtonColor: '#059669'
+    });
+    return;
+  }
+
+  const modal = document.getElementById('modalDuplicateFinder');
+  if (modal) {
+    modal.classList.add('open');
+    modal.style.display = 'flex';
+  }
+
+  renderDuplicateFinderContent();
+}
+
+function closeDuplicateFinderModal() {
+  const modal = document.getElementById('modalDuplicateFinder');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+}
+
+function getDuplicateRecordScore(r) {
+  let score = 0;
+  const bbNum = Number(r.bb) || 0;
+  const tbNum = Number(r.tb) || 0;
+  const sistolNum = Number(r.td_sistolik) || 0;
+  const isExamined = !!r.is_examined || (bbNum > 0 || tbNum > 0 || sistolNum > 0);
+
+  if (isExamined) score += 1000;
+  if (bbNum > 0) score += 50;
+  if (tbNum > 0) score += 50;
+  if (sistolNum > 0) score += 50;
+  if (r.gula_darah && r.gula_darah !== '-') score += 20;
+  if (r.hb && r.hb !== '-') score += 20;
+  if (r.no_whatsapp && r.no_whatsapp.trim() !== '') score += 10;
+  if (r.alamat && r.alamat.trim() !== '') score += 10;
+  if (r.tanggal_lahir && r.tanggal_lahir.trim() !== '') score += 10;
+  if (r.telinga && r.telinga !== '-') score += 5;
+  if (r.gigi && r.gigi !== '-') score += 5;
+  if (r.mata && r.mata !== '-') score += 5;
+  return score;
+}
+
+function renderDuplicateFinderContent() {
+  const contentEl = document.getElementById('duplicateFinderContent');
+  const summaryEl = document.getElementById('duplicateFinderSummary');
+  const btnAutoEl = document.getElementById('btnAutoResolveDuplicates');
+  if (!contentEl) return;
+
+  // Re-scan from current sekolahRecords to make sure it's 100% fresh
+  const nikMap = {};
+  sekolahRecords.forEach(r => {
+    if (isNikValidForDuplicate(r.nik)) {
+      const cleanNik = String(r.nik).trim();
+      if (!nikMap[cleanNik]) nikMap[cleanNik] = [];
+      nikMap[cleanNik].push(r);
+    }
+  });
+
+  currentDuplicateGroups = Object.keys(nikMap)
+    .filter(k => nikMap[k].length > 1)
+    .map(nik => ({
+      nik: nik,
+      records: nikMap[nik]
+    }));
+
+  if (currentDuplicateGroups.length === 0) {
+    contentEl.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px;">
+        <i class="bi bi-check-circle-fill" style="font-size: 48px; color: #22c55e;"></i>
+        <h4 style="font-weight: 800; color: #166534; margin: 14px 0 6px 0;">Semua Duplikat Berhasil Dibersihkan!</h4>
+        <p style="color: #64748b; font-size: 13px;">Tidak ada lagi siswa dengan NIK ganda di database.</p>
+      </div>
+    `;
+    if (summaryEl) summaryEl.textContent = 'Semua data bersih (0 duplikat)';
+    if (btnAutoEl) btnAutoEl.style.display = 'none';
+    return;
+  }
+
+  const totalGroups = currentDuplicateGroups.length;
+  const totalRows = currentDuplicateGroups.reduce((acc, g) => acc + g.records.length, 0);
+  const totalRedundant = currentDuplicateGroups.reduce((acc, g) => acc + (g.records.length - 1), 0);
+
+  if (summaryEl) {
+    summaryEl.innerHTML = `<strong>${totalGroups} NIK Ganda</strong> ditemukan (${totalRows} baris data, <strong>${totalRedundant} duplikat redundan</strong>).`;
+  }
+  if (btnAutoEl) {
+    btnAutoEl.style.display = 'inline-flex';
+    btnAutoEl.innerHTML = `<i class="bi bi-magic"></i> Hapus Otomatis ${totalRedundant} Duplikat (Simpan Data Terlengkap)`;
+  }
+
+  let html = `
+    <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-size: 12.5px; color: #991b1b; line-height: 1.5;">
+      <div style="font-weight: 800; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+        <i class="bi bi-exclamation-triangle-fill" style="color: #dc2626;"></i> Ditemukan Data Siswa Dengan NIK Sama
+      </div>
+      <div>
+        Data yang ditandai dengan badge <span style="background: #059669; color: #fff; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 700;">⭐ Disarankan Simpan</span> adalah data yang <strong>sudah diperiksa / paling lengkap</strong>. Anda dapat menghapus data duplikat satu per satu atau menggunakan tombol otomatis.
+      </div>
+    </div>
+  `;
+
+  currentDuplicateGroups.forEach((group, groupIdx) => {
+    // Determine which record is best to keep
+    const recordsWithScore = group.records.map(r => ({
+      record: r,
+      score: getDuplicateRecordScore(r)
+    }));
+
+    // Sort descending by score
+    recordsWithScore.sort((a, b) => b.score - a.score);
+    const bestRecordId = recordsWithScore[0].record.id;
+
+    html += `
+      <div style="border: 1.5px solid #e2e8f0; border-radius: 14px; margin-bottom: 14px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+        <div style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <div style="font-weight: 800; font-size: 13px; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+            <span style="background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800;">Grup #${groupIdx + 1}</span>
+            <span>NIK: <code style="font-size: 13px; font-weight: 800; color: #0f172a; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${escapeHtml(group.nik)}</code></span>
+          </div>
+          <span style="background: #fee2e2; color: #b91c1c; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 20px;">
+            ${group.records.length} Record Terdaftar
+          </span>
+        </div>
+        <div style="padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;">
+    `;
+
+    recordsWithScore.forEach(({ record: r, score }) => {
+      const isBest = (r.id === bestRecordId);
+      const bbNum = Number(r.bb) || 0;
+      const tbNum = Number(r.tb) || 0;
+      const sistolNum = Number(r.td_sistolik) || 0;
+      const isExamined = !!r.is_examined || (bbNum > 0 || tbNum > 0 || sistolNum > 0);
+
+      const itemBg = isBest ? '#f0fdf4' : '#fff5f5';
+      const itemBorder = isBest ? '#86efac' : '#fecaca';
+
+      html += `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: ${itemBg}; border: 1.5px solid ${itemBorder}; border-radius: 10px; padding: 10px 14px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 220px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-weight: 800; font-size: 13.5px; color: #0f172a;">${escapeHtml(r.nama)}</span>
+              ${isBest ? `
+                <span style="background: #059669; color: #ffffff; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px;">
+                  <i class="bi bi-star-fill" style="font-size: 9px;"></i> Disarankan Simpan (Utama)
+                </span>
+              ` : `
+                <span style="background: #ef4444; color: #ffffff; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 6px;">
+                  ⚠️ Duplikat / Redundan
+                </span>
+              `}
+            </div>
+            <div style="font-size: 11.5px; color: #475569; margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap;">
+              <span><strong>Sekolah:</strong> ${escapeHtml(r.sekolah || '-')}</span>
+              <span><strong>Kelas:</strong> ${escapeHtml(r.kelas || '-')}</span>
+              <span><strong>JK:</strong> ${escapeHtml(r.jk || '-')}</span>
+              <span><strong>ID:</strong> <code style="font-size: 10.5px;">${escapeHtml(r.id || '-')}</code></span>
+            </div>
+            <div style="font-size: 11.5px; margin-top: 4px;">
+              ${isExamined ? `
+                <span style="color: #15803d; font-weight: 700;">
+                  <i class="bi bi-check-circle-fill"></i> Sudah Diperiksa
+                  <span style="font-weight: 500; color: #166534;">(BB: ${bbNum}kg, TB: ${tbNum}cm, TD: ${sistolNum}/${r.td_diastolik || 0}, IMT: ${r.imt || 0})</span>
+                </span>
+              ` : `
+                <span style="color: #b91c1c; font-weight: 600;">
+                  <i class="bi bi-clock-history"></i> Belum Diperiksa (Pemeriksaan Kosong)
+                </span>
+              `}
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button type="button" class="btn btn-sm" onclick="deleteSingleDuplicateRecord('${escapeHtml(r.id)}', '${escapeHtml(r.nama)}', '${escapeHtml(group.nik)}')"
+              style="background: #dc2626; color: #ffffff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: background 0.2s;"
+              onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'"
+              title="Hapus record duplikat ini dari Cloud Database">
+              <i class="bi bi-trash3-fill"></i> Hapus Baris Ini
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+  });
+
+  contentEl.innerHTML = html;
+}
+
+async function deleteSingleDuplicateRecord(id, nama, nik) {
+  const result = await Swal.fire({
+    icon: 'warning',
+    title: 'Hapus Record Duplikat?',
+    html: `
+      <div style="text-align: left; font-size: 13px; line-height: 1.5;">
+        <p>Apakah Anda yakin ingin menghapus data siswa:</p>
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px; color: #991b1b; font-weight: 700;">
+          ${escapeHtml(nama)} (NIK: ${escapeHtml(nik)})
+        </div>
+        <p style="color: #64748b; font-size: 11.5px; margin-top: 8px;">Record ini akan dihapus permanen dari Cloudflare D1. Record pasangan lainnya dengan NIK yang sama tetap tersimpan.</p>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus Sekarang',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    reverseButtons: true
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await fetch(`/api/sekolah?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    showToast(`Data duplikat ${nama} berhasil dihapus.`, 'info');
+    await fetchSekolahRecordsFromCloud();
+    renderDuplicateFinderContent();
+  } catch (err) {
+    console.error('Error deleting duplicate record:', err);
+    showToast('Gagal menghapus data duplikat: ' + err.message, 'danger');
+  }
+}
+
+async function autoResolveAllDuplicates() {
+  if (!currentDuplicateGroups || currentDuplicateGroups.length === 0) return;
+
+  // Gather all redundant IDs (all records in each group except the one with highest score)
+  const redundantList = [];
+  currentDuplicateGroups.forEach(group => {
+    const scored = group.records.map(r => ({ record: r, score: getDuplicateRecordScore(r) }));
+    scored.sort((a, b) => b.score - a.score);
+    // Best is at index 0, rest are redundant
+    for (let i = 1; i < scored.length; i++) {
+      redundantList.push(scored[i].record);
+    }
+  });
+
+  if (redundantList.length === 0) {
+    showToast('Tidak ada data duplikat yang dapat dihapus.', 'info');
+    return;
+  }
+
+  const result = await Swal.fire({
+    icon: 'question',
+    title: `Hapus Otomatis ${redundantList.length} Duplikat?`,
+    html: `
+      <div style="text-align: left; font-size: 13px; line-height: 1.6;">
+        <p>Sistem akan secara otomatis:</p>
+        <ul style="padding-left: 18px; margin: 8px 0; color: #1e293b;">
+          <li><strong style="color: #059669;">Mempertahankan</strong> 1 data terlengkap / sudah diperiksa untuk setiap NIK.</li>
+          <li><strong style="color: #dc2626;">Menghapus permanen</strong> <strong>${redundantList.length}</strong> record ganda yang kosong/redundant dari Cloudflare D1.</li>
+        </ul>
+        <p style="color: #64748b; font-size: 11.5px;">Tindakan ini tidak dapat dibatalkan. Pastikan data yang dipertahankan sudah sesuai.</p>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: `Ya, Bersihkan ${redundantList.length} Duplikat`,
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#e11d48',
+    cancelButtonColor: '#64748b',
+    reverseButtons: true
+  });
+
+  if (!result.isConfirmed) return;
+
+  Swal.fire({
+    title: 'Membersihkan Data Duplikat...',
+    html: `Sedang menghapus <strong>${redundantList.length}</strong> record dari Cloud Database...`,
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  try {
+    for (const item of redundantList) {
+      await fetch(`/api/sekolah?id=${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+    }
+
+    await fetchSekolahRecordsFromCloud();
+    renderDuplicateFinderContent();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Pembersihan Selesai!',
+      html: `Sebanyak <strong>${redundantList.length}</strong> data duplikat berhasil dibersihkan dari Cloud Database. Seluruh data siswa kini unik!`,
+      confirmButtonColor: '#059669'
+    });
+  } catch (err) {
+    console.error('Error auto resolving duplicates:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Membersihkan',
+      text: err.message || 'Terjadi kesalahan saat menghapus data duplikat.',
+      confirmButtonColor: '#dc2626'
+    });
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -11921,13 +12351,84 @@ function handleSekolahImportFileSelect(event) {
       pendingSekolahImportData = parsedItems;
       document.getElementById('sekolahImportDropzoneText').textContent = `File Terpilih: ${file.name} (${parsedItems.length} Siswa Terdeteksi)`;
 
+      // --- Anti-Duplikat: Cek NIK duplikat terhadap data yang sudah ada di database ---
+      // PENTING: NIK kosong / tidak valid TIDAK dianggap duplikat data!
+      const existingNikSet = new Set();
+      sekolahRecords.forEach(r => {
+        if (isNikValidForDuplicate(r.nik)) existingNikSet.add(String(r.nik).trim());
+      });
+
+      const duplicateItems = parsedItems.filter(item => isNikValidForDuplicate(item.nik) && existingNikSet.has(String(item.nik).trim()));
+      const newItems = parsedItems.filter(item => !isNikValidForDuplicate(item.nik) || !existingNikSet.has(String(item.nik).trim()));
+
+      // Cek duplikat di dalam file Excel itu sendiri (hanya NIK valid)
+      const fileNikMap = {};
+      parsedItems.forEach(item => {
+        if (isNikValidForDuplicate(item.nik)) {
+          const nik = String(item.nik).trim();
+          if (!fileNikMap[nik]) fileNikMap[nik] = [];
+          fileNikMap[nik].push(item);
+        }
+      });
+      const internalDuplicateNiks = Object.keys(fileNikMap).filter(k => fileNikMap[k].length > 1);
+
       const previewArea = document.getElementById('sekolahImportPreviewArea');
       previewArea.style.display = 'block';
-      previewArea.innerHTML = `
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; color: #166534; font-size: 13px; font-weight: 700;">
-          <i class="bi bi-check-circle-fill" style="color: #22c55e;"></i> Berhasil membaca ${parsedItems.length} data siswa dari file Excel.
-        </div>
-      `;
+
+      if (duplicateItems.length === 0 && internalDuplicateNiks.length === 0) {
+        // No duplicates found - simple green message
+        previewArea.innerHTML = `
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; color: #166534; font-size: 13px; font-weight: 700;">
+            <i class="bi bi-check-circle-fill" style="color: #22c55e;"></i> Berhasil membaca ${parsedItems.length} data siswa dari file Excel.
+            <span style="display: block; font-size: 11px; font-weight: 600; color: #15803d; margin-top: 4px;">✅ Tidak ada data duplikat ditemukan. Aman untuk diimport langsung.</span>
+          </div>
+        `;
+        pendingSekolahImportSkipDuplicates = false;
+        pendingSekolahImportNewOnly = parsedItems;
+      } else {
+        // Duplicates found - show warning
+        const dupList = duplicateItems.slice(0, 8).map(d => {
+          const existInDb = sekolahRecords.find(r => isNikValidForDuplicate(r.nik) && String(r.nik).trim() === String(d.nik).trim());
+          return `<li style="margin-bottom: 4px;"><strong>${escapeHtml(d.nama)}</strong> (NIK: ${escapeHtml(d.nik)})${existInDb ? ' — sudah ada: <em>' + escapeHtml(existInDb.nama) + '</em> (' + escapeHtml(existInDb.sekolah || '') + ')' : ''}</li>`;
+        }).join('');
+
+        let internalDupHtml = '';
+        if (internalDuplicateNiks.length > 0) {
+          internalDupHtml = `
+            <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 12px; margin-top: 8px; font-size: 11.5px; color: #854d0e;">
+              <i class="bi bi-exclamation-triangle-fill"></i> <strong>${internalDuplicateNiks.length} NIK duplikat</strong> ditemukan <em>di dalam file Excel itu sendiri</em>.
+            </div>
+          `;
+        }
+
+        previewArea.innerHTML = `
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; color: #166534; font-size: 13px; font-weight: 700; margin-bottom: 10px;">
+            <i class="bi bi-check-circle-fill" style="color: #22c55e;"></i> Berhasil membaca ${parsedItems.length} data siswa dari file Excel.
+          </div>
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 14px; color: #991b1b; font-size: 12.5px;">
+            <div style="font-weight: 800; font-size: 13px; margin-bottom: 6px;">
+              <i class="bi bi-exclamation-diamond-fill" style="color: #dc2626;"></i> ${duplicateItems.length} Data Duplikat NIK Ditemukan!
+            </div>
+            <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">${dupList}</ul>
+            ${duplicateItems.length > 8 ? '<div style="font-size: 11px; color: #b91c1c; margin-top: 4px;">...dan ' + (duplicateItems.length - 8) + ' lainnya</div>' : ''}
+            ${internalDupHtml}
+            <div style="font-size: 11.5px; color: #64748b; margin: 8px 0 10px 0;">
+              *Siswa dengan NIK kosong tetap dianggap data baru dan aman diimport.
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" onclick="setImportDupMode(true)" id="btnImportSkipDup" class="btn btn-sm" style="background: #059669; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 12px; cursor: pointer; box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.4); transform: scale(1.02);">
+                <i class="bi bi-funnel-fill"></i> Import Hanya Data Baru (${newItems.length} siswa)
+              </button>
+              <button type="button" onclick="setImportDupMode(false)" id="btnImportAllDup" class="btn btn-sm" style="background: #d97706; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 12px; cursor: pointer;">
+                <i class="bi bi-arrow-repeat"></i> Import Semua (${parsedItems.length} siswa)
+              </button>
+            </div>
+          </div>
+        `;
+        // Default to skip duplicates
+        pendingSekolahImportSkipDuplicates = true;
+        pendingSekolahImportNewOnly = newItems;
+      }
       document.getElementById('btnExecuteSekolahImport').disabled = false;
 
     } catch (err) {
@@ -11941,7 +12442,16 @@ function handleSekolahImportFileSelect(event) {
 async function executeSekolahXLSXImport() {
   if (!pendingSekolahImportData || pendingSekolahImportData.length === 0) return;
 
-  const total = pendingSekolahImportData.length;
+  const itemsToUpload = (pendingSekolahImportSkipDuplicates && pendingSekolahImportNewOnly)
+    ? pendingSekolahImportNewOnly
+    : pendingSekolahImportData;
+
+  const total = itemsToUpload.length;
+  if (total === 0) {
+    showToast('Tidak ada data baru untuk diimport (seluruh data duplikat dilewati).', 'warning');
+    return;
+  }
+
   Swal.fire({
     title: 'Mengunggah ke Cloud Database...',
     html: `Sedang mengunggah <strong>${total}</strong> data siswa langsung ke server Cloudflare D1...`,
@@ -11955,7 +12465,7 @@ async function executeSekolahXLSXImport() {
     // Send in chunks of 50 to prevent large payload timeouts
     const chunkSize = 50;
     for (let i = 0; i < total; i += chunkSize) {
-      const chunk = pendingSekolahImportData.slice(i, i + chunkSize);
+      const chunk = itemsToUpload.slice(i, i + chunkSize);
       await fetch('/api/sekolah', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
