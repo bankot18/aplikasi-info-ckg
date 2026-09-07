@@ -14,7 +14,11 @@ function initDashboardCharts(officers = []) {
   const prodCtx = prodCanvas.getContext('2d');
   const propCtx = propCanvas.getContext('2d');
 
-  Chart.defaults.color = '#64748b';
+  const isDark = document.body.classList.contains('dark-mode');
+  const textColor = isDark ? '#cbd5e1' : '#64748b';
+  const gridColor = isDark ? 'rgba(51, 65, 85, 0.6)' : 'rgba(226, 232, 240, 0.6)';
+
+  Chart.defaults.color = textColor;
   Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
 
   // Active filter year (default current year e.g. 2026)
@@ -24,7 +28,7 @@ function initDashboardCharts(officers = []) {
   // Update Right Chart Title if element exists
   const monthChartTitleEl = document.getElementById('monthlyTrendChartTitle');
   if (monthChartTitleEl) {
-    monthChartTitleEl.innerHTML = `<i class="bi bi-calendar-event-fill" style="color: #10b981;"></i> Grafik Total Entri Data CKG Tiap Bulan <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">(Tahun ${selectedYear})</span>`;
+    monthChartTitleEl.innerHTML = `<i class="bi bi-calendar-event-fill" style="color: #10b981;"></i> Grafik Total Entri Data CKG Tiap Bulan <span style="font-size: 11.5px; color: ${textColor}; font-weight: 600;">(Tahun ${selectedYear})</span>`;
   }
 
   // Create Bar Gradients for Left Canvas (Productivity Top 10)
@@ -81,7 +85,7 @@ function initDashboardCharts(officers = []) {
         legend: {
           position: 'top',
           align: 'end',
-          labels: { font: { size: 11, weight: '700' }, usePointStyle: true, pointStyle: 'circle' }
+          labels: { color: textColor, font: { size: 11, weight: '700' }, usePointStyle: true, pointStyle: 'circle' }
         },
         tooltip: {
           backgroundColor: 'rgba(15, 23, 42, 0.95)',
@@ -101,12 +105,13 @@ function initDashboardCharts(officers = []) {
       scales: {
         y: {
           beginAtZero: true,
-          grid: { color: 'rgba(226, 232, 240, 0.6)', drawBorder: false },
-          ticks: { font: { size: 10.5, weight: '600' }, precision: 0 }
+          grid: { color: gridColor, drawBorder: false },
+          ticks: { color: textColor, font: { size: 10.5, weight: '600' }, precision: 0 }
         },
         x: {
           grid: { display: false },
           ticks: {
+            color: textColor,
             font: { size: 10, weight: '600' },
             maxRotation: 45,
             minRotation: 25
@@ -190,7 +195,7 @@ function initDashboardCharts(officers = []) {
         legend: {
           position: 'top',
           align: 'end',
-          labels: { font: { size: 10.5, weight: '700' }, usePointStyle: true, pointStyle: 'circle' }
+          labels: { color: textColor, font: { size: 10.5, weight: '700' }, usePointStyle: true, pointStyle: 'circle' }
         },
         tooltip: {
           backgroundColor: 'rgba(15, 23, 42, 0.95)',
@@ -214,12 +219,12 @@ function initDashboardCharts(officers = []) {
       scales: {
         y: {
           beginAtZero: true,
-          grid: { color: 'rgba(226, 232, 240, 0.6)', drawBorder: false },
-          ticks: { font: { size: 10.5, weight: '600' }, precision: 0 }
+          grid: { color: gridColor, drawBorder: false },
+          ticks: { color: textColor, font: { size: 10.5, weight: '600' }, precision: 0 }
         },
         x: {
           grid: { display: false },
-          ticks: { font: { size: 10, weight: '700' }, padding: 4 }
+          ticks: { color: textColor, font: { size: 10, weight: '700' }, padding: 4 }
         }
       }
     }

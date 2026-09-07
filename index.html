@@ -22,7 +22,7 @@
 
   <!-- Application Stylesheet & SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="index.css?v=2.2">
 
   <!-- Chart.js, SweetAlert2 & SheetJS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -30,7 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
-<body>
+<body class="dark-mode">
 
   <!-- FULLSCREEN SPLIT-SCREEN AUTH FORM OVERLAY -->
   <div id="loginViewContainer" class="login-view-container">
@@ -107,10 +107,10 @@
       <!-- RIGHT COLUMN: Auth Form Fields Panel -->
       <div class="split-form-panel">
         <div style="position: absolute; top: 20px; right: 24px;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDarkMode()"
+          <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDarkMode()" id="loginThemeToggleBtn"
             style="border-radius: 20px; padding: 6px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
-            <i id="loginThemeIcon" class="bi bi-moon-stars-fill" style="color: #f59e0b;"></i>
-            <span id="loginThemeText">Mode Gelap</span>
+            <i id="loginThemeIcon" class="bi bi-sun-fill" style="color: #f59e0b;"></i>
+            <span id="loginThemeText">Mode Terang</span>
           </button>
         </div>
         <div class="form-panel-content">
@@ -240,8 +240,8 @@
         <div id="darkModeHeaderPill" class="stat-pill"
           style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;" onclick="toggleDarkMode()"
           title="Ganti Mode Gelap / Terang">
-          <i id="themeToggleHeaderIcon" class="bi bi-moon-stars-fill" style="color: #f59e0b;"></i>
-          <span id="themeToggleHeaderText">Mode Gelap</span>
+          <i id="themeToggleHeaderIcon" class="bi bi-sun-fill" style="color: #f59e0b;"></i>
+          <span id="themeToggleHeaderText">Mode Terang</span>
         </div>
 
         <!-- TOP-RIGHT USER PROFILE DROPDOWN MENU (Click Icon User -> Popover Menu) -->
@@ -270,8 +270,8 @@
             <div style="display: flex; flex-direction: column; gap: 8px;">
               <button class="btn btn-secondary btn-sm" onclick="toggleDarkMode(); closeUserProfileDropdown();"
                 style="width: 100%; justify-content: flex-start; padding: 8px 12px; font-size: 12.5px;">
-                <i id="userMenuThemeIcon" class="bi bi-moon-stars-fill" style="color: #f59e0b;"></i>
-                <span id="userMenuThemeText">Mode Gelap</span>
+                <i id="userMenuThemeIcon" class="bi bi-sun-fill" style="color: #f59e0b;"></i>
+                <span id="userMenuThemeText">Mode Terang</span>
               </button>
               <button class="btn btn-amber btn-sm admin-koordinator-only"
                 onclick="openEditAnnouncementModal(); closeUserProfileDropdown();"
@@ -2517,37 +2517,39 @@
     </div>
   </div>
 
-  <!-- MODAL 1: POP-UP IDENTITAS & PEMERIKSAAN KESEHATAN SISWA DENGAN TAB KATEGORI & DEGRADASI HIJAU-PUTIH -->
+  <!-- =================================================================== -->
+  <!-- MODAL 1: POP-UP PILIHAN BAGIAN PEMERIKSAAN (TOMBOL POS DARI GAMBAR 1)-->
+  <!-- =================================================================== -->
   <div id="modalPemeriksaanSiswa" class="modal-overlay">
     <div class="modal-container sekolah-modal-container"
-      style="max-width: 960px; width: 95vw; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #a7f3d0; box-shadow: 0 20px 40px rgba(5, 150, 105, 0.15);">
+      style="max-width: 820px; width: 95vw; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #a7f3d0; box-shadow: 0 20px 40px rgba(5, 150, 105, 0.15);">
       <div class="modal-header"
         style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; padding: 16px 22px;">
         <div class="modal-title"
           style="font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-          <i class="bi bi-heart-pulse-fill"></i> Pemeriksaan Kesehatan Siswa (CKG Sekolah)
+          <i class="bi bi-ui-checks-grid"></i> Pemeriksaan Kesehatan Siswa (CKG Sekolah)
         </div>
         <button class="modal-close" onclick="closePemeriksaanModal()"
           style="color: #ffffff; opacity: 0.9;">&times;</button>
       </div>
 
-      <div class="modal-body sekolah-modal-body" style="padding: 18px 22px; max-height: 82vh; overflow-y: auto;">
+      <div class="modal-body sekolah-modal-body" style="padding: 20px 24px; max-height: 85vh; overflow-y: auto;">
         <input type="hidden" id="periksaSiswaId" value="">
 
-        <!-- HEADER CARD: RINGKASAN PROFIL SISWA (HIJAU & PUTIH) -->
+        <!-- HEADER CARD: RINGKASAN PROFIL SISWA -->
         <div class="sekolah-profile-summary-card"
-          style="background: #f0fdf4; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          style="background: #f0fdf4; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
           <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
             <div
-              style="width: 44px; height: 44px; min-width: 44px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; font-weight: 800; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);"
+              style="width: 46px; height: 46px; min-width: 46px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; font-weight: 800; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);"
               id="badgeAvatarSiswa">
               S
             </div>
             <div style="min-width: 0;">
               <h3 id="displayNamaSiswa"
-                style="font-size: 15px; font-weight: 800; color: #064e3b; margin: 0; word-break: break-word;">Nama Siswa
+                style="font-size: 16px; font-weight: 800; color: #064e3b; margin: 0; word-break: break-word;">Nama Siswa
               </h3>
-              <div style="font-size: 11.5px; color: #047857; font-weight: 600; margin-top: 2px;">
+              <div style="font-size: 12px; color: #047857; font-weight: 600; margin-top: 2px;">
                 <span id="displaySekolahSiswa">Nama Sekolah</span> &bull; <span id="displayKelasSiswa">Kelas</span>
                 &bull; <span id="displayJkSiswa">L</span>
               </div>
@@ -2555,38 +2557,118 @@
           </div>
           <div style="text-align: right;">
             <span id="badgeStatusSkrining" class="badge"
-              style="font-size: 11px; padding: 4px 12px; border-radius: 20px; font-weight: 800; background: #ecfdf5; border: 1.5px solid #6ee7b7; color: #047857;">BELUM
+              style="font-size: 11px; padding: 5px 14px; border-radius: 20px; font-weight: 800; background: #ecfdf5; border: 1.5px solid #6ee7b7; color: #047857;">BELUM
               DIPERIKSA</span>
           </div>
         </div>
 
-        <!-- CATEGORY TAB SELECTOR (KLIK UNTUK MEMILIH FORMAT PENGISIAN) -->
-        <div class="ckg-category-tab-bar" style="margin-bottom: 16px;">
-          <div class="ckg-tab-grid-6">
-            <button type="button" class="sekolah-cat-tab active" id="tabBtnIdentitas"
-              onclick="switchSekolahModalTab('identitas')">
-              <i class="bi bi-person-vcard-fill"></i> 1. Identitas
-            </button>
-            <button type="button" class="sekolah-cat-tab" id="tabBtnAntro" onclick="switchSekolahModalTab('antro')">
-              <i class="bi bi-person-arms-up"></i> 2. Antropometri
-            </button>
-            <button type="button" class="sekolah-cat-tab" id="tabBtnVital" onclick="switchSekolahModalTab('vital')">
-              <i class="bi bi-heart-pulse-fill"></i> 3. Tanda Vital
-            </button>
-            <button type="button" class="sekolah-cat-tab" id="tabBtnLab" onclick="switchSekolahModalTab('lab')">
-              <i class="bi bi-droplet-fill"></i> 4. Laboratorium
-            </button>
-            <button type="button" class="sekolah-cat-tab" id="tabBtnOrgan" onclick="switchSekolahModalTab('organ')">
-              <i class="bi bi-eye-fill"></i> 5. Organ Indera
-            </button>
-            <button type="button" class="sekolah-cat-tab" id="tabBtnKesimpulan"
-              onclick="switchSekolahModalTab('kesimpulan')">
-              <i class="bi bi-clipboard2-check-fill"></i> 6. Kesimpulan
-            </button>
+        <!-- INSTRUKSI / PETUNJUK POS -->
+        <div style="margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+          <div style="font-size: 13.5px; font-weight: 800; color: #064e3b; display: flex; align-items: center; gap: 7px;">
+            <i class="bi bi-hand-index-thumb-fill" style="color: #059669; font-size: 16px;"></i>
+            <span>Pilih Bagian Pemeriksaan yang Ingin Diisi:</span>
           </div>
-          <button type="button" class="sekolah-cat-tab sekolah-cat-tab-all" id="tabBtnSemua"
-            onclick="switchSekolahModalTab('semua')">
-            <i class="bi bi-card-checklist"></i> 📑 Tampilkan Semua Format Sekaligus (Mode Formulir Lengkap)
+          <span style="font-size: 11.5px; color: #059669; font-weight: 600;">Klik tombol untuk membuka pop-up form terkait</span>
+        </div>
+
+        <!-- 6 TOMBOL DARI GAMBAR 1 (POS SKRINING) -->
+        <div class="sekolah-pos-buttons-grid">
+          <!-- 1. IDENTITAS -->
+          <button type="button" class="pos-menu-button" id="btnPosMenuIdentitas" onclick="openFormPosPopup('identitas')">
+            <span class="pos-btn-title"><i class="bi bi-person-vcard-fill" style="color: #10b981; font-size: 17px;"></i> 1. Identitas</span>
+            <span class="pos-btn-badge" id="badgePosMenuIdentitas"><span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi</span></span>
+          </button>
+
+          <!-- 2. ANTROPOMETRI -->
+          <button type="button" class="pos-menu-button" id="btnPosMenuAntro" onclick="openFormPosPopup('antro')">
+            <span class="pos-btn-title"><i class="bi bi-person-arms-up" style="color: #0284c7; font-size: 17px;"></i> 2. Antropometri</span>
+            <span class="pos-btn-badge" id="badgePosMenuAntro"><span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span></span>
+          </button>
+
+          <!-- 3. TANDA VITAL -->
+          <button type="button" class="pos-menu-button" id="btnPosMenuVital" onclick="openFormPosPopup('vital')">
+            <span class="pos-btn-title"><i class="bi bi-heart-pulse-fill" style="color: #ef4444; font-size: 17px;"></i> 3. Tanda Vital</span>
+            <span class="pos-btn-badge" id="badgePosMenuVital"><span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span></span>
+          </button>
+
+          <!-- 4. LABORATORIUM -->
+          <button type="button" class="pos-menu-button" id="btnPosMenuLab" onclick="openFormPosPopup('lab')">
+            <span class="pos-btn-title"><i class="bi bi-droplet-fill" style="color: #d946ef; font-size: 17px;"></i> 4. Laboratorium</span>
+            <span class="pos-btn-badge" id="badgePosMenuLab"><span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span></span>
+          </button>
+
+          <!-- 5. ORGAN INDERA -->
+          <button type="button" class="pos-menu-button" id="btnPosMenuOrgan" onclick="openFormPosPopup('organ')">
+            <span class="pos-btn-title"><i class="bi bi-eye-fill" style="color: #0d9488; font-size: 17px;"></i> 5. Organ Indera</span>
+            <span class="pos-btn-badge" id="badgePosMenuOrgan"><span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span></span>
+          </button>
+
+          <!-- 6. KESIMPULAN -->
+          <button type="button" class="pos-menu-button" id="btnPosMenuKesimpulan" onclick="openFormPosPopup('kesimpulan')">
+            <span class="pos-btn-title"><i class="bi bi-clipboard2-check-fill" style="color: #f59e0b; font-size: 17px;"></i> 6. Kesimpulan</span>
+            <span class="pos-btn-badge" id="badgePosMenuKesimpulan"><span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span></span>
+          </button>
+        </div>
+
+        <!-- RINGKASAN HASIL PEMERIKSAAN SAAT INI -->
+        <div style="margin-top: 18px; padding: 14px 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px;">
+          <div style="font-size: 12px; font-weight: 800; color: #475569; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <i class="bi bi-journal-check" style="color: #059669;"></i> HASIL PEMERIKSAAN SAAT INI:
+          </div>
+          <div id="modalMenuHasilRingkasan" style="font-size: 12px; color: #64748b;">
+            Belum ada pos pemeriksaan yang diisi.
+          </div>
+        </div>
+
+        <!-- ACTION FOOTER MENU HUB -->
+        <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #d1fae5; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <button type="button" class="btn btn-sekolah-secondary" onclick="closePemeriksaanModal()"
+            style="font-weight: 700; border-radius: 10px; background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 20px;">
+            <i class="bi bi-x-circle"></i> Tutup
+          </button>
+          <button type="button" class="btn btn-sekolah-all-mode" onclick="openFormPosPopup('semua')"
+            style="font-weight: 700; border-radius: 10px; background: #ecfdf5; color: #047857; border: 1.5px dashed #10b981; padding: 9px 18px;">
+            <i class="bi bi-card-checklist"></i> 📑 Buka Semua Format Sekaligus
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- MODAL 2: POP-UP FORM PEMERIKSAAN SPESIFIK (MUNCUL SETELAH KLIK TOMBOL) -->
+  <!-- =================================================================== -->
+  <div id="modalFormPosSiswa" class="modal-overlay">
+    <div class="modal-container sekolah-modal-container"
+      style="max-width: 860px; width: 95vw; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #a7f3d0; box-shadow: 0 20px 40px rgba(5, 150, 105, 0.15);">
+      <div class="modal-header"
+        style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; padding: 15px 22px;">
+        <div class="modal-title" id="formPosModalTitle"
+          style="font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-pencil-square"></i> Format Pemeriksaan
+        </div>
+        <button class="modal-close" onclick="closeFormPosPopup()"
+          style="color: #ffffff; opacity: 0.9;">&times;</button>
+      </div>
+
+      <div class="modal-body sekolah-modal-body" style="padding: 16px 20px; max-height: 82vh; overflow-y: auto;">
+        <!-- INFORMASI SINGKAT SISWA DI DALAM FORM -->
+        <div
+          style="background: #f0fdf4; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+            <div
+              style="width: 34px; height: 34px; min-width: 34px; border-radius: 50%; background: #059669; color: #ffffff; font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center;"
+              id="formPosAvatar">
+              S
+            </div>
+            <div style="min-width: 0;">
+              <strong id="formPosNamaSiswa" style="color: #064e3b; font-size: 14px; display: block; word-break: break-word;">Nama Siswa</strong>
+              <div id="formPosSubInfo" style="font-size: 11.5px; color: #047857; font-weight: 600;">SMP PASUNDAN • KELAS 8 • Perempuan</div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+            style="background: #ffffff; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11.5px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 5px;">
+            <i class="bi bi-grid-fill"></i> Pilihan Bagian
           </button>
         </div>
 
@@ -2594,13 +2676,16 @@
         <!-- FORMAT 1: IDENTITAS & DOMISILI SISWA -->
         <!-- =================================================================== -->
         <div id="panelPemeriksaanIdentitas" class="sekolah-form-panel"
-          style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          style="display: none; background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
           <div
             style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-person-vcard-fill"></i> 1. Format Identitas & Domisili Siswa
             </div>
-            <span style="font-size: 11px; color: #059669; font-weight: 600;">Data Diri Siswa</span>
+            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
+              <i class="bi bi-grid-fill"></i> Pilihan Bagian
+            </button>
           </div>
 
           <div class="sekolah-grid-3"
@@ -2626,34 +2711,34 @@
             </div>
           </div>
 
-          <div class="sekolah-grid-3"
-            style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr; gap: 12px; margin-bottom: 12px;">
+          <div class="sekolah-grid-2"
+            style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
-              <label class="form-label" for="periksaSekolah">Nama Sekolah <span class="required"
+              <label class="form-label" for="periksaSekolah">Asal Sekolah <span class="required"
                   style="color: #059669;">*</span></label>
-              <select id="periksaSekolah" class="form-control" onchange="updatePeriksaSiswaKelasDropdown()" required
+              <select id="periksaSekolah" class="form-control" required onchange="updatePeriksaSiswaKelasDropdown()"
                 style="font-weight: 700;">
-                <option value="">-- Pilih Sekolah --</option>
+                <!-- Populated dynamically -->
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" for="periksaKelas">Kelas <span class="required"
+              <label class="form-label" for="periksaKelas">Kelas Siswa <span class="required"
                   style="color: #059669;">*</span></label>
               <select id="periksaKelas" class="form-control" required style="font-weight: 700;">
-                <option value="">-- Pilih Kelas --</option>
+                <!-- Populated dynamically -->
               </select>
             </div>
+          </div>
+
+          <div class="sekolah-grid-3"
+            style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
               <label class="form-label" for="periksaTglLahir">Tanggal Lahir</label>
               <input type="date" id="periksaTglLahir" class="form-control" onchange="calculateSiswaAge()">
             </div>
-          </div>
-
-          <div class="sekolah-grid-2"
-            style="display: grid; grid-template-columns: 1.5fr 2.5fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
-              <label class="form-label" for="periksaWa">No. WhatsApp Siswa/Ortu</label>
-              <input type="tel" id="periksaWa" class="form-control" inputmode="tel" placeholder="08xxxxxxxxxx">
+              <label class="form-label" for="periksaWa">No. WhatsApp</label>
+              <input type="tel" id="periksaWa" class="form-control" placeholder="08xxxxxxxxxx">
             </div>
             <div class="form-group">
               <label class="form-label" for="periksaAlamat">Alamat Tempat Tinggal</label>
@@ -2665,16 +2750,16 @@
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 1 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
-            <button type="button" class="btn btn-sekolah-secondary" onclick="closePemeriksaanModal()"
-              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
-              Tutup
+            <button type="button" class="btn btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
               <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('identitas')"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Data Identitas
               </button>
-              <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('antro')"
+              <button type="button" class="btn btn-sekolah-next" onclick="openFormPosPopup('antro')"
                 style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Antropometri &rarr;
               </button>
@@ -2692,7 +2777,10 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-activity"></i> 2. Format Pengisian Antropometri & Status Gizi
             </div>
-            <span style="font-size: 11px; color: #059669; font-weight: 600;">Pengukuran Fisik</span>
+            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
+              <i class="bi bi-grid-fill"></i> Pilihan Bagian
+            </button>
           </div>
 
           <div class="sekolah-grid-4"
@@ -2727,16 +2815,16 @@
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 2 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
-            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('identitas')"
-              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
-              &larr; Identitas
+            <button type="button" class="btn btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
               <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('antro')"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Antropometri
               </button>
-              <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('vital')"
+              <button type="button" class="btn btn-sekolah-next" onclick="openFormPosPopup('vital')"
                 style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Tanda Vital &rarr;
               </button>
@@ -2754,7 +2842,10 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-heart-pulse-fill"></i> 3. Format Pengisian Tanda Vital (Tekanan Darah)
             </div>
-            <span style="font-size: 11px; color: #059669; font-weight: 600;">Hemodinamik</span>
+            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
+              <i class="bi bi-grid-fill"></i> Pilihan Bagian
+            </button>
           </div>
 
           <div class="sekolah-grid-2"
@@ -2774,16 +2865,16 @@
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 3 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
-            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('antro')"
-              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
-              &larr; Antropometri
+            <button type="button" class="btn btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
               <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('vital')"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Tanda Vital
               </button>
-              <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('lab')"
+              <button type="button" class="btn btn-sekolah-next" onclick="openFormPosPopup('lab')"
                 style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Laboratorium &rarr;
               </button>
@@ -2801,7 +2892,10 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-droplet-fill"></i> 4. Format Pengisian Laboratorium Sederhana
             </div>
-            <span style="font-size: 11px; color: #059669; font-weight: 600;">Gula Darah & Hb Anemia</span>
+            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
+              <i class="bi bi-grid-fill"></i> Pilihan Bagian
+            </button>
           </div>
 
           <div class="sekolah-grid-2"
@@ -2821,16 +2915,16 @@
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 4 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
-            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('vital')"
-              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
-              &larr; Tanda Vital
+            <button type="button" class="btn btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
               <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('lab')"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Laboratorium
               </button>
-              <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('organ')"
+              <button type="button" class="btn btn-sekolah-next" onclick="openFormPosPopup('organ')"
                 style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Organ Indera &rarr;
               </button>
@@ -2848,7 +2942,10 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-eye-fill"></i> 5. Format Pengisian Organ Indera & Spesifik UKS
             </div>
-            <span style="font-size: 11px; color: #059669; font-weight: 600;">Pemeriksaan Khusus UKS</span>
+            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
+              <i class="bi bi-grid-fill"></i> Pilihan Bagian
+            </button>
           </div>
 
           <div class="sekolah-grid-3"
@@ -2945,16 +3042,16 @@
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 5 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
-            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('lab')"
-              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
-              &larr; Laboratorium
+            <button type="button" class="btn btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
               <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('organ')"
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Organ Indera & UKS
               </button>
-              <button type="button" class="btn btn-sekolah-next" onclick="switchSekolahModalTab('kesimpulan')"
+              <button type="button" class="btn btn-sekolah-next" onclick="openFormPosPopup('kesimpulan')"
                 style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Kesimpulan &rarr;
               </button>
@@ -2972,7 +3069,10 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-clipboard2-check-fill"></i> 6. Format Kesimpulan & Rekomendasi Rujukan
             </div>
-            <span style="font-size: 11px; color: #059669; font-weight: 600;">Status & Tindak Lanjut</span>
+            <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
+              <i class="bi bi-grid-fill"></i> Pilihan Bagian
+            </button>
           </div>
 
           <div class="sekolah-grid-2"
@@ -2996,9 +3096,9 @@
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 6 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
-            <button type="button" class="btn btn-sekolah-secondary" onclick="switchSekolahModalTab('organ')"
-              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
-              &larr; Organ Indera
+            <button type="button" class="btn btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="bi bi-arrow-left"></i> Pilihan Bagian
             </button>
             <div class="panel-btn-group" style="display: flex; gap: 8px;">
               <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('kesimpulan')"
@@ -3009,12 +3109,12 @@
           </div>
         </div>
 
-        <!-- GLOBAL FOOTER (SHOWN WHEN 'SEMUA' TAB IS SELECTED) -->
+        <!-- GLOBAL FOOTER (SHOWN WHEN 'SEMUA' MODE IS SELECTED) -->
         <div id="panelPemeriksaanSemuaFooter" class="panel-action-footer"
           style="display: none; align-items: center; justify-content: space-between; padding: 14px 0 0 0; border-top: 1px solid #d1fae5;">
-          <button type="button" class="btn btn-sekolah-secondary" onclick="closePemeriksaanModal()"
+          <button type="button" class="btn btn-sekolah-secondary" onclick="closeFormPosPopup()"
             style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700;">
-            Tutup
+            ⬅ Pilihan Bagian
           </button>
           <button type="button" class="btn btn-sekolah-primary" onclick="savePemeriksaanSiswa(event)"
             style="padding: 10px 24px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
@@ -3201,7 +3301,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 
 </html>

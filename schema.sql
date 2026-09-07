@@ -109,19 +109,37 @@ CREATE TABLE IF NOT EXISTS ckg_sekolah_records (
     bb REAL DEFAULT 0,
     tb REAL DEFAULT 0,
     lp REAL DEFAULT 0,
+    imt REAL DEFAULT 0,
+    status_imt TEXT DEFAULT 'Normal',
     td_sistolik INTEGER DEFAULT 0,
     td_diastolik INTEGER DEFAULT 0,
     gula_darah TEXT DEFAULT '-',
     hb TEXT DEFAULT '-',
-    karies TEXT DEFAULT 'Tidak',
+    telinga TEXT DEFAULT 'Tidak ada serumen',
+    gigi TEXT DEFAULT 'Tidak ada',
+    mata TEXT DEFAULT 'Normal',
     kebugaran TEXT DEFAULT 'Baik',
     menstruasi TEXT DEFAULT 'Belum',
-    kacamata TEXT DEFAULT 'Tidak',
+    status_kesehatan TEXT DEFAULT 'Sehat',
+    catatan_rujukan TEXT DEFAULT '-',
+    is_examined BOOLEAN DEFAULT 0,
+    identitas_done INTEGER DEFAULT 0,
+    antro_done INTEGER DEFAULT 0,
+    vital_done INTEGER DEFAULT 0,
+    lab_done INTEGER DEFAULT 0,
+    organ_done INTEGER DEFAULT 0,
+    kesimpulan_done INTEGER DEFAULT 0,
     petugas_entry TEXT DEFAULT 'Admin',
     tanggal_entry TEXT,
     raw_json TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_sekolah_nama ON ckg_sekolah_records(nama);
+CREATE INDEX IF NOT EXISTS idx_sekolah_instansi ON ckg_sekolah_records(sekolah);
+CREATE INDEX IF NOT EXISTS idx_sekolah_kelas ON ckg_sekolah_records(kelas);
+CREATE INDEX IF NOT EXISTS idx_sekolah_nik ON ckg_sekolah_records(nik);
+CREATE INDEX IF NOT EXISTS idx_sekolah_status ON ckg_sekolah_records(is_examined);
 
 
 -- --------------------------------------------------------------------

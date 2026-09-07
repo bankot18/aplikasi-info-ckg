@@ -2,7 +2,7 @@
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Content-Type': 'application/json'
 };
@@ -58,12 +58,28 @@ export async function onRequestGet(context) {
         is_examined BOOLEAN DEFAULT 0,
         petugas_entry TEXT DEFAULT 'Admin',
         tanggal_entry TEXT,
+        antro_done INTEGER DEFAULT 0,
+        vital_done INTEGER DEFAULT 0,
+        lab_done INTEGER DEFAULT 0,
+        organ_done INTEGER DEFAULT 0,
+        kesimpulan_done INTEGER DEFAULT 0,
+        identitas_done INTEGER DEFAULT 0,
         raw_json TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+  } catch (_) {}
 
+  try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN antro_done INTEGER DEFAULT 0').run(); } catch (_) {}
+  try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN vital_done INTEGER DEFAULT 0').run(); } catch (_) {}
+  try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN lab_done INTEGER DEFAULT 0').run(); } catch (_) {}
+  try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN organ_done INTEGER DEFAULT 0').run(); } catch (_) {}
+  try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN kesimpulan_done INTEGER DEFAULT 0').run(); } catch (_) {}
+  try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN identitas_done INTEGER DEFAULT 0').run(); } catch (_) {}
+
+  try {
     const url = new URL(request.url);
+    const idFilter = url.searchParams.get('id');
     const sekolahFilter = url.searchParams.get('sekolah');
     const kelasFilter = url.searchParams.get('kelas');
 
@@ -71,6 +87,10 @@ export async function onRequestGet(context) {
     const params = [];
     const conditions = [];
 
+    if (idFilter) {
+      conditions.push('id = ?');
+      params.push(idFilter);
+    }
     if (sekolahFilter) {
       conditions.push('UPPER(sekolah) = ?');
       params.push(sekolahFilter.toUpperCase());
@@ -108,6 +128,90 @@ export async function onRequestGet(context) {
   }
 }
 
+async function handlePartialUpdate(env, body) {
+  const targetId = body.id;
+  if (!targetId) {
+    return new Response(JSON.stringify({ success: false, error: 'Missing student id for partial update' }), {
+      status: 400,
+      headers: corsHeaders
+    });
+  }
+
+  const allowedCols = [
+    'nama', 'kelas', 'sekolah', 'jk', 'nik', 'tanggal_lahir', 'no_whatsapp',
+    'provinsi', 'kab_kota', 'kecamatan', 'kelurahan', 'alamat',
+    'bb', 'tb', 'lp', 'imt', 'status_imt',
+    'td_sistolik', 'td_diastolik', 'gula_darah', 'hb',
+    'telinga', 'gigi', 'mata', 'kebugaran', 'menstruasi',
+    'status_kesehatan', 'catatan_rujukan',
+    'is_examined', 'petugas_entry', 'tanggal_entry',
+    'antro_done', 'vital_done', 'lab_done', 'organ_done', 'kesimpulan_done', 'identitas_done'
+  ];
+
+  const updateData = body.fields || body;
+  const setClauses = [];
+  const setParams = [];
+
+  for (const col of allowedCols) {
+    if (updateData[col] !== undefined) {
+      setClauses.push(`${col} = ?`);
+      let val = updateData[col];
+      if (typeof val === 'boolean') val = val ? 1 : 0;
+      setParams.push(val);
+    }
+  }
+
+  if (setClauses.length === 0) {
+    return new Response(JSON.stringify({ success: true, message: 'No fields to update' }), { headers: corsHeaders });
+  }
+
+  let currentJson = {};
+  try {
+    const existing = await env.DB.prepare('SELECT raw_json FROM ckg_sekolah_records WHERE id = ?').bind(targetId).first();
+    if (existing && existing.raw_json) {
+      currentJson = JSON.parse(existing.raw_json || '{}');
+    }
+  } catch (_) {}
+
+  const mergedJson = { ...currentJson, ...updateData };
+  delete mergedJson.id;
+  setClauses.push('raw_json = ?');
+  setParams.push(JSON.stringify(mergedJson));
+
+  setParams.push(targetId);
+  const updateSql = `UPDATE ckg_sekolah_records SET ${setClauses.join(', ')} WHERE id = ?`;
+  await env.DB.prepare(updateSql).bind(...setParams).run();
+
+  const updatedRecord = await env.DB.prepare('SELECT * FROM ckg_sekolah_records WHERE id = ?').bind(targetId).first();
+  let finalJson = {};
+  try { finalJson = JSON.parse(updatedRecord.raw_json || '{}'); } catch (_) {}
+  const result = { ...finalJson, ...updatedRecord };
+
+  return new Response(JSON.stringify({ success: true, message: 'Updated successfully', data: result }), {
+    headers: corsHeaders
+  });
+}
+
+export async function onRequestPatch(context) {
+  const { env, request } = context;
+  if (!env.DB) {
+    return new Response(JSON.stringify({ success: false, error: 'Database D1 binding (DB) not configured.' }), {
+      status: 500,
+      headers: corsHeaders
+    });
+  }
+
+  try {
+    const body = await request.json();
+    return await handlePartialUpdate(env, body);
+  } catch (err) {
+    return new Response(JSON.stringify({ success: false, error: err.message }), {
+      status: 500,
+      headers: corsHeaders
+    });
+  }
+}
+
 export async function onRequestPost(context) {
   const { env, request } = context;
 
@@ -120,6 +224,12 @@ export async function onRequestPost(context) {
 
   try {
     const body = await request.json();
+    const isPartial = body && (body.action === 'partial_update' || body.is_partial || (body.id && body.fields));
+
+    if (isPartial) {
+      return await handlePartialUpdate(env, body);
+    }
+
     const records = Array.isArray(body) ? body : [body];
     if (records.length === 0) {
       return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
@@ -132,8 +242,10 @@ export async function onRequestPost(context) {
         bb, tb, lp, imt, status_imt,
         td_sistolik, td_diastolik, gula_darah, hb,
         telinga, gigi, mata, kebugaran, menstruasi, status_kesehatan, catatan_rujukan,
-        is_examined, petugas_entry, tanggal_entry, raw_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        is_examined, petugas_entry, tanggal_entry,
+        antro_done, vital_done, lab_done, organ_done, kesimpulan_done, identitas_done,
+        raw_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         no = excluded.no,
         nama = excluded.nama,
@@ -167,6 +279,12 @@ export async function onRequestPost(context) {
         is_examined = excluded.is_examined,
         petugas_entry = excluded.petugas_entry,
         tanggal_entry = excluded.tanggal_entry,
+        antro_done = excluded.antro_done,
+        vital_done = excluded.vital_done,
+        lab_done = excluded.lab_done,
+        organ_done = excluded.organ_done,
+        kesimpulan_done = excluded.kesimpulan_done,
+        identitas_done = excluded.identitas_done,
         raw_json = excluded.raw_json
     `);
 
@@ -178,6 +296,13 @@ export async function onRequestPost(context) {
         const tbM = tb / 100;
         imt = Number((bb / (tbM * tbM)).toFixed(2));
       }
+
+      const antroDone = (item.antro_done || (bb > 0 && tb > 0)) ? 1 : 0;
+      const vitalDone = (item.vital_done || Number(item.td_sistolik || 0) > 0) ? 1 : 0;
+      const labDone = (item.lab_done || (item.hb && item.hb !== '-') || (item.gula_darah && item.gula_darah !== '-')) ? 1 : 0;
+      const organDone = item.organ_done ? 1 : 0;
+      const kesimpulanDone = item.kesimpulan_done ? 1 : 0;
+      const identitasDone = (item.identitas_done || item.nama) ? 1 : 0;
 
       return stmt.bind(
         String(item.id || item.nik || `SCH-${Date.now()}-${idx}`),
@@ -213,6 +338,12 @@ export async function onRequestPost(context) {
         item.is_examined ? 1 : 0,
         String(item.petugas_entry || 'Admin'),
         String(item.tanggal_entry || new Date().toISOString().substring(0, 10)),
+        antroDone,
+        vitalDone,
+        labDone,
+        organDone,
+        kesimpulanDone,
+        identitasDone,
         JSON.stringify(item)
       );
     });

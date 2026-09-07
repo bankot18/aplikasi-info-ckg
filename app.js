@@ -9884,7 +9884,13 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
             catatan_rujukan: r.catatan_rujukan || '-',
             is_examined: isExamined,
             petugas_entry: r.petugas_entry || 'Admin',
-            tanggal_entry: r.tanggal_entry || new Date().toISOString().substring(0, 10)
+            tanggal_entry: r.tanggal_entry || new Date().toISOString().substring(0, 10),
+            antro_done: r.antro_done !== undefined ? Number(r.antro_done) : ((bbNum > 0 && tbNum > 0) ? 1 : 0),
+            vital_done: r.vital_done !== undefined ? Number(r.vital_done) : (sistolNum > 0 ? 1 : 0),
+            lab_done: r.lab_done !== undefined ? Number(r.lab_done) : (((r.hb && r.hb !== '-') || (r.gula_darah && r.gula_darah !== '-')) ? 1 : 0),
+            organ_done: r.organ_done !== undefined ? Number(r.organ_done) : 0,
+            kesimpulan_done: r.kesimpulan_done !== undefined ? Number(r.kesimpulan_done) : 0,
+            identitas_done: r.identitas_done !== undefined ? Number(r.identitas_done) : 1
           };
         });
         localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
@@ -9904,6 +9910,18 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
       showToast('Gagal memuat data dari Cloud Database.', 'warning');
     }
   }
+}
+
+// Multi-user live synchronization: Refresh CKG Sekolah data periodically
+if (!window._ckgSekolahSyncInterval) {
+  window._ckgSekolahSyncInterval = setInterval(() => {
+    if (document.hidden) return;
+    const viewSekolah = document.getElementById('view-ckg-sekolah');
+    const modal = document.getElementById('modalPemeriksaanSiswa');
+    if (viewSekolah && viewSekolah.classList.contains('active') && (!modal || modal.style.display !== 'flex')) {
+      fetchSekolahRecordsFromCloud(false);
+    }
+  }, 25000);
 }
 
 async function syncSekolahRecordsToCloud(dataList) {
@@ -10527,7 +10545,13 @@ function renderSekolahView() {
   }
 
   tbody.innerHTML = dataset.map((r, idx) => {
-    const isExamined = !!(r.is_examined || r.bb > 0 || r.tb > 0 || r.td_sistolik > 0);
+    const hasAntro = !!(r.antro_done || (r.bb > 0 && r.tb > 0));
+    const hasVital = !!(r.vital_done || (r.td_sistolik && Number(r.td_sistolik) > 0));
+    const hasLab = !!(r.lab_done || ((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')));
+    const hasOrgan = !!(r.organ_done);
+    const hasKesimpulan = !!(r.kesimpulan_done || (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== ''));
+    const isExamined = hasAntro || hasVital || hasLab || hasOrgan || hasKesimpulan || !!r.is_examined;
+
     const safeId = escapeHtml(r.id || '');
     const safeNama = escapeHtml(r.nama || '-');
     const safeSekolah = escapeHtml(r.sekolah || '-');
@@ -10536,40 +10560,128 @@ function renderSekolahView() {
     const safeJk = r.jk === 'P' ? 'Perempuan' : 'Laki-laki';
     const jkColor = r.jk === 'P' ? '#ec4899' : '#4f46e5';
 
-    // Status Badge
+    // Status Badge: Vertical Checklist showing only completed screening stations
     let statusBadge = `<span class="badge badge-amber" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-clock-history"></i> Belum Diperiksa</span>`;
     if (isExamined) {
-      if (r.status_kesehatan === 'Perlu Rujukan') {
-        statusBadge = `<span class="badge badge-rose" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-exclamation-triangle-fill"></i> Perlu Rujukan</span>`;
-      } else if (r.status_kesehatan === 'Perlu Perhatian') {
-        statusBadge = `<span class="badge badge-amber" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-info-circle-fill"></i> Perlu Perhatian</span>`;
-      } else {
-        statusBadge = `<span class="badge badge-emerald" style="padding: 4px 10px; font-size: 11px; font-weight: 800; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill"></i> Sehat / Selesai</span>`;
+      const checklistItems = [];
+      if (hasAntro) {
+        checklistItems.push(`<span class="status-check-badge antro"><i class="bi bi-check-circle-fill" style="color: #10b981;"></i> Antropometri</span>`);
+      }
+      if (hasVital) {
+        checklistItems.push(`<span class="status-check-badge vital"><i class="bi bi-check-circle-fill" style="color: #3b82f6;"></i> Tanda Vital</span>`);
+      }
+      if (hasLab) {
+        checklistItems.push(`<span class="status-check-badge lab"><i class="bi bi-check-circle-fill" style="color: #ec4899;"></i> Lab</span>`);
+      }
+      if (hasOrgan) {
+        checklistItems.push(`<span class="status-check-badge organ"><i class="bi bi-check-circle-fill" style="color: #0d9488;"></i> Organ Indera</span>`);
+      }
+      if (hasKesimpulan) {
+        if (r.status_kesehatan === 'Perlu Rujukan') {
+          checklistItems.push(`<span class="status-check-badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;"><i class="bi bi-exclamation-triangle-fill"></i> Perlu Rujukan</span>`);
+        } else if (r.status_kesehatan === 'Perlu Perhatian') {
+          checklistItems.push(`<span class="status-check-badge" style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a;"><i class="bi bi-info-circle-fill"></i> Perlu Perhatian</span>`);
+        } else {
+          checklistItems.push(`<span class="status-check-badge kesimpulan"><i class="bi bi-check-circle-fill" style="color: #eab308;"></i> Kesimpulan</span>`);
+        }
+      }
+      statusBadge = `<div class="status-checklist">${checklistItems.length ? checklistItems.join('') : '<span class="status-check-badge antro"><i class="bi bi-check-circle-fill"></i> Diperiksa</span>'}</div>`;
+    }
+
+    // Column Hasil Pemeriksaan: ONLY show chips for categories that have ACTUALLY been filled!
+    let hasilChips = [];
+
+    // 1. Antropometri
+    if (hasAntro) {
+      let imtStr = '-';
+      let giziStr = r.status_imt || 'Normal';
+      if (r.bb && r.tb) {
+        const tbM = r.tb / 100;
+        if (tbM > 0) {
+          const val = (r.bb / (tbM * tbM));
+          imtStr = val.toFixed(1);
+          if (val < 17.0) giziStr = 'Sangat Kurus';
+          else if (val < 18.5) giziStr = 'Kurus';
+          else if (val <= 25.0) giziStr = 'Normal';
+          else if (val <= 27.0) giziStr = 'Gemuk';
+          else giziStr = 'Obesitas';
+        }
+      }
+      hasilChips.push(`
+        <span style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #065f46;">
+          <strong>Antro:</strong> ${r.bb || '-'}kg / ${r.tb || '-'}cm (IMT: ${imtStr} - ${escapeHtml(giziStr)})
+        </span>
+      `);
+    }
+
+    // 2. Tanda Vital
+    if (hasVital) {
+      const tdStr = (r.td_sistolik && r.td_diastolik) ? `${r.td_sistolik}/${r.td_diastolik}` : `${r.td_sistolik || '-'}`;
+      hasilChips.push(`
+        <span style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #1e40af;">
+          <strong>TD:</strong> ${tdStr} mmHg
+        </span>
+      `);
+    }
+
+    // 3. Laboratorium
+    if (hasLab) {
+      if (r.hb && r.hb !== '-' && String(r.hb).trim() !== '') {
+        hasilChips.push(`
+          <span style="background: #fdf2f8; border: 1px solid #fbcfe8; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #9d174d;">
+            <strong>HB:</strong> ${escapeHtml(r.hb)} g/dL
+          </span>
+        `);
+      }
+      if (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '') {
+        hasilChips.push(`
+          <span style="background: #fdf4ff; border: 1px solid #f5d0fe; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #86198f;">
+            <strong>Gula:</strong> ${escapeHtml(r.gula_darah)} mg/dL
+          </span>
+        `);
       }
     }
 
-    // Calculate IMT & Gizi
-    let imtStr = '-';
-    let giziStr = r.status_imt || 'Normal';
-    if (r.bb && r.tb) {
-      const tbM = r.tb / 100;
-      if (tbM > 0) {
-        const val = (r.bb / (tbM * tbM));
-        imtStr = val.toFixed(1);
-        if (val < 17.0) giziStr = 'Sangat Kurus';
-        else if (val < 18.5) giziStr = 'Kurus';
-        else if (val <= 25.0) giziStr = 'Normal';
-        else if (val <= 27.0) giziStr = 'Gemuk';
-        else giziStr = 'Obesitas';
-      }
+    // 4. Organ Indera
+    if (hasOrgan) {
+      const telingaStr = r.telinga || 'Normal';
+      const gigiStr = r.gigi || 'Bebas Karies';
+      const mataStr = r.mata || 'Normal';
+      const kebugaranStr = r.kebugaran || 'Baik';
+      hasilChips.push(`
+        <span style="background: #f0fdfa; border: 1px solid #99f6e4; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #115e59;">
+          <strong>Gigi:</strong> ${escapeHtml(gigiStr)}
+        </span>
+      `);
+      hasilChips.push(`
+        <span style="background: #fdf4ff; border: 1px solid #f5d0fe; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #86198f;">
+          <strong>Mata:</strong> ${escapeHtml(mataStr)}
+        </span>
+      `);
+      hasilChips.push(`
+        <span style="background: #fffbeb; border: 1px solid #fef3c7; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #92400e;">
+          <strong>Telinga:</strong> ${escapeHtml(telingaStr)}
+        </span>
+      `);
+      hasilChips.push(`
+        <span style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #475569;">
+          <strong>Kebugaran:</strong> ${escapeHtml(kebugaranStr)}
+        </span>
+      `);
     }
 
-    const tdStr = (r.td_sistolik && r.td_diastolik) ? `${r.td_sistolik}/${r.td_diastolik}` : '-';
-    const hbStr = r.hb && r.hb !== '-' ? `${r.hb} g/dL` : '-';
-    const telingaStr = r.telinga || 'Tidak ada serumen';
-    const gigiStr = r.gigi || 'Tidak ada';
-    const mataStr = r.mata || 'Normal';
-    const kebugaranStr = r.kebugaran || 'Baik';
+    // 5. Kesimpulan / Catatan Rujukan
+    if (hasKesimpulan && r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== '') {
+      hasilChips.push(`
+        <span style="background: #fef2f2; border: 1px solid #fecaca; padding: 2px 7px; border-radius: 6px; font-weight: 700; color: #dc2626;">
+          <strong>Rujukan:</strong> ${escapeHtml(r.catatan_rujukan)}
+        </span>
+      `);
+    }
+
+    const hasilContent = hasilChips.length > 0
+      ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; font-size: 11px;">${hasilChips.join('')}</div>`
+      : `<span style="font-size: 11.5px; color: #94a3b8; font-style: italic;">Belum ada pemeriksaan</span>`;
 
     return `
       <tr style="cursor: pointer; transition: background 0.15s ease;">
@@ -10602,43 +10714,14 @@ function renderSekolahView() {
           </span>
         </td>
 
-        <!-- Column 4: Status Skrining -->
+        <!-- Column 4: Status Skrining (Checklist) -->
         <td onclick="openPemeriksaanModal('${safeId}')" style="text-align: center; vertical-align: middle;">
           ${statusBadge}
         </td>
 
-        <!-- Column 5: Hasil Pemeriksaan (Chips) -->
+        <!-- Column 5: Hasil Pemeriksaan (Clean Chips) -->
         <td onclick="openPemeriksaanModal('${safeId}')" style="vertical-align: middle;">
-          ${isExamined ? `
-            <div style="display: flex; gap: 4px; flex-wrap: wrap; font-size: 11px;">
-              <span style="background: #f1f5f9; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #334155;">
-                <strong>Antro:</strong> ${r.bb || '-'}kg / ${r.tb || '-'}cm (IMT: ${imtStr} - ${escapeHtml(giziStr)})
-              </span>
-              <span style="background: #eff6ff; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #1e40af;">
-                <strong>TD:</strong> ${tdStr}
-              </span>
-              <span style="background: #fef2f2; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #991b1b;">
-                <strong>HB:</strong> ${hbStr}
-              </span>
-              <span style="background: #ecfdf5; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #065f46;">
-                <strong>Gigi:</strong> ${escapeHtml(gigiStr)}
-              </span>
-              <span style="background: #fdf4ff; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #86198f;">
-                <strong>Mata:</strong> ${escapeHtml(mataStr)}
-              </span>
-              <span style="background: #fffbeb; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #92400e;">
-                <strong>Telinga:</strong> ${escapeHtml(telingaStr)}
-              </span>
-              <span style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: #475569;">
-                <strong>Kebugaran:</strong> ${escapeHtml(kebugaranStr)}
-              </span>
-              ${r.catatan_rujukan && r.catatan_rujukan !== '-' ? `
-                <span style="background: #fef2f2; border: 1px solid #fecaca; padding: 2px 7px; border-radius: 6px; font-weight: 700; color: #dc2626;">
-                  <strong>Rujukan:</strong> ${escapeHtml(r.catatan_rujukan)}
-                </span>
-              ` : ''}
-            </div>
-          ` : `<span style="font-size: 11.5px; color: #94a3b8; font-style: italic;">Klik untuk mulai periksa...</span>`}
+          ${hasilContent}
         </td>
 
         <!-- Column 6: Aksi -->
@@ -10658,48 +10741,199 @@ function renderSekolahView() {
 }
 
 // --------------------------------------------------------------------------
-// 🩺 POP-UP PEMERIKSAAN & IDENTITAS SISWA
+// 🩺 POP-UP PEMERIKSAAN & IDENTITAS SISWA (MULTI-USER ISOLATED)
 // --------------------------------------------------------------------------
 
-function switchSekolahModalTab(tabKey) {
-  const tabs = ['identitas', 'antro', 'vital', 'lab', 'organ', 'kesimpulan', 'semua'];
-  
-  tabs.forEach(t => {
-    const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
-    const panel = document.getElementById(`panelPemeriksaan${t.charAt(0).toUpperCase() + t.slice(1)}`);
-    
-    if (btn) {
-      if (t === tabKey) {
-        btn.classList.add('active');
-        btn.style.background = 'linear-gradient(135deg, #059669, #047857)';
-        btn.style.color = '#ffffff';
-        btn.style.borderColor = '#047857';
-        btn.style.boxShadow = '0 4px 12px rgba(5, 150, 105, 0.25)';
-      } else {
-        btn.classList.remove('active');
-        btn.style.background = '#f0fdf4';
-        btn.style.color = '#065f46';
-        btn.style.borderColor = '#a7f3d0';
-        btn.style.boxShadow = 'none';
-      }
-    }
-    
-    if (panel) {
-      if (tabKey === 'semua' || t === tabKey) {
-        panel.style.display = 'block';
-      } else {
-        panel.style.display = 'none';
-      }
-    }
+function openFormPosPopup(posKey) {
+  const siswaId = document.getElementById('periksaSiswaId')?.value;
+  const siswa = sekolahRecords.find(r => r.id === siswaId);
+  if (!siswa) {
+    showToast('Data siswa tidak ditemukan.', 'warning');
+    return;
+  }
+
+  // Set student banner inside form popup
+  const titleEl = document.getElementById('formPosModalTitle');
+  const namaEl = document.getElementById('formPosNamaSiswa');
+  const subInfoEl = document.getElementById('formPosSubInfo');
+  const avatarEl = document.getElementById('formPosAvatar');
+
+  if (namaEl) namaEl.textContent = siswa.nama || 'Nama Siswa';
+  if (subInfoEl) {
+    const safeJk = siswa.jk === 'P' ? 'Perempuan' : 'Laki-laki';
+    subInfoEl.textContent = `${siswa.sekolah || 'Nama Sekolah'} • KELAS ${siswa.kelas || '-'} • ${safeJk}`;
+  }
+  if (avatarEl) avatarEl.textContent = (siswa.nama || 'S').charAt(0).toUpperCase();
+
+  const titleMap = {
+    identitas: '<i class="bi bi-person-vcard-fill" style="color: #10b981;"></i> Format 1: Identitas & Domisili Siswa',
+    antro: '<i class="bi bi-person-arms-up" style="color: #0284c7;"></i> Format 2: Antropometri & Status Gizi',
+    vital: '<i class="bi bi-heart-pulse-fill" style="color: #ef4444;"></i> Format 3: Tanda Vital (Tekanan Darah)',
+    lab: '<i class="bi bi-droplet-fill" style="color: #d946ef;"></i> Format 4: Pemeriksaan Laboratorium Sederhana',
+    organ: '<i class="bi bi-eye-fill" style="color: #0d9488;"></i> Format 5: Organ Indera & Spesifik UKS',
+    kesimpulan: '<i class="bi bi-clipboard2-check-fill" style="color: #f59e0b;"></i> Format 6: Kesimpulan & Catatan Rujukan',
+    semua: '<i class="bi bi-card-checklist" style="color: #059669;"></i> Pemeriksaan Lengkap (Semua Format Sekaligus)'
+  };
+
+  if (titleEl) titleEl.innerHTML = titleMap[posKey] || '<i class="bi bi-pencil-square"></i> Format Pemeriksaan';
+
+  // Toggle form panels
+  const panels = ['identitas', 'antro', 'vital', 'lab', 'organ', 'kesimpulan'];
+  panels.forEach(p => {
+    const el = document.getElementById(`panelPemeriksaan${p.charAt(0).toUpperCase() + p.slice(1)}`);
+    if (el) el.style.display = (posKey === 'semua' || posKey === p) ? 'block' : 'none';
   });
 
   const globalFooter = document.getElementById('panelPemeriksaanSemuaFooter');
   if (globalFooter) {
-    globalFooter.style.display = (tabKey === 'semua') ? 'flex' : 'none';
+    globalFooter.style.display = (posKey === 'semua') ? 'flex' : 'none';
+  }
+
+  // Hide Menu Popup, Show Form Popup
+  const mMenu = document.getElementById('modalPemeriksaanSiswa');
+  if (mMenu) {
+    mMenu.classList.remove('active', 'open');
+    mMenu.style.display = 'none';
+  }
+
+  const mForm = document.getElementById('modalFormPosSiswa');
+  if (mForm) {
+    mForm.classList.add('active', 'open');
+    mForm.style.display = 'flex';
   }
 }
 
-function openPemeriksaanModal(siswaId, defaultTab = 'identitas') {
+function closeFormPosPopup() {
+  // Hide Form Popup, Re-open Menu Popup
+  const mForm = document.getElementById('modalFormPosSiswa');
+  if (mForm) {
+    mForm.classList.remove('active', 'open');
+    mForm.style.display = 'none';
+  }
+
+  const mMenu = document.getElementById('modalPemeriksaanSiswa');
+  if (mMenu) {
+    mMenu.classList.add('active', 'open');
+    mMenu.style.display = 'flex';
+  }
+
+  const siswaId = document.getElementById('periksaSiswaId')?.value;
+  const siswa = sekolahRecords.find(r => r.id === siswaId);
+  if (siswa) updateSekolahMenuBadges(siswa);
+}
+
+function switchSekolahModalTab(tabKey) {
+  if (tabKey === 'menu') {
+    closeFormPosPopup();
+  } else {
+    openFormPosPopup(tabKey);
+  }
+}
+
+function updateSekolahMenuBadges(siswa) {
+  if (!siswa) return;
+  
+  const hasAntro = !!(siswa.antro_done || (siswa.bb > 0 && siswa.tb > 0));
+  const hasVital = !!(siswa.vital_done || (siswa.td_sistolik && Number(siswa.td_sistolik) > 0));
+  const hasLab = !!(siswa.lab_done || ((siswa.hb && siswa.hb !== '-' && String(siswa.hb).trim() !== '') || (siswa.gula_darah && siswa.gula_darah !== '-' && String(siswa.gula_darah).trim() !== '')));
+  const hasOrgan = !!(siswa.organ_done);
+  const hasKesimpulan = !!(siswa.kesimpulan_done || (siswa.catatan_rujukan && siswa.catatan_rujukan !== '-' && String(siswa.catatan_rujukan).trim() !== ''));
+
+  // 1. Identitas
+  const bIdentitas = document.getElementById('badgePosMenuIdentitas');
+  if (bIdentitas) {
+    bIdentitas.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi</span>`;
+  }
+  document.getElementById('btnPosMenuIdentitas')?.classList.add('is-done');
+
+  // 2. Antropometri
+  const bAntro = document.getElementById('badgePosMenuAntro');
+  const btnAntro = document.getElementById('btnPosMenuAntro');
+  if (bAntro) {
+    if (hasAntro) {
+      bAntro.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${siswa.bb || 0}kg/${siswa.tb || 0}cm)</span>`;
+      btnAntro?.classList.add('is-done');
+    } else {
+      bAntro.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
+      btnAntro?.classList.remove('is-done');
+    }
+  }
+
+  // 3. Tanda Vital
+  const bVital = document.getElementById('badgePosMenuVital');
+  const btnVital = document.getElementById('btnPosMenuVital');
+  if (bVital) {
+    if (hasVital) {
+      bVital.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${siswa.td_sistolik}/${siswa.td_diastolik || 0})</span>`;
+      btnVital?.classList.add('is-done');
+    } else {
+      bVital.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
+      btnVital?.classList.remove('is-done');
+    }
+  }
+
+  // 4. Lab
+  const bLab = document.getElementById('badgePosMenuLab');
+  const btnLab = document.getElementById('btnPosMenuLab');
+  if (bLab) {
+    if (hasLab) {
+      const parts = [];
+      if (siswa.hb && siswa.hb !== '-') parts.push(`Hb ${siswa.hb}`);
+      if (siswa.gula_darah && siswa.gula_darah !== '-') parts.push(`GDS ${siswa.gula_darah}`);
+      bLab.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi ${parts.length ? `(${parts.join(', ')})` : ''}</span>`;
+      btnLab?.classList.add('is-done');
+    } else {
+      bLab.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
+      btnLab?.classList.remove('is-done');
+    }
+  }
+
+  // 5. Organ Indera
+  const bOrgan = document.getElementById('badgePosMenuOrgan');
+  const btnOrgan = document.getElementById('btnPosMenuOrgan');
+  if (bOrgan) {
+    if (hasOrgan) {
+      bOrgan.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (Selesai)</span>`;
+      btnOrgan?.classList.add('is-done');
+    } else {
+      bOrgan.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
+      btnOrgan?.classList.remove('is-done');
+    }
+  }
+
+  // 6. Kesimpulan
+  const bKesimpulan = document.getElementById('badgePosMenuKesimpulan');
+  const btnKesimpulan = document.getElementById('btnPosMenuKesimpulan');
+  if (bKesimpulan) {
+    if (hasKesimpulan) {
+      bKesimpulan.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${siswa.status_kesehatan || 'Sehat'})</span>`;
+      btnKesimpulan?.classList.add('is-done');
+    } else {
+      bKesimpulan.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
+      btnKesimpulan?.classList.remove('is-done');
+    }
+  }
+
+  // Ringkasan hasil pemeriksaan yang sudah terisi
+  const elRingkasan = document.getElementById('modalMenuHasilRingkasan');
+  if (elRingkasan) {
+    const chips = [];
+    if (hasAntro) chips.push(`<span class="status-check-badge antro"><i class="bi bi-check-circle-fill" style="color:#10b981;"></i> Antro: ${siswa.bb || '-'}kg / ${siswa.tb || '-'}cm</span>`);
+    if (hasVital) chips.push(`<span class="status-check-badge vital"><i class="bi bi-check-circle-fill" style="color:#3b82f6;"></i> TD: ${siswa.td_sistolik || '-'}/${siswa.td_diastolik || '-'}</span>`);
+    if (hasLab) {
+      if (siswa.hb && siswa.hb !== '-') chips.push(`<span class="status-check-badge lab"><i class="bi bi-check-circle-fill" style="color:#ec4899;"></i> Hb: ${siswa.hb}</span>`);
+      if (siswa.gula_darah && siswa.gula_darah !== '-') chips.push(`<span class="status-check-badge lab"><i class="bi bi-check-circle-fill" style="color:#ec4899;"></i> Gula: ${siswa.gula_darah}</span>`);
+    }
+    if (hasOrgan) chips.push(`<span class="status-check-badge organ"><i class="bi bi-check-circle-fill" style="color:#0d9488;"></i> Organ Indera (Selesai)</span>`);
+    if (hasKesimpulan) chips.push(`<span class="status-check-badge kesimpulan"><i class="bi bi-check-circle-fill" style="color:#eab308;"></i> Status: ${siswa.status_kesehatan || 'Sehat'}</span>`);
+
+    elRingkasan.innerHTML = chips.length > 0 
+      ? `<div style="display: flex; gap: 6px; flex-wrap: wrap;">${chips.join('')}</div>`
+      : `<span style="color: #94a3b8; font-style: italic;">Belum ada pos pemeriksaan yang diisi.</span>`;
+  }
+}
+
+function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
   const siswa = sekolahRecords.find(r => r.id === siswaId);
   if (!siswa) {
     showToast('Data siswa tidak ditemukan.', 'warning');
@@ -10718,20 +10952,20 @@ function openPemeriksaanModal(siswaId, defaultTab = 'identitas') {
   if (badgeStatus) {
     if (isExamined) {
       if (siswa.status_kesehatan === 'Perlu Rujukan') {
-        badgeStatus.style.background = '#ecfdf5';
-        badgeStatus.style.border = '1.5px solid #10b981';
-        badgeStatus.style.color = '#047857';
+        badgeStatus.style.background = '#fef2f2';
+        badgeStatus.style.border = '1.5px solid #ef4444';
+        badgeStatus.style.color = '#dc2626';
         badgeStatus.textContent = 'PERLU RUJUKAN';
       } else if (siswa.status_kesehatan === 'Perlu Perhatian') {
-        badgeStatus.style.background = '#ecfdf5';
-        badgeStatus.style.border = '1.5px solid #34d399';
-        badgeStatus.style.color = '#059669';
+        badgeStatus.style.background = '#fffbeb';
+        badgeStatus.style.border = '1.5px solid #f59e0b';
+        badgeStatus.style.color = '#d97706';
         badgeStatus.textContent = 'PERLU PERHATIAN';
       } else {
         badgeStatus.style.background = '#d1fae5';
         badgeStatus.style.border = '1.5px solid #059669';
         badgeStatus.style.color = '#065f46';
-        badgeStatus.textContent = 'SUDAH DIPERIKSA (SEHAT)';
+        badgeStatus.textContent = 'SUDAH DIPERIKSA';
       }
     } else {
       badgeStatus.style.background = '#f0fdf4';
@@ -10774,22 +11008,63 @@ function openPemeriksaanModal(siswaId, defaultTab = 'identitas') {
   if (document.getElementById('periksaCatatanRujukan')) document.getElementById('periksaCatatanRujukan').value = (siswa.catatan_rujukan && siswa.catatan_rujukan !== '-') ? siswa.catatan_rujukan : '';
 
   calculateSiswaIMT();
-  switchSekolahModalTab(defaultTab);
+  updateSekolahMenuBadges(siswa);
 
+  // Close form modal if previously open
+  const mForm = document.getElementById('modalFormPosSiswa');
+  if (mForm) {
+    mForm.classList.remove('active', 'open');
+    mForm.style.display = 'none';
+  }
+
+  // Open the Menu Buttons Modal
   const modal = document.getElementById('modalPemeriksaanSiswa');
   if (modal) {
-    modal.classList.add('active');
-    modal.classList.add('open');
+    modal.classList.add('active', 'open');
     modal.style.display = 'flex';
   }
+
+  // If a specific tab was explicitly requested other than 'menu', open that form
+  if (defaultTab && defaultTab !== 'menu') {
+    openFormPosPopup(defaultTab);
+  }
+
+  // Multi-user concurrency: Fetch fresh single student record from Cloud in background
+  fetch(`/api/sekolah?id=${encodeURIComponent(siswaId)}`)
+    .then(r => r.json())
+    .then(res => {
+      if (res.success && res.data && res.data.length > 0) {
+        const fresh = res.data[0];
+        const curIdx = sekolahRecords.findIndex(r => r.id === siswaId);
+        if (curIdx >= 0) {
+          sekolahRecords[curIdx] = { ...sekolahRecords[curIdx], ...fresh };
+          const curS = sekolahRecords[curIdx];
+          updateSekolahMenuBadges(curS);
+          if (document.getElementById('periksaSiswaId')?.value === siswaId) {
+            if (document.activeElement?.id !== 'periksaBb') document.getElementById('periksaBb').value = curS.bb || '';
+            if (document.activeElement?.id !== 'periksaTb') document.getElementById('periksaTb').value = curS.tb || '';
+            if (document.activeElement?.id !== 'periksaSistol') document.getElementById('periksaSistol').value = curS.td_sistolik || '';
+            if (document.activeElement?.id !== 'periksaDiastol') document.getElementById('periksaDiastol').value = curS.td_diastolik || '';
+            if (document.activeElement?.id !== 'periksaHb') document.getElementById('periksaHb').value = (curS.hb && curS.hb !== '-') ? curS.hb : '';
+            if (document.activeElement?.id !== 'periksaGula') document.getElementById('periksaGula').value = (curS.gula_darah && curS.gula_darah !== '-') ? curS.gula_darah : '';
+            calculateSiswaIMT();
+          }
+        }
+      }
+    })
+    .catch(_ => {});
 }
 
 function closePemeriksaanModal() {
-  const modal = document.getElementById('modalPemeriksaanSiswa');
-  if (modal) {
-    modal.classList.remove('active');
-    modal.classList.remove('open');
-    modal.style.display = 'none';
+  const m1 = document.getElementById('modalPemeriksaanSiswa');
+  if (m1) {
+    m1.classList.remove('active', 'open');
+    m1.style.display = 'none';
+  }
+  const m2 = document.getElementById('modalFormPosSiswa');
+  if (m2) {
+    m2.classList.remove('active', 'open');
+    m2.style.display = 'none';
   }
 }
 
@@ -10852,7 +11127,12 @@ async function saveSekolahCategory(categoryKey) {
   const existing = sekolahRecords[idx];
 
   let titleMsg = '';
-  let updatedRecord = { ...existing };
+  let categoryName = '';
+  let fieldsToUpdate = {
+    petugas_entry: currentUserName,
+    tanggal_entry: new Date().toISOString().substring(0, 10),
+    is_examined: 1
+  };
 
   if (categoryKey === 'identitas') {
     const nama = document.getElementById('periksaNama')?.value.trim().toUpperCase();
@@ -10860,14 +11140,16 @@ async function saveSekolahCategory(categoryKey) {
       showToast('Nama Lengkap Siswa wajib diisi!', 'warning');
       return;
     }
-    updatedRecord.nama = nama;
-    updatedRecord.nik = document.getElementById('periksaNik')?.value.trim() || '';
-    updatedRecord.jk = document.getElementById('periksaJk')?.value || 'L';
-    updatedRecord.sekolah = document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || existing.sekolah;
-    updatedRecord.kelas = document.getElementById('periksaKelas')?.value.trim().toUpperCase() || existing.kelas;
-    updatedRecord.tanggal_lahir = document.getElementById('periksaTglLahir')?.value || '';
-    updatedRecord.no_whatsapp = document.getElementById('periksaWa')?.value.trim() || '';
-    updatedRecord.alamat = document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '';
+    fieldsToUpdate.nama = nama;
+    fieldsToUpdate.nik = document.getElementById('periksaNik')?.value.trim() || '';
+    fieldsToUpdate.jk = document.getElementById('periksaJk')?.value || 'L';
+    fieldsToUpdate.sekolah = document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || existing.sekolah;
+    fieldsToUpdate.kelas = document.getElementById('periksaKelas')?.value.trim().toUpperCase() || existing.kelas;
+    fieldsToUpdate.tanggal_lahir = document.getElementById('periksaTglLahir')?.value || '';
+    fieldsToUpdate.no_whatsapp = document.getElementById('periksaWa')?.value.trim() || '';
+    fieldsToUpdate.alamat = document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '';
+    fieldsToUpdate.identitas_done = 1;
+    categoryName = 'Identitas Siswa';
     titleMsg = 'Data Identitas Siswa Berhasil Disimpan!';
   } else if (categoryKey === 'antro') {
     const bbVal = parseFloat(document.getElementById('periksaBb')?.value) || 0;
@@ -10884,88 +11166,122 @@ async function saveSekolahCategory(categoryKey) {
       else statusImt = 'Obesitas';
     }
 
-    updatedRecord.bb = bbVal;
-    updatedRecord.tb = tbVal;
-    updatedRecord.lp = parseFloat(document.getElementById('periksaLp')?.value) || 0;
-    updatedRecord.imt = imtVal;
-    updatedRecord.status_imt = statusImt;
-    updatedRecord.is_examined = true;
+    fieldsToUpdate.bb = bbVal;
+    fieldsToUpdate.tb = tbVal;
+    fieldsToUpdate.lp = parseFloat(document.getElementById('periksaLp')?.value) || 0;
+    fieldsToUpdate.imt = imtVal;
+    fieldsToUpdate.status_imt = statusImt;
+    fieldsToUpdate.antro_done = 1;
+    categoryName = 'Antropometri';
     titleMsg = 'Data Antropometri Berhasil Disimpan!';
   } else if (categoryKey === 'vital') {
-    updatedRecord.td_sistolik = parseInt(document.getElementById('periksaSistol')?.value, 10) || 0;
-    updatedRecord.td_diastolik = parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0;
-    updatedRecord.is_examined = true;
-    titleMsg = 'Data Tanda Vital (Tekanan Darah) Berhasil Disimpan!';
+    fieldsToUpdate.td_sistolik = parseInt(document.getElementById('periksaSistol')?.value, 10) || 0;
+    fieldsToUpdate.td_diastolik = parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0;
+    fieldsToUpdate.vital_done = 1;
+    categoryName = 'Tanda Vital (Tekanan Darah)';
+    titleMsg = 'Data Tanda Vital Berhasil Disimpan!';
   } else if (categoryKey === 'lab') {
-    updatedRecord.gula_darah = document.getElementById('periksaGula')?.value.trim() || '-';
-    updatedRecord.hb = document.getElementById('periksaHb')?.value.trim() || '-';
-    updatedRecord.is_examined = true;
-    titleMsg = 'Data Pemeriksaan Laboratorium Berhasil Disimpan!';
+    fieldsToUpdate.gula_darah = document.getElementById('periksaGula')?.value.trim() || '-';
+    fieldsToUpdate.hb = document.getElementById('periksaHb')?.value.trim() || '-';
+    fieldsToUpdate.lab_done = 1;
+    categoryName = 'Laboratorium';
+    titleMsg = 'Data Laboratorium Berhasil Disimpan!';
   } else if (categoryKey === 'organ') {
-    updatedRecord.telinga = document.getElementById('periksaTelinga')?.value || 'Tidak ada serumen';
-    updatedRecord.gigi = document.getElementById('periksaGigi')?.value || 'Tidak ada';
-    updatedRecord.mata = document.getElementById('periksaMata')?.value || 'Normal';
-    updatedRecord.kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
-    updatedRecord.menstruasi = document.getElementById('periksaMenstruasi')?.value || 'Belum';
-    updatedRecord.is_examined = true;
-    titleMsg = 'Data Organ Indera & UKS Berhasil Disimpan!';
+    fieldsToUpdate.telinga = document.getElementById('periksaTelinga')?.value || 'Tidak ada serumen';
+    fieldsToUpdate.gigi = document.getElementById('periksaGigi')?.value || 'Tidak ada';
+    fieldsToUpdate.mata = document.getElementById('periksaMata')?.value || 'Normal';
+    fieldsToUpdate.kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
+    fieldsToUpdate.menstruasi = document.getElementById('periksaMenstruasi')?.value || 'Belum';
+    fieldsToUpdate.organ_done = 1;
+    categoryName = 'Organ Indera & UKS';
+    titleMsg = 'Data Organ Indera Berhasil Disimpan!';
   } else if (categoryKey === 'kesimpulan') {
-    updatedRecord.status_kesehatan = document.getElementById('periksaStatusKesehatan')?.value || 'Sehat';
-    updatedRecord.catatan_rujukan = document.getElementById('periksaCatatanRujukan')?.value.trim() || '-';
-    updatedRecord.is_examined = true;
-    titleMsg = 'Data Kesimpulan & Rujukan Berhasil Disimpan!';
+    fieldsToUpdate.status_kesehatan = document.getElementById('periksaStatusKesehatan')?.value || 'Sehat';
+    fieldsToUpdate.catatan_rujukan = document.getElementById('periksaCatatanRujukan')?.value.trim() || '-';
+    fieldsToUpdate.kesimpulan_done = 1;
+    categoryName = 'Kesimpulan & Rujukan';
+    titleMsg = 'Data Kesimpulan Berhasil Disimpan!';
   }
 
-  updatedRecord.petugas_entry = currentUserName;
-  updatedRecord.tanggal_entry = new Date().toISOString().substring(0, 10);
-
-  // Directly POST to Cloud Database
+  // ATOMIC PARTIAL UPDATE: Only sends fields for this category to prevent overwriting others
+  let freshRecord = null;
   try {
-    await fetch('/api/sekolah', {
-      method: 'POST',
+    let patchRes = await fetch('/api/sekolah', {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify([updatedRecord])
+      body: JSON.stringify({ id, category: categoryKey, fields: fieldsToUpdate })
     });
+    if (!patchRes.ok) {
+      patchRes = await fetch('/api/sekolah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'partial_update', id, category: categoryKey, fields: fieldsToUpdate })
+      });
+    }
+    if (patchRes.ok) {
+      const resJson = await patchRes.json();
+      if (resJson.data) freshRecord = resJson.data;
+    }
   } catch (err) {
-    console.warn('Sync to cloud error:', err);
+    console.warn('Partial update notice:', err);
   }
 
-  await fetchSekolahRecordsFromCloud();
+  // Update local memory without overwriting other categories
+  if (freshRecord) {
+    sekolahRecords[idx] = { ...sekolahRecords[idx], ...freshRecord };
+  } else {
+    sekolahRecords[idx] = { ...sekolahRecords[idx], ...fieldsToUpdate };
+  }
+  localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+
+  const currentSiswa = sekolahRecords[idx];
 
   // Update modal header display in real-time
-  document.getElementById('displayNamaSiswa').textContent = updatedRecord.nama || 'Nama Siswa';
-  document.getElementById('displaySekolahSiswa').textContent = updatedRecord.sekolah || 'Nama Sekolah';
-  document.getElementById('displayKelasSiswa').textContent = updatedRecord.kelas || 'Kelas';
-  document.getElementById('displayJkSiswa').textContent = updatedRecord.jk === 'P' ? 'Perempuan' : 'Laki-laki';
+  document.getElementById('displayNamaSiswa').textContent = currentSiswa.nama || 'Nama Siswa';
+  document.getElementById('displaySekolahSiswa').textContent = currentSiswa.sekolah || 'Nama Sekolah';
+  document.getElementById('displayKelasSiswa').textContent = currentSiswa.kelas || 'Kelas';
+  document.getElementById('displayJkSiswa').textContent = currentSiswa.jk === 'P' ? 'Perempuan' : 'Laki-laki';
 
+  // Update menu buttons checkmarks in modal
+  updateSekolahMenuBadges(currentSiswa);
+
+  // Update header badge status
   const badgeStatus = document.getElementById('badgeStatusSkrining');
   if (badgeStatus) {
-    if (updatedRecord.is_examined) {
-      if (updatedRecord.status_kesehatan === 'Perlu Rujukan') {
-        badgeStatus.style.background = '#ecfdf5';
-        badgeStatus.style.border = '1.5px solid #10b981';
-        badgeStatus.style.color = '#047857';
-        badgeStatus.textContent = 'PERLU RUJUKAN';
-      } else if (updatedRecord.status_kesehatan === 'Perlu Perhatian') {
-        badgeStatus.style.background = '#ecfdf5';
-        badgeStatus.style.border = '1.5px solid #34d399';
-        badgeStatus.style.color = '#059669';
-        badgeStatus.textContent = 'PERLU PERHATIAN';
-      } else {
-        badgeStatus.style.background = '#d1fae5';
-        badgeStatus.style.border = '1.5px solid #059669';
-        badgeStatus.style.color = '#065f46';
-        badgeStatus.textContent = 'SUDAH DIPERIKSA (SEHAT)';
-      }
+    if (currentSiswa.status_kesehatan === 'Perlu Rujukan') {
+      badgeStatus.style.background = '#fef2f2';
+      badgeStatus.style.border = '1.5px solid #ef4444';
+      badgeStatus.style.color = '#dc2626';
+      badgeStatus.textContent = 'PERLU RUJUKAN';
+    } else if (currentSiswa.status_kesehatan === 'Perlu Perhatian') {
+      badgeStatus.style.background = '#fffbeb';
+      badgeStatus.style.border = '1.5px solid #f59e0b';
+      badgeStatus.style.color = '#d97706';
+      badgeStatus.textContent = 'PERLU PERHATIAN';
+    } else {
+      badgeStatus.style.background = '#d1fae5';
+      badgeStatus.style.border = '1.5px solid #059669';
+      badgeStatus.style.color = '#065f46';
+      badgeStatus.textContent = 'SUDAH DIPERIKSA';
     }
   }
+
+  // Refresh table background view
+  renderSekolahView();
 
   Swal.fire({
     icon: 'success',
     title: titleMsg,
-    html: `Format data untuk <strong>${updatedRecord.nama}</strong> telah tersimpan langsung di Cloud Database.`,
+    html: `Format data <strong>${categoryName}</strong> untuk <strong>${currentSiswa.nama}</strong> berhasil disimpan ke Cloud Database.<br><span style="font-size: 12px; color: #059669; font-weight: 600;">Data bagian lain tetap aman dan tidak terganggu.</span>`,
     confirmButtonColor: '#059669',
-    timer: 2000
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-grid-fill"></i> Menu Bagian',
+    cancelButtonText: 'Tetap di Form Ini',
+    cancelButtonColor: '#64748b'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      switchSekolahModalTab('menu');
+    }
   });
 }
 
@@ -11019,16 +11335,22 @@ async function savePemeriksaanSiswa(event) {
     td_diastolik: parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0,
     gula_darah: document.getElementById('periksaGula')?.value.trim() || '-',
     hb: document.getElementById('periksaHb')?.value.trim() || '-',
-    telinga: document.getElementById('periksaTelinga')?.value || 'Tidak ada serumen',
-    gigi: document.getElementById('periksaGigi')?.value || 'Tidak ada',
-    mata: document.getElementById('periksaMata')?.value || 'Normal',
-    kebugaran: kebugaran,
-    menstruasi: menstruasi,
-    status_kesehatan: statusKesehatan,
-    catatan_rujukan: catatanRujukan,
+    telinga: document.getElementById('periksaTelinga')?.value || sekolahRecords[idx].telinga || 'Tidak ada serumen',
+    gigi: document.getElementById('periksaGigi')?.value || sekolahRecords[idx].gigi || 'Tidak ada',
+    mata: document.getElementById('periksaMata')?.value || sekolahRecords[idx].mata || 'Normal',
+    kebugaran: kebugaran || sekolahRecords[idx].kebugaran || 'Baik',
+    menstruasi: menstruasi || sekolahRecords[idx].menstruasi || 'Belum',
+    status_kesehatan: statusKesehatan || sekolahRecords[idx].status_kesehatan || 'Sehat',
+    catatan_rujukan: (catatanRujukan && catatanRujukan !== '-') ? catatanRujukan : (sekolahRecords[idx].catatan_rujukan || '-'),
     is_examined: true,
     petugas_entry: currentUserName,
-    tanggal_entry: new Date().toISOString().substring(0, 10)
+    tanggal_entry: new Date().toISOString().substring(0, 10),
+    antro_done: (bbVal > 0 && tbVal > 0) ? 1 : (sekolahRecords[idx].antro_done || 0),
+    vital_done: (parseInt(document.getElementById('periksaSistol')?.value, 10) > 0) ? 1 : (sekolahRecords[idx].vital_done || 0),
+    lab_done: ((document.getElementById('periksaHb')?.value.trim() && document.getElementById('periksaHb')?.value.trim() !== '-') || (document.getElementById('periksaGula')?.value.trim() && document.getElementById('periksaGula')?.value.trim() !== '-')) ? 1 : (sekolahRecords[idx].lab_done || 0),
+    organ_done: (sekolahRecords[idx].organ_done || 0),
+    kesimpulan_done: (statusKesehatan && statusKesehatan !== 'Sehat' && statusKesehatan !== '') || (catatanRujukan && catatanRujukan !== '-' && catatanRujukan.trim() !== '') ? 1 : (sekolahRecords[idx].kesimpulan_done || 0),
+    identitas_done: (sekolahRecords[idx].identitas_done || 1)
   };
 
   // Directly POST to Cloud Database
@@ -13886,8 +14208,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initDarkMode() {
   const savedTheme = localStorage.getItem('ckg_theme_mode');
-  // Default is strictly Light Mode unless user explicitly saved 'dark'
-  const isDark = (savedTheme === 'dark');
+  // Default is strictly Dark Mode unless user explicitly saved 'light'
+  const isDark = (savedTheme !== 'light');
   
   if (isDark) {
     document.body.classList.add('dark-mode');
@@ -13901,6 +14223,17 @@ function toggleDarkMode() {
   const isDark = document.body.classList.toggle('dark-mode');
   localStorage.setItem('ckg_theme_mode', isDark ? 'dark' : 'light');
   updateThemeToggleUI(isDark);
+
+  // Refresh dashboard charts with updated theme colors if available
+  if (typeof initDashboardCharts === 'function' && typeof getOfficerPerformanceData === 'function') {
+    try {
+      const officersData = getOfficerPerformanceData();
+      initDashboardCharts(officersData);
+    } catch (e) {
+      console.warn('Could not refresh charts on theme toggle:', e);
+    }
+  }
+
   showToast(isDark ? '🌙 Mode Gelap Diaktifkan' : '☀️ Mode Terang Diaktifkan', 'info');
 }
 
@@ -13909,19 +14242,21 @@ function updateThemeToggleUI(isDark) {
   const headerBtnIcon = document.getElementById('themeToggleHeaderIcon');
   const headerBtnText = document.getElementById('themeToggleHeaderText');
   if (headerBtnIcon) headerBtnIcon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
-  if (headerBtnIcon) headerBtnIcon.style.color = isDark ? '#f59e0b' : '#f59e0b';
+  if (headerBtnIcon) headerBtnIcon.style.color = '#f59e0b';
   if (headerBtnText) headerBtnText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
 
   // User Profile Menu item
   const userMenuIcon = document.getElementById('userMenuThemeIcon');
   const userMenuText = document.getElementById('userMenuThemeText');
   if (userMenuIcon) userMenuIcon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+  if (userMenuIcon) userMenuIcon.style.color = '#f59e0b';
   if (userMenuText) userMenuText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
 
   // Login page button
   const loginThemeIcon = document.getElementById('loginThemeIcon');
   const loginThemeText = document.getElementById('loginThemeText');
   if (loginThemeIcon) loginThemeIcon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+  if (loginThemeIcon) loginThemeIcon.style.color = '#f59e0b';
   if (loginThemeText) loginThemeText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
 }
 

@@ -2801,70 +2801,123 @@ body.dark-mode ::-webkit-scrollbar-thumb {
 }
 
 /* Split-screen Login Panel in Dark Mode */
+body.dark-mode .login-view-container {
+  background: #0b0f19 !important;
+}
+
 body.dark-mode .split-auth-card {
   background: #0f172a !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6) !important;
 }
+
+body.dark-mode .split-visual-panel {
+  background: linear-gradient(135deg, #090d16 0%, #172554 50%, #064e3b 100%) !important;
+}
+
+body.dark-mode .visual-brand-logo {
+  background: #1e293b !important;
+  border: 1.5px solid #334155 !important;
+}
+
 body.dark-mode .split-form-panel {
   background: #0f172a !important;
   color: #f8fafc !important;
 }
+
+body.dark-mode #loginThemeToggleBtn {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-mode #loginThemeToggleBtn:hover {
+  background: #334155 !important;
+  border-color: #475569 !important;
+}
+
 body.dark-mode .auth-header-text h2 {
   color: #f8fafc !important;
 }
+
 body.dark-mode .auth-header-text p {
   color: #94a3b8 !important;
 }
+
 body.dark-mode .auth-form-logo > div {
   background: #1e293b !important;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5) !important;
+  border: 1.5px solid #334155 !important;
 }
 
 /* App Header & Navigation Bar in Dark Mode */
 body.dark-mode .app-header {
-  background: #1e293b !important;
-  border-bottom-color: #334155 !important;
+  background: #111827 !important;
+  border-bottom-color: #1e293b !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
 }
+
+body.dark-mode .brand-logo {
+  background: #1e293b !important;
+  border: 1.5px solid #334155 !important;
+}
+
 body.dark-mode .brand-title h1 {
   color: #60a5fa !important;
 }
+
 body.dark-mode .brand-title p {
   color: #94a3b8 !important;
 }
+
 body.dark-mode .stat-pill {
-  background: #0f172a !important;
+  background: #1e293b !important;
   border-color: #334155 !important;
   color: #cbd5e1 !important;
 }
+
 body.dark-mode .stat-pill strong {
   color: #60a5fa !important;
 }
+
 body.dark-mode #cloudSyncPill {
   background: rgba(16, 185, 129, 0.15) !important;
   border-color: rgba(16, 185, 129, 0.3) !important;
   color: #34d399 !important;
 }
+
 body.dark-mode #cloudPingPill {
-  background: #0f172a !important;
+  background: #1e293b !important;
   border-color: #334155 !important;
   color: #cbd5e1 !important;
 }
+
 body.dark-mode #darkModeHeaderPill {
-  background: #0f172a !important;
+  background: #1e293b !important;
   border-color: #334155 !important;
   color: #f59e0b !important;
 }
 
-body.dark-mode .nav-tabs-bar {
-  background: #1e293b !important;
-  border-bottom-color: #334155 !important;
+body.dark-mode #darkModeHeaderPill:hover {
+  background: #334155 !important;
+  border-color: #475569 !important;
 }
+
+body.dark-mode .nav-tabs-bar {
+  background: #111827 !important;
+  border-bottom-color: #1e293b !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25) !important;
+}
+
 body.dark-mode .nav-tab-btn {
   color: #94a3b8 !important;
 }
+
 body.dark-mode .nav-tab-btn:hover {
-  background: #0f172a !important;
+  background: #1e293b !important;
   color: #38bdf8 !important;
 }
+
 body.dark-mode .nav-tab-btn.active {
   background: rgba(59, 130, 246, 0.2) !important;
   color: #60a5fa !important;
@@ -2878,13 +2931,16 @@ body.dark-mode .card-panel {
   border-color: #334155 !important;
   color: #f8fafc !important;
 }
+
 body.dark-mode .card-header-title {
   color: #f8fafc !important;
 }
+
 body.dark-mode .filter-bar-box {
   background: #0f172a !important;
   border-color: #334155 !important;
 }
+
 body.dark-mode .filter-item {
   color: #94a3b8 !important;
 }
@@ -2903,11 +2959,13 @@ body.dark-mode textarea {
   border-color: #334155 !important;
   color: #f8fafc !important;
 }
+
 body.dark-mode .form-control::placeholder,
 body.dark-mode input::placeholder,
 body.dark-mode textarea::placeholder {
   color: #64748b !important;
 }
+
 body.dark-mode .form-control:focus,
 body.dark-mode input:focus,
 body.dark-mode select:focus,
@@ -2915,10 +2973,12 @@ body.dark-mode textarea:focus {
   border-color: #3b82f6 !important;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
 }
+
 body.dark-mode select option {
   background-color: #1e293b !important;
   color: #f8fafc !important;
 }
+
 body.dark-mode .form-label {
   color: #e2e8f0 !important;
 }
@@ -2929,46 +2989,92 @@ body.dark-mode .address-autocomplete-dropdown {
   border-color: #334155 !important;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
 }
+
 body.dark-mode .address-autocomplete-item {
   border-bottom-color: #334155 !important;
   color: #f8fafc !important;
 }
+
 body.dark-mode .address-autocomplete-item:hover {
   background: rgba(56, 189, 248, 0.15) !important;
 }
+
 body.dark-mode .address-autocomplete-item .icon-box {
   background: rgba(56, 189, 248, 0.2) !important;
   color: #38bdf8 !important;
 }
 
 /* Buttons in Dark Mode */
-body.dark-mode .btn-secondary {
-  background: #0f172a !important;
+body.dark-mode .btn-secondary,
+body.dark-mode .btn-slate,
+body.dark-mode .btn-outline-secondary {
+  background: #1e293b !important;
   border-color: #334155 !important;
   color: #f8fafc !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
-body.dark-mode .btn-secondary:hover {
-  background: #1e293b !important;
+
+body.dark-mode .btn-secondary:hover,
+body.dark-mode .btn-slate:hover,
+body.dark-mode .btn-outline-secondary:hover {
+  background: #334155 !important;
   border-color: #475569 !important;
+  color: #60a5fa !important;
 }
+
+body.dark-mode .btn-amber {
+  background: rgba(245, 158, 11, 0.18) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  color: #fbbf24 !important;
+}
+
+body.dark-mode .btn-emerald {
+  background: rgba(16, 185, 129, 0.18) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #34d399 !important;
+}
+
+body.dark-mode .btn-cyan {
+  background: rgba(2, 132, 199, 0.18) !important;
+  border-color: rgba(2, 132, 199, 0.4) !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-mode .btn-blue {
+  background: rgba(37, 99, 235, 0.18) !important;
+  border-color: rgba(37, 99, 235, 0.4) !important;
+  color: #60a5fa !important;
+}
+
+body.dark-mode .btn-danger,
+body.dark-mode .btn-rose {
+  background: rgba(225, 29, 72, 0.18) !important;
+  border-color: rgba(225, 29, 72, 0.4) !important;
+  color: #fca5a5 !important;
+}
+
 body.dark-mode .btn-quick-login {
-  background: #0f172a !important;
+  background: #1e293b !important;
   border-color: #334155 !important;
   color: #94a3b8 !important;
 }
+
 body.dark-mode .btn-quick-login:hover {
   background: rgba(59, 130, 246, 0.2) !important;
   border-color: #3b82f6 !important;
   color: #60a5fa !important;
 }
+
 body.dark-mode .btn-profile-trigger {
-  background: #0f172a !important;
+  background: #1e293b !important;
   border-color: #334155 !important;
   color: #f8fafc !important;
 }
+
 body.dark-mode .btn-profile-trigger i {
   color: #cbd5e1 !important;
 }
+
 body.dark-mode .btn-profile-trigger:hover {
   background: rgba(59, 130, 246, 0.2) !important;
   border-color: #3b82f6 !important;
@@ -2980,9 +3086,11 @@ body.dark-mode .user-profile-popover {
   border-color: #334155 !important;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
 }
+
 body.dark-mode .user-name-text {
   color: #f8fafc !important;
 }
+
 body.dark-mode .user-badge {
   border-bottom-color: #334155 !important;
 }
@@ -5646,4 +5754,257 @@ body.dark-mode .sekolah-cat-tab-all:not(.active) {
     box-sizing: border-box !important;
   }
 }
+
+/* ==========================================================================
+   CKG SEKOLAH: CATEGORY BUTTONS GRID & CHECKLIST STATUS BADGES
+   ========================================================================== */
+.sekolah-category-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .sekolah-category-buttons-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.sekolah-cat-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sekolah-cat-card-btn:hover {
+  transform: translateY(-2px);
+  background: #ffffff;
+  border-color: #10b981;
+  box-shadow: 0 8px 18px rgba(5, 150, 105, 0.12);
+}
+
+.sekolah-cat-card-btn:active {
+  transform: translateY(0);
+}
+
+.cat-card-icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 12px;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.cat-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.cat-card-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.cat-card-desc {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cat-card-status {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.badge-pos-done {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #6ee7b7;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-pos-pending {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Status Checklist badges in table */
+.status-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+}
+
+.status-check-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.status-check-badge.antro {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.status-check-badge.vital {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.status-check-badge.lab {
+  background: #fdf2f8;
+  color: #9d174d;
+  border: 1px solid #fbcfe8;
+}
+
+.status-check-badge.organ {
+  background: #f0fdfa;
+  color: #115e59;
+  border: 1px solid #99f6e4;
+}
+
+.status-check-badge.kesimpulan {
+  background: #fefce8;
+  color: #854d0e;
+  border: 1px solid #fef08a;
+}
+
+body.dark-mode .sekolah-cat-card-btn {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+body.dark-mode .sekolah-cat-card-btn:hover {
+  background: #0f172a;
+  border-color: #10b981;
+}
+
+body.dark-mode .cat-card-title {
+  color: #f1f5f9;
+}
+
+body.dark-mode .cat-card-desc {
+  color: #94a3b8;
+}
+
+/* =================================================================== */
+/* POS MENU BUTTONS GRID (MATCHING GAMBAR 1 TOMBOL FORMAT)             */
+/* =================================================================== */
+.sekolah-pos-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .sekolah-pos-buttons-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .sekolah-pos-buttons-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pos-menu-button {
+  width: 100%;
+  padding: 13px 15px !important;
+  font-size: 13px !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border: 1.5px solid #a7f3d0 !important;
+  background: #f0fdf4 !important;
+  color: #065f46 !important;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.06);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.pos-menu-button:hover {
+  border-color: #059669 !important;
+  background: #ecfdf5 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(5, 150, 105, 0.15) !important;
+}
+
+.pos-menu-button.is-done {
+  border-color: #10b981 !important;
+  background: #f0fdf4 !important;
+}
+
+.pos-btn-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.pos-btn-badge .badge {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+body.dark-mode .pos-menu-button {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode .pos-menu-button:hover {
+  background: #0f172a !important;
+  border-color: #10b981 !important;
+}
+
 
