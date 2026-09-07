@@ -863,6 +863,34 @@ body {
   background: linear-gradient(135deg, #7c3aed, #6d28d9);
 }
 
+/* Clickable Metric Cards as Quick Filter Targets */
+.metric-card-solid.clickable-card {
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 0.2, 1), outline 0.18s ease;
+  user-select: none;
+}
+
+.metric-card-solid.clickable-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  filter: brightness(1.05);
+}
+
+.metric-card-solid.clickable-card:active {
+  transform: translateY(-1px);
+}
+
+.metric-card-solid.clickable-card.active-filter {
+  outline: 3.5px solid #ffffff;
+  box-shadow: 0 0 0 5px #4f46e5, 0 10px 24px rgba(0, 0, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+body.dark-mode .metric-card-solid.clickable-card.active-filter {
+  outline: 3px solid #1e293b;
+  box-shadow: 0 0 0 5px #818cf8, 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
 .metric-card-info {
   display: flex;
   flex-direction: column;
@@ -4184,7 +4212,9 @@ body.dark-mode .sekolah-filter-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .sekolah-filter-title {
@@ -4198,6 +4228,97 @@ body.dark-mode .sekolah-filter-card {
 
 body.dark-mode .sekolah-filter-title {
   color: #a5b4fc;
+}
+
+/* Quick Filter Status Pills */
+.sekolah-status-pills {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.status-pill:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+  transform: translateY(-1px);
+}
+
+.status-pill.active {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4338ca;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.status-pill.pill-sudah.active {
+  background: #059669;
+  color: #ffffff;
+  border-color: #047857;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.35);
+}
+
+.status-pill.pill-belum.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0369a1;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+}
+
+.status-pill.pill-rujukan.active {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #b91c1c;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+}
+
+body.dark-mode .status-pill {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+body.dark-mode .status-pill:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+body.dark-mode .status-pill.active {
+  background: #6366f1;
+  color: #ffffff;
+  border-color: #4f46e5;
+}
+
+body.dark-mode .status-pill.pill-sudah.active {
+  background: #10b981;
+  border-color: #059669;
+}
+
+body.dark-mode .status-pill.pill-belum.active {
+  background: #0ea5e9;
+  border-color: #0284c7;
+}
+
+body.dark-mode .status-pill.pill-rujukan.active {
+  background: #ef4444;
+  border-color: #dc2626;
 }
 
 /* Horizontal Row for Desktop (Sejajar) */
@@ -4217,13 +4338,18 @@ body.dark-mode .sekolah-filter-title {
 }
 
 .filter-col-sekolah {
-  flex: 3;
-  min-width: 260px;
+  flex: 2.8;
+  min-width: 220px;
 }
 
 .filter-col-kelas {
-  flex: 1.5;
-  min-width: 140px;
+  flex: 1.4;
+  min-width: 120px;
+}
+
+.filter-col-status {
+  flex: 1.6;
+  min-width: 155px;
 }
 
 .filter-col-btn {
@@ -4231,8 +4357,8 @@ body.dark-mode .sekolah-filter-title {
 }
 
 .filter-col-search {
-  flex: 2.5;
-  min-width: 220px;
+  flex: 2.2;
+  min-width: 180px;
 }
 
 .filter-label {
@@ -4708,17 +4834,17 @@ body.dark-mode .combobox-option-item.selected {
     left: 0 !important;
     right: 0 !important;
     z-index: 9999 !important;
-    background: rgba(255, 255, 255, 0.96) !important;
+    background: rgba(255, 255, 255, 0.97) !important;
     backdrop-filter: blur(16px) !important;
     -webkit-backdrop-filter: blur(16px) !important;
     border-top: 1px solid rgba(226, 232, 240, 0.9) !important;
     border-bottom: none !important;
-    padding: 6px 4px env(safe-area-inset-bottom, 8px) 4px !important;
+    padding: 6px 10px env(safe-area-inset-bottom, 8px) 10px !important;
     margin: 0 !important;
     display: flex !important;
-    justify-content: space-between !important;
+    justify-content: center !important;
     align-items: center !important;
-    gap: 2px !important;
+    gap: 8px !important;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.07) !important;
     overflow-x: auto !important;
     scrollbar-width: none !important;
@@ -4729,20 +4855,20 @@ body.dark-mode .combobox-option-item.selected {
   }
 
   body.dark-mode .nav-tabs-bar {
-    background: rgba(15, 23, 42, 0.96) !important;
+    background: rgba(15, 23, 42, 0.97) !important;
     border-top-color: rgba(51, 65, 85, 0.9) !important;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3) !important;
   }
 
   .nav-tab-btn {
     flex: 1 1 0 !important;
-    min-width: 44px !important;
-    max-width: 60px !important;
+    min-width: 48px !important;
+    max-width: 82px !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 5px 2px !important;
+    padding: 6px 8px !important;
     border: none !important;
     border-radius: 12px !important;
     color: #64748b !important;
@@ -4752,14 +4878,14 @@ body.dark-mode .combobox-option-item.selected {
   }
 
   .nav-tab-btn i {
-    font-size: 18px !important;
+    font-size: 19px !important;
     line-height: 1 !important;
     margin-bottom: 2px !important;
     transition: transform 0.2s ease !important;
   }
 
   .nav-tab-btn span {
-    font-size: 8.5px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
     line-height: 1.1 !important;
     white-space: nowrap !important;
@@ -5180,11 +5306,18 @@ body.dark-mode .combobox-option-item.selected {
     border-color: #334155 !important;
   }
 
+  .sekolah-filter-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
   .sekolah-filter-title {
     font-size: 12.5px !important;
     font-weight: 800 !important;
     color: #4338ca !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 0 !important;
     display: flex !important;
     align-items: center !important;
     gap: 6px !important;
@@ -5192,6 +5325,21 @@ body.dark-mode .combobox-option-item.selected {
 
   body.dark-mode .sekolah-filter-title {
     color: #a5b4fc !important;
+  }
+
+  .sekolah-status-pills {
+    width: 100% !important;
+    overflow-x: auto !important;
+    padding-bottom: 4px !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .status-pill {
+    white-space: nowrap !important;
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+    flex-shrink: 0 !important;
   }
 
   .sekolah-filter-row {
@@ -5395,18 +5543,26 @@ body.dark-mode .combobox-option-item.selected {
     font-size: 7px !important;
   }
 
+  .nav-tabs-bar {
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 6px 8px env(safe-area-inset-bottom, 8px) 8px !important;
+  }
+
   .nav-tab-btn {
-    min-width: 36px !important;
-    max-width: 48px !important;
-    padding: 4px 0 !important;
+    flex: 1 1 0 !important;
+    min-width: 44px !important;
+    max-width: 78px !important;
+    padding: 5px 6px !important;
   }
 
   .nav-tab-btn i {
-    font-size: 17px !important;
+    font-size: 18px !important;
   }
 
   .nav-tab-btn span {
-    font-size: 7.5px !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
   }
 }
 

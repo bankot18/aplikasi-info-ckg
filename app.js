@@ -10475,6 +10475,69 @@ function updatePeriksaSiswaKelasDropdown() {
   if (currentKelas) selectKelas.value = currentKelas;
 }
 
+// State for Filter Status Skrining (all | sudah | belum | rujukan)
+let currentSekolahStatusFilter = 'all';
+
+function isSekolahRecordExamined(r) {
+  if (!r) return false;
+  const hasAntro = !!(r.antro_done || (r.bb > 0 && r.tb > 0));
+  const hasVital = !!(r.vital_done || (r.td_sistolik && Number(r.td_sistolik) > 0));
+  const hasLab = !!(r.lab_done || ((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')));
+  const hasOrgan = !!(r.organ_done);
+  const hasKesimpulan = !!(r.kesimpulan_done || (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== ''));
+  return hasAntro || hasVital || hasLab || hasOrgan || hasKesimpulan || !!r.is_examined;
+}
+
+function isSekolahRecordPerluRujukan(r) {
+  if (!r) return false;
+  const hbVal = parseFloat(r.hb);
+  const isAnemia = !isNaN(hbVal) && hbVal > 0 && hbVal < 12.0;
+  const isHipertensi = r.td_sistolik && Number(r.td_sistolik) > 120;
+  const adaKaries = r.gigi && r.gigi !== 'Tidak ada' && r.gigi !== 'Tidak' && r.gigi !== '0';
+  const mataBukanNormal = r.mata && r.mata !== 'Normal' && r.mata !== 'Tidak';
+  const adaSerumen = r.telinga && (String(r.telinga).toLowerCase().includes('ada serumen') || String(r.telinga).toLowerCase().includes('infeksi'));
+  const statusRujuk = r.status_kesehatan && (r.status_kesehatan === 'Perlu Rujukan' || r.status_kesehatan === 'Perlu Perhatian' || r.status_kesehatan !== 'Sehat');
+  return !!(isAnemia || isHipertensi || adaKaries || mataBukanNormal || adaSerumen || statusRujuk);
+}
+
+function setSekolahStatusFilter(status) {
+  currentSekolahStatusFilter = status || 'all';
+
+  // Synchronize Dropdown
+  const select = document.getElementById('filterSelectStatus');
+  if (select && select.value !== currentSekolahStatusFilter) {
+    select.value = currentSekolahStatusFilter;
+  }
+
+  // Synchronize Quick Filter Pills
+  document.querySelectorAll('.status-pill').forEach(pill => {
+    if (pill.getAttribute('data-status') === currentSekolahStatusFilter) {
+      pill.classList.add('active');
+    } else {
+      pill.classList.remove('active');
+    }
+  });
+
+  // Synchronize Clickable Metric Cards active indicator
+  const cardMap = {
+    all: 'cardFilterTotal',
+    sudah: 'cardFilterSudah',
+    belum: 'cardFilterBelum',
+    rujukan: 'cardFilterRujukan'
+  };
+
+  ['cardFilterTotal', 'cardFilterSudah', 'cardFilterBelum', 'cardFilterRujukan'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active-filter');
+  });
+
+  const activeCardId = cardMap[currentSekolahStatusFilter];
+  if (activeCardId) {
+    document.getElementById(activeCardId)?.classList.add('active-filter');
+  }
+
+  renderSekolahView();
+}
+
 function applySekolahFilter() {
   renderSekolahView();
 }
@@ -10508,36 +10571,59 @@ function renderSekolahView() {
     });
   }
 
-  // Update KPI Summary Metrics
+  // Update KPI Summary Metrics (Calculated BEFORE status filtering so total counts stay accurate)
   const totalStudents = dataset.length;
-  const sudahPeriksa = dataset.filter(r => r.is_examined || r.bb > 0 || r.tb > 0 || r.td_sistolik > 0).length;
+  const sudahPeriksa = dataset.filter(r => isSekolahRecordExamined(r)).length;
   const belumPeriksa = totalStudents - sudahPeriksa;
-
-  const perluPerhatian = dataset.filter(r => {
-    const hbVal = parseFloat(r.hb);
-    const isAnemia = !isNaN(hbVal) && hbVal > 0 && hbVal < 12.0;
-    const isHipertensi = r.td_sistolik && r.td_sistolik > 120;
-    const adaKaries = r.gigi && r.gigi !== 'Tidak ada' && r.gigi !== 'Tidak' && r.gigi !== '0';
-    const mataBukanNormal = r.mata && r.mata !== 'Normal' && r.mata !== 'Tidak';
-    const adaSerumen = r.telinga && (r.telinga.toLowerCase().includes('ada serumen') || r.telinga.toLowerCase().includes('infeksi'));
-    const statusRujuk = r.status_kesehatan && r.status_kesehatan !== 'Sehat';
-    return isAnemia || isHipertensi || adaKaries || mataBukanNormal || adaSerumen || statusRujuk;
-  }).length;
+  const perluPerhatian = dataset.filter(r => isSekolahRecordPerluRujukan(r)).length;
 
   document.getElementById('metricSekolahTotal') && (document.getElementById('metricSekolahTotal').textContent = totalStudents.toLocaleString('id-ID'));
   document.getElementById('metricSekolahSudah') && (document.getElementById('metricSekolahSudah').textContent = sudahPeriksa.toLocaleString('id-ID'));
   document.getElementById('metricSekolahBelum') && (document.getElementById('metricSekolahBelum').textContent = belumPeriksa.toLocaleString('id-ID'));
   document.getElementById('metricSekolahRujukan') && (document.getElementById('metricSekolahRujukan').textContent = perluPerhatian.toLocaleString('id-ID'));
 
+  // Update Pill Counts
+  document.getElementById('pillCountTotal') && (document.getElementById('pillCountTotal').textContent = totalStudents.toLocaleString('id-ID'));
+  document.getElementById('pillCountSudah') && (document.getElementById('pillCountSudah').textContent = sudahPeriksa.toLocaleString('id-ID'));
+  document.getElementById('pillCountBelum') && (document.getElementById('pillCountBelum').textContent = belumPeriksa.toLocaleString('id-ID'));
+  document.getElementById('pillCountRujukan') && (document.getElementById('pillCountRujukan').textContent = perluPerhatian.toLocaleString('id-ID'));
+
+  // Apply Status Filter to the rendered table dataset
+  if (currentSekolahStatusFilter === 'sudah') {
+    dataset = dataset.filter(r => isSekolahRecordExamined(r));
+  } else if (currentSekolahStatusFilter === 'belum') {
+    dataset = dataset.filter(r => !isSekolahRecordExamined(r));
+  } else if (currentSekolahStatusFilter === 'rujukan') {
+    dataset = dataset.filter(r => isSekolahRecordPerluRujukan(r));
+  }
+
   if (dataset.length === 0) {
+    let emptyIcon = 'bi-mortarboard';
+    let emptyTitle = 'Tidak Ada Data Siswa Ditemukan';
+    let emptyMsg = 'Pilih Sekolah & Kelas lain, atau klik tombol <strong>"Tambah Siswa"</strong> / <strong>"Import Data Excel"</strong> untuk menambahkan data.';
+
+    if (currentSekolahStatusFilter === 'sudah' && totalStudents > 0) {
+      emptyIcon = 'bi-clock-history';
+      emptyTitle = 'Belum Ada Siswa yang Diperiksa';
+      emptyMsg = `Dari <strong>${totalStudents}</strong> siswa pada kelas ini, belum ada yang diperiksa. Klik tombol <strong>"Periksa"</strong> untuk memulai skrining.`;
+    } else if (currentSekolahStatusFilter === 'belum' && totalStudents > 0) {
+      emptyIcon = 'bi-check-circle-fill';
+      emptyTitle = 'Semua Siswa Selesai Diperiksa! 🎉';
+      emptyMsg = `Hebat! Seluruh <strong>${totalStudents}</strong> siswa pada kelas ini sudah selesai diperiksa. Tidak ada siswa yang tertinggal.`;
+    } else if (currentSekolahStatusFilter === 'rujukan' && totalStudents > 0) {
+      emptyIcon = 'bi-shield-check';
+      emptyTitle = 'Tidak Ada Siswa yang Perlu Rujukan 👍';
+      emptyMsg = 'Semua siswa yang telah diperiksa dalam kondisi sehat normal tanpa rujukan khusus.';
+    }
+
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; padding: 48px 20px; color: #64748b;">
           <div style="width: 56px; height: 56px; margin: 0 auto 12px auto; background: #eef2ff; color: #4f46e5; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px;">
-            <i class="bi bi-mortarboard"></i>
+            <i class="bi ${emptyIcon}"></i>
           </div>
-          <div style="font-size: 15px; font-weight: 800; color: #1e293b; margin-bottom: 4px;">Tidak Ada Data Siswa Ditemukan</div>
-          <p style="font-size: 12.5px; color: #64748b; margin: 0;">Pilih Sekolah & Kelas lain, atau klik tombol <strong>"Tambah Siswa"</strong> / <strong>"Import Data Excel"</strong> untuk menambahkan data.</p>
+          <div style="font-size: 15px; font-weight: 800; color: #1e293b; margin-bottom: 4px;">${emptyTitle}</div>
+          <p style="font-size: 12.5px; color: #64748b; margin: 0;">${emptyMsg}</p>
         </td>
       </tr>
     `;
@@ -10550,7 +10636,7 @@ function renderSekolahView() {
     const hasLab = !!(r.lab_done || ((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')));
     const hasOrgan = !!(r.organ_done);
     const hasKesimpulan = !!(r.kesimpulan_done || (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== ''));
-    const isExamined = hasAntro || hasVital || hasLab || hasOrgan || hasKesimpulan || !!r.is_examined;
+    const isExamined = isSekolahRecordExamined(r);
 
     const safeId = escapeHtml(r.id || '');
     const safeNama = escapeHtml(r.nama || '-');
@@ -11570,6 +11656,15 @@ function exportSekolahToXLSX() {
     });
   }
 
+  // Apply active status filter if set
+  if (currentSekolahStatusFilter === 'sudah') {
+    dataset = dataset.filter(r => isSekolahRecordExamined(r));
+  } else if (currentSekolahStatusFilter === 'belum') {
+    dataset = dataset.filter(r => !isSekolahRecordExamined(r));
+  } else if (currentSekolahStatusFilter === 'rujukan') {
+    dataset = dataset.filter(r => isSekolahRecordPerluRujukan(r));
+  }
+
   if (dataset.length === 0) {
     showToast('Tidak ada data CKG Sekolah yang sesuai filter untuk diekspor.', 'warning');
     return;
@@ -11624,7 +11719,7 @@ function exportSekolahToXLSX() {
       r.menstruasi || 'Belum',
       r.status_kesehatan || 'Sehat',
       r.catatan_rujukan || '-',
-      (r.is_examined || r.bb > 0) ? 'Sudah Diperiksa' : 'Belum Diperiksa',
+      isSekolahRecordExamined(r) ? 'Sudah Diperiksa' : 'Belum Diperiksa',
       r.petugas_entry || 'Admin',
       r.tanggal_entry || ''
     ];
@@ -11635,7 +11730,12 @@ function exportSekolahToXLSX() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'CKG_SEKOLAH');
 
-  const fileName = `CKG_SEKOLAH_${chosenSekolah ? chosenSekolah.replace(/\s+/g, '_') : 'SEMUA'}_${new Date().toISOString().substring(0, 10)}.xlsx`;
+  let statusSuffix = '';
+  if (currentSekolahStatusFilter === 'sudah') statusSuffix = '_SUDAH_DIPERIKSA';
+  if (currentSekolahStatusFilter === 'belum') statusSuffix = '_BELUM_DIPERIKSA';
+  if (currentSekolahStatusFilter === 'rujukan') statusSuffix = '_PERLU_RUJUKAN';
+
+  const fileName = `CKG_SEKOLAH_${chosenSekolah ? chosenSekolah.replace(/\s+/g, '_') : 'SEMUA'}_${chosenKelas ? chosenKelas.replace(/\s+/g, '_') : 'SEMUA_KELAS'}${statusSuffix}_${new Date().toISOString().substring(0, 10)}.xlsx`;
   XLSX.writeFile(wb, fileName);
   showToast(`Berhasil mendownload Excel (${dataset.length} Siswa).`, 'success');
 }

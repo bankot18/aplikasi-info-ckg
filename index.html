@@ -1024,9 +1024,9 @@
             </div>
           </div>
 
-          <!-- Metric Cards Summary CKG Sekolah -->
+          <!-- Metric Cards Summary CKG Sekolah (Clickable Filters) -->
           <div class="metric-cards-grid" style="margin-bottom: 16px;">
-            <div class="metric-card-solid bg-purple">
+            <div class="metric-card-solid bg-purple clickable-card active-filter" id="cardFilterTotal" onclick="setSekolahStatusFilter('all')" role="button" tabindex="0" title="Klik untuk filter: Tampilkan Semua Siswa">
               <div class="metric-card-info">
                 <span class="metric-card-title">TOTAL SISWA</span>
                 <span class="metric-card-value" id="metricSekolahTotal">0</span>
@@ -1034,7 +1034,7 @@
               <div class="metric-card-icon"><i class="bi bi-people-fill"></i></div>
             </div>
 
-            <div class="metric-card-solid bg-emerald">
+            <div class="metric-card-solid bg-emerald clickable-card" id="cardFilterSudah" onclick="setSekolahStatusFilter('sudah')" role="button" tabindex="0" title="Klik untuk filter: Sudah Diperiksa Saja">
               <div class="metric-card-info">
                 <span class="metric-card-title">SUDAH DIPERIKSA</span>
                 <span class="metric-card-value" id="metricSekolahSudah">0</span>
@@ -1042,7 +1042,7 @@
               <div class="metric-card-icon"><i class="bi bi-check-circle-fill"></i></div>
             </div>
 
-            <div class="metric-card-solid bg-cyan">
+            <div class="metric-card-solid bg-cyan clickable-card" id="cardFilterBelum" onclick="setSekolahStatusFilter('belum')" role="button" tabindex="0" title="Klik untuk filter: Belum Diperiksa Saja">
               <div class="metric-card-info">
                 <span class="metric-card-title">BELUM DIPERIKSA</span>
                 <span class="metric-card-value" id="metricSekolahBelum">0</span>
@@ -1050,7 +1050,7 @@
               <div class="metric-card-icon"><i class="bi bi-clock-history"></i></div>
             </div>
 
-            <div class="metric-card-solid bg-blue">
+            <div class="metric-card-solid bg-blue clickable-card" id="cardFilterRujukan" onclick="setSekolahStatusFilter('rujukan')" role="button" tabindex="0" title="Klik untuk filter: Perlu Perhatian / Rujukan">
               <div class="metric-card-info">
                 <span class="metric-card-title">PERLU PERHATIAN / RUJUKAN</span>
                 <span class="metric-card-value" id="metricSekolahRujukan">0</span>
@@ -1059,11 +1059,26 @@
             </div>
           </div>
 
-          <!-- Filter Bar CKG Sekolah (Sejajar & Searchable Dropdown + Search Sekolah) -->
+          <!-- Filter Bar CKG Sekolah (Sejajar & Searchable Dropdown + Status Filter + Search) -->
           <div class="sekolah-filter-card">
             <div class="sekolah-filter-header">
               <div class="sekolah-filter-title">
                 <i class="bi bi-funnel-fill"></i> Filter & Pilih Data Siswa Sekolah
+              </div>
+              <!-- Status Filter Quick Pills -->
+              <div class="sekolah-status-pills" id="sekolahStatusPills">
+                <button type="button" class="status-pill active" data-status="all" onclick="setSekolahStatusFilter('all')" title="Tampilkan Semua Siswa">
+                  <i class="bi bi-collection"></i> Semua (<span id="pillCountTotal">0</span>)
+                </button>
+                <button type="button" class="status-pill pill-sudah" data-status="sudah" onclick="setSekolahStatusFilter('sudah')" title="Filter: Siswa yang Sudah Diperiksa">
+                  <i class="bi bi-check-circle-fill"></i> Sudah Diperiksa (<span id="pillCountSudah">0</span>)
+                </button>
+                <button type="button" class="status-pill pill-belum" data-status="belum" onclick="setSekolahStatusFilter('belum')" title="Filter: Siswa yang Belum Diperiksa">
+                  <i class="bi bi-clock-history"></i> Belum Diperiksa (<span id="pillCountBelum">0</span>)
+                </button>
+                <button type="button" class="status-pill pill-rujukan" data-status="rujukan" onclick="setSekolahStatusFilter('rujukan')" title="Filter: Perlu Perhatian / Rujukan">
+                  <i class="bi bi-heart-pulse-fill"></i> Rujukan (<span id="pillCountRujukan">0</span>)
+                </button>
               </div>
             </div>
 
@@ -1151,7 +1166,21 @@
                 </div>
               </div>
 
-              <!-- 3. Tombol Tampilkan -->
+              <!-- 3. Status Pemeriksaan (Dropdown) -->
+              <div class="filter-group-col filter-col-status">
+                <label class="filter-label" for="filterSelectStatus">
+                  <i class="bi bi-ui-checks"></i> Status Periksa:
+                </label>
+                <select id="filterSelectStatus" class="form-control filter-input-control"
+                  onchange="setSekolahStatusFilter(this.value)">
+                  <option value="all">Semua Status</option>
+                  <option value="sudah">✅ Sudah Diperiksa</option>
+                  <option value="belum">⏳ Belum Diperiksa</option>
+                  <option value="rujukan">⚠️ Perlu Rujukan</option>
+                </select>
+              </div>
+
+              <!-- 4. Tombol Tampilkan -->
               <div class="filter-group-col filter-col-btn">
                 <label class="filter-label filter-label-spacer">&nbsp;</label>
                 <button type="button" class="btn btn-primary btn-tampilkan-sekolah" onclick="renderSekolahView()">
@@ -1159,7 +1188,7 @@
                 </button>
               </div>
 
-              <!-- 4. Cari Siswa / NISN -->
+              <!-- 5. Cari Siswa / NISN -->
               <div class="filter-group-col filter-col-search">
                 <label class="filter-label" for="searchSekolahRecords">
                   <i class="bi bi-person-search"></i> Cari Nama Siswa / NISN:
