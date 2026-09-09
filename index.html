@@ -1020,6 +1020,10 @@
               <button class="btn btn-rose admin-koordinator-only" onclick="openDuplicateFinderModal()" title="Cari data ganda / NIK sama yang sudah terlanjur ada di database">
                 <i class="bi bi-copy"></i> Cek Duplikat
               </button>
+              <button class="btn btn-secondary admin-koordinator-only" onclick="bulkAutoFillAntroSekolah()"
+                title="Isi BB, TB & LP otomatis untuk semua siswa yang masih kosong (nilai acak normal sesuai umur)">
+                <i class="bi bi-magic"></i> Auto-Fill Antro
+              </button>
               <button class="btn btn-danger admin-koordinator-only" id="btnHapusSemuaDataSekolah"
                 onclick="confirmDeleteAllSekolahRecords()">
                 <i class="bi bi-trash3-fill"></i> Hapus Semua
@@ -2805,10 +2809,17 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-activity"></i> 2. Format Pengisian Antropometri & Status Gizi
             </div>
-            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
-              style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
-              <i class="bi bi-grid-fill"></i> Pilihan Bagian
-            </button>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button type="button" class="btn btn-sm" onclick="autoFillAntroSiswa()"
+                style="background: linear-gradient(135deg, #0284c7, #0ea5e9); color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 4px 10px; box-shadow: 0 2px 6px rgba(2,132,199,0.25);"
+                title="Isi BB, TB & LP otomatis berdasarkan umur siswa (nilai acak normal)">
+                <i class="bi bi-magic"></i> Isi Otomatis
+              </button>
+              <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
+                style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
+                <i class="bi bi-grid-fill"></i> Pilihan Bagian
+              </button>
+            </div>
           </div>
 
           <div class="sekolah-grid-4"

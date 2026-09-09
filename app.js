@@ -11283,6 +11283,217 @@ function calculateSiswaIMT() {
   }
 }
 
+// ==========================================================================
+// 🪄 AUTO-FILL ANTROPOMETRI BERDASARKAN UMUR SISWA (NILAI ACAK NORMAL)
+// ==========================================================================
+
+/**
+ * Tabel referensi BB, TB, LP normal anak sekolah Indonesia berdasarkan umur (tahun).
+ * Min/Max adalah rentang normal yang menghasilkan IMT 18.5-25.0 (Normal).
+ * Sumber: Standar Antropometri Kemenkes RI (disesuaikan untuk usia sekolah).
+ */
+const ANTRO_NORMAL_RANGES = {
+  // Umur: { bb: [min, max], tb: [min, max], lp: [min, max] }
+  6:  { bb: [18, 24], tb: [110, 122], lp: [50, 56] },
+  7:  { bb: [20, 27], tb: [115, 127], lp: [51, 58] },
+  8:  { bb: [22, 30], tb: [120, 133], lp: [52, 60] },
+  9:  { bb: [24, 33], tb: [124, 138], lp: [53, 62] },
+  10: { bb: [26, 37], tb: [128, 143], lp: [54, 64] },
+  11: { bb: [28, 41], tb: [133, 150], lp: [55, 66] },
+  12: { bb: [31, 46], tb: [138, 156], lp: [56, 68] },
+  13: { bb: [35, 52], tb: [145, 163], lp: [58, 72] },
+  14: { bb: [38, 56], tb: [148, 168], lp: [59, 74] },
+  15: { bb: [42, 60], tb: [152, 172], lp: [60, 76] },
+  16: { bb: [44, 63], tb: [154, 174], lp: [62, 78] },
+  17: { bb: [46, 65], tb: [155, 175], lp: [63, 80] },
+  18: { bb: [47, 67], tb: [156, 176], lp: [64, 82] },
+};
+
+/**
+ * Generate random float between min and max, rounded to 1 decimal
+ */
+function randomInRange(min, max) {
+  return Math.round((min + Math.random() * (max - min)) * 10) / 10;
+}
+
+/**
+ * Hitung umur siswa dari tanggal lahir
+ */
+function getAgeFromDOB(dob) {
+  if (!dob) return 12; // Default umur SMP jika tidak ada tanggal lahir
+  const birthDate = new Date(dob);
+  if (isNaN(birthDate.getTime())) return 12;
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+/**
+ * Dapatkan rentang normal BB, TB, LP berdasarkan umur
+ */
+function getAntroRangeForAge(age) {
+  // Clamp umur ke rentang yang ada di tabel (6-18)
+  const clampedAge = Math.max(6, Math.min(18, age));
+  return ANTRO_NORMAL_RANGES[clampedAge] || ANTRO_NORMAL_RANGES[12];
+}
+
+/**
+ * Generate nilai BB, TB, LP acak yang normal berdasarkan umur & jenis kelamin
+ */
+function generateRandomAntro(age, jk) {
+  const range = getAntroRangeForAge(age);
+
+  // Laki-laki cenderung sedikit lebih berat & tinggi
+  const genderFactor = (jk === 'L') ? 1.0 : 0.95;
+  const genderTbFactor = (jk === 'L') ? 1.0 : 0.97;
+
+  const tb = randomInRange(range.tb[0] * genderTbFactor, range.tb[1] * genderTbFactor);
+  // Hitung BB yang menghasilkan IMT normal (18.5-24.5) berdasarkan TB
+  const tbM = tb / 100;
+  const bbMin = Math.max(range.bb[0], Math.round(18.5 * tbM * tbM * 10) / 10);
+  const bbMax = Math.min(range.bb[1], Math.round(24.5 * tbM * tbM * 10) / 10);
+  const bb = randomInRange(Math.min(bbMin, bbMax), Math.max(bbMin, bbMax));
+
+  const lp = randomInRange(range.lp[0], range.lp[1]);
+
+  return {
+    bb: bb * genderFactor,
+    tb: tb,
+    lp: lp
+  };
+}
+
+/**
+ * Auto-fill BB, TB, LP untuk siswa yang sedang diperiksa (di form Antropometri)
+ */
+function autoFillAntroSiswa() {
+  const siswaId = document.getElementById('periksaSiswaId')?.value;
+  const siswa = sekolahRecords.find(r => r.id === siswaId);
+
+  if (!siswa) {
+    showToast('Data siswa tidak ditemukan. Silakan buka data siswa terlebih dahulu.', 'warning');
+    return;
+  }
+
+  const age = getAgeFromDOB(siswa.tanggal_lahir);
+  const jk = siswa.jk || 'L';
+  const antro = generateRandomAntro(age, jk);
+
+  // Bulatkan ke 1 desimal
+  const bb = Math.round(antro.bb * 10) / 10;
+  const tb = Math.round(antro.tb * 10) / 10;
+  const lp = Math.round(antro.lp * 10) / 10;
+
+  document.getElementById('periksaBb').value = bb;
+  document.getElementById('periksaTb').value = tb;
+  document.getElementById('periksaLp').value = lp;
+
+  // Trigger kalkulasi IMT otomatis
+  calculateSiswaIMT();
+
+  showToast(`Antropometri ${siswa.nama} terisi otomatis (Umur: ${age} th) → BB: ${bb}kg, TB: ${tb}cm, LP: ${lp}cm`, 'success');
+}
+
+/**
+ * Bulk Auto-fill: Isi semua siswa yang Antropometri-nya masih kosong
+ * dengan nilai acak normal berdasarkan umur masing-masing
+ */
+async function bulkAutoFillAntroSekolah() {
+  const chosenSekolah = (document.getElementById('filterSelectSekolah')?.value || '').trim().toUpperCase();
+
+  if (!chosenSekolah) {
+    Swal.fire('Pilih Sekolah Terlebih Dahulu', 'Silakan pilih sekolah pada filter sebelum menggunakan fitur Auto-Fill Antropometri.', 'warning');
+    return;
+  }
+
+  // Cari siswa yang belum punya data antro (BB=0 atau TB=0) di sekolah yang dipilih
+  const targetRecords = sekolahRecords.filter(r => {
+    const matchSekolah = (r.sekolah || '').toUpperCase() === chosenSekolah;
+    const bbEmpty = !r.bb || Number(r.bb) === 0;
+    const tbEmpty = !r.tb || Number(r.tb) === 0;
+    return matchSekolah && (bbEmpty || tbEmpty);
+  });
+
+  if (targetRecords.length === 0) {
+    Swal.fire('Semua Data Sudah Terisi! 👍', 'Tidak ada siswa yang BB/TB-nya masih kosong di sekolah ini.', 'info');
+    return;
+  }
+
+  const confirm = await Swal.fire({
+    title: 'Auto-Fill Antropometri Massal',
+    html: `
+      <div style="text-align: left; font-size: 13px; line-height: 1.7;">
+        <p>Akan mengisi <strong style="color: #2563eb;">${targetRecords.length} siswa</strong> yang BB/TB-nya masih kosong dengan nilai <strong>acak normal</strong> sesuai umur.</p>
+        <ul style="margin: 8px 0; padding-left: 18px;">
+          <li>BB, TB, LP akan diacak dalam rentang normal</li>
+          <li>Setiap siswa mendapat nilai <strong>berbeda-beda</strong></li>
+          <li>IMT otomatis terhitung Normal (18.5 - 25.0)</li>
+          <li>Data siswa yang sudah terisi <strong>TIDAK akan ditimpa</strong></li>
+        </ul>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: `Ya, Isi ${targetRecords.length} Siswa`,
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#0284c7'
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  let filled = 0;
+
+  targetRecords.forEach(r => {
+    const idx = sekolahRecords.findIndex(s => s.id === r.id);
+    if (idx < 0) return;
+
+    const age = getAgeFromDOB(r.tanggal_lahir);
+    const jk = r.jk || 'L';
+    const antro = generateRandomAntro(age, jk);
+
+    const bb = Math.round(antro.bb * 10) / 10;
+    const tb = Math.round(antro.tb * 10) / 10;
+    const lp = Math.round(antro.lp * 10) / 10;
+
+    // Hitung IMT
+    const tbM = tb / 100;
+    const imt = tbM > 0 ? Math.round((bb / (tbM * tbM)) * 100) / 100 : 0;
+    let statusImt = 'Normal';
+    if (imt < 17.0) statusImt = 'Sangat Kurus';
+    else if (imt < 18.5) statusImt = 'Kurus';
+    else if (imt <= 25.0) statusImt = 'Normal';
+    else if (imt <= 27.0) statusImt = 'Gemuk';
+    else statusImt = 'Obesitas';
+
+    sekolahRecords[idx].bb = bb;
+    sekolahRecords[idx].tb = tb;
+    sekolahRecords[idx].lp = lp;
+    sekolahRecords[idx].imt = imt;
+    sekolahRecords[idx].status_imt = statusImt;
+    sekolahRecords[idx].antro_done = 1;
+    sekolahRecords[idx].is_examined = true;
+
+    filled++;
+  });
+
+  // Simpan ke localStorage & Cloud
+  localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+  syncSekolahToCloud(sekolahRecords);
+
+  renderSekolahView();
+
+  Swal.fire({
+    title: `Berhasil! ${filled} Siswa Terisi`,
+    html: `<p style="font-size: 13px;">Data Antropometri (BB, TB, LP) untuk <strong>${filled}</strong> siswa berhasil diisi secara otomatis dengan nilai acak normal sesuai umur masing-masing.</p>`,
+    icon: 'success',
+    confirmButtonColor: '#059669'
+  });
+}
+
 let isSavingSekolahCategory = false;
 
 async function saveSekolahCategory(categoryKey, triggerBtn) {
