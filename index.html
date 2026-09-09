@@ -1053,12 +1053,12 @@
               <div class="metric-card-icon"><i class="bi bi-clock-history"></i></div>
             </div>
 
-            <div class="metric-card-solid bg-blue clickable-card" id="cardFilterRujukan" onclick="setSekolahStatusFilter('rujukan')" role="button" tabindex="0" title="Klik untuk filter: Perlu Perhatian / Rujukan">
+            <div class="metric-card-solid bg-blue clickable-card" id="cardFilterSebagian" onclick="setSekolahStatusFilter('sebagian')" role="button" tabindex="0" title="Klik untuk filter: Periksa Sebagian">
               <div class="metric-card-info">
-                <span class="metric-card-title">PERLU PERHATIAN / RUJUKAN</span>
-                <span class="metric-card-value" id="metricSekolahRujukan">0</span>
+                <span class="metric-card-title">PERIKSA SEBAGIAN</span>
+                <span class="metric-card-value" id="metricSekolahSebagian">0</span>
               </div>
-              <div class="metric-card-icon"><i class="bi bi-heart-pulse-fill"></i></div>
+              <div class="metric-card-icon"><i class="bi bi-pie-chart-fill"></i></div>
             </div>
           </div>
 
@@ -1079,8 +1079,8 @@
                 <button type="button" class="status-pill pill-belum" data-status="belum" onclick="setSekolahStatusFilter('belum')" title="Filter: Siswa yang Belum Diperiksa">
                   <i class="bi bi-clock-history"></i> Belum Diperiksa (<span id="pillCountBelum">0</span>)
                 </button>
-                <button type="button" class="status-pill pill-rujukan" data-status="rujukan" onclick="setSekolahStatusFilter('rujukan')" title="Filter: Perlu Perhatian / Rujukan">
-                  <i class="bi bi-heart-pulse-fill"></i> Rujukan (<span id="pillCountRujukan">0</span>)
+                <button type="button" class="status-pill pill-sebagian" data-status="sebagian" onclick="setSekolahStatusFilter('sebagian')" title="Filter: Periksa Sebagian">
+                  <i class="bi bi-pie-chart-fill"></i> Periksa Sebagian (<span id="pillCountSebagian">0</span>)
                 </button>
               </div>
             </div>
@@ -1179,7 +1179,7 @@
                   <option value="all">Semua Status</option>
                   <option value="sudah">✅ Sudah Diperiksa</option>
                   <option value="belum">⏳ Belum Diperiksa</option>
-                  <option value="rujukan">⚠️ Perlu Rujukan</option>
+                  <option value="sebagian">🟡 Periksa Sebagian</option>
                 </select>
               </div>
 
@@ -2635,11 +2635,7 @@
             <span class="pos-btn-badge" id="badgePosMenuOrgan"><span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span></span>
           </button>
 
-          <!-- 6. KESIMPULAN -->
-          <button type="button" class="pos-menu-button" id="btnPosMenuKesimpulan" onclick="openFormPosPopup('kesimpulan')">
-            <span class="pos-btn-title"><i class="bi bi-clipboard2-check-fill" style="color: #f59e0b; font-size: 17px;"></i> 6. Kesimpulan</span>
-            <span class="pos-btn-badge" id="badgePosMenuKesimpulan"><span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span></span>
-          </button>
+
         </div>
 
         <!-- RINGKASAN HASIL PEMERIKSAAN SAAT INI -->
@@ -3083,63 +3079,12 @@
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Organ Indera & UKS
               </button>
-              <button type="button" class="btn btn-sekolah-next" onclick="openFormPosPopup('kesimpulan')"
-                style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
-                Lanjut: Kesimpulan &rarr;
-              </button>
+
             </div>
           </div>
         </div>
 
-        <!-- =================================================================== -->
-        <!-- FORMAT 6: KESIMPULAN & REKOMENDASI RUJUKAN -->
-        <!-- =================================================================== -->
-        <div id="panelPemeriksaanKesimpulan" class="sekolah-form-panel"
-          style="display: none; background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
-          <div
-            style="font-size: 13.5px; font-weight: 800; color: #047857; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #d1fae5; padding-bottom: 8px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <i class="bi bi-clipboard2-check-fill"></i> 6. Format Kesimpulan & Rekomendasi Rujukan
-            </div>
-            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
-              style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
-              <i class="bi bi-grid-fill"></i> Pilihan Bagian
-            </button>
-          </div>
 
-          <div class="sekolah-grid-2"
-            style="display: grid; grid-template-columns: 1.2fr 2fr; gap: 12px; margin-bottom: 16px;">
-            <div class="form-group">
-              <label class="form-label" for="periksaStatusKesehatan">Status Kesehatan Siswa <span class="required"
-                  style="color: #059669;">*</span></label>
-              <select id="periksaStatusKesehatan" class="form-control" required style="font-weight: 800;">
-                <option value="Sehat" selected>🟢 Sehat (Normal)</option>
-                <option value="Perlu Perhatian">🟡 Perlu Perhatian / Konseling</option>
-                <option value="Perlu Rujukan">🔴 Perlu Rujukan ke Puskesmas</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="periksaCatatanRujukan">Catatan Tindak Lanjut / Rujukan</label>
-              <input type="text" id="periksaCatatanRujukan" class="form-control"
-                placeholder="Contoh: Rujukan ke Poli Gigi / Poli Mata">
-            </div>
-          </div>
-
-          <!-- TOMBOL SIMPAN KHUSUS FORMAT 6 -->
-          <div class="panel-action-footer"
-            style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
-            <button type="button" class="btn btn-sekolah-secondary" onclick="closeFormPosPopup()"
-              style="background: #f0fdf4; color: #047857; border: 1.5px solid #a7f3d0; padding: 9px 18px; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
-              <i class="bi bi-arrow-left"></i> Pilihan Bagian
-            </button>
-            <div class="panel-btn-group" style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('kesimpulan', this)"
-                style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
-                <i class="bi bi-check-circle-fill"></i> Simpan Kesimpulan & Selesai
-              </button>
-            </div>
-          </div>
-        </div>
 
         <!-- GLOBAL FOOTER (SHOWN WHEN 'SEMUA' MODE IS SELECTED) -->
         <div id="panelPemeriksaanSemuaFooter" class="panel-action-footer"

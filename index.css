@@ -4296,11 +4296,11 @@ body.dark-mode .sekolah-filter-title {
   box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
 }
 
-.status-pill.pill-rujukan.active {
-  background: #dc2626;
+.status-pill.pill-sebagian.active {
+  background: #d97706;
   color: #ffffff;
-  border-color: #b91c1c;
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+  border-color: #b45309;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.35);
 }
 
 body.dark-mode .status-pill {
@@ -4330,9 +4330,9 @@ body.dark-mode .status-pill.pill-belum.active {
   border-color: #0284c7;
 }
 
-body.dark-mode .status-pill.pill-rujukan.active {
-  background: #ef4444;
-  border-color: #dc2626;
+body.dark-mode .status-pill.pill-sebagian.active {
+  background: #f59e0b;
+  border-color: #d97706;
 }
 
 /* Horizontal Row for Desktop (Sejajar) */

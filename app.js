@@ -10522,11 +10522,10 @@ function isSekolahRecordExamined(r) {
   const hasVital = !!(Number(r.vital_done) === 1 || sistolNum > 0);
   const hasLab = !!(Number(r.lab_done) === 1 || ((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')));
   const hasOrgan = !!(Number(r.organ_done) === 1);
-  const hasKesimpulan = !!(Number(r.kesimpulan_done) === 1 || (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== ''));
 
   // PENTING: Identitas (nama, nik, tgl lahir, dll) TIDAK terhitung sebagai pemeriksaan!
   // Siswa hanya dianggap sudah diperiksa jika minimal 1 stasiun skrining medis telah dilakukan.
-  return hasAntro || hasVital || hasLab || hasOrgan || hasKesimpulan;
+  return hasAntro || hasVital || hasLab || hasOrgan;
 }
 
 function isSekolahRecordPerluRujukan(r) {
@@ -10539,6 +10538,22 @@ function isSekolahRecordPerluRujukan(r) {
   const adaSerumen = r.telinga && (String(r.telinga).toLowerCase().includes('ada serumen') || String(r.telinga).toLowerCase().includes('infeksi'));
   const statusRujuk = r.status_kesehatan && (r.status_kesehatan === 'Perlu Rujukan' || r.status_kesehatan === 'Perlu Perhatian' || r.status_kesehatan !== 'Sehat');
   return !!(isAnemia || isHipertensi || adaKaries || mataBukanNormal || adaSerumen || statusRujuk);
+}
+
+function isSekolahRecordPartialExamined(r) {
+  if (!r) return false;
+  const bbNum = Number(r.bb) || 0;
+  const tbNum = Number(r.tb) || 0;
+  const sistolNum = Number(r.td_sistolik) || 0;
+
+  const hasAntro = !!(Number(r.antro_done) === 1 || (bbNum > 0 && tbNum > 0));
+  const hasVital = !!(Number(r.vital_done) === 1 || sistolNum > 0);
+  const hasLab = !!(Number(r.lab_done) === 1 || ((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')));
+  const hasOrgan = !!(Number(r.organ_done) === 1);
+
+  const stationsDone = [hasAntro, hasVital, hasLab, hasOrgan].filter(Boolean).length;
+  // Periksa Sebagian: minimal 1 stasiun selesai, tapi belum semua (4 stasiun)
+  return stationsDone >= 1 && stationsDone < 4;
 }
 
 function setSekolahStatusFilter(status) {
@@ -10564,10 +10579,10 @@ function setSekolahStatusFilter(status) {
     all: 'cardFilterTotal',
     sudah: 'cardFilterSudah',
     belum: 'cardFilterBelum',
-    rujukan: 'cardFilterRujukan'
+    sebagian: 'cardFilterSebagian'
   };
 
-  ['cardFilterTotal', 'cardFilterSudah', 'cardFilterBelum', 'cardFilterRujukan'].forEach(id => {
+  ['cardFilterTotal', 'cardFilterSudah', 'cardFilterBelum', 'cardFilterSebagian'].forEach(id => {
     document.getElementById(id)?.classList.remove('active-filter');
   });
 
@@ -10594,8 +10609,8 @@ function renderSekolahView() {
   // WAJIB PILIH SEKOLAH: Jika belum ada sekolah yang dipilih, data siswa TIDAK ditampilkan
   if (!chosenSekolah) {
     // Reset KPI Summary Metrics & Pill Counts ke 0
-    ['metricSekolahTotal', 'metricSekolahSudah', 'metricSekolahBelum', 'metricSekolahRujukan',
-     'pillCountTotal', 'pillCountSudah', 'pillCountBelum', 'pillCountRujukan'].forEach(id => {
+    ['metricSekolahTotal', 'metricSekolahSudah', 'metricSekolahBelum', 'metricSekolahSebagian',
+     'pillCountTotal', 'pillCountSudah', 'pillCountBelum', 'pillCountSebagian'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = '0';
     });
@@ -10644,26 +10659,26 @@ function renderSekolahView() {
   const totalStudents = dataset.length;
   const sudahPeriksa = dataset.filter(r => isSekolahRecordExamined(r)).length;
   const belumPeriksa = totalStudents - sudahPeriksa;
-  const perluPerhatian = dataset.filter(r => isSekolahRecordPerluRujukan(r)).length;
+  const periksaSebagian = dataset.filter(r => isSekolahRecordPartialExamined(r)).length;
 
   document.getElementById('metricSekolahTotal') && (document.getElementById('metricSekolahTotal').textContent = totalStudents.toLocaleString('id-ID'));
   document.getElementById('metricSekolahSudah') && (document.getElementById('metricSekolahSudah').textContent = sudahPeriksa.toLocaleString('id-ID'));
   document.getElementById('metricSekolahBelum') && (document.getElementById('metricSekolahBelum').textContent = belumPeriksa.toLocaleString('id-ID'));
-  document.getElementById('metricSekolahRujukan') && (document.getElementById('metricSekolahRujukan').textContent = perluPerhatian.toLocaleString('id-ID'));
+  document.getElementById('metricSekolahSebagian') && (document.getElementById('metricSekolahSebagian').textContent = periksaSebagian.toLocaleString('id-ID'));
 
   // Update Pill Counts
   document.getElementById('pillCountTotal') && (document.getElementById('pillCountTotal').textContent = totalStudents.toLocaleString('id-ID'));
   document.getElementById('pillCountSudah') && (document.getElementById('pillCountSudah').textContent = sudahPeriksa.toLocaleString('id-ID'));
   document.getElementById('pillCountBelum') && (document.getElementById('pillCountBelum').textContent = belumPeriksa.toLocaleString('id-ID'));
-  document.getElementById('pillCountRujukan') && (document.getElementById('pillCountRujukan').textContent = perluPerhatian.toLocaleString('id-ID'));
+  document.getElementById('pillCountSebagian') && (document.getElementById('pillCountSebagian').textContent = periksaSebagian.toLocaleString('id-ID'));
 
   // Apply Status Filter to the rendered table dataset
   if (currentSekolahStatusFilter === 'sudah') {
     dataset = dataset.filter(r => isSekolahRecordExamined(r));
   } else if (currentSekolahStatusFilter === 'belum') {
     dataset = dataset.filter(r => !isSekolahRecordExamined(r));
-  } else if (currentSekolahStatusFilter === 'rujukan') {
-    dataset = dataset.filter(r => isSekolahRecordPerluRujukan(r));
+  } else if (currentSekolahStatusFilter === 'sebagian') {
+    dataset = dataset.filter(r => isSekolahRecordPartialExamined(r));
   }
 
   if (dataset.length === 0) {
@@ -10679,10 +10694,10 @@ function renderSekolahView() {
       emptyIcon = 'bi-check-circle-fill';
       emptyTitle = 'Semua Siswa Selesai Diperiksa! 🎉';
       emptyMsg = `Hebat! Seluruh <strong>${totalStudents}</strong> siswa pada kelas ini sudah selesai diperiksa. Tidak ada siswa yang tertinggal.`;
-    } else if (currentSekolahStatusFilter === 'rujukan' && totalStudents > 0) {
-      emptyIcon = 'bi-shield-check';
-      emptyTitle = 'Tidak Ada Siswa yang Perlu Rujukan 👍';
-      emptyMsg = 'Semua siswa yang telah diperiksa dalam kondisi sehat normal tanpa rujukan khusus.';
+    } else if (currentSekolahStatusFilter === 'sebagian' && totalStudents > 0) {
+      emptyIcon = 'bi-check-circle-fill';
+      emptyTitle = 'Tidak Ada Siswa yang Periksa Sebagian 👍';
+      emptyMsg = 'Semua siswa yang telah diperiksa sudah menyelesaikan seluruh pos pemeriksaan.';
     }
 
     tbody.innerHTML = `
@@ -10708,7 +10723,6 @@ function renderSekolahView() {
     const hasVital = !!(Number(r.vital_done) === 1 || sistolNum > 0);
     const hasLab = !!(Number(r.lab_done) === 1 || ((r.hb && r.hb !== '-' && String(r.hb).trim() !== '') || (r.gula_darah && r.gula_darah !== '-' && String(r.gula_darah).trim() !== '')));
     const hasOrgan = !!(Number(r.organ_done) === 1);
-    const hasKesimpulan = !!(Number(r.kesimpulan_done) === 1 || (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== ''));
     const isExamined = isSekolahRecordExamined(r);
 
     const safeId = escapeHtml(r.id || '');
@@ -10734,15 +10748,6 @@ function renderSekolahView() {
       }
       if (hasOrgan) {
         checklistItems.push(`<span class="status-check-badge organ"><i class="bi bi-check-circle-fill" style="color: #0d9488;"></i> Organ Indera</span>`);
-      }
-      if (hasKesimpulan) {
-        if (r.status_kesehatan === 'Perlu Rujukan') {
-          checklistItems.push(`<span class="status-check-badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;"><i class="bi bi-exclamation-triangle-fill"></i> Perlu Rujukan</span>`);
-        } else if (r.status_kesehatan === 'Perlu Perhatian') {
-          checklistItems.push(`<span class="status-check-badge" style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a;"><i class="bi bi-info-circle-fill"></i> Perlu Perhatian</span>`);
-        } else {
-          checklistItems.push(`<span class="status-check-badge kesimpulan"><i class="bi bi-check-circle-fill" style="color: #eab308;"></i> Kesimpulan</span>`);
-        }
       }
       if (checklistItems.length > 0) {
         statusBadge = `<div class="status-checklist">${checklistItems.join('')}</div>`;
@@ -10831,8 +10836,8 @@ function renderSekolahView() {
       `);
     }
 
-    // 5. Kesimpulan / Catatan Rujukan
-    if (hasKesimpulan && r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== '') {
+    // 5. Catatan Rujukan (jika ada)
+    if (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== '') {
       hasilChips.push(`
         <span style="background: #fef2f2; border: 1px solid #fecaca; padding: 2px 7px; border-radius: 6px; font-weight: 700; color: #dc2626;">
           <strong>Rujukan:</strong> ${escapeHtml(r.catatan_rujukan)}
@@ -10937,14 +10942,13 @@ function openFormPosPopup(posKey) {
     vital: '<i class="bi bi-heart-pulse-fill" style="color: #ef4444;"></i> Format 3: Tanda Vital (Tekanan Darah)',
     lab: '<i class="bi bi-droplet-fill" style="color: #d946ef;"></i> Format 4: Pemeriksaan Laboratorium Sederhana',
     organ: '<i class="bi bi-eye-fill" style="color: #0d9488;"></i> Format 5: Organ Indera & Spesifik UKS',
-    kesimpulan: '<i class="bi bi-clipboard2-check-fill" style="color: #f59e0b;"></i> Format 6: Kesimpulan & Catatan Rujukan',
     semua: '<i class="bi bi-card-checklist" style="color: #059669;"></i> Pemeriksaan Lengkap (Semua Format Sekaligus)'
   };
 
   if (titleEl) titleEl.innerHTML = titleMap[posKey] || '<i class="bi bi-pencil-square"></i> Format Pemeriksaan';
 
   // Toggle form panels
-  const panels = ['identitas', 'antro', 'vital', 'lab', 'organ', 'kesimpulan'];
+  const panels = ['identitas', 'antro', 'vital', 'lab', 'organ'];
   panels.forEach(p => {
     const el = document.getElementById(`panelPemeriksaan${p.charAt(0).toUpperCase() + p.slice(1)}`);
     if (el) el.style.display = (posKey === 'semua' || posKey === p) ? 'block' : 'none';
@@ -11015,7 +11019,6 @@ function updateSekolahMenuBadges(siswa) {
   const hasVital = !!(siswa.vital_done || (siswa.td_sistolik && Number(siswa.td_sistolik) > 0));
   const hasLab = !!(siswa.lab_done || ((siswa.hb && siswa.hb !== '-' && String(siswa.hb).trim() !== '') || (siswa.gula_darah && siswa.gula_darah !== '-' && String(siswa.gula_darah).trim() !== '')));
   const hasOrgan = !!(siswa.organ_done);
-  const hasKesimpulan = !!(siswa.kesimpulan_done || (siswa.catatan_rujukan && siswa.catatan_rujukan !== '-' && String(siswa.catatan_rujukan).trim() !== ''));
 
   // 1. Identitas
   const bIdentitas = document.getElementById('badgePosMenuIdentitas');
@@ -11079,18 +11082,6 @@ function updateSekolahMenuBadges(siswa) {
     }
   }
 
-  // 6. Kesimpulan
-  const bKesimpulan = document.getElementById('badgePosMenuKesimpulan');
-  const btnKesimpulan = document.getElementById('btnPosMenuKesimpulan');
-  if (bKesimpulan) {
-    if (hasKesimpulan) {
-      bKesimpulan.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${siswa.status_kesehatan || 'Sehat'})</span>`;
-      btnKesimpulan?.classList.add('is-done');
-    } else {
-      bKesimpulan.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
-      btnKesimpulan?.classList.remove('is-done');
-    }
-  }
 
   // Ringkasan hasil pemeriksaan yang sudah terisi
   const elRingkasan = document.getElementById('modalMenuHasilRingkasan');
@@ -11103,7 +11094,6 @@ function updateSekolahMenuBadges(siswa) {
       if (siswa.gula_darah && siswa.gula_darah !== '-') chips.push(`<span class="status-check-badge lab"><i class="bi bi-check-circle-fill" style="color:#ec4899;"></i> Gula: ${siswa.gula_darah}</span>`);
     }
     if (hasOrgan) chips.push(`<span class="status-check-badge organ"><i class="bi bi-check-circle-fill" style="color:#0d9488;"></i> Organ Indera (Selesai)</span>`);
-    if (hasKesimpulan) chips.push(`<span class="status-check-badge kesimpulan"><i class="bi bi-check-circle-fill" style="color:#eab308;"></i> Status: ${siswa.status_kesehatan || 'Sehat'}</span>`);
 
     elRingkasan.innerHTML = chips.length > 0 
       ? `<div style="display: flex; gap: 6px; flex-wrap: wrap;">${chips.join('')}</div>`
@@ -12291,8 +12281,8 @@ function exportSekolahToXLSX() {
     dataset = dataset.filter(r => isSekolahRecordExamined(r));
   } else if (currentSekolahStatusFilter === 'belum') {
     dataset = dataset.filter(r => !isSekolahRecordExamined(r));
-  } else if (currentSekolahStatusFilter === 'rujukan') {
-    dataset = dataset.filter(r => isSekolahRecordPerluRujukan(r));
+  } else if (currentSekolahStatusFilter === 'sebagian') {
+    dataset = dataset.filter(r => isSekolahRecordPartialExamined(r));
   }
 
   if (dataset.length === 0) {
@@ -12363,7 +12353,7 @@ function exportSekolahToXLSX() {
   let statusSuffix = '';
   if (currentSekolahStatusFilter === 'sudah') statusSuffix = '_SUDAH_DIPERIKSA';
   if (currentSekolahStatusFilter === 'belum') statusSuffix = '_BELUM_DIPERIKSA';
-  if (currentSekolahStatusFilter === 'rujukan') statusSuffix = '_PERLU_RUJUKAN';
+  if (currentSekolahStatusFilter === 'sebagian') statusSuffix = '_PERIKSA_SEBAGIAN';
 
   const fileName = `CKG_SEKOLAH_${chosenSekolah ? chosenSekolah.replace(/\s+/g, '_') : 'SEMUA'}_${chosenKelas ? chosenKelas.replace(/\s+/g, '_') : 'SEMUA_KELAS'}${statusSuffix}_${new Date().toISOString().substring(0, 10)}.xlsx`;
   XLSX.writeFile(wb, fileName);
