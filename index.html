@@ -1195,16 +1195,16 @@
                 </button>
               </div>
 
-              <!-- 5. Cari Siswa / NISN -->
+              <!-- 5. Cari Siswa / NIK -->
               <div class="filter-group-col filter-col-search">
                 <label class="filter-label" for="searchSekolahRecords">
-                  <i class="bi bi-person-search"></i> Cari Nama Siswa / NISN:
+                  <i class="bi bi-person-search"></i> Cari Nama Siswa / NIK:
                 </label>
                 <div class="filter-search-box-wrap">
                   <i class="bi bi-search search-box-icon"></i>
                   <input type="text" id="searchSekolahRecords"
                     class="form-control filter-input-control filter-search-input"
-                    placeholder="Ketik nama / NISN / NIK..." oninput="renderSekolahView()">
+                    placeholder="Ketik nama / NIK..." oninput="renderSekolahView()">
                 </div>
               </div>
             </div>
@@ -2639,7 +2639,11 @@
             <span class="pos-btn-badge" id="badgePosMenuOrgan"><span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span></span>
           </button>
 
-
+          <!-- 6. KESIMPULAN & RUJUKAN (OPSIONAL) -->
+          <button type="button" class="pos-menu-button" id="btnPosMenuKesimpulan" onclick="openFormPosPopup('kesimpulan')">
+            <span class="pos-btn-title"><i class="bi bi-clipboard2-pulse-fill" style="color: #f59e0b; font-size: 17px;"></i> 6. Kesimpulan & Rujukan</span>
+            <span class="pos-btn-badge" id="badgePosMenuKesimpulan"><span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-dash-circle"></i> Opsional</span></span>
+          </button>
         </div>
 
         <!-- RINGKASAN HASIL PEMERIKSAAN SAAT INI -->
@@ -2729,9 +2733,9 @@
                 style="font-weight: 700; text-transform: uppercase;">
             </div>
             <div class="form-group">
-              <label class="form-label" for="periksaNik">NISN / NIK Siswa</label>
+              <label class="form-label" for="periksaNik">NIK Siswa (16 Digit)</label>
               <input type="text" id="periksaNik" class="form-control" inputmode="numeric"
-                placeholder="16 Digit NIK / NISN" maxlength="16" style="font-family: monospace; font-weight: 700;">
+                placeholder="16 Digit NIK" maxlength="16" style="font-family: monospace; font-weight: 700;">
             </div>
             <div class="form-group">
               <label class="form-label" for="periksaJk">Jenis Kelamin <span class="required"
@@ -2762,11 +2766,17 @@
             </div>
           </div>
 
-          <div class="sekolah-grid-3"
-            style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 12px; margin-bottom: 16px;">
+          <div class="sekolah-grid-4"
+            style="display: grid; grid-template-columns: 1.2fr 1fr 1.2fr 1.8fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
               <label class="form-label" for="periksaTglLahir">Tanggal Lahir</label>
-              <input type="date" id="periksaTglLahir" class="form-control" onchange="calculateSiswaAge()">
+              <input type="date" id="periksaTglLahir" class="form-control" onchange="calculateSiswaAge()" oninput="calculateSiswaAge()">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="periksaUsia">Usia Saat Ini</label>
+              <input type="text" id="periksaUsia" class="form-control" readonly placeholder="Otomatis"
+                style="font-weight: 800; background: #f0fdf4; border-color: #a7f3d0; color: #065f46;"
+                title="Dihitung otomatis realtime dari tanggal lahir ke tanggal hari ini">
             </div>
             <div class="form-group">
               <label class="form-label" for="periksaWa">No. WhatsApp</label>
@@ -2881,23 +2891,38 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-heart-pulse-fill"></i> 3. Format Pengisian Tanda Vital (Tekanan Darah)
             </div>
-            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
-              style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
-              <i class="bi bi-grid-fill"></i> Pilihan Bagian
-            </button>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button type="button" class="btn btn-sm" onclick="autoFillVitalSiswa()"
+                style="background: linear-gradient(135deg, #ef4444, #dc2626); color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 4px 10px; box-shadow: 0 2px 6px rgba(239,68,68,0.25);"
+                title="Isi TD otomatis berdasarkan umur & jenis kelamin siswa (nilai acak normal)">
+                <i class="bi bi-magic"></i> Isi Otomatis
+              </button>
+              <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
+                style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
+                <i class="bi bi-grid-fill"></i> Pilihan Bagian
+              </button>
+            </div>
           </div>
 
-          <div class="sekolah-grid-2"
-            style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div class="sekolah-grid-3"
+            style="display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
               <label class="form-label" for="periksaSistol">TD Sistolik (mmHg)</label>
               <input type="number" id="periksaSistol" class="form-control" inputmode="numeric"
-                placeholder="Contoh: 110">
+                placeholder="Contoh: 110" oninput="calculateSiswaVitalCategory()">
             </div>
             <div class="form-group">
               <label class="form-label" for="periksaDiastol">TD Diastolik (mmHg)</label>
               <input type="number" id="periksaDiastol" class="form-control" inputmode="numeric"
-                placeholder="Contoh: 70">
+                placeholder="Contoh: 70" oninput="calculateSiswaVitalCategory()">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="periksaKategoriTd">
+                Hasil Kategori TD <span class="badge" style="font-size: 9.5px; padding: 2px 6px; background: #059669; color: #ffffff;">Auto</span>
+              </label>
+              <input type="text" id="periksaKategoriTd" class="form-control" readonly placeholder="Otomatis"
+                style="font-weight: 800; background: #f0fdf4; border-color: #a7f3d0; color: #065f46;"
+                title="Hasil kategori tekanan darah terhitung otomatis">
             </div>
           </div>
 
@@ -2931,23 +2956,53 @@
             <div style="display: flex; align-items: center; gap: 6px;">
               <i class="bi bi-droplet-fill"></i> 4. Format Pengisian Laboratorium Sederhana
             </div>
-            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
-              style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
-              <i class="bi bi-grid-fill"></i> Pilihan Bagian
-            </button>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button type="button" class="btn btn-sm" onclick="autoFillLabSiswa()"
+                style="background: linear-gradient(135deg, #d946ef, #c026d3); color: #ffffff; border: none; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 4px 10px; box-shadow: 0 2px 6px rgba(217,70,239,0.25);"
+                title="Isi Laboratorium (Hb & Gula Darah) otomatis berdasarkan umur & jenis kelamin (nilai acak normal)">
+                <i class="bi bi-magic"></i> Isi Otomatis
+              </button>
+              <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
+                style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
+                <i class="bi bi-grid-fill"></i> Pilihan Bagian
+              </button>
+            </div>
+          </div>
+
+          <div class="sekolah-grid-2"
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" id="groupPeriksaGula">
+              <label class="form-label" for="periksaGula">Gula Darah (mg/dL)</label>
+              <input type="number" id="periksaGula" class="form-control" inputmode="numeric" placeholder="Contoh: 100" oninput="calculateSiswaLabCategory()">
+              <div id="periksaGulaLockHint" style="display: none; font-size: 11px; color: #dc2626; font-weight: 600; margin-top: 4px;">
+                <i class="bi bi-lock-fill"></i> Terkunci: Skrining Gula Darah hanya untuk usia &ge; 15 tahun
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="periksaKategoriGula">
+                Hasil Kategori Gula <span class="badge" style="font-size: 9.5px; padding: 2px 6px; background: #059669; color: #ffffff;">Auto</span>
+              </label>
+              <input type="text" id="periksaKategoriGula" class="form-control" readonly placeholder="Otomatis"
+                style="font-weight: 800; background: #f0fdf4; border-color: #a7f3d0; color: #065f46;"
+                title="Hasil kategori gula darah terhitung otomatis">
+            </div>
           </div>
 
           <div class="sekolah-grid-2"
             style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
-              <label class="form-label" for="periksaGula">Gula Darah (mg/dL)</label>
-              <input type="number" id="periksaGula" class="form-control" inputmode="numeric" placeholder="Contoh: 100">
-            </div>
-            <div class="form-group">
               <label class="form-label" for="periksaHb">Hemoglobin (g/dL) <span
                   style="font-size: 10px; color: #047857;">(Skrining Anemia)</span></label>
               <input type="number" step="0.1" id="periksaHb" class="form-control" inputmode="decimal"
-                placeholder="Contoh: 13.5">
+                placeholder="Contoh: 13.5" oninput="calculateSiswaLabCategory()">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="periksaKategoriHb">
+                Hasil Kategori Hb <span class="badge" style="font-size: 9.5px; padding: 2px 6px; background: #059669; color: #ffffff;">Auto</span>
+              </label>
+              <input type="text" id="periksaKategoriHb" class="form-control" readonly placeholder="Otomatis"
+                style="font-weight: 800; background: #f0fdf4; border-color: #a7f3d0; color: #065f46;"
+                title="Hasil kategori hemoglobin terhitung otomatis">
             </div>
           </div>
 
@@ -3050,8 +3105,8 @@
             </div>
           </div>
 
-          <div class="sekolah-grid-2"
-            style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div class="sekolah-grid-3"
+            style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
             <!-- 4. KEBUGARAN -->
             <div class="form-group">
               <label class="form-label" for="periksaKebugaran">
@@ -3064,10 +3119,23 @@
               </select>
             </div>
 
-            <!-- 5. MENSTRUASI (REMAJA) -->
+            <!-- 5. KUKU -->
             <div class="form-group">
+              <label class="form-label" for="periksaKuku">
+                <i class="bi bi-hand-index" style="color: #059669;"></i> Kebersihan Kuku
+              </label>
+              <select id="periksaKuku" class="form-control" style="font-weight: 700;">
+                <option value="Pendek Bersih" selected>Pendek Bersih</option>
+                <option value="Panjang Bersih">Panjang Bersih</option>
+                <option value="Pendek Kotor">Pendek Kotor</option>
+                <option value="Panjang Kotor">Panjang Kotor</option>
+              </select>
+            </div>
+
+            <!-- 6. MENSTRUASI (HANYA PEREMPUAN) -->
+            <div class="form-group" id="groupPeriksaMenstruasi">
               <label class="form-label" for="periksaMenstruasi">
-                <i class="bi bi-gender-female" style="color: #059669;"></i> Status Menstruasi (Remaja Putri)
+                <i class="bi bi-gender-female" style="color: #ec4899;"></i> Status Menstruasi (Remaja Putri)
               </label>
               <select id="periksaMenstruasi" class="form-control" style="font-weight: 700;">
                 <option value="Belum" selected>Belum Menstruasi</option>
@@ -3090,7 +3158,67 @@
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Organ Indera & UKS
               </button>
+              <button type="button" class="btn btn-sekolah-next" onclick="openFormPosPopup('kesimpulan')"
+                style="padding: 9px 16px; font-weight: 700; background: #fffbeb; color: #92400e; border: 1.5px solid #fde68a; border-radius: 10px;">
+                Lanjut: Kesimpulan &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
 
+        <!-- =================================================================== -->
+        <!-- FORMAT 6: KESIMPULAN STATUS KESEHATAN & RUJUKAN (OPSIONAL) -->
+        <!-- =================================================================== -->
+        <div id="panelPemeriksaanKesimpulan" class="sekolah-form-panel"
+          style="display: none; background: #ffffff; border: 1.5px solid #fde68a; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          <div
+            style="font-size: 13.5px; font-weight: 800; color: #b45309; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #fef3c7; padding-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="bi bi-clipboard2-pulse-fill"></i> 6. Format Kesimpulan & Rujukan <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 10px; font-weight: 700; border-radius: 12px; padding: 2px 8px; border: 1px solid #fde68a;">Opsional</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-sekolah-secondary sekolah-header-subbtn" onclick="closeFormPosPopup()"
+              style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
+              <i class="bi bi-grid-fill"></i> Pilihan Bagian
+            </button>
+          </div>
+
+          <div class="sekolah-grid-2"
+            style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label" for="periksaStatusKesehatan">
+                <i class="bi bi-check2-circle" style="color: #b45309;"></i> Kesimpulan Status Kesehatan
+              </label>
+              <select id="periksaStatusKesehatan" class="form-control" style="font-weight: 700;">
+                <option value="Sehat" selected>Sehat (Tidak Ada Masalah Kritis)</option>
+                <option value="Perlu Perhatian">Perlu Perhatian (Karies / IMT / dll)</option>
+                <option value="Perlu Rujukan">Perlu Rujukan (Faskes / Puskesmas)</option>
+              </select>
+              <div style="font-size: 11px; color: #64748b; margin-top: 4px;">*Opsional (Secara default: Sehat).</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="periksaCatatanRujukan">
+                <i class="bi bi-hospital" style="color: #ef4444;"></i> Catatan Tindak Lanjut / Rujukan Faskes
+              </label>
+              <input type="text" id="periksaCatatanRujukan" class="form-control"
+                placeholder="Contoh: Rujuk Poli Gigi Puskesmas untuk tambal karies (Opsional)"
+                style="font-weight: 600;">
+              <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Kosongkan jika siswa dalam kondisi normal / tidak dirujuk.</div>
+            </div>
+          </div>
+
+          <!-- TOMBOL SIMPAN KHUSUS FORMAT 6 -->
+          <div class="panel-action-footer"
+            style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #fef3c7; padding-top: 14px;">
+            <button type="button" class="btn btn-sekolah-secondary" onclick="closeFormPosPopup()"
+              style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; padding: 9px 18px; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="bi bi-arrow-left"></i> Pilihan Bagian
+            </button>
+            <div class="panel-btn-group" style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-sekolah-primary" onclick="saveSekolahCategory('kesimpulan', this)"
+                style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);">
+                <i class="bi bi-floppy-fill"></i> Simpan Kesimpulan & Rujukan
+              </button>
             </div>
           </div>
         </div>
@@ -3140,7 +3268,7 @@
           <div class="sekolah-grid-2"
             style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
-              <label class="form-label" for="tambahSiswaNik">NISN / NIK Siswa</label>
+              <label class="form-label" for="tambahSiswaNik">NIK Siswa (16 Digit)</label>
               <input type="text" id="tambahSiswaNik" class="form-control" inputmode="numeric" placeholder="16 Digit NIK"
                 maxlength="16" style="font-family: monospace; font-weight: 700;">
             </div>
@@ -3173,11 +3301,16 @@
             </div>
           </div>
 
-          <div class="sekolah-grid-2"
-            style="display: grid; grid-template-columns: 1.2fr 1.4fr; gap: 12px; margin-bottom: 12px;">
+          <div class="sekolah-grid-3"
+            style="display: grid; grid-template-columns: 1.2fr 0.9fr 1.4fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
               <label class="form-label" for="tambahSiswaTglLahir">Tanggal Lahir</label>
-              <input type="date" id="tambahSiswaTglLahir" class="form-control">
+              <input type="date" id="tambahSiswaTglLahir" class="form-control" onchange="calculateTambahSiswaAge()" oninput="calculateTambahSiswaAge()">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="tambahSiswaUsia">Usia Saat Ini</label>
+              <input type="text" id="tambahSiswaUsia" class="form-control" readonly placeholder="Otomatis"
+                style="font-weight: 800; background: #f0fdf4; border-color: #a7f3d0; color: #065f46;">
             </div>
             <div class="form-group">
               <label class="form-label" for="tambahSiswaWa">No. WhatsApp</label>

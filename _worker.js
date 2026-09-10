@@ -462,6 +462,7 @@ export default {
             mata TEXT DEFAULT 'Normal',
             kebugaran TEXT DEFAULT 'Baik',
             menstruasi TEXT DEFAULT 'Belum',
+            kuku TEXT DEFAULT 'Pendek Bersih',
             status_kesehatan TEXT DEFAULT 'Sehat',
             catatan_rujukan TEXT DEFAULT '-',
             is_examined BOOLEAN DEFAULT 0,
@@ -485,6 +486,7 @@ export default {
       try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN organ_done INTEGER DEFAULT 0').run(); } catch (_) {}
       try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN kesimpulan_done INTEGER DEFAULT 0').run(); } catch (_) {}
       try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN identitas_done INTEGER DEFAULT 0').run(); } catch (_) {}
+      try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN kuku TEXT DEFAULT 'Pendek Bersih'").run(); } catch (_) {}
 
       if (request.method === 'GET') {
         try {
@@ -547,7 +549,7 @@ export default {
               'provinsi', 'kab_kota', 'kecamatan', 'kelurahan', 'alamat',
               'bb', 'tb', 'lp', 'imt', 'status_imt',
               'td_sistolik', 'td_diastolik', 'gula_darah', 'hb',
-              'telinga', 'gigi', 'mata', 'kebugaran', 'menstruasi',
+              'telinga', 'gigi', 'mata', 'kebugaran', 'menstruasi', 'kuku',
               'status_kesehatan', 'catatan_rujukan',
               'is_examined', 'petugas_entry', 'tanggal_entry',
               'antro_done', 'vital_done', 'lab_done', 'organ_done', 'kesimpulan_done', 'identitas_done'
