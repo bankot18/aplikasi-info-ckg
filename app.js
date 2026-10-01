@@ -13098,7 +13098,7 @@ async function deleteSiswaSekolah(id) {
 
 async function confirmDeleteAllSekolahRecords() {
   const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
-  if (currentUserRole !== 'admin' && currentUserRole !== 'koordinator') {
+  if (!currentUserRole.includes('admin') && !currentUserRole.includes('koordinator')) {
     showToast('Hanya Koordinator dan Admin yang dapat menghapus seluruh database CKG Sekolah.', 'warning');
     return;
   }
@@ -13134,7 +13134,7 @@ let currentDuplicateGroups = [];
 
 function openDuplicateFinderModal() {
   const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
-  if (currentUserRole !== 'admin' && currentUserRole !== 'koordinator') {
+  if (!currentUserRole.includes('admin') && !currentUserRole.includes('koordinator')) {
     showToast('Fitur Cek Duplikat hanya dapat digunakan oleh Koordinator dan Admin.', 'warning');
     return;
   }
@@ -13378,7 +13378,7 @@ function renderDuplicateFinderContent() {
 
 async function deleteSingleDuplicateRecord(id, nama, nik) {
   const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
-  if (currentUserRole !== 'admin' && currentUserRole !== 'koordinator') {
+  if (!currentUserRole.includes('admin') && !currentUserRole.includes('koordinator')) {
     showToast('Hanya Koordinator dan Admin yang dapat menghapus data duplikat.', 'warning');
     return;
   }
@@ -13418,7 +13418,7 @@ async function deleteSingleDuplicateRecord(id, nama, nik) {
 
 async function autoResolveAllDuplicates() {
   const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
-  if (currentUserRole !== 'admin' && currentUserRole !== 'koordinator') {
+  if (!currentUserRole.includes('admin') && !currentUserRole.includes('koordinator')) {
     showToast('Hanya Koordinator dan Admin yang dapat menghapus data duplikat.', 'warning');
     return;
   }
@@ -13503,6 +13503,12 @@ async function autoResolveAllDuplicates() {
    ========================================================================== */
 
 function openNaikKelasModal() {
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (!currentUserRole.includes('admin') && !currentUserRole.includes('koordinator')) {
+    showToast('Fitur Kenaikan Kelas hanya dapat diakses oleh Admin dan Koordinator.', 'warning');
+    return;
+  }
+
   const modal = document.getElementById('modalNaikKelas');
   if (!modal) return;
 
@@ -14043,6 +14049,12 @@ async function executeNaikKelas(e) {
 let migrasiCachedStudents = [];
 
 function openMigrasiSekolahModal() {
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (!currentUserRole.includes('admin') && !currentUserRole.includes('koordinator')) {
+    showToast('Fitur Migrasi Sekolah hanya dapat diakses oleh Admin dan Koordinator.', 'warning');
+    return;
+  }
+
   const modal = document.getElementById('modalMigrasiSekolah');
   if (!modal) return;
 
