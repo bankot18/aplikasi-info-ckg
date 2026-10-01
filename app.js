@@ -1,5 +1,107 @@
 // Main Application Logic for Pencatatan CKG Puskesmas Banjaran Kota
 
+// Quota & Storage Optimization: Clean up oversized/obsolete localStorage keys immediately
+(function cleanupStorageQuota() {
+  try {
+    localStorage.removeItem('ckg_sekolah_records_v1'); // Migrated to IndexedDB to eliminate 5MB quota crash
+    localStorage.removeItem('ckg_records_db'); // Obsolete duplicate of ckg_records
+  } catch (_) {}
+})();
+
+// Robust, high-capacity IndexedDB storage layer for large datasets (no 5MB quota limit)
+const CkgIdb = {
+  dbName: 'CkgIndexedDb',
+  dbVersion: 1,
+  dbPromise: null,
+  getDb() {
+    if (this.dbPromise) return this.dbPromise;
+    this.dbPromise = new Promise((resolve) => {
+      try {
+        if (typeof indexedDB === 'undefined') return resolve(null);
+        const req = indexedDB.open(this.dbName, this.dbVersion);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('store')) {
+            db.createObjectStore('store');
+          }
+        };
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror = (e) => {
+          console.warn('[CkgIdb] open error:', e.target?.error);
+          resolve(null);
+        };
+      } catch (err) {
+        console.warn('[CkgIdb] init exception:', err);
+        resolve(null);
+      }
+    });
+    return this.dbPromise;
+  },
+  async set(key, val) {
+    try {
+      const db = await this.getDb();
+      if (!db) return false;
+      return new Promise((resolve) => {
+        const tx = db.transaction('store', 'readwrite');
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+        tx.objectStore('store').put(val, key);
+      });
+    } catch (_) {
+      return false;
+    }
+  },
+  async get(key) {
+    try {
+      const db = await this.getDb();
+      if (!db) return null;
+      return new Promise((resolve) => {
+        const tx = db.transaction('store', 'readonly');
+        const req = tx.objectStore('store').get(key);
+        req.onsuccess = () => resolve(req.result ?? null);
+        req.onerror = () => resolve(null);
+      });
+    } catch (_) {
+      return null;
+    }
+  },
+  async delete(key) {
+    try {
+      const db = await this.getDb();
+      if (!db) return false;
+      return new Promise((resolve) => {
+        const tx = db.transaction('store', 'readwrite');
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+        tx.objectStore('store').delete(key);
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+};
+
+// Safe localStorage setter that handles QuotaExceededError without crashing or breaking caller flow
+function safeLocalStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (err) {
+    console.warn(`[safeLocalStorageSet] Storage quota warning on key "${key}":`, err);
+    if (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014) {
+      try {
+        localStorage.removeItem('ckg_sekolah_records_v1');
+        localStorage.removeItem('ckg_records_db');
+        localStorage.setItem(key, value);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+    return false;
+  }
+}
+
 // Utility: Escape HTML to prevent XSS
 function escapeHtml(str) {
   if (!str) return '';
@@ -141,8 +243,11 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAuthFormEvents();
   checkAuthSession();
 
-  // Load maintenance settings from Cloud D1
+  // Load maintenance settings from Cloud D1 and poll periodically
   loadMaintenanceSettings();
+  if (!window._maintInterval) {
+    window._maintInterval = setInterval(loadMaintenanceSettings, 15000);
+  }
 });
 
 function loadStoredUserDatabase() {
@@ -332,7 +437,8 @@ function loadStoredRecords() {
 }
 
 function saveRecordsToStorage() {
-  localStorage.setItem('ckg_records', JSON.stringify(records));
+  safeLocalStorageSet('ckg_records', JSON.stringify(records));
+  if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_records', records);
   syncRecordsToCloud(records);
 }
 
@@ -443,7 +549,8 @@ function loadStoredSimpusRecords() {
 }
 
 function saveSimpusRecordsToStorage() {
-  localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+  safeLocalStorageSet('ckg_simpus_records', JSON.stringify(simpusRecords));
+  if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_simpus_records', simpusRecords);
   syncSimpusToCloud(simpusRecords);
 }
 
@@ -459,7 +566,7 @@ async function loadStoredRecycleBin() {
       const result = await res.json();
       if (result.success && Array.isArray(result.data)) {
         recycleBin = result.data;
-        localStorage.setItem('ckg_recycle_bin', JSON.stringify(recycleBin));
+        safeLocalStorageSet('ckg_recycle_bin', JSON.stringify(recycleBin));
       }
     }
   } catch (e) {
@@ -468,7 +575,7 @@ async function loadStoredRecycleBin() {
 }
 
 async function saveRecycleBinToStorage(deletedItem = null, deleteId = null, deleteOptions = null) {
-  localStorage.setItem('ckg_recycle_bin', JSON.stringify(recycleBin));
+  safeLocalStorageSet('ckg_recycle_bin', JSON.stringify(recycleBin));
   try {
     if (deleteId) {
       await fetch(`/api/recycle?id=${encodeURIComponent(deleteId)}`, { method: 'DELETE' });
@@ -681,57 +788,118 @@ function setupImportDropzone() {
   }, false);
 }
 
-function checkAuthSession() {
+function setupUserSessionUI() {
+  const savedName = sessionStorage.getItem('ckg_user_name') || 'Mochamad Fauzie, S.Gz';
+  const savedRole = sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas';
+  currentRole = savedRole;
+
+  document.body.classList.remove('role-admin', 'role-koordinator', 'role-petugas');
+  document.body.classList.add('role-' + (savedRole || 'Petugas').toLowerCase());
+
+  const nameEl = document.getElementById('headerUserName');
+  const roleBadgeEl = document.getElementById('headerUserRoleBadge');
+  const avatarEl = document.getElementById('headerUserAvatar');
+
+  if (nameEl) nameEl.textContent = savedName;
+  if (roleBadgeEl) {
+    const roleUpper = (savedRole || 'Petugas').toUpperCase();
+    roleBadgeEl.textContent = roleUpper;
+    roleBadgeEl.className = 'badge-role-pill role-' + (savedRole || 'Petugas').toLowerCase();
+  }
+  if (avatarEl) {
+    const initials = savedName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    avatarEl.textContent = initials;
+  }
+
+  renderApp();
+  setTimeout(checkAndShowAnnouncement, 500);
+
+  sendUserHeartbeat('active');
+  fetchLiveSessions();
+
+  if (!window._heartbeatInterval) {
+    window._heartbeatInterval = setInterval(() => sendUserHeartbeat('active'), 15000);
+  }
+  if (!window._fetchSessionsInterval) {
+    window._fetchSessionsInterval = setInterval(() => fetchLiveSessions(), 10000);
+  }
+  if (!window._cloudSyncInterval) {
+    window._cloudSyncInterval = setInterval(() => {
+      if (!document.hidden) {
+        fetchCloudRecords();
+        fetchCloudSimpusRecords(true);
+      }
+    }, 15000);
+  }
+}
+
+async function checkAuthSession() {
   const isLoggedIn = sessionStorage.getItem('ckg_logged_in') === 'true';
   const loginOverlay = document.getElementById('loginViewContainer');
   const mainApp = document.getElementById('appMainContainer');
+  const savedRole = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const isAdmin = savedRole.includes('admin');
+
+  // 1. Fast sync check from cached maintenance state (locks out instantly on refresh)
+  const isCachedMaint = maintenanceState.maintenance_web || (localStorage.getItem('ckg_cached_maint_web') === '1');
+  if (isCachedMaint && !isAdmin) {
+    if (loginOverlay) loginOverlay.classList.add('hidden');
+    if (mainApp) mainApp.style.display = 'none';
+    showMaintenanceScreen(maintenanceState.maintenance_web_message || localStorage.getItem('ckg_cached_maint_msg'));
+    return;
+  }
+
+  // 2. Admin / Super Admin always bypasses maintenance screens
+  if (isAdmin) {
+    const existingOverlay = document.getElementById('maintenanceFullscreenOverlay');
+    if (existingOverlay) existingOverlay.remove();
+
+    if (isLoggedIn) {
+      if (loginOverlay) loginOverlay.classList.add('hidden');
+      if (mainApp) mainApp.style.display = 'block';
+      setupUserSessionUI();
+    } else {
+      if (loginOverlay) loginOverlay.classList.remove('hidden');
+      if (mainApp) mainApp.style.display = 'none';
+    }
+    return;
+  }
+
+  // 3. For non-admin: ALWAYS verify maintenance with Cloud D1 BEFORE revealing mainApp!
+  try {
+    const res = await fetch('/api/maintenance');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        maintenanceState.maintenance_web = !!data.maintenance_web;
+        maintenanceState.maintenance_web_message = data.maintenance_web_message || maintenanceState.maintenance_web_message;
+        maintenanceState.locked_menus = data.locked_menus || [];
+        maintenanceState.maintenance_menu_message = data.maintenance_menu_message || maintenanceState.maintenance_menu_message;
+
+        safeLocalStorageSet('ckg_cached_maint_web', maintenanceState.maintenance_web ? '1' : '0');
+        safeLocalStorageSet('ckg_cached_maint_msg', maintenanceState.maintenance_web_message);
+
+        if (maintenanceState.maintenance_web) {
+          // Maintenance is active -> BLOCK non-admin completely!
+          if (loginOverlay) loginOverlay.classList.add('hidden');
+          if (mainApp) mainApp.style.display = 'none';
+          showMaintenanceScreen(maintenanceState.maintenance_web_message);
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Maintenance] Error checking status on load:', err);
+  }
+
+  // 4. Maintenance is OFF:
+  const existingOverlay = document.getElementById('maintenanceFullscreenOverlay');
+  if (existingOverlay) existingOverlay.remove();
 
   if (isLoggedIn) {
     if (loginOverlay) loginOverlay.classList.add('hidden');
     if (mainApp) mainApp.style.display = 'block';
-
-    const savedName = sessionStorage.getItem('ckg_user_name') || 'Mochamad Fauzie, S.Gz';
-    const savedRole = sessionStorage.getItem('ckg_user_role') || 'Admin';
-    currentRole = savedRole;
-
-    document.body.classList.remove('role-admin', 'role-koordinator', 'role-petugas');
-    document.body.classList.add('role-' + (savedRole || 'Petugas').toLowerCase());
-
-    const nameEl = document.getElementById('headerUserName');
-    const roleBadgeEl = document.getElementById('headerUserRoleBadge');
-    const avatarEl = document.getElementById('headerUserAvatar');
-
-    if (nameEl) nameEl.textContent = savedName;
-    if (roleBadgeEl) {
-      const roleUpper = (savedRole || 'Petugas').toUpperCase();
-      roleBadgeEl.textContent = roleUpper;
-      roleBadgeEl.className = 'badge-role-pill role-' + (savedRole || 'Petugas').toLowerCase();
-    }
-    if (avatarEl) {
-      const initials = savedName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-      avatarEl.textContent = initials;
-    }
-
-    renderApp();
-    setTimeout(checkAndShowAnnouncement, 500);
-
-    sendUserHeartbeat('active');
-    fetchLiveSessions();
-
-    if (!window._heartbeatInterval) {
-      window._heartbeatInterval = setInterval(() => sendUserHeartbeat('active'), 15000);
-    }
-    if (!window._fetchSessionsInterval) {
-      window._fetchSessionsInterval = setInterval(() => fetchLiveSessions(), 10000);
-    }
-    if (!window._cloudSyncInterval) {
-      window._cloudSyncInterval = setInterval(() => {
-        if (!document.hidden) {
-          fetchCloudRecords();
-          fetchCloudSimpusRecords(true);
-        }
-      }, 15000);
-    }
+    setupUserSessionUI();
   } else {
     if (loginOverlay) loginOverlay.classList.remove('hidden');
     if (mainApp) mainApp.style.display = 'none';
@@ -987,6 +1155,24 @@ function handleLogin(e) {
     }
   }
 
+  // Check if system is in maintenance mode - only Admin / Super Admin allowed
+  const userRole = (user.role || 'Petugas').toLowerCase();
+  const isAdmin = userRole.includes('admin');
+  const isMaint = maintenanceState.maintenance_web || (localStorage.getItem('ckg_cached_maint_web') === '1');
+  if (isMaint && !isAdmin) {
+    showMaintenanceScreen(maintenanceState.maintenance_web_message || localStorage.getItem('ckg_cached_maint_msg'));
+    Swal.fire({
+      icon: 'warning',
+      title: 'Sistem Dalam Maintenance',
+      html: `<div style="font-size: 13.5px; line-height: 1.6;">
+              Sistem saat ini sedang dalam pemeliharaan/maintenance oleh Administrator.<br><br>
+              <strong style="color: #dc2626;">Akses hanya dibuka untuk Admin & Super Admin.</strong> Silakan hubungi Administrator atau coba beberapa saat lagi.
+             </div>`,
+      confirmButtonColor: '#2563eb'
+    });
+    return;
+  }
+
   const dbPassword = (user.password || '').trim();
 
   // If user has NO password → login directly
@@ -1038,6 +1224,13 @@ function handleLogin(e) {
 }
 
 function performLoginSuccess(user) {
+  const userRole = (user.role || 'Petugas').toLowerCase();
+  const isAdmin = userRole.includes('admin');
+  if (maintenanceState.maintenance_web && !isAdmin) {
+    showMaintenanceScreen(maintenanceState.maintenance_web_message);
+    return;
+  }
+
   showLoadingOverlay('Memverifikasi Akses...', `Login sebagai ${user.nama_user}`);
 
   setTimeout(() => {
@@ -1054,8 +1247,8 @@ function performLoginSuccess(user) {
 
     // Background load maintenance settings and apply locks
     loadMaintenanceSettings().then(() => {
-      const userRole = (user.role || 'Petugas').toLowerCase();
-      if (userRole !== 'admin' && maintenanceState.maintenance_web) {
+      const currentRoleLower = (user.role || 'Petugas').toLowerCase();
+      if (!currentRoleLower.includes('admin') && maintenanceState.maintenance_web) {
         showMaintenanceScreen(maintenanceState.maintenance_web_message);
       }
     });
@@ -1129,21 +1322,7 @@ function startLiveClock() {
   setInterval(update, 1000);
 }
 
-function loadStoredRecords() {
-  const saved = localStorage.getItem('ckg_records_db');
-  if (saved) {
-    try { records = JSON.parse(saved); }
-    catch (e) { records = INITIAL_MOCK_RECORDS; }
-  } else {
-    records = INITIAL_MOCK_RECORDS;
-    saveRecordsToStorage();
-  }
-}
-
-function saveRecordsToStorage() {
-  localStorage.setItem('ckg_records_db', JSON.stringify(records));
-  localStorage.setItem('ckg_records', JSON.stringify(records));
-}
+// (Obsolete duplicate loadStoredRecords and saveRecordsToStorage removed to prevent duplicate ckg_records_db quota exhaustion)
 
 function populateAllYearDropdowns() {
   const currentYearStr = String(new Date().getFullYear());
@@ -2827,7 +3006,8 @@ async function executeSimpusBulkAction(actionType) {
       }
 
       records.unshift(...newCkgRecords);
-      localStorage.setItem('ckg_records', JSON.stringify(records));
+      safeLocalStorageSet('ckg_records', JSON.stringify(records));
+      if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_records', records);
 
       // Delete from SIMPUS Cloud
       const deleteTab = 'sudah_bagi';
@@ -2841,7 +3021,8 @@ async function executeSimpusBulkAction(actionType) {
       // Remove from local simpusRecords
       const removeSet = new Set(selectedArray);
       simpusRecords = simpusRecords.filter(r => !removeSet.has(String(r.id || r.nik)));
-      localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+      safeLocalStorageSet('ckg_simpus_records', JSON.stringify(simpusRecords));
+      if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_simpus_records', simpusRecords);
 
       clearSimpusSelection();
       renderApp();
@@ -2923,7 +3104,8 @@ async function executeSimpusBulkAction(actionType) {
 
       const removeSet = new Set(selectedArray);
       simpusRecords = simpusRecords.filter(r => !removeSet.has(String(r.id || r.nik)));
-      localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+      safeLocalStorageSet('ckg_simpus_records', JSON.stringify(simpusRecords));
+      if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_simpus_records', simpusRecords);
 
       clearSimpusSelection();
       renderApp();
@@ -3685,7 +3867,8 @@ async function handleSimpusActionBerhasil(id) {
     }
 
     records.unshift(newCkgRecord);
-    localStorage.setItem('ckg_records', JSON.stringify(records));
+    safeLocalStorageSet('ckg_records', JSON.stringify(records));
+    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_records', records);
 
     // 3. Delete record from SIMPUS table (sudah_bagi or belum_bagi)
     const targetId = item.id || item.nik || id;
@@ -3696,7 +3879,8 @@ async function handleSimpusActionBerhasil(id) {
 
     // 4. Update local SIMPUS array
     simpusRecords = simpusRecords.filter(r => (r.id || r.nik || '') !== id);
-    localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+    safeLocalStorageSet('ckg_simpus_records', JSON.stringify(simpusRecords));
+    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_simpus_records', simpusRecords);
 
     renderApp();
 
@@ -3777,7 +3961,8 @@ async function handleSimpusActionSudahEntry(id) {
     await saveRecycleBinToStorage(item);
 
     simpusRecords = simpusRecords.filter(r => (r.id || r.nik || '') !== id);
-    localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+    safeLocalStorageSet('ckg_simpus_records', JSON.stringify(simpusRecords));
+    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_simpus_records', simpusRecords);
 
     renderApp();
 
@@ -3858,7 +4043,8 @@ async function handleSimpusActionGagal(id) {
     await saveRecycleBinToStorage(item);
 
     simpusRecords = simpusRecords.filter(r => (r.id || r.nik || '') !== id);
-    localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+    safeLocalStorageSet('ckg_simpus_records', JSON.stringify(simpusRecords));
+    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_simpus_records', simpusRecords);
 
     renderApp();
 
@@ -5151,7 +5337,8 @@ async function handleFormSubmit(e) {
     } else {
       records.unshift(formData);
     }
-    localStorage.setItem('ckg_records', JSON.stringify(records));
+    safeLocalStorageSet('ckg_records', JSON.stringify(records));
+    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_records', records);
 
     const editedId = currentEditingId;
     currentEditingId = null; // Reset editing ID!
@@ -5178,7 +5365,8 @@ async function handleFormSubmit(e) {
     } else {
       records.unshift(formData);
     }
-    localStorage.setItem('ckg_records', JSON.stringify(records));
+    safeLocalStorageSet('ckg_records', JSON.stringify(records));
+    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_records', records);
     currentEditingId = null; // Reset editing ID!
     closeInputModal();
     renderApp();
@@ -6554,7 +6742,8 @@ async function deleteRecord(id) {
 
     // 3. Remove from local state AFTER cloud confirmation
     records = records.filter(r => r.id !== id);
-    localStorage.setItem('ckg_records', JSON.stringify(records));
+    safeLocalStorageSet('ckg_records', JSON.stringify(records));
+    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_records', records);
 
     renderApp();
     updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
@@ -6636,7 +6825,8 @@ async function deleteSimpusRecord(id) {
     await saveRecycleBinToStorage(targetSimpus);
 
     simpusRecords = simpusRecords.filter(r => (r.id || r.nik || '') !== id);
-    localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+    safeLocalStorageSet('ckg_simpus_records', JSON.stringify(simpusRecords));
+    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_simpus_records', simpusRecords);
 
     renderApp();
 
@@ -8277,7 +8467,8 @@ async function executeSimpusAdminXLSXImport() {
   }
 
   simpusRecords = [...parsedSimpusAdminRecords, ...simpusRecords];
-  localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+  safeLocalStorageSet('ckg_simpus_records', JSON.stringify(simpusRecords));
+  if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_simpus_records', simpusRecords);
 
   renderSimpusView();
   updateCloudSyncPill(true, `D1 Online (${simpusRecords.length} SIMPUS)`);
@@ -9382,8 +9573,8 @@ function openCustomLogoModal() {
    ========================================================================== */
 
 let maintenanceState = {
-  maintenance_web: false,
-  maintenance_web_message: 'Sistem sedang dalam maintenance. Silakan coba beberapa saat lagi.',
+  maintenance_web: localStorage.getItem('ckg_cached_maint_web') === '1',
+  maintenance_web_message: localStorage.getItem('ckg_cached_maint_msg') || 'Sistem sedang dalam maintenance. Silakan coba beberapa saat lagi.',
   locked_menus: [],
   maintenance_menu_message: 'Menu ini sedang dalam maintenance oleh Admin.'
 };
@@ -9394,10 +9585,13 @@ async function loadMaintenanceSettings() {
     if (res.ok) {
       const data = await res.json();
       if (data.success) {
-        maintenanceState.maintenance_web = data.maintenance_web || false;
+        maintenanceState.maintenance_web = !!data.maintenance_web;
         maintenanceState.maintenance_web_message = data.maintenance_web_message || maintenanceState.maintenance_web_message;
         maintenanceState.locked_menus = data.locked_menus || [];
         maintenanceState.maintenance_menu_message = data.maintenance_menu_message || maintenanceState.maintenance_menu_message;
+
+        safeLocalStorageSet('ckg_cached_maint_web', maintenanceState.maintenance_web ? '1' : '0');
+        safeLocalStorageSet('ckg_cached_maint_msg', maintenanceState.maintenance_web_message);
       }
     }
   } catch (err) {
@@ -9448,10 +9642,10 @@ async function toggleMaintenanceWebMode() {
     title: `${actionText} Maintenance Web?`,
     html: newState
       ? `<div style="font-size:13.5px; text-align:left; line-height:1.7;">
-          Semua pengguna <strong style="color:#dc2626;">SELAIN Admin</strong> akan <strong>TIDAK BISA LOGIN</strong> ke aplikasi.<br><br>
+          Semua pengguna <strong style="color:#dc2626;">SELAIN Admin / Super Admin</strong> akan <strong>TIDAK BISA AKSES</strong> ke aplikasi.<br><br>
           Mereka akan melihat halaman Maintenance Mode sampai Anda menonaktifkannya.
         </div>`
-      : `<div style="font-size:13.5px;">Semua pengguna akan dapat login kembali secara normal.</div>`,
+      : `<div style="font-size:13.5px;">Semua pengguna akan dapat mengakses aplikasi kembali secara normal.</div>`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: newState ? '#dc2626' : '#059669',
@@ -9478,6 +9672,8 @@ async function toggleMaintenanceWebMode() {
     if (res.ok) {
       maintenanceState.maintenance_web = newState;
       if (customMsg) maintenanceState.maintenance_web_message = customMsg;
+      safeLocalStorageSet('ckg_cached_maint_web', newState ? '1' : '0');
+      safeLocalStorageSet('ckg_cached_maint_msg', maintenanceState.maintenance_web_message);
       updateMaintenanceAdminUI();
       showToast(`Maintenance Web berhasil ${newState ? 'DIAKTIFKAN' : 'DINONAKTIFKAN'}!`, newState ? 'warning' : 'success');
     } else {
@@ -9534,17 +9730,36 @@ async function saveMenuMaintenanceSettings() {
 
 function applyMaintenanceLocks() {
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const isAdmin = role.includes('admin');
 
-  // Admin bypasses all locks
-  if (role === 'admin') {
+  // Admin / Super Admin bypasses all locks & maintenance screens
+  if (isAdmin) {
     document.querySelectorAll('.nav-tab-btn.maintenance-locked').forEach(btn => {
       btn.classList.remove('maintenance-locked');
     });
-    // Remove maintenance overlay if admin
     const overlay = document.getElementById('maintenanceFullscreenOverlay');
     if (overlay) overlay.remove();
+
+    const isLoggedIn = sessionStorage.getItem('ckg_logged_in') === 'true';
+    const mainApp = document.getElementById('appMainContainer');
+    if (isLoggedIn && mainApp) mainApp.style.display = 'block';
     return;
   }
+
+  // Non-Admin: If website maintenance is active, LOCK DOWN THE WHOLE APP
+  if (maintenanceState.maintenance_web) {
+    const mainApp = document.getElementById('appMainContainer');
+    if (mainApp) mainApp.style.display = 'none';
+    showMaintenanceScreen(maintenanceState.maintenance_web_message);
+    return;
+  }
+
+  // Website maintenance is OFF: Remove fullscreen overlay if present
+  const overlay = document.getElementById('maintenanceFullscreenOverlay');
+  if (overlay) overlay.remove();
+  const isLoggedIn = sessionStorage.getItem('ckg_logged_in') === 'true';
+  const mainApp = document.getElementById('appMainContainer');
+  if (isLoggedIn && mainApp) mainApp.style.display = 'block';
 
   // Apply menu locks for non-admin
   document.querySelectorAll('.nav-tab-btn').forEach(btn => {
@@ -9559,8 +9774,9 @@ function applyMaintenanceLocks() {
 
 function checkMaintenanceOnLogin(userRole) {
   const role = (userRole || 'Petugas').toLowerCase();
+  const isAdmin = role.includes('admin');
 
-  if (role === 'admin') return true; // Admin always passes
+  if (isAdmin) return true; // Admin / Super Admin always passes
 
   if (maintenanceState.maintenance_web) {
     // Show fullscreen maintenance overlay
@@ -9575,6 +9791,9 @@ function showMaintenanceScreen(message) {
   // Remove existing overlay if any
   const existing = document.getElementById('maintenanceFullscreenOverlay');
   if (existing) existing.remove();
+
+  const mainApp = document.getElementById('appMainContainer');
+  if (mainApp) mainApp.style.display = 'none';
 
   const overlay = document.createElement('div');
   overlay.id = 'maintenanceFullscreenOverlay';
@@ -9622,7 +9841,14 @@ function exitMaintenanceToLogin() {
     window._cloudSyncInterval = null;
   }
 
-  checkAuthSession();
+  const mainApp = document.getElementById('appMainContainer');
+  if (mainApp) mainApp.style.display = 'none';
+
+  const loginOverlay = document.getElementById('loginViewContainer');
+  if (loginOverlay) {
+    loginOverlay.classList.remove('hidden');
+    loginOverlay.style.display = 'flex';
+  }
 }
 
 /* ==========================================================================
@@ -9848,7 +10074,17 @@ function setImportDupMode(skip) {
   }
 }
 
-function loadStoredSekolahRecords() {
+async function loadStoredSekolahRecords() {
+  if (typeof CkgIdb !== 'undefined') {
+    try {
+      const cached = await CkgIdb.get('sekolah_records');
+      if (Array.isArray(cached) && cached.length > 0 && sekolahRecords.length === 0) {
+        sekolahRecords = cached;
+        populateSekolahFilterDropdowns();
+        renderSekolahView();
+      }
+    } catch (_) {}
+  }
   fetchSekolahRecordsFromCloud(false);
 }
 
@@ -9941,7 +10177,9 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
             identitas_done: r.identitas_done !== undefined ? Number(r.identitas_done) : 1
           };
         });
-        localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+        if (typeof CkgIdb !== 'undefined') {
+          CkgIdb.set('sekolah_records', sekolahRecords);
+        }
         populateSekolahFilterDropdowns();
         renderSekolahView();
 
@@ -9952,6 +10190,14 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
     }
   } catch (err) {
     console.warn('⚡ Fetch /api/sekolah notice (Offline/Fallback):', err);
+    if (typeof CkgIdb !== 'undefined' && sekolahRecords.length === 0) {
+      try {
+        const cached = await CkgIdb.get('sekolah_records');
+        if (Array.isArray(cached) && cached.length > 0) {
+          sekolahRecords = cached;
+        }
+      } catch (_) {}
+    }
     populateSekolahFilterDropdowns();
     renderSekolahView();
     if (showFeedback) {
@@ -9986,7 +10232,9 @@ async function syncSekolahRecordsToCloud(dataList) {
 }
 
 function saveSekolahRecordsToStorage() {
-  localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+  if (typeof CkgIdb !== 'undefined') {
+    CkgIdb.set('sekolah_records', sekolahRecords);
+  }
   syncSekolahRecordsToCloud(sekolahRecords);
 }
 
@@ -10057,15 +10305,15 @@ function getSchoolLevel(schoolName) {
 function getClassesForSchool(schoolName) {
   const level = getSchoolLevel(schoolName);
   if (level === 'SD') {
-    return ['Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6'];
+    return ['Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6', 'Lulus'];
   } else if (level === 'SMP') {
-    return ['Kelas 7', 'Kelas 8', 'Kelas 9'];
+    return ['Kelas 7', 'Kelas 8', 'Kelas 9', 'Lulus'];
   } else if (level === 'SMA') {
-    return ['Kelas 10', 'Kelas 11', 'Kelas 12'];
+    return ['Kelas 10', 'Kelas 11', 'Kelas 12', 'Lulus'];
   }
   return [
     'Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6',
-    'Kelas 7', 'Kelas 8', 'Kelas 9', 'Kelas 10', 'Kelas 11', 'Kelas 12'
+    'Kelas 7', 'Kelas 8', 'Kelas 9', 'Kelas 10', 'Kelas 11', 'Kelas 12', 'Lulus'
   ];
 }
 
@@ -10461,6 +10709,8 @@ function updateKelasDropdownOptions() {
   });
 
   const sortedKelas = Array.from(kelasSet).sort((a, b) => {
+    if (a.toUpperCase() === 'LULUS') return 1;
+    if (b.toUpperCase() === 'LULUS') return -1;
     const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
     const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
     return numA - numB || a.localeCompare(b);
@@ -10896,9 +11146,10 @@ function renderSekolahView() {
           <div style="font-weight: 800; color: #1e293b; font-size: 13px; margin-bottom: 2px;">
             ${safeSekolah}
           </div>
-          <span class="badge badge-purple" style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">
-            ${safeKelas}
-          </span>
+          ${safeKelas.toUpperCase() === 'LULUS'
+            ? `<span class="badge badge-emerald" style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0;"><i class="bi bi-mortarboard-fill"></i> LULUS</span>`
+            : `<span class="badge badge-purple" style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">${safeKelas}</span>`
+          }
         </td>
 
         <!-- Column 4: Status Skrining (Checklist) -->
@@ -11857,9 +12108,11 @@ async function bulkAutoFillAntroSekolah() {
     filled++;
   });
 
-  // Simpan ke localStorage & Cloud
-  localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
-  syncSekolahToCloud(sekolahRecords);
+  // Simpan ke IndexedDB & Cloud
+  if (typeof CkgIdb !== 'undefined') {
+    CkgIdb.set('sekolah_records', sekolahRecords);
+  }
+  syncSekolahRecordsToCloud(sekolahRecords);
 
   renderSekolahView();
 
@@ -12030,7 +12283,9 @@ async function saveSekolahCategory(categoryKey, triggerBtn) {
     } else {
       sekolahRecords[idx] = { ...sekolahRecords[idx], ...fieldsToUpdate };
     }
-    localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+    if (typeof CkgIdb !== 'undefined') {
+      CkgIdb.set('sekolah_records', sekolahRecords);
+    }
 
     const currentSiswa = sekolahRecords[idx];
 
@@ -12854,6 +13109,793 @@ async function autoResolveAllDuplicates() {
       icon: 'error',
       title: 'Gagal Membersihkan',
       text: err.message || 'Terjadi kesalahan saat menghapus data duplikat.',
+      confirmButtonColor: '#dc2626'
+    });
+  }
+}
+
+/* ==========================================================================
+   🎓 FITUR NAIK KELAS & KELULUSAN (CKG SEKOLAH)
+   ========================================================================== */
+
+function openNaikKelasModal() {
+  const modal = document.getElementById('modalNaikKelas');
+  if (!modal) return;
+
+  const selectSekolah = document.getElementById('naikKelasSekolah');
+  if (selectSekolah) {
+    const masterSet = new Set(MASTER_SARANA_SEKOLAH.map(s => s.nama.toUpperCase()));
+    const extraSchools = [];
+    sekolahRecords.forEach(r => {
+      if (r.sekolah && r.sekolah.trim()) {
+        const up = r.sekolah.trim().toUpperCase();
+        if (!masterSet.has(up) && !extraSchools.includes(up)) extraSchools.push(up);
+      }
+    });
+
+    const sdList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SD').map(s => s.nama);
+    const smpList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMP').map(s => s.nama);
+    const smaList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMA').map(s => s.nama);
+
+    let html = '<option value="">-- Pilih Sekolah --</option>';
+    html += '<optgroup label="📚 SD / MI (Kelas 1 - 6)">';
+    html += sdList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    html += '</optgroup>';
+    html += '<optgroup label="🏫 SMP / MTs (Kelas 7 - 9)">';
+    html += smpList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    html += '</optgroup>';
+    html += '<optgroup label="🎓 SMA / SMK / MA (Kelas 10 - 12)">';
+    html += smaList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    html += '</optgroup>';
+    if (extraSchools.length > 0) {
+      html += '<optgroup label="📌 Sekolah Lainnya">';
+      html += extraSchools.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+      html += '</optgroup>';
+    }
+
+    selectSekolah.innerHTML = html;
+
+    const currentFilterSekolah = document.getElementById('filterSelectSekolah')?.value;
+    if (currentFilterSekolah) {
+      selectSekolah.value = currentFilterSekolah;
+    }
+  }
+
+  const radioOtomatis = document.querySelector('input[name="modeNaikKelas"][value="otomatis"]');
+  if (radioOtomatis) radioOtomatis.checked = true;
+  toggleNaikKelasMode();
+
+  onNaikKelasSekolahChange();
+
+  modal.classList.add('open');
+  modal.style.display = 'flex';
+}
+
+function closeNaikKelasModal() {
+  const modal = document.getElementById('modalNaikKelas');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+}
+
+function toggleNaikKelasMode() {
+  const isManual = document.querySelector('input[name="modeNaikKelas"]:checked')?.value === 'manual';
+  const containerManual = document.getElementById('containerNaikKelasManual');
+  if (containerManual) {
+    containerManual.style.display = isManual ? 'block' : 'none';
+  }
+  previewNaikKelasImpact();
+}
+
+function onNaikKelasSekolahChange() {
+  const schoolName = document.getElementById('naikKelasSekolah')?.value || '';
+  const selectAsal = document.getElementById('naikKelasAsal');
+  const selectTujuan = document.getElementById('naikKelasTujuan');
+
+  if (selectAsal && selectTujuan) {
+    const standardClasses = getClassesForSchool(schoolName);
+
+    const existingClasses = new Set();
+    sekolahRecords.forEach(r => {
+      if ((r.sekolah || '').toUpperCase() === schoolName.toUpperCase() && r.kelas && r.kelas.trim()) {
+        existingClasses.add(r.kelas.trim().toUpperCase());
+      }
+    });
+
+    const asalSet = new Set([...standardClasses.map(c => c.toUpperCase()), ...existingClasses]);
+    asalSet.delete('LULUS');
+
+    const sortedAsal = Array.from(asalSet).sort((a, b) => {
+      const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+      return numA - numB || a.localeCompare(b);
+    });
+
+    selectAsal.innerHTML = '<option value="">-- Pilih Kelas Asal --</option>' +
+      sortedAsal.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
+
+    const tujuanSet = new Set([...standardClasses.map(c => c.toUpperCase()), ...existingClasses, 'LULUS']);
+    const sortedTujuan = Array.from(tujuanSet).sort((a, b) => {
+      if (a === 'LULUS') return 1;
+      if (b === 'LULUS') return -1;
+      const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+      return numA - numB || a.localeCompare(b);
+    });
+
+    selectTujuan.innerHTML = '<option value="">-- Pilih Kelas Tujuan --</option>' +
+      sortedTujuan.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
+  }
+
+  previewNaikKelasImpact();
+}
+
+function promoteClassString(oldKelas, schoolLevel) {
+  if (!oldKelas) return null;
+  const clean = oldKelas.trim();
+  const upper = clean.toUpperCase();
+  if (upper === 'LULUS' || upper.includes('ALUMNI')) return null;
+
+  let maxGrade = 9;
+  if (schoolLevel === 'SD') maxGrade = 6;
+  else if (schoolLevel === 'SMP') maxGrade = 9;
+  else if (schoolLevel === 'SMA') maxGrade = 12;
+  else {
+    const numMatch = clean.match(/\d+/);
+    if (numMatch) {
+      const n = parseInt(numMatch[0], 10);
+      if (n <= 6) maxGrade = 6;
+      else if (n <= 9) maxGrade = 9;
+      else maxGrade = 12;
+    }
+  }
+
+  const arabicMatch = clean.match(/(\d+)/);
+  if (arabicMatch) {
+    const currentNum = parseInt(arabicMatch[1], 10);
+    if (currentNum >= maxGrade) {
+      return 'LULUS';
+    }
+    const nextNum = currentNum + 1;
+    return clean.replace(arabicMatch[1], String(nextNum));
+  }
+
+  const romanMap = {
+    'I': 'II', 'II': 'III', 'III': 'IV', 'IV': 'V', 'V': 'VI', 'VI': 'LULUS',
+    'VII': 'VIII', 'VIII': 'IX', 'IX': 'LULUS',
+    'X': 'XI', 'XI': 'XII', 'XII': 'LULUS'
+  };
+  for (const [rom, nextRom] of Object.entries(romanMap)) {
+    const reg = new RegExp(`\\b${rom}\\b`, 'i');
+    if (reg.test(clean)) {
+      if (nextRom === 'LULUS') return 'LULUS';
+      return clean.replace(reg, nextRom);
+    }
+  }
+
+  return null;
+}
+
+function previewNaikKelasImpact() {
+  const schoolName = document.getElementById('naikKelasSekolah')?.value || '';
+  const isManual = document.querySelector('input[name="modeNaikKelas"]:checked')?.value === 'manual';
+  const previewList = document.getElementById('naikKelasPreviewList');
+  const countBadge = document.getElementById('naikKelasTotalCountBadge');
+  const btnSubmit = document.getElementById('btnSubmitNaikKelas');
+
+  if (!previewList || !countBadge) return;
+
+  if (!schoolName) {
+    previewList.innerHTML = '<span style="color:#94a3b8; font-style:italic;">Pilih sekolah terlebih dahulu untuk melihat ringkasan.</span>';
+    countBadge.textContent = '0 Siswa';
+    if (btnSubmit) btnSubmit.disabled = true;
+    return;
+  }
+
+  const schoolStudents = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === schoolName.toUpperCase());
+  const level = getSchoolLevel(schoolName);
+
+  if (schoolStudents.length === 0) {
+    previewList.innerHTML = `<span style="color:#ef4444; font-weight:600;"><i class="bi bi-exclamation-triangle"></i> Tidak ada data siswa yang terdaftar di sekolah "${escapeHtml(schoolName)}".</span>`;
+    countBadge.textContent = '0 Siswa';
+    if (btnSubmit) btnSubmit.disabled = true;
+    return;
+  }
+
+  let totalImpacted = 0;
+  let breakdownHtml = '';
+
+  if (isManual) {
+    const asal = (document.getElementById('naikKelasAsal')?.value || '').trim().toUpperCase();
+    const tujuan = (document.getElementById('naikKelasTujuan')?.value || '').trim().toUpperCase();
+
+    if (!asal || !tujuan) {
+      previewList.innerHTML = '<span style="color:#64748b;">Silakan pilih Kelas Asal dan Kelas Tujuan.</span>';
+      countBadge.textContent = '0 Siswa';
+      if (btnSubmit) btnSubmit.disabled = true;
+      return;
+    }
+
+    if (asal === tujuan) {
+      previewList.innerHTML = '<span style="color:#ef4444; font-weight:600;">Kelas asal dan kelas tujuan tidak boleh sama.</span>';
+      countBadge.textContent = '0 Siswa';
+      if (btnSubmit) btnSubmit.disabled = true;
+      return;
+    }
+
+    const matchedStudents = schoolStudents.filter(r => (r.kelas || '').trim().toUpperCase() === asal);
+    totalImpacted = matchedStudents.length;
+
+    const isLulus = tujuan === 'LULUS';
+    breakdownHtml = `
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <strong style="color:#1e293b;">${escapeHtml(asal)}</strong>
+          <i class="bi bi-arrow-right" style="margin:0 6px; color:#2563eb;"></i>
+          <strong style="color:${isLulus ? '#059669' : '#2563eb'};">${escapeHtml(tujuan)}</strong>
+          ${isLulus ? ' <span class="badge badge-emerald" style="font-size:10px; padding:2px 6px;">🎓 LULUS</span>' : ''}
+        </div>
+        <div style="font-weight:800; color:#1e40af;">${totalImpacted} Siswa</div>
+      </div>
+    `;
+  } else {
+    const classGroups = {};
+    schoolStudents.forEach(r => {
+      const k = (r.kelas || '').trim().toUpperCase() || 'TANPA KELAS';
+      if (k === 'LULUS' || k.includes('ALUMNI')) return;
+      if (!classGroups[k]) classGroups[k] = 0;
+      classGroups[k]++;
+    });
+
+    const entries = Object.entries(classGroups);
+    if (entries.length === 0) {
+      previewList.innerHTML = '<span style="color:#64748b;">Semua siswa di sekolah ini sudah berstatus LULUS.</span>';
+      countBadge.textContent = '0 Siswa';
+      if (btnSubmit) btnSubmit.disabled = true;
+      return;
+    }
+
+    entries.sort((a, b) => {
+      const numA = parseInt(a[0].replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b[0].replace(/\D/g, ''), 10) || 0;
+      return numA - numB || a[0].localeCompare(b[0]);
+    });
+
+    breakdownHtml = '<div style="display:flex; flex-direction:column; gap:6px;">';
+    entries.forEach(([oldCls, count]) => {
+      const newCls = promoteClassString(oldCls, level) || 'LULUS';
+      const isLulus = newCls === 'LULUS';
+      totalImpacted += count;
+      breakdownHtml += `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; display:flex; align-items:center; justify-content:space-between; font-size:12.5px;">
+          <div>
+            <span style="font-weight:700; color:#334155;">${escapeHtml(oldCls)}</span>
+            <i class="bi bi-arrow-right" style="margin:0 6px; color:#3b82f6;"></i>
+            <span style="font-weight:800; color:${isLulus ? '#059669' : '#1d4ed8'};">${escapeHtml(newCls)}</span>
+            ${isLulus ? ' <span class="badge badge-emerald" style="font-size:10px; padding:2px 6px;">🎓 LULUS</span>' : ''}
+          </div>
+          <span style="font-weight:800; color:#1e40af; background:#dbeafe; padding:2px 8px; border-radius:10px; font-size:11px;">
+            ${count} siswa
+          </span>
+        </div>
+      `;
+    });
+    breakdownHtml += '</div>';
+  }
+
+  previewList.innerHTML = breakdownHtml;
+  countBadge.textContent = `${totalImpacted} Siswa`;
+  if (btnSubmit) btnSubmit.disabled = totalImpacted === 0;
+}
+
+async function executeNaikKelas(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (currentUserRole !== 'admin' && currentUserRole !== 'koordinator') {
+    showToast('Hanya Koordinator dan Admin yang memiliki izin memproses kenaikan kelas.', 'warning');
+    return;
+  }
+
+  const schoolName = document.getElementById('naikKelasSekolah')?.value;
+  if (!schoolName) {
+    showToast('Silakan pilih sekolah terlebih dahulu.', 'warning');
+    return;
+  }
+
+  const isManual = document.querySelector('input[name="modeNaikKelas"]:checked')?.value === 'manual';
+  const resetSkrining = document.getElementById('naikKelasResetSkrining')?.checked || false;
+  const level = getSchoolLevel(schoolName);
+
+  const updates = [];
+  const schoolStudents = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === schoolName.toUpperCase());
+
+  if (isManual) {
+    const asal = (document.getElementById('naikKelasAsal')?.value || '').trim().toUpperCase();
+    const tujuan = (document.getElementById('naikKelasTujuan')?.value || '').trim().toUpperCase();
+    if (!asal || !tujuan) {
+      showToast('Pilih kelas asal dan kelas tujuan.', 'warning');
+      return;
+    }
+
+    schoolStudents.forEach(student => {
+      if ((student.kelas || '').trim().toUpperCase() === asal) {
+        updates.push({ student, targetKelas: tujuan, isLulus: tujuan === 'LULUS' });
+      }
+    });
+  } else {
+    schoolStudents.forEach(student => {
+      const oldK = (student.kelas || '').trim().toUpperCase();
+      if (oldK === 'LULUS' || oldK.includes('ALUMNI')) return;
+      const nextK = promoteClassString(student.kelas, level) || 'LULUS';
+      updates.push({ student, targetKelas: nextK, isLulus: nextK === 'LULUS' });
+    });
+  }
+
+  if (updates.length === 0) {
+    showToast('Tidak ada siswa yang perlu dinaikkan kelasnya.', 'info');
+    return;
+  }
+
+  const lulusCount = updates.filter(u => u.isLulus).length;
+  const naikCount = updates.length - lulusCount;
+
+  const result = await Swal.fire({
+    title: 'Konfirmasi Kenaikan Kelas',
+    html: `
+      <div style="text-align: left; font-size: 13.5px; line-height: 1.6; color: #1e293b;">
+        <p>Anda akan memproses <strong>${updates.length} siswa</strong> di <strong>${escapeHtml(schoolName)}</strong>:</p>
+        <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 12px; margin: 12px 0;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span><i class="bi bi-arrow-up-circle-fill" style="color:#2563eb;"></i> Naik Tingkat Kelas:</span>
+            <strong>${naikCount} siswa</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span><i class="bi bi-mortarboard-fill" style="color:#059669;"></i> Masuk Status Lulus:</span>
+            <strong style="color:#059669;">${lulusCount} siswa</strong>
+          </div>
+        </div>
+        ${resetSkrining ? `
+          <div style="background:#fffbeb; border:1px solid #fef3c7; border-radius:8px; padding:8px 12px; font-size:12px; color:#92400e;">
+            <i class="bi bi-arrow-counterclockwise"></i> Status pemeriksaan ${naikCount} siswa yang naik kelas akan di-reset untuk tahun ajaran baru.
+          </div>
+        ` : ''}
+        <p style="font-size: 11.5px; color: #64748b; margin-top: 10px;">Pastikan Anda sudah mengekspor backup data sebelum memproses kenaikan kelas masal.</p>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#2563eb',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: '<i class="bi bi-mortarboard-fill"></i> Ya, Proses Sekarang',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!result.isConfirmed) return;
+
+  Swal.fire({
+    title: 'Memproses Kenaikan Kelas...',
+    html: `Sedang memperbarui <strong>${updates.length}</strong> siswa di Cloud Database...`,
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  const modifiedRecords = [];
+  updates.forEach(({ student, targetKelas, isLulus }) => {
+    student.kelas = targetKelas;
+    if (resetSkrining && !isLulus) {
+      student.bb = 0;
+      student.tb = 0;
+      student.lp = 0;
+      student.imt = 0;
+      student.status_imt = 'Normal';
+      student.td_sistolik = 0;
+      student.td_diastolik = 0;
+      student.gula_darah = '-';
+      student.hb = '-';
+      student.telinga = 'Tidak ada serumen';
+      student.gigi = 'Tidak ada';
+      student.mata = 'Normal';
+      student.kebugaran = 'Baik';
+      student.menstruasi = 'Belum';
+      student.kuku = 'Pendek Bersih';
+      student.status_kesehatan = 'Sehat';
+      student.catatan_rujukan = '-';
+      student.is_examined = 0;
+      student.antro_done = 0;
+      student.vital_done = 0;
+      student.lab_done = 0;
+      student.organ_done = 0;
+      student.kesimpulan_done = 0;
+    }
+    modifiedRecords.push(student);
+  });
+
+  if (typeof CkgIdb !== 'undefined') {
+    CkgIdb.set('sekolah_records', sekolahRecords);
+  }
+
+  try {
+    const batchSize = 50;
+    for (let i = 0; i < modifiedRecords.length; i += batchSize) {
+      const batch = modifiedRecords.slice(i, i + batchSize);
+      await fetch('/api/sekolah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(batch)
+      });
+    }
+
+    closeNaikKelasModal();
+    populateSekolahFilterDropdowns();
+
+    const selectFilter = document.getElementById('filterSelectSekolah');
+    if (selectFilter) {
+      selectFilter.value = schoolName;
+      updateKelasDropdownOptions();
+    }
+    renderSekolahView();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Kenaikan Kelas Berhasil!',
+      html: `
+        <div style="text-align: left; font-size: 13.5px; line-height: 1.6;">
+          <p>Kenaikan kelas untuk <strong>${escapeHtml(schoolName)}</strong> telah selesai diproses!</p>
+          <ul style="padding-left: 20px; color: #1e293b;">
+            <li><strong>${naikCount} siswa</strong> berhasil naik ke tingkat kelas berikutnya.</li>
+            <li><strong style="color: #059669;">${lulusCount} siswa</strong> tingkat akhir berhasil dialihkan ke status <strong>"LULUS"</strong>.</li>
+          </ul>
+        </div>
+      `,
+      confirmButtonColor: '#059669'
+    });
+  } catch (err) {
+    console.error('Error executing naik kelas:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Memperbarui Cloud',
+      text: err.message || 'Terjadi kesalahan saat menyinkronkan ke database server.',
+      confirmButtonColor: '#dc2626'
+    });
+  }
+}
+
+/* ==========================================================================
+   🔄 FITUR MIGRASI / MUTASI SEKOLAH SISWA (CKG SEKOLAH)
+   ========================================================================== */
+
+let migrasiCachedStudents = [];
+
+function openMigrasiSekolahModal() {
+  const modal = document.getElementById('modalMigrasiSekolah');
+  if (!modal) return;
+
+  const selectAsal = document.getElementById('migrasiSekolahAsal');
+  const selectTujuan = document.getElementById('migrasiSekolahTujuan');
+
+  const masterSet = new Set(MASTER_SARANA_SEKOLAH.map(s => s.nama.toUpperCase()));
+  const extraSchools = [];
+  sekolahRecords.forEach(r => {
+    if (r.sekolah && r.sekolah.trim()) {
+      const up = r.sekolah.trim().toUpperCase();
+      if (!masterSet.has(up) && !extraSchools.includes(up)) extraSchools.push(up);
+    }
+  });
+
+  const sdList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SD').map(s => s.nama);
+  const smpList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMP').map(s => s.nama);
+  const smaList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMA').map(s => s.nama);
+
+  function buildOptions(placeholder) {
+    let html = `<option value="">${placeholder}</option>`;
+    html += '<optgroup label="📚 SD / MI (Kelas 1 - 6)">';
+    html += sdList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    html += '</optgroup>';
+    html += '<optgroup label="🏫 SMP / MTs (Kelas 7 - 9)">';
+    html += smpList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    html += '</optgroup>';
+    html += '<optgroup label="🎓 SMA / SMK / MA (Kelas 10 - 12)">';
+    html += smaList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    html += '</optgroup>';
+    if (extraSchools.length > 0) {
+      html += '<optgroup label="📌 Sekolah Lainnya">';
+      html += extraSchools.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+      html += '</optgroup>';
+    }
+    return html;
+  }
+
+  if (selectAsal) {
+    selectAsal.innerHTML = buildOptions('-- Pilih Sekolah Asal --');
+    const currentFilter = document.getElementById('filterSelectSekolah')?.value;
+    if (currentFilter) selectAsal.value = currentFilter;
+  }
+
+  if (selectTujuan) {
+    selectTujuan.innerHTML = buildOptions('-- Pilih Sekolah Tujuan --');
+  }
+
+  const radioAll = document.querySelector('input[name="modeMigrasiSiswa"][value="all"]');
+  if (radioAll) radioAll.checked = true;
+  toggleMigrasiMode();
+
+  onMigrasiSekolahAsalChange();
+  onMigrasiSekolahTujuanChange();
+
+  modal.classList.add('open');
+  modal.style.display = 'flex';
+}
+
+function closeMigrasiSekolahModal() {
+  const modal = document.getElementById('modalMigrasiSekolah');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+}
+
+function onMigrasiSekolahAsalChange() {
+  const originSchool = document.getElementById('migrasiSekolahAsal')?.value || '';
+  const selectFilterKelas = document.getElementById('migrasiKelasAsalFilter');
+
+  if (selectFilterKelas) {
+    const existingClasses = new Set();
+    sekolahRecords.forEach(r => {
+      if ((r.sekolah || '').toUpperCase() === originSchool.toUpperCase() && r.kelas && r.kelas.trim()) {
+        existingClasses.add(r.kelas.trim().toUpperCase());
+      }
+    });
+
+    const sorted = Array.from(existingClasses).sort((a, b) => {
+      if (a === 'LULUS') return 1;
+      if (b === 'LULUS') return -1;
+      const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+      return numA - numB || a.localeCompare(b);
+    });
+
+    selectFilterKelas.innerHTML = '<option value="">-- Semua Kelas --</option>' +
+      sorted.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
+  }
+
+  updateMigrasiSiswaList();
+}
+
+function onMigrasiKelasAsalFilterChange() {
+  updateMigrasiSiswaList();
+}
+
+function onMigrasiSekolahTujuanChange() {
+  const destSchool = document.getElementById('migrasiSekolahTujuan')?.value || '';
+  const selectDestKelas = document.getElementById('migrasiKelasTujuan');
+  if (!selectDestKelas) return;
+
+  let html = '<option value="keep">-- Pertahankan Kelas Saat Ini --</option>';
+  if (destSchool) {
+    const classes = getClassesForSchool(destSchool);
+    html += classes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  }
+  selectDestKelas.innerHTML = html;
+}
+
+function toggleMigrasiMode() {
+  const isSelected = document.querySelector('input[name="modeMigrasiSiswa"]:checked')?.value === 'selected';
+  const containerChecklist = document.getElementById('containerMigrasiChecklist');
+  if (containerChecklist) {
+    containerChecklist.style.display = isSelected ? 'block' : 'none';
+  }
+  updateMigrasiCheckedCount();
+}
+
+function updateMigrasiSiswaList() {
+  const originSchool = (document.getElementById('migrasiSekolahAsal')?.value || '').trim().toUpperCase();
+  const filterKelas = (document.getElementById('migrasiKelasAsalFilter')?.value || '').trim().toUpperCase();
+  const badgeAll = document.getElementById('migrasiCountAllBadge');
+  const checklistContainer = document.getElementById('migrasiSiswaChecklistItems');
+  const checkAll = document.getElementById('migrasiCheckAll');
+
+  if (!originSchool) {
+    migrasiCachedStudents = [];
+    if (badgeAll) badgeAll.textContent = '0';
+    if (checklistContainer) checklistContainer.innerHTML = '<div style="color:#94a3b8; font-size:12px; text-align:center; padding:10px;">Pilih sekolah asal terlebih dahulu</div>';
+    updateMigrasiCheckedCount();
+    return;
+  }
+
+  migrasiCachedStudents = sekolahRecords.filter(r => {
+    if ((r.sekolah || '').toUpperCase() !== originSchool) return false;
+    if (filterKelas && (r.kelas || '').trim().toUpperCase() !== filterKelas) return false;
+    return true;
+  });
+
+  if (badgeAll) badgeAll.textContent = String(migrasiCachedStudents.length);
+
+  if (checklistContainer) {
+    if (migrasiCachedStudents.length === 0) {
+      checklistContainer.innerHTML = '<div style="color:#ef4444; font-size:12px; text-align:center; padding:10px;">Tidak ada siswa yang cocok dengan filter</div>';
+    } else {
+      checklistContainer.innerHTML = migrasiCachedStudents.map(r => {
+        const safeId = escapeHtml(r.id || '');
+        const safeNama = escapeHtml(r.nama || '');
+        const safeKelas = escapeHtml(r.kelas || '-');
+        const safeNik = escapeHtml(r.nik || '-');
+        return `
+          <label style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:12.5px; margin:0;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" class="cb-migrasi-siswa" value="${safeId}" onchange="updateMigrasiCheckedCount()" style="width:16px; height:16px;">
+              <div>
+                <strong style="color:#0f172a;">${safeNama}</strong>
+                <span style="font-size:11px; color:#64748b; margin-left:6px;">(NIK: ${safeNik})</span>
+              </div>
+            </div>
+            <span class="badge badge-purple" style="font-size:10px; padding:2px 7px;">${safeKelas}</span>
+          </label>
+        `;
+      }).join('');
+    }
+  }
+
+  if (checkAll) checkAll.checked = false;
+  updateMigrasiCheckedCount();
+}
+
+function toggleMigrasiCheckAll(checked) {
+  document.querySelectorAll('.cb-migrasi-siswa').forEach(cb => {
+    cb.checked = checked;
+  });
+  updateMigrasiCheckedCount();
+}
+
+function updateMigrasiCheckedCount() {
+  const textEl = document.getElementById('migrasiCheckedCountText');
+  const checkedCbs = document.querySelectorAll('.cb-migrasi-siswa:checked');
+  if (textEl) {
+    textEl.textContent = `${checkedCbs.length} dipilih`;
+  }
+}
+
+async function executeMigrasiSekolah(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (currentUserRole !== 'admin' && currentUserRole !== 'koordinator') {
+    showToast('Hanya Koordinator dan Admin yang memiliki izin memproses migrasi sekolah.', 'warning');
+    return;
+  }
+
+  const asal = document.getElementById('migrasiSekolahAsal')?.value;
+  const tujuan = document.getElementById('migrasiSekolahTujuan')?.value;
+  const kelasTujuanVal = document.getElementById('migrasiKelasTujuan')?.value || 'keep';
+  const isSelectedMode = document.querySelector('input[name="modeMigrasiSiswa"]:checked')?.value === 'selected';
+
+  if (!asal) {
+    showToast('Pilih sekolah asal.', 'warning');
+    return;
+  }
+  if (!tujuan) {
+    showToast('Pilih sekolah tujuan.', 'warning');
+    return;
+  }
+  if (asal.toUpperCase() === tujuan.toUpperCase()) {
+    showToast('Sekolah tujuan tidak boleh sama dengan sekolah asal.', 'warning');
+    return;
+  }
+
+  let targetStudents = [];
+  if (isSelectedMode) {
+    const checkedIds = new Set(Array.from(document.querySelectorAll('.cb-migrasi-siswa:checked')).map(cb => cb.value));
+    if (checkedIds.size === 0) {
+      showToast('Centang setidaknya 1 siswa yang ingin dipindahkan.', 'warning');
+      return;
+    }
+    targetStudents = migrasiCachedStudents.filter(r => checkedIds.has(r.id));
+  } else {
+    targetStudents = [...migrasiCachedStudents];
+  }
+
+  if (targetStudents.length === 0) {
+    showToast('Tidak ada siswa yang dipilih untuk dipindahkan.', 'warning');
+    return;
+  }
+
+  const kelasDesc = kelasTujuanVal === 'keep' ? 'Mempertahankan kelas masing-masing' : `Diubah menjadi ${kelasTujuanVal}`;
+
+  const result = await Swal.fire({
+    title: 'Konfirmasi Migrasi Sekolah',
+    html: `
+      <div style="text-align: left; font-size: 13.5px; line-height: 1.6; color: #1e293b;">
+        <p>Anda akan memindahkan data <strong>${targetStudents.length} siswa</strong>:</p>
+        <div style="background: #f0fdfa; border: 1.5px solid #99f6e4; border-radius: 10px; padding: 12px; margin: 12px 0;">
+          <div style="margin-bottom:6px;">
+            <strong style="color: #64748b;">Sekolah Asal:</strong><br>
+            <span style="font-weight:700; color:#b91c1c;">${escapeHtml(asal)}</span>
+          </div>
+          <div style="margin-bottom:6px;">
+            <strong style="color: #64748b;">Sekolah Tujuan:</strong><br>
+            <span style="font-weight:700; color:#0f766e;">${escapeHtml(tujuan)}</span>
+          </div>
+          <div>
+            <strong style="color: #64748b;">Penyesuaian Kelas:</strong><br>
+            <span style="font-weight:700; color:#0369a1;">${escapeHtml(kelasDesc)}</span>
+          </div>
+        </div>
+        <p style="font-size: 11.5px; color: #64748b;">Riwayat pemeriksaan medis siswa akan tetap tersimpan utuh di bawah nama sekolah yang baru.</p>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#0d9488',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: '<i class="bi bi-arrow-left-right"></i> Ya, Pindahkan Siswa',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!result.isConfirmed) return;
+
+  Swal.fire({
+    title: 'Memindahkan Data Siswa...',
+    html: `Sedang memindahkan <strong>${targetStudents.length}</strong> siswa ke server Cloud...`,
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  targetStudents.forEach(student => {
+    student.sekolah = tujuan;
+    if (kelasTujuanVal !== 'keep') {
+      student.kelas = kelasTujuanVal;
+    }
+  });
+
+  if (typeof CkgIdb !== 'undefined') {
+    CkgIdb.set('sekolah_records', sekolahRecords);
+  }
+
+  try {
+    const batchSize = 50;
+    for (let i = 0; i < targetStudents.length; i += batchSize) {
+      const batch = targetStudents.slice(i, i + batchSize);
+      await fetch('/api/sekolah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(batch)
+      });
+    }
+
+    closeMigrasiSekolahModal();
+    populateSekolahFilterDropdowns();
+
+    const selectFilter = document.getElementById('filterSelectSekolah');
+    if (selectFilter) {
+      selectFilter.value = tujuan;
+      updateKelasDropdownOptions();
+    }
+    renderSekolahView();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Migrasi Siswa Berhasil!',
+      html: `
+        <div style="text-align: left; font-size: 13.5px; line-height: 1.6;">
+          <p>Sebanyak <strong>${targetStudents.length} siswa</strong> berhasil dipindahkan ke <strong>${escapeHtml(tujuan)}</strong>.</p>
+          <div style="font-size: 12px; color: #047857; background: #ecfdf5; padding: 8px 12px; border-radius: 8px; border: 1px solid #a7f3d0;">
+            Filter CKG Sekolah telah otomatis diarahkan ke <strong>${escapeHtml(tujuan)}</strong> untuk mempermudah pengecekan.
+          </div>
+        </div>
+      `,
+      confirmButtonColor: '#059669'
+    });
+  } catch (err) {
+    console.error('Error executing migrasi sekolah:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Memindahkan Siswa',
+      text: err.message || 'Terjadi kesalahan saat menyimpan data ke server Cloudflare D1.',
       confirmButtonColor: '#dc2626'
     });
   }
@@ -14260,11 +15302,12 @@ async function repairAllRecordsAddressWithAi() {
 
   function finishRepairProcess() {
     if (simpusFixedCount > 0) {
-      localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords));
+      safeLocalStorageSet('ckg_simpus_records', JSON.stringify(simpusRecords));
+      if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_simpus_records', simpusRecords);
       if (typeof syncSimpusToCloud === 'function') syncSimpusToCloud(simpusRecords);
     }
     if (sekolahFixedCount > 0) {
-      localStorage.setItem('ckg_sekolah_records_v1', JSON.stringify(sekolahRecords));
+      if (typeof CkgIdb !== 'undefined') CkgIdb.set('sekolah_records', sekolahRecords);
       if (typeof syncSekolahRecordsToCloud === 'function') syncSekolahRecordsToCloud(sekolahRecords);
     }
 

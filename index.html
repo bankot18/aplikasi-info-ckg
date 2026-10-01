@@ -22,7 +22,7 @@
 
   <!-- Application Stylesheet & SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-  <link rel="stylesheet" href="index.css?v=2.2">
+  <link rel="stylesheet" href="index.css?v=2.3">
 
   <!-- Chart.js, SweetAlert2 & SheetJS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1016,6 +1016,14 @@
               </button>
               <button class="btn btn-secondary" onclick="fetchSekolahRecordsFromCloud(true)">
                 <i class="bi bi-arrow-clockwise"></i> Refresh Data
+              </button>
+              <button class="btn btn-primary" onclick="openNaikKelasModal()"
+                title="Kenaikan Kelas Siswa (Contoh: Kelas 7 -> 8, 8 -> 9, 9 -> LULUS)" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff;">
+                <i class="bi bi-mortarboard-fill"></i> Naik Kelas
+              </button>
+              <button class="btn btn-teal" onclick="openMigrasiSekolahModal()"
+                title="Migrasi / Mutasi Siswa Antar Sekolah" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;">
+                <i class="bi bi-arrow-left-right"></i> Migrasi Sekolah
               </button>
               <button class="btn btn-rose admin-koordinator-only" onclick="openDuplicateFinderModal()" title="Cari data ganda / NIK sama yang sudah terlanjur ada di database">
                 <i class="bi bi-copy"></i> Cek Duplikat
@@ -3445,6 +3453,216 @@
     </div>
   </div>
 
+  <!-- MODAL NAIK KELAS (CKG SEKOLAH) -->
+  <div id="modalNaikKelas" class="modal-overlay">
+    <div class="modal-container sekolah-modal-container"
+      style="max-width: 680px; width: 95%; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #bfdbfe; box-shadow: 0 25px 50px -12px rgba(37, 99, 235, 0.25);">
+      <div class="modal-header"
+        style="background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #ffffff; padding: 16px 22px; display: flex; align-items: center; justify-content: space-between;">
+        <div class="modal-title"
+          style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-mortarboard-fill" style="font-size: 20px;"></i> Kenaikan Kelas Siswa (Naik Kelas)
+        </div>
+        <button class="modal-close" onclick="closeNaikKelasModal()"
+          style="color: #ffffff; opacity: 0.9; background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+      <div class="modal-body sekolah-modal-body" style="padding: 22px 24px; max-height: 75vh; overflow-y: auto;">
+        
+        <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; font-size: 13px; color: #1e40af; line-height: 1.5;">
+          <div style="font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <i class="bi bi-info-circle-fill"></i> Aturan Kenaikan Kelas
+          </div>
+          <div>
+            Pilih sekolah untuk menaikkan tingkatan kelas siswa. Siswa di tingkat akhir (contoh: <strong>Kelas 9</strong> di SMP/MTs, <strong>Kelas 6</strong> di SD/MI, <strong>Kelas 12</strong> di SMA/SMK) akan otomatis masuk ke data status <strong>"LULUS"</strong>.
+          </div>
+        </div>
+
+        <form id="formNaikKelas" onsubmit="executeNaikKelas(event)">
+          <!-- Pilih Sekolah -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-weight: 700; color: #1e293b;">Pilih Sekolah Target <span style="color:#dc2626;">*</span></label>
+            <select id="naikKelasSekolah" class="form-control" onchange="onNaikKelasSekolahChange()" required style="border-radius: 10px; font-weight: 600;">
+              <option value="">-- Pilih Sekolah --</option>
+            </select>
+          </div>
+
+          <!-- Mode Kenaikan -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-weight: 700; color: #1e293b;">Metode Kenaikan Kelas</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <label style="display: flex; align-items: flex-start; gap: 8px; background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-size: 13px;">
+                <input type="radio" name="modeNaikKelas" value="otomatis" checked onchange="toggleNaikKelasMode()" style="margin-top: 3px;">
+                <div>
+                  <strong style="color: #0f172a; display: block;">Naik Kelas Massal</strong>
+                  <span style="font-size: 11.5px; color: #64748b;">Naikkan semua tingkatan sekaligus (Contoh: 7➔8, 8➔9, 9➔LULUS)</span>
+                </div>
+              </label>
+              <label style="display: flex; align-items: flex-start; gap: 8px; background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-size: 13px;">
+                <input type="radio" name="modeNaikKelas" value="manual" onchange="toggleNaikKelasMode()" style="margin-top: 3px;">
+                <div>
+                  <strong style="color: #0f172a; display: block;">Pilih Kelas Tertentu</strong>
+                  <span style="font-size: 11.5px; color: #64748b;">Hanya menaikkan kelas asal ke kelas tujuan tertentu</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Opsi Khusus Mode Manual -->
+          <div id="containerNaikKelasManual" style="display: none; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
+            <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center;">
+              <div>
+                <label class="form-label" style="font-size: 12px; font-weight: 700; color: #475569;">Dari Kelas (Asal)</label>
+                <select id="naikKelasAsal" class="form-control" onchange="previewNaikKelasImpact()" style="border-radius: 8px;">
+                  <option value="">-- Pilih Kelas Asal --</option>
+                </select>
+              </div>
+              <div style="text-align: center; padding-top: 18px; font-size: 18px; color: #3b82f6;">
+                <i class="bi bi-arrow-right-circle-fill"></i>
+              </div>
+              <div>
+                <label class="form-label" style="font-size: 12px; font-weight: 700; color: #475569;">Ke Kelas (Tujuan)</label>
+                <select id="naikKelasTujuan" class="form-control" onchange="previewNaikKelasImpact()" style="border-radius: 8px;">
+                  <option value="">-- Pilih Kelas Tujuan --</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Opsi Reset Status Skrining Medis -->
+          <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12.5px; color: #92400e; font-weight: 700; margin: 0;">
+              <input type="checkbox" id="naikKelasResetSkrining" checked style="width: 16px; height: 16px;">
+              <span>Reset status pemeriksaan untuk tahun ajaran baru (siswa siap diskrining ulang di kelas baru)</span>
+            </label>
+            <div style="font-size: 11px; color: #b45309; margin-top: 4px; margin-left: 24px;">
+              Jika dicentang, riwayat antro/vital/lab siswa yang naik kelas akan disiapkan segar untuk skrining periode tahun ajaran baru. Untuk siswa yang menjadi <strong>LULUS</strong> data pemeriksaan tetap diarsipkan.
+            </div>
+          </div>
+
+          <!-- Preview Siswa Terdampak -->
+          <div id="naikKelasPreviewContainer" style="border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; background: #ffffff;">
+            <div style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+              <span><i class="bi bi-eye-fill" style="color: #2563eb;"></i> Ringkasan Siswa Terdampak:</span>
+              <span id="naikKelasTotalCountBadge" style="background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 800;">0 Siswa</span>
+            </div>
+            <div id="naikKelasPreviewList" style="font-size: 12.5px; color: #64748b; line-height: 1.6;">
+              Pilih sekolah terlebih dahulu untuk melihat ringkasan.
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary" onclick="closeNaikKelasModal()" style="border-radius: 10px; padding: 10px 20px;">
+              Batal
+            </button>
+            <button type="submit" id="btnSubmitNaikKelas" class="btn btn-primary" style="border-radius: 10px; padding: 10px 24px; font-weight: 800; background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+              <i class="bi bi-mortarboard-fill"></i> Proses Kenaikan Kelas
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MIGRASI SEKOLAH (CKG SEKOLAH) -->
+  <div id="modalMigrasiSekolah" class="modal-overlay">
+    <div class="modal-container sekolah-modal-container"
+      style="max-width: 740px; width: 95%; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #99f6e4; box-shadow: 0 25px 50px -12px rgba(13, 148, 136, 0.25);">
+      <div class="modal-header"
+        style="background: linear-gradient(135deg, #0f766e, #0d9488); color: #ffffff; padding: 16px 22px; display: flex; align-items: center; justify-content: space-between;">
+        <div class="modal-title"
+          style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-arrow-left-right" style="font-size: 20px;"></i> Migrasi / Mutasi Sekolah Siswa
+        </div>
+        <button class="modal-close" onclick="closeMigrasiSekolahModal()"
+          style="color: #ffffff; opacity: 0.9; background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+      <div class="modal-body sekolah-modal-body" style="padding: 22px 24px; max-height: 75vh; overflow-y: auto;">
+        
+        <div style="background: #f0fdfa; border: 1.5px solid #99f6e4; border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; font-size: 13px; color: #115e59; line-height: 1.5;">
+          <div style="font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <i class="bi bi-info-circle-fill"></i> Panduan Migrasi Data Siswa
+          </div>
+          <div>
+            Fitur ini memindahkan siswa dari satu sekolah ke sekolah lain (misal: siswa mutasi/pindah sekolah, atau siswa lulusan SD yang melanjutkan ke SMP tertentu).
+          </div>
+        </div>
+
+        <form id="formMigrasiSekolah" onsubmit="executeMigrasiSekolah(event)">
+          <!-- Sekolah Asal & Filter Kelas Asal -->
+          <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 12px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700; color: #1e293b;">Sekolah Asal <span style="color:#dc2626;">*</span></label>
+              <select id="migrasiSekolahAsal" class="form-control" onchange="onMigrasiSekolahAsalChange()" required style="border-radius: 10px; font-weight: 600;">
+                <option value="">-- Pilih Sekolah Asal --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700; color: #1e293b;">Filter Kelas Asal</label>
+              <select id="migrasiKelasAsalFilter" class="form-control" onchange="onMigrasiKelasAsalFilterChange()" style="border-radius: 10px;">
+                <option value="">-- Semua Kelas --</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Pilihan Siswa: Seluruhnya atau Pilih Tertentu -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-weight: 700; color: #1e293b;">Siswa yang Dipindahkan</label>
+            <div style="display: flex; gap: 14px; margin-bottom: 10px; flex-wrap: wrap;">
+              <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                <input type="radio" name="modeMigrasiSiswa" value="all" checked onchange="toggleMigrasiMode()">
+                <span>Semua Siswa di Filter Ini (<span id="migrasiCountAllBadge" style="font-weight: 800; color: #0d9488;">0</span> siswa)</span>
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                <input type="radio" name="modeMigrasiSiswa" value="selected" onchange="toggleMigrasiMode()">
+                <span>Pilih Siswa Manual (Checklist)</span>
+              </label>
+            </div>
+
+            <!-- List Checklist Siswa (Muncul jika Pilih Siswa Manual) -->
+            <div id="containerMigrasiChecklist" style="display: none; border: 1.5px solid #cbd5e1; border-radius: 12px; max-height: 220px; overflow-y: auto; padding: 10px 14px; background: #f8fafc;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0;">
+                <label style="font-size: 12px; font-weight: 700; cursor: pointer; margin: 0;">
+                  <input type="checkbox" id="migrasiCheckAll" onchange="toggleMigrasiCheckAll(this.checked)"> Pilih Semua Siswa
+                </label>
+                <span id="migrasiCheckedCountText" style="font-size: 11.5px; color: #0d9488; font-weight: 800;">0 dipilih</span>
+              </div>
+              <div id="migrasiSiswaChecklistItems" style="display: flex; flex-direction: column; gap: 6px;">
+                <!-- Dinamis via JS -->
+              </div>
+            </div>
+          </div>
+
+          <div style="border-top: 1.5px dashed #cbd5e1; margin: 18px 0;"></div>
+
+          <!-- Sekolah Tujuan & Kelas Tujuan -->
+          <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 12px; margin-bottom: 18px;">
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700; color: #0f766e;">Sekolah Tujuan <span style="color:#dc2626;">*</span></label>
+              <select id="migrasiSekolahTujuan" class="form-control" onchange="onMigrasiSekolahTujuanChange()" required style="border-radius: 10px; font-weight: 600; border-color: #0d9488;">
+                <option value="">-- Pilih Sekolah Tujuan --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 700; color: #0f766e;">Sesuaikan Kelas Baru</label>
+              <select id="migrasiKelasTujuan" class="form-control" style="border-radius: 10px; border-color: #0d9488;">
+                <option value="keep">-- Pertahankan Kelas Saat Ini --</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary" onclick="closeMigrasiSekolahModal()" style="border-radius: 10px; padding: 10px 20px;">
+              Batal
+            </button>
+            <button type="submit" id="btnSubmitMigrasiSekolah" class="btn btn-teal" style="border-radius: 10px; padding: 10px 24px; font-weight: 800; background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;">
+              <i class="bi bi-arrow-left-right"></i> Proses Migrasi Siswa
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Fullscreen Loading Overlay -->
@@ -3457,7 +3675,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=2.2"></script>
+  <script src="app.js?v=2.3"></script>
 </body>
 
 </html>
