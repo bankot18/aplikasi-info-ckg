@@ -22,7 +22,7 @@
 
   <!-- Application Stylesheet & SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-  <link rel="stylesheet" href="index.css?v=2.3">
+  <link rel="stylesheet" href="index.css?v=2.4">
 
   <!-- Chart.js, SweetAlert2 & SheetJS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1031,6 +1031,10 @@
               <button class="btn btn-secondary admin-koordinator-only" onclick="bulkAutoFillAntroSekolah()"
                 title="Isi BB, TB & LP otomatis untuk semua siswa yang masih kosong (nilai acak normal sesuai umur)">
                 <i class="bi bi-magic"></i> Auto-Fill Antro
+              </button>
+              <button class="btn btn-secondary admin-koordinator-only" onclick="bulkSetLabTidakDiperiksa()"
+                title="Tandai semua siswa yang belum periksa Lab menjadi 'Tidak Diperiksa' (agar terhitung sudah diperiksa)">
+                <i class="bi bi-slash-circle"></i> Set Lab Tidak Diperiksa
               </button>
               <button class="btn btn-danger admin-koordinator-only" id="btnHapusSemuaDataSekolah"
                 onclick="confirmDeleteAllSekolahRecords()">
@@ -2664,6 +2668,20 @@
           </div>
         </div>
 
+        <!-- RIWAYAT PEMERIKSAAN KELAS SEBELUMNYA (ARSIP KENAIKAN KELAS) -->
+        <div id="containerRiwayatPemeriksaanSiswa" style="display: none; margin-top: 16px; padding: 14px 16px; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+            <div style="font-size: 13px; font-weight: 800; color: #1e40af; display: flex; align-items: center; gap: 6px;">
+              <i class="bi bi-clock-history" style="color: #2563eb; font-size: 16px;"></i>
+              <span>Riwayat Skrining Tahun & Kelas Sebelumnya:</span>
+            </div>
+            <span id="badgeJumlahRiwayatSiswa" style="background: #2563eb; color: #ffffff; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 800;">0 Riwayat</span>
+          </div>
+          <div id="listRiwayatPemeriksaanSiswa" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Dinamis via JS -->
+          </div>
+        </div>
+
         <!-- ACTION FOOTER MENU HUB -->
         <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #d1fae5; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <button type="button" class="btn btn-sekolah-secondary" onclick="closePemeriksaanModal()"
@@ -2975,6 +2993,28 @@
                 <i class="bi bi-grid-fill"></i> Pilihan Bagian
               </button>
             </div>
+          </div>
+
+          <!-- Tombol Centang Tidak Diperiksa Lab (Agar terhitung sudah diisi & sudah diperiksa) -->
+          <div id="containerLabTidakDiperiksa"
+            style="background: #fdf2f8; border: 1.5px solid #f472b6; border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-size: 13px; font-weight: 700; color: #9d174d;">
+              <input type="checkbox" id="periksaLabTidakDiperiksa" onchange="toggleLabTidakDiperiksa(this.checked)"
+                style="width: 19px; height: 19px; cursor: pointer; accent-color: #db2777;">
+              <span>
+                <i class="bi bi-slash-circle" style="color: #db2777; font-size: 15px;"></i>
+                Tandai <strong>"Tidak Diperiksa"</strong> untuk Laboratorium
+              </span>
+            </label>
+            <span style="font-size: 11.5px; color: #be185d; background: #fce7f3; border: 1px solid #fbcfe8; padding: 3px 10px; border-radius: 8px; font-weight: 700;">
+              ✨ Tetap terhitung selesai &amp; memenuhi syarat "Sudah Diperiksa"
+            </span>
+          </div>
+
+          <!-- Banner status jika Tidak Diperiksa aktif -->
+          <div id="bannerLabTidakDiperiksaAktif"
+            style="display: none; background: #fff1f2; border: 1.5px dashed #f43f5e; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px; color: #9f1239; font-weight: 600;">
+            <i class="bi bi-info-circle-fill" style="color: #e11d48;"></i> Laboratorium siswa ini ditandai <strong>TIDAK DIPERIKSA</strong>. Kolom Gula Darah &amp; Hb dinonaktifkan dan akan disimpan dengan label <em>"Tidak Diperiksa"</em>.
           </div>
 
           <div class="sekolah-grid-2"
@@ -3528,14 +3568,24 @@
             </div>
           </div>
 
-          <!-- Opsi Reset Status Skrining Medis -->
-          <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12.5px; color: #92400e; font-weight: 700; margin: 0;">
-              <input type="checkbox" id="naikKelasResetSkrining" checked style="width: 16px; height: 16px;">
-              <span>Reset status pemeriksaan untuk tahun ajaran baru (siswa siap diskrining ulang di kelas baru)</span>
+          <!-- Arsip & Reset Status Skrining Medis -->
+          <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
+            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 13px; color: #1e40af; font-weight: 700; margin: 0;">
+              <input type="checkbox" id="naikKelasResetSkrining" checked style="width: 18px; height: 18px; margin-top: 2px;">
+              <div>
+                <span style="display: block;">Arsipkan Pemeriksaan Sebelumnya & Siapkan Skrining Kelas Baru</span>
+                <span style="font-size: 11.5px; font-weight: 400; color: #3b82f6; display: block; margin-top: 3px; line-height: 1.5;">
+                  Pemeriksaan saat ini <strong>TIDAK AKAN HILANG</strong>, melainkan otomatis disimpan ke <strong>Riwayat Skrining</strong> lengkap dengan label <strong>Tahun & Kelas Sebelumnya</strong>. Formulir siswa kemudian siap digunakan untuk skrining di kelas yang baru.
+                </span>
+              </div>
             </label>
-            <div style="font-size: 11px; color: #b45309; margin-top: 4px; margin-left: 24px;">
-              Jika dicentang, riwayat antro/vital/lab siswa yang naik kelas akan disiapkan segar untuk skrining periode tahun ajaran baru. Untuk siswa yang menjadi <strong>LULUS</strong> data pemeriksaan tetap diarsipkan.
+
+            <!-- Input Tahun Arsip -->
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #bfdbfe; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <label for="naikKelasTahunArsip" style="font-size: 12px; font-weight: 700; color: #1e3a8a; margin: 0;">
+                <i class="bi bi-tag-fill" style="color: #2563eb;"></i> Label Tahun Ajaran / Periode Skrining Sebelumnya:
+              </label>
+              <input type="text" id="naikKelasTahunArsip" class="form-control" style="max-width: 150px; height: 34px; font-size: 12px; font-weight: 700; border-radius: 8px; border-color: #93c5fd; text-align: center;" value="2025/2026" placeholder="Contoh: 2025/2026">
             </div>
           </div>
 
@@ -3675,7 +3725,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=2.3"></script>
+  <script src="app.js?v=2.4"></script>
 </body>
 
 </html>
