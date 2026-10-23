@@ -11806,6 +11806,47 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
     .catch(_ => {});
 }
 
+async function refreshCurrentSiswaModal(btn) {
+  const siswaId = document.getElementById('periksaSiswaId')?.value;
+  if (!siswaId) return;
+
+  const originalHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="sekolah-spinner" style="width: 13px; height: 13px; border-width: 2px; display: inline-block; vertical-align: middle;" aria-hidden="true"></span> Memuat...`;
+  }
+
+  try {
+    const res = await fetch(`/api/sekolah?id=${encodeURIComponent(siswaId)}`);
+    const json = await res.json();
+    if (json.success && json.data && json.data.length > 0) {
+      const fresh = json.data[0];
+      const curIdx = sekolahRecords.findIndex(r => r.id === siswaId);
+      if (curIdx >= 0) {
+        sekolahRecords[curIdx] = { ...sekolahRecords[curIdx], ...fresh };
+      } else {
+        sekolahRecords.push(fresh);
+      }
+      if (typeof CkgIdb !== 'undefined') {
+        CkgIdb.set('sekolah_records', sekolahRecords);
+      }
+      openPemeriksaanModal(siswaId, 'menu');
+      renderSekolahView();
+      showToast('Data pemeriksaan siswa berhasil diperbarui dari Cloud Database!', 'success');
+    } else {
+      showToast('Data siswa tidak ditemukan di server.', 'warning');
+    }
+  } catch (err) {
+    console.error('Error refreshing siswa data:', err);
+    showToast('Gagal memuat pembaruan data: ' + err.message, 'danger');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml || `<i class="bi bi-arrow-clockwise"></i> Refresh Data`;
+    }
+  }
+}
+
 function closePemeriksaanModal() {
   const m1 = document.getElementById('modalPemeriksaanSiswa');
   if (m1) {
