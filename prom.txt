@@ -1,0 +1,7 @@
+di bagian ckg sekolah di pemeriksaan tambahin kesimpulan dan rujukan tapi itu opsional kalo ga di isi atau di isi ga di hitung sebagai pemeriksaan kalo semua ke isi kecuali rujukan tetap ke hitung sudah di isi
+
+dan di bagian tanda vital/tekanan darah dan laboratorium tambahkan isi otomatis menjadi jawaban hasil normal sesuai umurnya dan jenis kelamin dan akngkanya di isi acak jangan sama semua
+
+Kemudian di bagian gula kalo di bawah usia 15 tahun itu bagian gula kekunci tidak bisa di isi
+
+Dan di bagian identitas ada kolom usia itu terisi otomatis dari tanggal lahir sampai tanggal sekarang (realtime akan bertambah sesuai sekarang tanggal berapa)

@@ -10165,6 +10165,12 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
             mata: r.mata || r.kacamata || 'Normal',
             kebugaran: r.kebugaran || 'Baik',
             menstruasi: r.menstruasi || 'Belum',
+            kuku: r.kuku || 'Pendek Bersih',
+            merokok: r.merokok || 'Tidak',
+            jenis_rokok: r.jenis_rokok || '-',
+            intensitas_merokok: r.intensitas_merokok || '-',
+            jumlah_batang: r.jumlah_batang || '-',
+            tahun_skrining: r.tahun_skrining || (r.tanggal_entry ? r.tanggal_entry.substring(0, 4) : '2026'),
             status_kesehatan: r.status_kesehatan || 'Sehat',
             catatan_rujukan: r.catatan_rujukan || '-',
             is_examined: isExamined,
@@ -10175,7 +10181,8 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
             lab_done: labDoneVal,
             organ_done: organDoneVal,
             kesimpulan_done: kesimpulanDoneVal,
-            identitas_done: r.identitas_done !== undefined ? Number(r.identitas_done) : 1
+            identitas_done: r.identitas_done !== undefined ? Number(r.identitas_done) : 1,
+            riwayat_pemeriksaan: Array.isArray(r.riwayat_pemeriksaan) ? r.riwayat_pemeriksaan : (typeof r.riwayat_pemeriksaan === 'string' ? JSON.parse(r.riwayat_pemeriksaan || '[]') : [])
           };
         });
         if (typeof CkgIdb !== 'undefined') {
@@ -10447,6 +10454,53 @@ function populateSekolahFilterDropdowns() {
   populateSchoolSelectElement('periksaSekolah');
 
   updateKelasDropdownOptions();
+  populateTahunFilterOptions();
+}
+
+function onFilterTahunChange() {
+  renderSekolahView();
+}
+
+function populateTahunFilterOptions() {
+  const select = document.getElementById('filterSelectTahun');
+  if (!select) return;
+
+  const currentVal = select.value || '2026';
+  const yearsSet = new Set(['2026', '2027', '2025']);
+
+  sekolahRecords.forEach(r => {
+    if (r.tahun_skrining && String(r.tahun_skrining).trim()) {
+      yearsSet.add(String(r.tahun_skrining).trim());
+    }
+    if (r.tanggal_entry && r.tanggal_entry.length >= 4) {
+      const y = r.tanggal_entry.substring(0, 4);
+      if (/^\d{4}$/.test(y)) yearsSet.add(y);
+    }
+    if (Array.isArray(r.riwayat_pemeriksaan)) {
+      r.riwayat_pemeriksaan.forEach(h => {
+        if (h.tahun && /^\d{4}$/.test(String(h.tahun).trim())) yearsSet.add(String(h.tahun).trim());
+        if (h.tahun_ajaran) {
+          const match = String(h.tahun_ajaran).match(/\b(20\d\d)\b/);
+          if (match) yearsSet.add(match[1]);
+        }
+      });
+    }
+  });
+
+  const sortedYears = Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+  let html = '';
+  sortedYears.forEach(y => {
+    const isCur = y === '2026' ? ' (Aktif)' : '';
+    html += `<option value="${escapeHtml(y)}">${escapeHtml(y)}${isCur}</option>`;
+  });
+  html += `<option value="all">Semua Tahun</option>`;
+
+  select.innerHTML = html;
+  if (Array.from(select.options).some(o => o.value === currentVal)) {
+    select.value = currentVal;
+  } else {
+    select.value = '2026';
+  }
 }
 
 // ==========================================================================
@@ -11047,6 +11101,7 @@ function renderSekolahView() {
 
   const chosenSekolah = (document.getElementById('filterSelectSekolah')?.value || '').trim().toUpperCase();
   const chosenKelas = (document.getElementById('filterSelectKelas')?.value || '').trim().toUpperCase();
+  const chosenTahun = (document.getElementById('filterSelectTahun')?.value || '2026').trim();
   const searchQuery = (document.getElementById('searchSekolahRecords')?.value || '').trim().toLowerCase();
 
   // WAJIB PILIH SEKOLAH: Jika belum ada sekolah yang dipilih, data siswa TIDAK ditampilkan
@@ -11085,6 +11140,20 @@ function renderSekolahView() {
 
   if (chosenKelas) {
     dataset = dataset.filter(r => (r.kelas || '').toUpperCase() === chosenKelas);
+  }
+
+  if (chosenTahun && chosenTahun !== 'all') {
+    dataset = dataset.filter(r => {
+      const recYear = String(r.tahun_skrining || (r.tanggal_entry ? r.tanggal_entry.substring(0, 4) : '2026')).trim();
+      if (recYear === chosenTahun) return true;
+      if (Array.isArray(r.riwayat_pemeriksaan) && r.riwayat_pemeriksaan.length > 0) {
+        return r.riwayat_pemeriksaan.some(h => {
+          const hy = String(h.tahun || (h.tanggal_pemeriksaan ? h.tanggal_pemeriksaan.substring(0, 4) : '') || h.tahun_ajaran || '').trim();
+          return hy === chosenTahun || hy.includes(chosenTahun);
+        });
+      }
+      return false;
+    });
   }
 
   if (searchQuery) {
@@ -11388,6 +11457,7 @@ function renderSekolahView() {
             ? `<span class="badge badge-emerald" style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0;"><i class="bi bi-mortarboard-fill"></i> LULUS</span>`
             : `<span class="badge badge-purple" style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">${safeKelas}</span>`
           }
+          <span class="badge" style="font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; margin-left: 3px;" title="Tahun CKG Skrining"><i class="bi bi-calendar-check"></i> ${escapeHtml(r.tahun_skrining || '2026')}</span>
           ${hasPastHistory
             ? `<div style="margin-top: 3px;">
                 <span style="font-size: 10px; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;" title="${r.riwayat_pemeriksaan.length} riwayat skrining tersimpan">
@@ -11652,6 +11722,7 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
   document.getElementById('displayNamaSiswa').textContent = siswa.nama || 'Nama Siswa';
   document.getElementById('displaySekolahSiswa').textContent = siswa.sekolah || 'Nama Sekolah';
   document.getElementById('displayKelasSiswa').textContent = siswa.kelas || 'Kelas';
+  document.getElementById('displayTahunSiswa') && (document.getElementById('displayTahunSiswa').textContent = `Tahun CKG ${siswa.tahun_skrining || '2026'}`);
 
   const ageObjModal = calculateRealtimeAge(siswa.tanggal_lahir);
   const safeAgeModalStr = ageObjModal ? ` • ${ageObjModal.years} Th` : '';
@@ -12898,6 +12969,7 @@ async function saveSekolahCategory(categoryKey, triggerBtn) {
     let cleanKelasDisp = String(currentSiswa.kelas || 'Kelas').replace(/^kelas\s+/i, '').trim();
     document.getElementById('displayKelasSiswa').textContent = cleanKelasDisp ? `Kelas ${cleanKelasDisp}` : 'Kelas';
     document.getElementById('displayJkSiswa').textContent = currentSiswa.jk === 'P' ? 'Perempuan' : 'Laki-laki';
+    document.getElementById('displayTahunSiswa') && (document.getElementById('displayTahunSiswa').textContent = `Tahun CKG ${currentSiswa.tahun_skrining || '2026'}`);
 
     // Update menu buttons checkmarks in modal
     updateSekolahMenuBadges(currentSiswa);
@@ -13303,7 +13375,8 @@ async function saveTambahSiswa(event) {
       identitas_done: 1,
       is_examined: false,
       petugas_entry: currentUserName,
-      tanggal_entry: new Date().toISOString().substring(0, 10)
+      tanggal_entry: new Date().toISOString().substring(0, 10),
+      tahun_skrining: document.getElementById('filterSelectTahun')?.value !== 'all' ? (document.getElementById('filterSelectTahun')?.value || '2026') : '2026'
     };
 
     // Directly POST to Cloud Database
@@ -14613,7 +14686,7 @@ async function executeNaikKelas(e) {
       const historyEntry = {
         id_riwayat: 'HIST-' + Date.now() + '-' + Math.floor(Math.random() * 100000),
         tahun_ajaran: tahunArsip,
-        tahun: (student.tanggal_entry && student.tanggal_entry.length >= 4) ? student.tanggal_entry.substring(0, 4) : tahunArsip,
+        tahun: student.tahun_skrining || ((student.tanggal_entry && student.tanggal_entry.length >= 4) ? student.tanggal_entry.substring(0, 4) : '2026'),
         kelas: oldKelas,
         sekolah: student.sekolah || schoolName,
         tanggal_pemeriksaan: student.tanggal_entry || new Date().toISOString().substring(0, 10),
@@ -14690,6 +14763,8 @@ async function executeNaikKelas(e) {
       student.organ_done = 0;
       student.kesimpulan_done = 0;
       student.tanggal_entry = '';
+      const currentYearNum = parseInt(student.tahun_skrining || '2026', 10);
+      student.tahun_skrining = String(isNaN(currentYearNum) ? 2027 : currentYearNum + 1);
     }
 
     modifiedRecords.push(student);
@@ -15122,6 +15197,21 @@ function exportSekolahToXLSX() {
     });
   }
 
+  const chosenTahun = (document.getElementById('filterSelectTahun')?.value || '2026').trim();
+  if (chosenTahun && chosenTahun !== 'all') {
+    dataset = dataset.filter(r => {
+      const recYear = String(r.tahun_skrining || (r.tanggal_entry ? r.tanggal_entry.substring(0, 4) : '2026')).trim();
+      if (recYear === chosenTahun) return true;
+      if (Array.isArray(r.riwayat_pemeriksaan) && r.riwayat_pemeriksaan.length > 0) {
+        return r.riwayat_pemeriksaan.some(h => {
+          const hy = String(h.tahun || (h.tanggal_pemeriksaan ? h.tanggal_pemeriksaan.substring(0, 4) : '') || h.tahun_ajaran || '').trim();
+          return hy === chosenTahun || hy.includes(chosenTahun);
+        });
+      }
+      return false;
+    });
+  }
+
   // Apply active status filter if set
   if (currentSekolahStatusFilter === 'sudah') {
     dataset = dataset.filter(r => isSekolahRecordExamined(r));
@@ -15137,7 +15227,7 @@ function exportSekolahToXLSX() {
   }
 
   const headers = [
-    'NO', 'NAMA SISWA', 'NIK', 'JENIS KELAMIN', 'SEKOLAH', 'KELAS', 'TANGGAL LAHIR', 'NO WHATSAPP',
+    'NO', 'NAMA SISWA', 'NIK', 'JENIS KELAMIN', 'SEKOLAH', 'KELAS', 'TAHUN SKRINING', 'TANGGAL LAHIR', 'NO WHATSAPP',
     'ALAMAT', 'BB (KG)', 'TB (CM)', 'LP (CM)', 'IMT', 'STATUS GIZI', 'TD SISTOLIK', 'TD DIASTOLIK',
     'GULA DARAH', 'HB', 'TELINGA (SERUMEN)', 'GIGI KARIES', 'PEMERIKSAAN MATA', 'KUKU', 'KEBUGARAN', 'MENSTRUASI',
     'MEROKOK', 'JENIS ROKOK', 'INTENSITAS MEROKOK', 'JUMLAH BATANG',
@@ -15175,6 +15265,7 @@ function exportSekolahToXLSX() {
       r.jk === 'P' ? 'Perempuan' : 'Laki-laki',
       r.sekolah || '',
       r.kelas || '',
+      r.tahun_skrining || '2026',
       r.tanggal_lahir || '',
       r.no_whatsapp || '',
       r.alamat || '',
@@ -15215,7 +15306,7 @@ function exportSekolahToXLSX() {
   if (currentSekolahStatusFilter === 'belum') statusSuffix = '_BELUM_DIPERIKSA';
   if (currentSekolahStatusFilter === 'sebagian') statusSuffix = '_PERIKSA_SEBAGIAN';
 
-  const fileName = `CKG_SEKOLAH_${chosenSekolah ? chosenSekolah.replace(/\s+/g, '_') : 'SEMUA'}_${chosenKelas ? chosenKelas.replace(/\s+/g, '_') : 'SEMUA_KELAS'}${statusSuffix}_${new Date().toISOString().substring(0, 10)}.xlsx`;
+  const fileName = `CKG_SEKOLAH_${chosenSekolah ? chosenSekolah.replace(/\s+/g, '_') : 'SEMUA'}_${chosenKelas ? chosenKelas.replace(/\s+/g, '_') : 'SEMUA_KELAS'}_TAHUN_${chosenTahun}${statusSuffix}_${new Date().toISOString().substring(0, 10)}.xlsx`;
   XLSX.writeFile(wb, fileName);
   showToast(`Berhasil mendownload Excel (${dataset.length} Siswa).`, 'success');
 }
@@ -15227,16 +15318,16 @@ function downloadSekolahXLSXTemplate() {
   }
 
   const headers = [
-    'NO', 'NAMA SISWA', 'NIK', 'JENIS KELAMIN', 'SEKOLAH', 'KELAS', 'TANGGAL LAHIR', 'NO WHATSAPP',
+    'NO', 'NAMA SISWA', 'NIK', 'JENIS KELAMIN', 'SEKOLAH', 'KELAS', 'TAHUN SKRINING', 'TANGGAL LAHIR', 'NO WHATSAPP',
     'ALAMAT', 'BB (KG)', 'TB (CM)', 'LP (CM)', 'TD SISTOLIK', 'TD DIASTOLIK',
     'GULA DARAH', 'HB', 'TELINGA (SERUMEN)', 'GIGI KARIES', 'PEMERIKSAAN MATA', 'KUKU',
     'KEBUGARAN', 'MENSTRUASI', 'MEROKOK', 'JENIS ROKOK', 'INTENSITAS MEROKOK', 'JUMLAH BATANG', 'STATUS KESEHATAN', 'CATATAN RUJUKAN'
   ];
 
   const sampleRows = [
-    [1, 'AHMAD FAUZI', '3204011504100001', 'L', 'SDN BANJARAN 01', 'Kelas 1', '2017-04-15', '081234567890', 'Kp. Pajagalan RT 01 RW 02', 24, 118, 52, 100, 65, '90', '12.5', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Tidak', '-', '-', '-', 'Sehat', '-'],
-    [2, 'SITI NURHALIZA', '3204015508110002', 'P', 'SMPN 1 BANJARAN', 'Kelas 7', '2012-08-15', '089876543210', 'Kp. Ciapus RT 03 RW 01', 42, 148, 60, 105, 65, '95', '11.8', 'Ada serumen', '2', '-1', 'Panjang Bersih', 'Cukup', 'Sudah', '-', '-', '-', '-', 'Perlu Perhatian', 'Konseling Anemia'],
-    [3, 'RIZKY PRATAMA', '3204012002080003', 'L', 'SMAN 1 BANJARAN', 'Kelas 10', '2009-02-20', '085712345678', 'Kp. Tarajusari RT 02 RW 04', 55, 168, 70, 115, 75, '100', '13.8', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Aktif', 'Konvensional', 'Tiap Hari', '5', 'Sehat', '-']
+    [1, 'AHMAD FAUZI', '3204011504100001', 'L', 'SDN BANJARAN 01', 'Kelas 1', '2026', '2017-04-15', '081234567890', 'Kp. Pajagalan RT 01 RW 02', 24, 118, 52, 100, 65, '90', '12.5', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Tidak', '-', '-', '-', 'Sehat', '-'],
+    [2, 'SITI NURHALIZA', '3204015508110002', 'P', 'SMPN 1 BANJARAN', 'Kelas 7', '2026', '2012-08-15', '089876543210', 'Kp. Ciapus RT 03 RW 01', 42, 148, 60, 105, 65, '95', '11.8', 'Ada serumen', '2', '-1', 'Panjang Bersih', 'Cukup', 'Sudah', '-', '-', '-', '-', 'Perlu Perhatian', 'Konseling Anemia'],
+    [3, 'RIZKY PRATAMA', '3204012002080003', 'L', 'SMAN 1 BANJARAN', 'Kelas 10', '2026', '2009-02-20', '085712345678', 'Kp. Tarajusari RT 02 RW 04', 55, 168, 70, 115, 75, '100', '13.8', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Aktif', 'Konvensional', 'Tiap Hari', '5', 'Sehat', '-']
   ];
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
@@ -15316,6 +15407,7 @@ function handleSekolahImportFileSelect(event) {
       const idxJenisRokok = getColIdx(['JENIS ROKOK']);
       const idxIntensitasMerokok = getColIdx(['INTENSITAS MEROKOK', 'INTENSITAS ROKOK']);
       const idxJumlahBatang = getColIdx(['JUMLAH BATANG', 'BATANG']);
+      const idxTahun = getColIdx(['TAHUN SKRINING', 'TAHUN']);
       const idxStatusKesehatan = getColIdx(['STATUS KESEHATAN', 'KESIMPULAN', 'STATUS']);
       const idxCatatanRujukan = getColIdx(['CATATAN RUJUKAN', 'RUJUKAN', 'TINDAK LANJUT']);
 
@@ -15359,6 +15451,7 @@ function handleSekolahImportFileSelect(event) {
         const jenisRokokVal = (idxJenisRokok >= 0 && row[idxJenisRokok]) ? String(row[idxJenisRokok]).trim() : '-';
         const intensitasMerokokVal = (idxIntensitasMerokok >= 0 && row[idxIntensitasMerokok]) ? String(row[idxIntensitasMerokok]).trim() : '-';
         const jumlahBatangVal = (idxJumlahBatang >= 0 && row[idxJumlahBatang]) ? String(row[idxJumlahBatang]).trim() : '-';
+        const tahunVal = (idxTahun >= 0 && row[idxTahun]) ? String(row[idxTahun]).trim() : (document.getElementById('filterSelectTahun')?.value !== 'all' ? (document.getElementById('filterSelectTahun')?.value || '2026') : '2026');
         const statusKesehatanVal = idxStatusKesehatan >= 0 ? String(row[idxStatusKesehatan] || 'Sehat').trim() : 'Sehat';
         const catatanRujukanVal = idxCatatanRujukan >= 0 ? String(row[idxCatatanRujukan] || '-').trim() : '-';
 
@@ -15425,7 +15518,8 @@ function handleSekolahImportFileSelect(event) {
           kesimpulan_done: kesimpulanDoneVal,
           identitas_done: 1,
           petugas_entry: currentUserName,
-          tanggal_entry: new Date().toISOString().substring(0, 10)
+          tanggal_entry: new Date().toISOString().substring(0, 10),
+          tahun_skrining: tahunVal
         });
       }
 

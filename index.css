@@ -4361,6 +4361,11 @@ body.dark-mode .status-pill.pill-sebagian.active {
   min-width: 120px;
 }
 
+.filter-col-tahun {
+  flex: 1.2;
+  min-width: 125px;
+}
+
 .filter-col-status {
   flex: 1.6;
   min-width: 155px;

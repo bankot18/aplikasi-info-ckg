@@ -472,6 +472,7 @@ export default {
             is_examined BOOLEAN DEFAULT 0,
             petugas_entry TEXT DEFAULT 'Admin',
             tanggal_entry TEXT,
+            tahun_skrining TEXT DEFAULT '2026',
             antro_done INTEGER DEFAULT 0,
             vital_done INTEGER DEFAULT 0,
             lab_done INTEGER DEFAULT 0,
@@ -495,6 +496,7 @@ export default {
       try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN jenis_rokok TEXT DEFAULT '-'").run(); } catch (_) {}
       try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN intensitas_merokok TEXT DEFAULT '-'").run(); } catch (_) {}
       try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN jumlah_batang TEXT DEFAULT '-'").run(); } catch (_) {}
+      try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN tahun_skrining TEXT DEFAULT '2026'").run(); } catch (_) {}
 
       if (request.method === 'GET') {
         try {
@@ -560,7 +562,7 @@ export default {
               'telinga', 'gigi', 'mata', 'kebugaran', 'menstruasi', 'kuku',
               'merokok', 'jenis_rokok', 'intensitas_merokok', 'jumlah_batang',
               'status_kesehatan', 'catatan_rujukan',
-              'is_examined', 'petugas_entry', 'tanggal_entry',
+              'is_examined', 'petugas_entry', 'tanggal_entry', 'tahun_skrining',
               'antro_done', 'vital_done', 'lab_done', 'organ_done', 'kesimpulan_done', 'identitas_done'
             ];
 
