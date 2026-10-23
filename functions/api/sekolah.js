@@ -55,6 +55,7 @@ export async function onRequestGet(context) {
         menstruasi TEXT DEFAULT 'Belum',
         kuku TEXT DEFAULT 'Pendek Bersih',
         merokok TEXT DEFAULT 'Tidak',
+        jenis_rokok TEXT DEFAULT '-',
         intensitas_merokok TEXT DEFAULT '-',
         jumlah_batang TEXT DEFAULT '-',
         status_kesehatan TEXT DEFAULT 'Sehat',
@@ -82,6 +83,7 @@ export async function onRequestGet(context) {
   try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN identitas_done INTEGER DEFAULT 0').run(); } catch (_) {}
   try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN kuku TEXT DEFAULT 'Pendek Bersih'").run(); } catch (_) {}
   try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN merokok TEXT DEFAULT 'Tidak'").run(); } catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN jenis_rokok TEXT DEFAULT '-'").run(); } catch (_) {}
   try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN intensitas_merokok TEXT DEFAULT '-'").run(); } catch (_) {}
   try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN jumlah_batang TEXT DEFAULT '-'").run(); } catch (_) {}
 
@@ -151,7 +153,7 @@ async function handlePartialUpdate(env, body) {
     'bb', 'tb', 'lp', 'imt', 'status_imt',
     'td_sistolik', 'td_diastolik', 'gula_darah', 'hb',
     'telinga', 'gigi', 'mata', 'kebugaran', 'menstruasi', 'kuku',
-    'merokok', 'intensitas_merokok', 'jumlah_batang',
+    'merokok', 'jenis_rokok', 'intensitas_merokok', 'jumlah_batang',
     'status_kesehatan', 'catatan_rujukan',
     'is_examined', 'petugas_entry', 'tanggal_entry',
     'antro_done', 'vital_done', 'lab_done', 'organ_done', 'kesimpulan_done', 'identitas_done'

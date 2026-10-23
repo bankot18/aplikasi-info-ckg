@@ -11320,8 +11320,11 @@ function renderSekolahView() {
         let smokeBadge = r.merokok;
         if (r.merokok === 'Aktif') {
           const detailParts = [];
-          if (r.intensitas_merokok && r.intensitas_merokok !== '-') detailParts.push(r.intensitas_merokok);
-          if (r.jumlah_batang && r.jumlah_batang !== '-' && r.jumlah_batang !== '0') detailParts.push(`${r.jumlah_batang} btg`);
+          if (r.jenis_rokok && r.jenis_rokok !== '-') detailParts.push(r.jenis_rokok);
+          if (r.jenis_rokok === 'Konvensional') {
+            if (r.intensitas_merokok && r.intensitas_merokok !== '-') detailParts.push(r.intensitas_merokok);
+            if (r.jumlah_batang && r.jumlah_batang !== '-' && r.jumlah_batang !== '0') detailParts.push(`${r.jumlah_batang} btg`);
+          }
           if (detailParts.length > 0) smokeBadge += ` (${detailParts.join(', ')})`;
         }
         const badgeBg = r.merokok === 'Aktif' ? '#fef2f2' : (r.merokok === 'Pasif' ? '#fff7ed' : '#f0fdf4');
@@ -11745,6 +11748,7 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
   if (document.getElementById('periksaKebugaran')) document.getElementById('periksaKebugaran').value = (siswa.kebugaran && siswa.kebugaran !== '-') ? siswa.kebugaran : 'Baik';
   if (document.getElementById('periksaMenstruasi')) document.getElementById('periksaMenstruasi').value = (siswa.menstruasi && siswa.menstruasi !== '-') ? siswa.menstruasi : 'Belum';
   if (document.getElementById('periksaMerokok')) document.getElementById('periksaMerokok').value = (siswa.merokok && siswa.merokok !== '-') ? siswa.merokok : 'Tidak';
+  if (document.getElementById('periksaJenisRokok')) document.getElementById('periksaJenisRokok').value = (siswa.jenis_rokok && siswa.jenis_rokok !== '-') ? siswa.jenis_rokok : '';
   if (document.getElementById('periksaIntensitasRokok')) document.getElementById('periksaIntensitasRokok').value = (siswa.intensitas_merokok && siswa.intensitas_merokok !== '-') ? siswa.intensitas_merokok : '';
   if (document.getElementById('periksaJumlahBatang')) document.getElementById('periksaJumlahBatang').value = (siswa.jumlah_batang && siswa.jumlah_batang !== '-' && siswa.jumlah_batang !== '0') ? siswa.jumlah_batang : '';
   updateGenderSpecificVisibility(siswa.jk);
@@ -11899,7 +11903,12 @@ function renderRiwayatPemeriksaanSiswa(siswa) {
     if (tdS > 0) chips.push(`<strong>Tensi:</strong> ${tdS}/${tdD} mmHg`);
     if (hb) chips.push(`<strong>HB:</strong> ${escapeHtml(hb)} g/dL`);
     if (gula) chips.push(`<strong>GDS:</strong> ${escapeHtml(gula)} mg/dL`);
-    if (h.merokok && h.merokok !== '-' && h.merokok !== 'Tidak') chips.push(`<strong>Merokok:</strong> ${escapeHtml(h.merokok)}${h.intensitas_merokok && h.intensitas_merokok !== '-' ? ` (${escapeHtml(h.intensitas_merokok)})` : ''}`);
+    if (h.merokok && h.merokok !== '-' && h.merokok !== 'Tidak') {
+      let rText = h.merokok;
+      if (h.jenis_rokok && h.jenis_rokok !== '-') rText += ` - ${h.jenis_rokok}`;
+      if (h.intensitas_merokok && h.intensitas_merokok !== '-') rText += ` (${h.intensitas_merokok})`;
+      chips.push(`<strong>Merokok:</strong> ${escapeHtml(rText)}`);
+    }
     if (h.menstruasi && h.menstruasi !== '-') chips.push(`<strong>Menstruasi:</strong> ${escapeHtml(h.menstruasi)}`);
     if (h.status_kesehatan) chips.push(`<strong>Status:</strong> ${escapeHtml(h.status_kesehatan)}`);
     if (h.catatan_rujukan && h.catatan_rujukan !== '-') chips.push(`<span style="color:#dc2626; font-weight:700;"><strong>Rujukan:</strong> ${escapeHtml(h.catatan_rujukan)}</span>`);
@@ -12108,15 +12117,49 @@ function calculateSiswaLabCategory() {
 function handleMerokokChange() {
   const val = document.getElementById('periksaMerokok')?.value || 'Tidak';
   const detailEl = document.getElementById('groupMerokokDetail');
+  const jenisEl = document.getElementById('periksaJenisRokok');
+  const konvenEl = document.getElementById('groupKonvensionalDetail');
+  const infoElektrik = document.getElementById('infoElektrikNote');
   const intensitasEl = document.getElementById('periksaIntensitasRokok');
   const groupBatang = document.getElementById('groupJumlahBatang');
   const batangEl = document.getElementById('periksaJumlahBatang');
 
   if (val === 'Aktif') {
     if (detailEl) detailEl.style.display = 'block';
-    handleIntensitasRokokChange();
+    handleJenisRokokChange();
   } else {
     if (detailEl) detailEl.style.display = 'none';
+    if (jenisEl) jenisEl.value = '';
+    if (konvenEl) konvenEl.style.display = 'none';
+    if (infoElektrik) infoElektrik.style.display = 'none';
+    if (intensitasEl) intensitasEl.value = '';
+    if (groupBatang) groupBatang.style.display = 'none';
+    if (batangEl) batangEl.value = '';
+  }
+}
+
+function handleJenisRokokChange() {
+  const jenisVal = document.getElementById('periksaJenisRokok')?.value || '';
+  const konvenEl = document.getElementById('groupKonvensionalDetail');
+  const infoElektrik = document.getElementById('infoElektrikNote');
+  const intensitasEl = document.getElementById('periksaIntensitasRokok');
+  const groupBatang = document.getElementById('groupJumlahBatang');
+  const batangEl = document.getElementById('periksaJumlahBatang');
+
+  if (jenisVal === 'Konvensional') {
+    if (konvenEl) konvenEl.style.display = 'block';
+    if (infoElektrik) infoElektrik.style.display = 'none';
+    handleIntensitasRokokChange();
+  } else if (jenisVal === 'Elektrik') {
+    // STOP SAMPAI DISITU: Sembunyikan dan reset pertanyaan lanjutan
+    if (konvenEl) konvenEl.style.display = 'none';
+    if (infoElektrik) infoElektrik.style.display = 'block';
+    if (intensitasEl) intensitasEl.value = '';
+    if (groupBatang) groupBatang.style.display = 'none';
+    if (batangEl) batangEl.value = '';
+  } else {
+    if (konvenEl) konvenEl.style.display = 'none';
+    if (infoElektrik) infoElektrik.style.display = 'none';
     if (intensitasEl) intensitasEl.value = '';
     if (groupBatang) groupBatang.style.display = 'none';
     if (batangEl) batangEl.value = '';
@@ -12776,6 +12819,7 @@ async function saveSekolahCategory(categoryKey, triggerBtn) {
       if (curJk === 'P') {
         fieldsToUpdate.menstruasi = document.getElementById('periksaMenstruasi')?.value || 'Belum';
         fieldsToUpdate.merokok = '-';
+        fieldsToUpdate.jenis_rokok = '-';
         fieldsToUpdate.intensitas_merokok = '-';
         fieldsToUpdate.jumlah_batang = '-';
       } else {
@@ -12783,9 +12827,17 @@ async function saveSekolahCategory(categoryKey, triggerBtn) {
         const merokokVal = document.getElementById('periksaMerokok')?.value || 'Tidak';
         fieldsToUpdate.merokok = merokokVal;
         if (merokokVal === 'Aktif') {
-          fieldsToUpdate.intensitas_merokok = document.getElementById('periksaIntensitasRokok')?.value || 'Tidak Nentu';
-          fieldsToUpdate.jumlah_batang = document.getElementById('periksaJumlahBatang')?.value ? String(document.getElementById('periksaJumlahBatang').value) : '-';
+          const jenisVal = document.getElementById('periksaJenisRokok')?.value || '-';
+          fieldsToUpdate.jenis_rokok = jenisVal;
+          if (jenisVal === 'Konvensional') {
+            fieldsToUpdate.intensitas_merokok = document.getElementById('periksaIntensitasRokok')?.value || 'Tidak Nentu';
+            fieldsToUpdate.jumlah_batang = document.getElementById('periksaJumlahBatang')?.value ? String(document.getElementById('periksaJumlahBatang').value) : '-';
+          } else {
+            fieldsToUpdate.intensitas_merokok = '-';
+            fieldsToUpdate.jumlah_batang = '-';
+          }
         } else {
+          fieldsToUpdate.jenis_rokok = '-';
           fieldsToUpdate.intensitas_merokok = '-';
           fieldsToUpdate.jumlah_batang = '-';
         }
@@ -12975,13 +13027,17 @@ async function savePemeriksaanSiswa(event) {
     const kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
     const menstruasi = (curJk === 'P') ? (document.getElementById('periksaMenstruasi')?.value || 'Belum') : '-';
     let merokokVal = '-';
+    let jenisRokokVal = '-';
     let intensitasRokokVal = '-';
     let jumlahBatangVal = '-';
     if (curJk === 'L') {
       merokokVal = hasOrganDone ? (document.getElementById('periksaMerokok')?.value || 'Tidak') : (sekolahRecords[idx].merokok || '-');
       if (merokokVal === 'Aktif') {
-        intensitasRokokVal = hasOrganDone ? (document.getElementById('periksaIntensitasRokok')?.value || 'Tidak Nentu') : (sekolahRecords[idx].intensitas_merokok || '-');
-        jumlahBatangVal = hasOrganDone ? (document.getElementById('periksaJumlahBatang')?.value ? String(document.getElementById('periksaJumlahBatang').value) : '-') : (sekolahRecords[idx].jumlah_batang || '-');
+        jenisRokokVal = hasOrganDone ? (document.getElementById('periksaJenisRokok')?.value || '-') : (sekolahRecords[idx].jenis_rokok || '-');
+        if (jenisRokokVal === 'Konvensional') {
+          intensitasRokokVal = hasOrganDone ? (document.getElementById('periksaIntensitasRokok')?.value || 'Tidak Nentu') : (sekolahRecords[idx].intensitas_merokok || '-');
+          jumlahBatangVal = hasOrganDone ? (document.getElementById('periksaJumlahBatang')?.value ? String(document.getElementById('periksaJumlahBatang').value) : '-') : (sekolahRecords[idx].jumlah_batang || '-');
+        }
       }
     }
     const kukuVal = document.getElementById('periksaKuku')?.value || sekolahRecords[idx].kuku || 'Pendek Bersih';
@@ -13045,6 +13101,7 @@ async function savePemeriksaanSiswa(event) {
       kebugaran: hasOrganDone ? (kebugaran || 'Baik') : (sekolahRecords[idx].kebugaran || '-'),
       menstruasi: hasOrganDone ? menstruasi : (sekolahRecords[idx].menstruasi || '-'),
       merokok: hasOrganDone ? merokokVal : (sekolahRecords[idx].merokok || '-'),
+      jenis_rokok: hasOrganDone ? jenisRokokVal : (sekolahRecords[idx].jenis_rokok || '-'),
       intensitas_merokok: hasOrganDone ? intensitasRokokVal : (sekolahRecords[idx].intensitas_merokok || '-'),
       jumlah_batang: hasOrganDone ? jumlahBatangVal : (sekolahRecords[idx].jumlah_batang || '-'),
       status_kesehatan: statusKesehatan || sekolahRecords[idx].status_kesehatan || 'Sehat',
@@ -13233,6 +13290,7 @@ async function saveTambahSiswa(event) {
       kebugaran: '-',
       menstruasi: '-',
       merokok: 'Tidak',
+      jenis_rokok: '-',
       intensitas_merokok: '-',
       jumlah_batang: '-',
       status_kesehatan: 'Sehat',
@@ -14576,6 +14634,7 @@ async function executeNaikKelas(e) {
         menstruasi: student.menstruasi || 'Belum',
         kuku: student.kuku || 'Pendek Bersih',
         merokok: student.merokok || 'Tidak',
+        jenis_rokok: student.jenis_rokok || '-',
         intensitas_merokok: student.intensitas_merokok || '-',
         jumlah_batang: student.jumlah_batang || '-',
         status_kesehatan: student.status_kesehatan || 'Sehat',
@@ -14619,6 +14678,7 @@ async function executeNaikKelas(e) {
       student.menstruasi = 'Belum';
       student.kuku = 'Pendek Bersih';
       student.merokok = 'Tidak';
+      student.jenis_rokok = '-';
       student.intensitas_merokok = '-';
       student.jumlah_batang = '-';
       student.status_kesehatan = 'Sehat';
@@ -15080,7 +15140,7 @@ function exportSekolahToXLSX() {
     'NO', 'NAMA SISWA', 'NIK', 'JENIS KELAMIN', 'SEKOLAH', 'KELAS', 'TANGGAL LAHIR', 'NO WHATSAPP',
     'ALAMAT', 'BB (KG)', 'TB (CM)', 'LP (CM)', 'IMT', 'STATUS GIZI', 'TD SISTOLIK', 'TD DIASTOLIK',
     'GULA DARAH', 'HB', 'TELINGA (SERUMEN)', 'GIGI KARIES', 'PEMERIKSAAN MATA', 'KUKU', 'KEBUGARAN', 'MENSTRUASI',
-    'MEROKOK', 'INTENSITAS MEROKOK', 'JUMLAH BATANG',
+    'MEROKOK', 'JENIS ROKOK', 'INTENSITAS MEROKOK', 'JUMLAH BATANG',
     'STATUS KESEHATAN', 'CATATAN RUJUKAN', 'STATUS SKRINING', 'PETUGAS ENTRY', 'TANGGAL ENTRY'
   ];
 
@@ -15134,8 +15194,9 @@ function exportSekolahToXLSX() {
       r.kebugaran || 'Baik',
       r.jk === 'P' ? (r.menstruasi || 'Belum') : '-',
       r.jk === 'L' ? (r.merokok || 'Tidak') : '-',
-      (r.jk === 'L' && r.merokok === 'Aktif') ? (r.intensitas_merokok || '-') : '-',
-      (r.jk === 'L' && r.merokok === 'Aktif') ? (r.jumlah_batang || '-') : '-',
+      (r.jk === 'L' && r.merokok === 'Aktif') ? (r.jenis_rokok || '-') : '-',
+      (r.jk === 'L' && r.merokok === 'Aktif' && r.jenis_rokok === 'Konvensional') ? (r.intensitas_merokok || '-') : '-',
+      (r.jk === 'L' && r.merokok === 'Aktif' && r.jenis_rokok === 'Konvensional') ? (r.jumlah_batang || '-') : '-',
       r.status_kesehatan || 'Sehat',
       r.catatan_rujukan || '-',
       statusSkriningText,
@@ -15169,13 +15230,13 @@ function downloadSekolahXLSXTemplate() {
     'NO', 'NAMA SISWA', 'NIK', 'JENIS KELAMIN', 'SEKOLAH', 'KELAS', 'TANGGAL LAHIR', 'NO WHATSAPP',
     'ALAMAT', 'BB (KG)', 'TB (CM)', 'LP (CM)', 'TD SISTOLIK', 'TD DIASTOLIK',
     'GULA DARAH', 'HB', 'TELINGA (SERUMEN)', 'GIGI KARIES', 'PEMERIKSAAN MATA', 'KUKU',
-    'KEBUGARAN', 'MENSTRUASI', 'MEROKOK', 'INTENSITAS MEROKOK', 'JUMLAH BATANG', 'STATUS KESEHATAN', 'CATATAN RUJUKAN'
+    'KEBUGARAN', 'MENSTRUASI', 'MEROKOK', 'JENIS ROKOK', 'INTENSITAS MEROKOK', 'JUMLAH BATANG', 'STATUS KESEHATAN', 'CATATAN RUJUKAN'
   ];
 
   const sampleRows = [
-    [1, 'AHMAD FAUZI', '3204011504100001', 'L', 'SDN BANJARAN 01', 'Kelas 1', '2017-04-15', '081234567890', 'Kp. Pajagalan RT 01 RW 02', 24, 118, 52, 100, 65, '90', '12.5', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Tidak', '-', '-', 'Sehat', '-'],
-    [2, 'SITI NURHALIZA', '3204015508110002', 'P', 'SMPN 1 BANJARAN', 'Kelas 7', '2012-08-15', '089876543210', 'Kp. Ciapus RT 03 RW 01', 42, 148, 60, 105, 65, '95', '11.8', 'Ada serumen', '2', '-1', 'Panjang Bersih', 'Cukup', 'Sudah', '-', '-', '-', 'Perlu Perhatian', 'Konseling Anemia'],
-    [3, 'RIZKY PRATAMA', '3204012002080003', 'L', 'SMAN 1 BANJARAN', 'Kelas 10', '2009-02-20', '085712345678', 'Kp. Tarajusari RT 02 RW 04', 55, 168, 70, 115, 75, '100', '13.8', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Aktif', 'Tiap Hari', '5', 'Sehat', '-']
+    [1, 'AHMAD FAUZI', '3204011504100001', 'L', 'SDN BANJARAN 01', 'Kelas 1', '2017-04-15', '081234567890', 'Kp. Pajagalan RT 01 RW 02', 24, 118, 52, 100, 65, '90', '12.5', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Tidak', '-', '-', '-', 'Sehat', '-'],
+    [2, 'SITI NURHALIZA', '3204015508110002', 'P', 'SMPN 1 BANJARAN', 'Kelas 7', '2012-08-15', '089876543210', 'Kp. Ciapus RT 03 RW 01', 42, 148, 60, 105, 65, '95', '11.8', 'Ada serumen', '2', '-1', 'Panjang Bersih', 'Cukup', 'Sudah', '-', '-', '-', '-', 'Perlu Perhatian', 'Konseling Anemia'],
+    [3, 'RIZKY PRATAMA', '3204012002080003', 'L', 'SMAN 1 BANJARAN', 'Kelas 10', '2009-02-20', '085712345678', 'Kp. Tarajusari RT 02 RW 04', 55, 168, 70, 115, 75, '100', '13.8', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Aktif', 'Konvensional', 'Tiap Hari', '5', 'Sehat', '-']
   ];
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
@@ -15252,6 +15313,7 @@ function handleSekolahImportFileSelect(event) {
       const idxKebugaran = getColIdx(['KEBUGARAN', 'BUGAR']);
       const idxMenstruasi = getColIdx(['MENSTRUASI', 'HAID']);
       const idxMerokok = getColIdx(['MEROKOK', 'ROKOK']);
+      const idxJenisRokok = getColIdx(['JENIS ROKOK']);
       const idxIntensitasMerokok = getColIdx(['INTENSITAS MEROKOK', 'INTENSITAS ROKOK']);
       const idxJumlahBatang = getColIdx(['JUMLAH BATANG', 'BATANG']);
       const idxStatusKesehatan = getColIdx(['STATUS KESEHATAN', 'KESIMPULAN', 'STATUS']);
@@ -15294,6 +15356,7 @@ function handleSekolahImportFileSelect(event) {
         const kebugaranVal = (idxKebugaran >= 0 && row[idxKebugaran]) ? String(row[idxKebugaran]).trim() : '-';
         const menstruasiVal = (idxMenstruasi >= 0 && row[idxMenstruasi]) ? String(row[idxMenstruasi]).trim() : '-';
         const merokokVal = (idxMerokok >= 0 && row[idxMerokok]) ? String(row[idxMerokok]).trim() : (jkVal === 'L' ? 'Tidak' : '-');
+        const jenisRokokVal = (idxJenisRokok >= 0 && row[idxJenisRokok]) ? String(row[idxJenisRokok]).trim() : '-';
         const intensitasMerokokVal = (idxIntensitasMerokok >= 0 && row[idxIntensitasMerokok]) ? String(row[idxIntensitasMerokok]).trim() : '-';
         const jumlahBatangVal = (idxJumlahBatang >= 0 && row[idxJumlahBatang]) ? String(row[idxJumlahBatang]).trim() : '-';
         const statusKesehatanVal = idxStatusKesehatan >= 0 ? String(row[idxStatusKesehatan] || 'Sehat').trim() : 'Sehat';
@@ -15349,6 +15412,7 @@ function handleSekolahImportFileSelect(event) {
           kebugaran: kebugaranVal,
           menstruasi: menstruasiVal,
           merokok: merokokVal,
+          jenis_rokok: jenisRokokVal,
           intensitas_merokok: intensitasMerokokVal,
           jumlah_batang: jumlahBatangVal,
           status_kesehatan: statusKesehatanVal,
