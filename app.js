@@ -10884,10 +10884,21 @@ function getSekolahRecordExamStations(r) {
   );
   const hasLab = !!(Number(r.lab_done) === 1 || isLabTidakDiperiksa || hasLabValue);
 
-  // 5. Skrining Organ Indera
+  // 5. Skrining Organ Indera (Telinga, Gigi, Mata)
+  // Hanya terisi jika organ_done === 1 (eksplisit diperiksa & disimpan).
+  // Untuk data lama di database yang sudah diperiksa medis sebelumnya (memiliki data antro/vital/lab/is_examined):
+  // tetap dipertahankan jika telinga, mata, dan gigi terisi bukan '-'
+  const hasOtherMedicalExams = !!(
+    Number(r.antro_done) === 1 ||
+    Number(r.vital_done) === 1 ||
+    Number(r.lab_done) === 1 ||
+    Number(r.is_examined) === 1 ||
+    (Number(r.bb) > 0 && Number(r.tb) > 0) ||
+    Number(r.td_sistolik) > 0
+  );
   const hasOrgan = !!(
     Number(r.organ_done) === 1 ||
-    (r.telinga && r.telinga !== '-' && r.mata && r.mata !== '-' && r.gigi && r.gigi !== '-')
+    (hasOtherMedicalExams && r.telinga && r.telinga !== '-' && r.mata && r.mata !== '-' && r.gigi && r.gigi !== '-')
   );
 
   // Hitung jumlah stasiun medis yang terpenuhi (dari 4 stasiun medis: antro, vital, lab, organ)
@@ -11305,6 +11316,23 @@ function renderSekolahView() {
           </span>
         `);
       }
+      if (r.jk === 'L' && r.merokok && r.merokok !== '-') {
+        let smokeBadge = r.merokok;
+        if (r.merokok === 'Aktif') {
+          const detailParts = [];
+          if (r.intensitas_merokok && r.intensitas_merokok !== '-') detailParts.push(r.intensitas_merokok);
+          if (r.jumlah_batang && r.jumlah_batang !== '-' && r.jumlah_batang !== '0') detailParts.push(`${r.jumlah_batang} btg`);
+          if (detailParts.length > 0) smokeBadge += ` (${detailParts.join(', ')})`;
+        }
+        const badgeBg = r.merokok === 'Aktif' ? '#fef2f2' : (r.merokok === 'Pasif' ? '#fff7ed' : '#f0fdf4');
+        const badgeBorder = r.merokok === 'Aktif' ? '#fecaca' : (r.merokok === 'Pasif' ? '#fed7aa' : '#bbf7d0');
+        const badgeColor = r.merokok === 'Aktif' ? '#dc2626' : (r.merokok === 'Pasif' ? '#c2410c' : '#16a34a');
+        hasilChips.push(`
+          <span style="background: ${badgeBg}; border: 1px solid ${badgeBorder}; padding: 2px 7px; border-radius: 6px; font-weight: 600; color: ${badgeColor};">
+            <strong>Merokok:</strong> ${escapeHtml(smokeBadge)}
+          </span>
+        `);
+      }
     }
 
     // 5. Catatan Rujukan (jika ada)
@@ -11666,7 +11694,7 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
   if (periksaJkSelect) {
     periksaJkSelect.onchange = () => {
       const curJk = periksaJkSelect.value;
-      updateMenstruasiVisibility(curJk);
+      updateGenderSpecificVisibility(curJk);
       calculateSiswaLabCategory();
     };
   }
@@ -11709,14 +11737,17 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
     calculateSiswaLabCategory();
   }
 
-  // Populate Section 3: Khusus (Telinga, Gigi Karies, Mata, Kuku, Kebugaran, Menstruasi)
-  document.getElementById('periksaTelinga').value = siswa.telinga || 'Tidak ada serumen';
-  document.getElementById('periksaGigi').value = siswa.gigi || 'Tidak ada';
-  document.getElementById('periksaMata').value = siswa.mata || 'Normal';
-  if (document.getElementById('periksaKuku')) document.getElementById('periksaKuku').value = siswa.kuku || 'Pendek Bersih';
-  if (document.getElementById('periksaKebugaran')) document.getElementById('periksaKebugaran').value = siswa.kebugaran || 'Baik';
-  if (document.getElementById('periksaMenstruasi')) document.getElementById('periksaMenstruasi').value = siswa.menstruasi || 'Belum';
-  updateMenstruasiVisibility(siswa.jk);
+  // Populate Section 3: Khusus (Telinga, Gigi Karies, Mata, Kuku, Kebugaran, Menstruasi / Merokok)
+  document.getElementById('periksaTelinga').value = (siswa.telinga && siswa.telinga !== '-') ? siswa.telinga : 'Tidak ada serumen';
+  document.getElementById('periksaGigi').value = (siswa.gigi && siswa.gigi !== '-') ? siswa.gigi : 'Tidak ada';
+  document.getElementById('periksaMata').value = (siswa.mata && siswa.mata !== '-') ? siswa.mata : 'Normal';
+  if (document.getElementById('periksaKuku')) document.getElementById('periksaKuku').value = (siswa.kuku && siswa.kuku !== '-') ? siswa.kuku : 'Pendek Bersih';
+  if (document.getElementById('periksaKebugaran')) document.getElementById('periksaKebugaran').value = (siswa.kebugaran && siswa.kebugaran !== '-') ? siswa.kebugaran : 'Baik';
+  if (document.getElementById('periksaMenstruasi')) document.getElementById('periksaMenstruasi').value = (siswa.menstruasi && siswa.menstruasi !== '-') ? siswa.menstruasi : 'Belum';
+  if (document.getElementById('periksaMerokok')) document.getElementById('periksaMerokok').value = (siswa.merokok && siswa.merokok !== '-') ? siswa.merokok : 'Tidak';
+  if (document.getElementById('periksaIntensitasRokok')) document.getElementById('periksaIntensitasRokok').value = (siswa.intensitas_merokok && siswa.intensitas_merokok !== '-') ? siswa.intensitas_merokok : '';
+  if (document.getElementById('periksaJumlahBatang')) document.getElementById('periksaJumlahBatang').value = (siswa.jumlah_batang && siswa.jumlah_batang !== '-' && siswa.jumlah_batang !== '0') ? siswa.jumlah_batang : '';
+  updateGenderSpecificVisibility(siswa.jk);
 
   // Populate Section 4: Kesimpulan & Rujukan
   if (document.getElementById('periksaStatusKesehatan')) document.getElementById('periksaStatusKesehatan').value = siswa.status_kesehatan || 'Sehat';
@@ -11827,6 +11858,8 @@ function renderRiwayatPemeriksaanSiswa(siswa) {
     if (tdS > 0) chips.push(`<strong>Tensi:</strong> ${tdS}/${tdD} mmHg`);
     if (hb) chips.push(`<strong>HB:</strong> ${escapeHtml(hb)} g/dL`);
     if (gula) chips.push(`<strong>GDS:</strong> ${escapeHtml(gula)} mg/dL`);
+    if (h.merokok && h.merokok !== '-' && h.merokok !== 'Tidak') chips.push(`<strong>Merokok:</strong> ${escapeHtml(h.merokok)}${h.intensitas_merokok && h.intensitas_merokok !== '-' ? ` (${escapeHtml(h.intensitas_merokok)})` : ''}`);
+    if (h.menstruasi && h.menstruasi !== '-') chips.push(`<strong>Menstruasi:</strong> ${escapeHtml(h.menstruasi)}`);
     if (h.status_kesehatan) chips.push(`<strong>Status:</strong> ${escapeHtml(h.status_kesehatan)}`);
     if (h.catatan_rujukan && h.catatan_rujukan !== '-') chips.push(`<span style="color:#dc2626; font-weight:700;"><strong>Rujukan:</strong> ${escapeHtml(h.catatan_rujukan)}</span>`);
 
@@ -12026,19 +12059,61 @@ function calculateSiswaLabCategory() {
 }
 
 /**
- * Kontrol Tampilan Pertanyaan Menstruasi: Hanya Ditampilkan untuk Siswa Perempuan
+ * Kontrol Tampilan Pertanyaan Spesifik Gender:
+ * - Menstruasi: Hanya Ditampilkan untuk Siswa Perempuan (P)
+ * - Skrining Rokok: Hanya Ditampilkan untuk Siswa Laki-laki (L)
+ * - Jika Merokok === 'Aktif': Muncul Pertanyaan Lanjutan Intensitas Rokok & Berapa Batang
  */
+function handleMerokokChange() {
+  const val = document.getElementById('periksaMerokok')?.value || 'Tidak';
+  const detailEl = document.getElementById('groupMerokokDetail');
+  const intensitasEl = document.getElementById('periksaIntensitasRokok');
+  const groupBatang = document.getElementById('groupJumlahBatang');
+  const batangEl = document.getElementById('periksaJumlahBatang');
+
+  if (val === 'Aktif') {
+    if (detailEl) detailEl.style.display = 'block';
+    handleIntensitasRokokChange();
+  } else {
+    if (detailEl) detailEl.style.display = 'none';
+    if (intensitasEl) intensitasEl.value = '';
+    if (groupBatang) groupBatang.style.display = 'none';
+    if (batangEl) batangEl.value = '';
+  }
+}
+
+function handleIntensitasRokokChange() {
+  const val = document.getElementById('periksaIntensitasRokok')?.value || '';
+  const groupBatang = document.getElementById('groupJumlahBatang');
+  if (val && val !== '' && val !== '-') {
+    if (groupBatang) groupBatang.style.display = 'block';
+  } else {
+    if (groupBatang) groupBatang.style.display = 'none';
+  }
+}
+
 function updateMenstruasiVisibility(jk) {
+  updateGenderSpecificVisibility(jk);
+}
+
+function updateGenderSpecificVisibility(jk) {
   const curJk = jk || document.getElementById('periksaJk')?.value || 'L';
   const groupMenstruasi = document.getElementById('groupPeriksaMenstruasi');
-  if (groupMenstruasi) {
-    if (curJk === 'P') {
-      groupMenstruasi.style.display = 'block';
-    } else {
+  const groupMerokok = document.getElementById('groupPeriksaMerokok');
+  const groupDetail = document.getElementById('groupMerokokDetail');
+
+  if (curJk === 'P') {
+    if (groupMenstruasi) groupMenstruasi.style.display = 'block';
+    if (groupMerokok) groupMerokok.style.display = 'none';
+    if (groupDetail) groupDetail.style.display = 'none';
+  } else {
+    if (groupMenstruasi) {
       groupMenstruasi.style.display = 'none';
       const inputMenstruasi = document.getElementById('periksaMenstruasi');
       if (inputMenstruasi) inputMenstruasi.value = 'Belum';
     }
+    if (groupMerokok) groupMerokok.style.display = 'block';
+    handleMerokokChange();
   }
 }
 
@@ -12657,7 +12732,23 @@ async function saveSekolahCategory(categoryKey, triggerBtn) {
       fieldsToUpdate.kuku = document.getElementById('periksaKuku')?.value || 'Pendek Bersih';
       fieldsToUpdate.kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
       const curJk = document.getElementById('periksaJk')?.value || existing.jk || 'L';
-      fieldsToUpdate.menstruasi = (curJk === 'P') ? (document.getElementById('periksaMenstruasi')?.value || 'Belum') : '-';
+      if (curJk === 'P') {
+        fieldsToUpdate.menstruasi = document.getElementById('periksaMenstruasi')?.value || 'Belum';
+        fieldsToUpdate.merokok = '-';
+        fieldsToUpdate.intensitas_merokok = '-';
+        fieldsToUpdate.jumlah_batang = '-';
+      } else {
+        fieldsToUpdate.menstruasi = '-';
+        const merokokVal = document.getElementById('periksaMerokok')?.value || 'Tidak';
+        fieldsToUpdate.merokok = merokokVal;
+        if (merokokVal === 'Aktif') {
+          fieldsToUpdate.intensitas_merokok = document.getElementById('periksaIntensitasRokok')?.value || 'Tidak Nentu';
+          fieldsToUpdate.jumlah_batang = document.getElementById('periksaJumlahBatang')?.value ? String(document.getElementById('periksaJumlahBatang').value) : '-';
+        } else {
+          fieldsToUpdate.intensitas_merokok = '-';
+          fieldsToUpdate.jumlah_batang = '-';
+        }
+      }
       fieldsToUpdate.organ_done = 1;
       categoryName = 'Organ Indera & UKS';
       titleMsg = 'Data Organ Indera Berhasil Disimpan!';
@@ -12842,6 +12933,16 @@ async function savePemeriksaanSiswa(event) {
     const catatanRujukan = document.getElementById('periksaCatatanRujukan')?.value.trim() || '-';
     const kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
     const menstruasi = (curJk === 'P') ? (document.getElementById('periksaMenstruasi')?.value || 'Belum') : '-';
+    let merokokVal = '-';
+    let intensitasRokokVal = '-';
+    let jumlahBatangVal = '-';
+    if (curJk === 'L') {
+      merokokVal = hasOrganDone ? (document.getElementById('periksaMerokok')?.value || 'Tidak') : (sekolahRecords[idx].merokok || '-');
+      if (merokokVal === 'Aktif') {
+        intensitasRokokVal = hasOrganDone ? (document.getElementById('periksaIntensitasRokok')?.value || 'Tidak Nentu') : (sekolahRecords[idx].intensitas_merokok || '-');
+        jumlahBatangVal = hasOrganDone ? (document.getElementById('periksaJumlahBatang')?.value ? String(document.getElementById('periksaJumlahBatang').value) : '-') : (sekolahRecords[idx].jumlah_batang || '-');
+      }
+    }
     const kukuVal = document.getElementById('periksaKuku')?.value || sekolahRecords[idx].kuku || 'Pendek Bersih';
 
     const tglLahirVal = document.getElementById('periksaTglLahir')?.value || sekolahRecords[idx].tanggal_lahir;
@@ -12870,15 +12971,8 @@ async function savePemeriksaanSiswa(event) {
       finalLabDone = !!((finalHb && finalHb !== '-') || (finalGula && finalGula !== '-')) ? 1 : (sekolahRecords[idx].lab_done || 0);
     }
 
-    const sistolVal = parseInt(document.getElementById('periksaSistol')?.value, 10) || 0;
-    const diastolVal = parseInt(document.getElementById('periksaDiastol')?.value, 10) || 0;
-
-    const hasOrganDone = !!(
-      document.getElementById('periksaTelinga')?.value ||
-      document.getElementById('periksaGigi')?.value ||
-      document.getElementById('periksaMata')?.value ||
-      sekolahRecords[idx].organ_done
-    );
+    const isFormSemuaActive = document.getElementById('panelPemeriksaanSemuaFooter')?.classList.contains('is-active-semua');
+    const hasOrganDone = isFormSemuaActive ? 1 : (Number(sekolahRecords[idx].organ_done) === 1 ? 1 : 0);
 
     const updatedRecord = {
       ...sekolahRecords[idx],
@@ -12903,12 +12997,15 @@ async function savePemeriksaanSiswa(event) {
       hb: finalHb,
       kategori_hb: finalKatHb,
       lab_tidak_diperiksa: finalLabTidakDiperiksa,
-      telinga: document.getElementById('periksaTelinga')?.value || sekolahRecords[idx].telinga || 'Tidak ada serumen',
-      gigi: document.getElementById('periksaGigi')?.value || sekolahRecords[idx].gigi || 'Tidak ada',
-      mata: document.getElementById('periksaMata')?.value || sekolahRecords[idx].mata || 'Normal',
-      kuku: kukuVal,
-      kebugaran: kebugaran || sekolahRecords[idx].kebugaran || 'Baik',
-      menstruasi: menstruasi,
+      telinga: hasOrganDone ? (document.getElementById('periksaTelinga')?.value || 'Tidak ada serumen') : (sekolahRecords[idx].telinga || '-'),
+      gigi: hasOrganDone ? (document.getElementById('periksaGigi')?.value || 'Tidak ada') : (sekolahRecords[idx].gigi || '-'),
+      mata: hasOrganDone ? (document.getElementById('periksaMata')?.value || 'Normal') : (sekolahRecords[idx].mata || '-'),
+      kuku: hasOrganDone ? kukuVal : (sekolahRecords[idx].kuku || '-'),
+      kebugaran: hasOrganDone ? (kebugaran || 'Baik') : (sekolahRecords[idx].kebugaran || '-'),
+      menstruasi: hasOrganDone ? menstruasi : (sekolahRecords[idx].menstruasi || '-'),
+      merokok: hasOrganDone ? merokokVal : (sekolahRecords[idx].merokok || '-'),
+      intensitas_merokok: hasOrganDone ? intensitasRokokVal : (sekolahRecords[idx].intensitas_merokok || '-'),
+      jumlah_batang: hasOrganDone ? jumlahBatangVal : (sekolahRecords[idx].jumlah_batang || '-'),
       status_kesehatan: statusKesehatan || sekolahRecords[idx].status_kesehatan || 'Sehat',
       catatan_rujukan: (catatanRujukan && catatanRujukan !== '-') ? catatanRujukan : (sekolahRecords[idx].catatan_rujukan || '-'),
       antro_done: (bbVal > 0 && tbVal > 0) ? 1 : (sekolahRecords[idx].antro_done || 0),
@@ -13088,14 +13185,23 @@ async function saveTambahSiswa(event) {
       td_diastolik: 0,
       gula_darah: '-',
       hb: '-',
-      telinga: 'Tidak ada serumen',
-      gigi: 'Tidak ada',
-      mata: 'Normal',
-      kuku: 'Pendek Bersih',
-      kebugaran: 'Baik',
-      menstruasi: 'Belum',
+      telinga: '-',
+      gigi: '-',
+      mata: '-',
+      kuku: '-',
+      kebugaran: '-',
+      menstruasi: '-',
+      merokok: 'Tidak',
+      intensitas_merokok: '-',
+      jumlah_batang: '-',
       status_kesehatan: 'Sehat',
       catatan_rujukan: '-',
+      antro_done: 0,
+      vital_done: 0,
+      lab_done: 0,
+      organ_done: 0,
+      kesimpulan_done: 0,
+      identitas_done: 1,
       is_examined: false,
       petugas_entry: currentUserName,
       tanggal_entry: new Date().toISOString().substring(0, 10)
@@ -14428,6 +14534,9 @@ async function executeNaikKelas(e) {
         kebugaran: student.kebugaran || 'Baik',
         menstruasi: student.menstruasi || 'Belum',
         kuku: student.kuku || 'Pendek Bersih',
+        merokok: student.merokok || 'Tidak',
+        intensitas_merokok: student.intensitas_merokok || '-',
+        jumlah_batang: student.jumlah_batang || '-',
         status_kesehatan: student.status_kesehatan || 'Sehat',
         catatan_rujukan: student.catatan_rujukan || '-',
         is_examined: 1,
@@ -14468,6 +14577,9 @@ async function executeNaikKelas(e) {
       student.kebugaran = 'Baik';
       student.menstruasi = 'Belum';
       student.kuku = 'Pendek Bersih';
+      student.merokok = 'Tidak';
+      student.intensitas_merokok = '-';
+      student.jumlah_batang = '-';
       student.status_kesehatan = 'Sehat';
       student.catatan_rujukan = '-';
       student.is_examined = 0;
@@ -14927,6 +15039,7 @@ function exportSekolahToXLSX() {
     'NO', 'NAMA SISWA', 'NIK', 'JENIS KELAMIN', 'SEKOLAH', 'KELAS', 'TANGGAL LAHIR', 'NO WHATSAPP',
     'ALAMAT', 'BB (KG)', 'TB (CM)', 'LP (CM)', 'IMT', 'STATUS GIZI', 'TD SISTOLIK', 'TD DIASTOLIK',
     'GULA DARAH', 'HB', 'TELINGA (SERUMEN)', 'GIGI KARIES', 'PEMERIKSAAN MATA', 'KUKU', 'KEBUGARAN', 'MENSTRUASI',
+    'MEROKOK', 'INTENSITAS MEROKOK', 'JUMLAH BATANG',
     'STATUS KESEHATAN', 'CATATAN RUJUKAN', 'STATUS SKRINING', 'PETUGAS ENTRY', 'TANGGAL ENTRY'
   ];
 
@@ -14979,6 +15092,9 @@ function exportSekolahToXLSX() {
       r.kuku || 'Pendek Bersih',
       r.kebugaran || 'Baik',
       r.jk === 'P' ? (r.menstruasi || 'Belum') : '-',
+      r.jk === 'L' ? (r.merokok || 'Tidak') : '-',
+      (r.jk === 'L' && r.merokok === 'Aktif') ? (r.intensitas_merokok || '-') : '-',
+      (r.jk === 'L' && r.merokok === 'Aktif') ? (r.jumlah_batang || '-') : '-',
       r.status_kesehatan || 'Sehat',
       r.catatan_rujukan || '-',
       statusSkriningText,
@@ -15012,13 +15128,13 @@ function downloadSekolahXLSXTemplate() {
     'NO', 'NAMA SISWA', 'NIK', 'JENIS KELAMIN', 'SEKOLAH', 'KELAS', 'TANGGAL LAHIR', 'NO WHATSAPP',
     'ALAMAT', 'BB (KG)', 'TB (CM)', 'LP (CM)', 'TD SISTOLIK', 'TD DIASTOLIK',
     'GULA DARAH', 'HB', 'TELINGA (SERUMEN)', 'GIGI KARIES', 'PEMERIKSAAN MATA', 'KUKU',
-    'KEBUGARAN', 'MENSTRUASI', 'STATUS KESEHATAN', 'CATATAN RUJUKAN'
+    'KEBUGARAN', 'MENSTRUASI', 'MEROKOK', 'INTENSITAS MEROKOK', 'JUMLAH BATANG', 'STATUS KESEHATAN', 'CATATAN RUJUKAN'
   ];
 
   const sampleRows = [
-    [1, 'AHMAD FAUZI', '3204011504100001', 'L', 'SDN BANJARAN 01', 'Kelas 1', '2017-04-15', '081234567890', 'Kp. Pajagalan RT 01 RW 02', 24, 118, 52, 100, 65, '90', '12.5', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Sehat', '-'],
-    [2, 'SITI NURHALIZA', '3204015508110002', 'P', 'SMPN 1 BANJARAN', 'Kelas 7', '2012-08-15', '089876543210', 'Kp. Ciapus RT 03 RW 01', 42, 148, 60, 105, 65, '95', '11.8', 'Ada serumen', '2', '-1', 'Panjang Bersih', 'Cukup', 'Sudah', 'Perlu Perhatian', 'Konseling Anemia'],
-    [3, 'RIZKY PRATAMA', '3204012002080003', 'L', 'SMAN 1 BANJARAN', 'Kelas 10', '2009-02-20', '085712345678', 'Kp. Tarajusari RT 02 RW 04', 55, 168, 70, 115, 75, '100', '13.8', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Sehat', '-']
+    [1, 'AHMAD FAUZI', '3204011504100001', 'L', 'SDN BANJARAN 01', 'Kelas 1', '2017-04-15', '081234567890', 'Kp. Pajagalan RT 01 RW 02', 24, 118, 52, 100, 65, '90', '12.5', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Tidak', '-', '-', 'Sehat', '-'],
+    [2, 'SITI NURHALIZA', '3204015508110002', 'P', 'SMPN 1 BANJARAN', 'Kelas 7', '2012-08-15', '089876543210', 'Kp. Ciapus RT 03 RW 01', 42, 148, 60, 105, 65, '95', '11.8', 'Ada serumen', '2', '-1', 'Panjang Bersih', 'Cukup', 'Sudah', '-', '-', '-', 'Perlu Perhatian', 'Konseling Anemia'],
+    [3, 'RIZKY PRATAMA', '3204012002080003', 'L', 'SMAN 1 BANJARAN', 'Kelas 10', '2009-02-20', '085712345678', 'Kp. Tarajusari RT 02 RW 04', 55, 168, 70, 115, 75, '100', '13.8', 'Tidak ada serumen', 'Tidak ada', 'Normal', 'Pendek Bersih', 'Baik', '-', 'Aktif', 'Tiap Hari', '5', 'Sehat', '-']
   ];
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
@@ -15094,6 +15210,9 @@ function handleSekolahImportFileSelect(event) {
       const idxKuku = getColIdx(['KUKU']);
       const idxKebugaran = getColIdx(['KEBUGARAN', 'BUGAR']);
       const idxMenstruasi = getColIdx(['MENSTRUASI', 'HAID']);
+      const idxMerokok = getColIdx(['MEROKOK', 'ROKOK']);
+      const idxIntensitasMerokok = getColIdx(['INTENSITAS MEROKOK', 'INTENSITAS ROKOK']);
+      const idxJumlahBatang = getColIdx(['JUMLAH BATANG', 'BATANG']);
       const idxStatusKesehatan = getColIdx(['STATUS KESEHATAN', 'KESIMPULAN', 'STATUS']);
       const idxCatatanRujukan = getColIdx(['CATATAN RUJUKAN', 'RUJUKAN', 'TINDAK LANJUT']);
 
@@ -15122,12 +15241,20 @@ function handleSekolahImportFileSelect(event) {
         const tdDiastolVal = idxTdDiastol >= 0 ? parseInt(row[idxTdDiastol], 10) || 0 : 0;
         const gulaVal = idxGula >= 0 ? String(row[idxGula] || '-').trim() : '-';
         const hbVal = idxHb >= 0 ? String(row[idxHb] || '-').trim() : '-';
-        const telingaVal = idxTelinga >= 0 ? String(row[idxTelinga] || 'Tidak ada serumen').trim() : 'Tidak ada serumen';
-        const gigiVal = idxGigi >= 0 ? String(row[idxGigi] || 'Tidak ada').trim() : 'Tidak ada';
-        const mataVal = idxMata >= 0 ? String(row[idxMata] || 'Normal').trim() : 'Normal';
-        const kukuVal = idxKuku >= 0 ? String(row[idxKuku] || 'Pendek Bersih').trim() : 'Pendek Bersih';
-        const kebugaranVal = idxKebugaran >= 0 ? String(row[idxKebugaran] || 'Baik').trim() : 'Baik';
-        const menstruasiVal = idxMenstruasi >= 0 ? (jkVal === 'P' ? String(row[idxMenstruasi] || 'Belum').trim() : '-') : (jkVal === 'P' ? 'Belum' : '-');
+        const hasTelingaCell = idxTelinga >= 0 && row[idxTelinga] !== undefined && String(row[idxTelinga]).trim() !== '' && String(row[idxTelinga]).trim() !== '-';
+        const hasGigiCell = idxGigi >= 0 && row[idxGigi] !== undefined && String(row[idxGigi]).trim() !== '' && String(row[idxGigi]).trim() !== '-';
+        const hasMataCell = idxMata >= 0 && row[idxMata] !== undefined && String(row[idxMata]).trim() !== '' && String(row[idxMata]).trim() !== '-';
+        const hasOrganInExcel = hasTelingaCell || hasGigiCell || hasMataCell;
+
+        const telingaVal = hasTelingaCell ? String(row[idxTelinga]).trim() : '-';
+        const gigiVal = hasGigiCell ? String(row[idxGigi]).trim() : '-';
+        const mataVal = hasMataCell ? String(row[idxMata]).trim() : '-';
+        const kukuVal = (idxKuku >= 0 && row[idxKuku]) ? String(row[idxKuku]).trim() : '-';
+        const kebugaranVal = (idxKebugaran >= 0 && row[idxKebugaran]) ? String(row[idxKebugaran]).trim() : '-';
+        const menstruasiVal = (idxMenstruasi >= 0 && row[idxMenstruasi]) ? String(row[idxMenstruasi]).trim() : '-';
+        const merokokVal = (idxMerokok >= 0 && row[idxMerokok]) ? String(row[idxMerokok]).trim() : (jkVal === 'L' ? 'Tidak' : '-');
+        const intensitasMerokokVal = (idxIntensitasMerokok >= 0 && row[idxIntensitasMerokok]) ? String(row[idxIntensitasMerokok]).trim() : '-';
+        const jumlahBatangVal = (idxJumlahBatang >= 0 && row[idxJumlahBatang]) ? String(row[idxJumlahBatang]).trim() : '-';
         const statusKesehatanVal = idxStatusKesehatan >= 0 ? String(row[idxStatusKesehatan] || 'Sehat').trim() : 'Sehat';
         const catatanRujukanVal = idxCatatanRujukan >= 0 ? String(row[idxCatatanRujukan] || '-').trim() : '-';
 
@@ -15143,7 +15270,12 @@ function handleSekolahImportFileSelect(event) {
           else statusImtVal = 'Obesitas';
         }
 
-        const isExamined = bbVal > 0 || tbVal > 0 || tdSistolVal > 0;
+        const antroDoneVal = (bbVal > 0 && tbVal > 0) ? 1 : 0;
+        const vitalDoneVal = (tdSistolVal > 0) ? 1 : 0;
+        const labDoneVal = ((hbVal && hbVal !== '-') || (gulaVal && gulaVal !== '-')) ? 1 : 0;
+        const organDoneVal = hasOrganInExcel ? 1 : 0;
+        const kesimpulanDoneVal = (statusKesehatanVal && statusKesehatanVal !== 'Sehat' && statusKesehatanVal !== '-') || (catatanRujukanVal && catatanRujukanVal !== '-') ? 1 : 0;
+        const isExamined = (antroDoneVal || vitalDoneVal || labDoneVal || organDoneVal || kesimpulanDoneVal) ? 1 : 0;
 
         parsedItems.push({
           id: `SCH-${Date.now()}-${i}`,
@@ -15175,9 +15307,18 @@ function handleSekolahImportFileSelect(event) {
           kuku: kukuVal,
           kebugaran: kebugaranVal,
           menstruasi: menstruasiVal,
+          merokok: merokokVal,
+          intensitas_merokok: intensitasMerokokVal,
+          jumlah_batang: jumlahBatangVal,
           status_kesehatan: statusKesehatanVal,
           catatan_rujukan: catatanRujukanVal,
           is_examined: isExamined,
+          antro_done: antroDoneVal,
+          vital_done: vitalDoneVal,
+          lab_done: labDoneVal,
+          organ_done: organDoneVal,
+          kesimpulan_done: kesimpulanDoneVal,
+          identitas_done: 1,
           petugas_entry: currentUserName,
           tanggal_entry: new Date().toISOString().substring(0, 10)
         });

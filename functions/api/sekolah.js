@@ -54,6 +54,9 @@ export async function onRequestGet(context) {
         kebugaran TEXT DEFAULT 'Baik',
         menstruasi TEXT DEFAULT 'Belum',
         kuku TEXT DEFAULT 'Pendek Bersih',
+        merokok TEXT DEFAULT 'Tidak',
+        intensitas_merokok TEXT DEFAULT '-',
+        jumlah_batang TEXT DEFAULT '-',
         status_kesehatan TEXT DEFAULT 'Sehat',
         catatan_rujukan TEXT DEFAULT '-',
         is_examined BOOLEAN DEFAULT 0,
@@ -78,6 +81,9 @@ export async function onRequestGet(context) {
   try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN kesimpulan_done INTEGER DEFAULT 0').run(); } catch (_) {}
   try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN identitas_done INTEGER DEFAULT 0').run(); } catch (_) {}
   try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN kuku TEXT DEFAULT 'Pendek Bersih'").run(); } catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN merokok TEXT DEFAULT 'Tidak'").run(); } catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN intensitas_merokok TEXT DEFAULT '-'").run(); } catch (_) {}
+  try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN jumlah_batang TEXT DEFAULT '-'").run(); } catch (_) {}
 
   try {
     const url = new URL(request.url);
@@ -145,6 +151,7 @@ async function handlePartialUpdate(env, body) {
     'bb', 'tb', 'lp', 'imt', 'status_imt',
     'td_sistolik', 'td_diastolik', 'gula_darah', 'hb',
     'telinga', 'gigi', 'mata', 'kebugaran', 'menstruasi', 'kuku',
+    'merokok', 'intensitas_merokok', 'jumlah_batang',
     'status_kesehatan', 'catatan_rujukan',
     'is_examined', 'petugas_entry', 'tanggal_entry',
     'antro_done', 'vital_done', 'lab_done', 'organ_done', 'kesimpulan_done', 'identitas_done'
@@ -332,11 +339,11 @@ export async function onRequestPost(context) {
         Number(item.td_diastolik || 0),
         String(item.gula_darah || '-'),
         String(item.hb || '-'),
-        String(item.telinga || 'Tidak ada serumen'),
-        String(item.gigi || 'Tidak ada'),
-        String(item.mata || 'Normal'),
-        String(item.kebugaran || 'Baik'),
-        String(item.menstruasi || 'Belum'),
+        String(item.telinga || '-'),
+        String(item.gigi || '-'),
+        String(item.mata || '-'),
+        String(item.kebugaran || '-'),
+        String(item.menstruasi || '-'),
         String(item.status_kesehatan || 'Sehat'),
         String(item.catatan_rujukan || '-'),
         isExamined,

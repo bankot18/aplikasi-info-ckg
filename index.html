@@ -3209,6 +3209,51 @@
                 <option value="Tidak Teratur">Menstruasi Tidak Teratur</option>
               </select>
             </div>
+
+            <!-- 6. MEROKOK (KHUSUS LAKI-LAKI) -->
+            <div class="form-group" id="groupPeriksaMerokok" style="display: none;">
+              <label class="form-label" for="periksaMerokok">
+                <i class="bi bi-fire" style="color: #ea580c;"></i> Skrining Rokok (Khusus Laki-laki)
+              </label>
+              <select id="periksaMerokok" class="form-control" style="font-weight: 700;" onchange="handleMerokokChange()">
+                <option value="Tidak" selected>Tidak</option>
+                <option value="Aktif">Aktif</option>
+                <option value="Pasif">Pasif</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- PERTANYAAN LANJUTAN JIKA AKTIF MEROKOK (KHUSUS LAKI-LAKI) -->
+          <div id="groupMerokokDetail"
+            style="display: none; background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
+            <div style="font-size: 12.5px; font-weight: 800; color: #c2410c; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+              <i class="bi bi-exclamation-triangle-fill"></i> Pertanyaan Lanjutan: Perilaku Merokok Aktif
+            </div>
+            <div class="sekolah-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <!-- INTENSITAS ROKOK -->
+              <div class="form-group" id="groupIntensitasRokok">
+                <label class="form-label" for="periksaIntensitasRokok" style="color: #9a3412; font-weight: 700;">
+                  <i class="bi bi-clock-history"></i> Intensitas Rokok
+                </label>
+                <select id="periksaIntensitasRokok" class="form-control" style="font-weight: 700; border-color: #fdba74;" onchange="handleIntensitasRokokChange()">
+                  <option value="" disabled selected>-- Pilih Intensitas --</option>
+                  <option value="Tiap Hari">Tiap Hari</option>
+                  <option value="Seminggu Sekali">Seminggu Sekali</option>
+                  <option value="Tidak Nentu">Tidak Nentu</option>
+                </select>
+              </div>
+
+              <!-- BERAPA BATANG -->
+              <div class="form-group" id="groupJumlahBatang" style="display: none;">
+                <label class="form-label" for="periksaJumlahBatang" style="color: #9a3412; font-weight: 700;">
+                  <i class="bi bi-hash"></i> Berapa Batang?
+                </label>
+                <div class="input-group" style="display: flex;">
+                  <input type="number" id="periksaJumlahBatang" class="form-control" placeholder="Contoh: 4" min="1" max="100" style="font-weight: 700; border-color: #fdba74; border-top-right-radius: 0; border-bottom-right-radius: 0;">
+                  <span class="input-group-text" style="background: #fed7aa; border: 1px solid #fdba74; border-left: none; font-weight: 700; color: #9a3412; border-top-right-radius: 8px; border-bottom-right-radius: 8px; padding: 6px 12px; font-size: 13px;">Batang</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 5 -->
@@ -3886,7 +3931,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=2.6"></script>
+  <script src="app.js?v=2.8"></script>
 </body>
 
 </html>
