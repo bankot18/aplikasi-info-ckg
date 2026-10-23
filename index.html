@@ -1014,6 +1014,11 @@
               <button class="btn btn-emerald" onclick="exportSekolahToXLSX()">
                 <i class="bi bi-file-earmark-arrow-down-fill"></i> Eksport Excel
               </button>
+              <button class="btn btn-sky" onclick="openLaporanSekolahModal()"
+                title="Buka & Cetak Output Laporan Resmi Hasil Pemeriksaan Siswa Sekolah"
+                style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 700; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
+                <i class="bi bi-file-earmark-medical-fill"></i> Cetak Laporan Hasil
+              </button>
               <button class="btn btn-secondary" onclick="fetchSekolahRecordsFromCloud(true)">
                 <i class="bi bi-arrow-clockwise"></i> Refresh Data
               </button>
@@ -2602,6 +2607,10 @@
           <i class="bi bi-ui-checks-grid"></i> Pemeriksaan Kesehatan Siswa (CKG Sekolah)
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-sm" onclick="cetakHasilSiswaIndividu(document.getElementById('periksaSiswaId').value)" title="Cetak Lembar Hasil Pemeriksaan Siswa Ini"
+            style="background: rgba(255, 255, 255, 0.22); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; font-weight: 700; font-size: 11.5px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px;">
+            <i class="bi bi-printer-fill"></i> Cetak Hasil
+          </button>
           <button type="button" class="btn btn-sm" onclick="refreshCurrentSiswaModal(this)" title="Refresh data siswa langsung dari server Cloudflare D1"
             style="background: rgba(255, 255, 255, 0.18); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 8px; font-weight: 700; font-size: 11.5px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px;">
             <i class="bi bi-arrow-clockwise"></i> Refresh
@@ -3961,6 +3970,124 @@
     </div>
   </div>
 
+  <!-- MODAL OUTPUT LAPORAN HASIL PEMERIKSAAN SEKOLAH (KOLEKTIF & REKAPITULASI) -->
+  <div id="modalLaporanSekolah" class="modal-overlay">
+    <div class="modal-container sekolah-modal-container"
+      style="max-width: 1280px; width: 97%; max-height: 94vh; border-radius: 20px; overflow: hidden; background: #f8fafc; border: 1.5px solid #0284c7; box-shadow: 0 25px 50px -12px rgba(2, 132, 199, 0.35); display: flex; flex-direction: column;">
+      
+      <!-- Modal Header (Controls & Filters) -->
+      <div class="modal-header no-print"
+        style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 14px 22px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div class="modal-title" style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-file-earmark-medical-fill" style="font-size: 20px;"></i> Output Laporan Hasil Pemeriksaan Kesehatan Sekolah
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-sm" onclick="printLaporanSekolah()"
+            style="background: #ffffff; color: #0369a1; font-weight: 800; font-size: 12px; border-radius: 8px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            <i class="bi bi-printer-fill"></i> Cetak / Simpan PDF
+          </button>
+          <button type="button" class="btn btn-sm" onclick="exportLaporanSekolahToXLSX()"
+            style="background: #10b981; color: #ffffff; font-weight: 800; font-size: 12px; border-radius: 8px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            <i class="bi bi-file-earmark-excel-fill"></i> Download Excel
+          </button>
+          <button class="modal-close" onclick="closeLaporanSekolahModal()"
+            style="color: #ffffff; opacity: 0.9; background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+      </div>
+
+      <!-- Filter Controls Bar Inside Modal -->
+      <div class="no-print" style="padding: 10px 22px; background: #ffffff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div>
+            <label style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 2px; display: block;">Sekolah:</label>
+            <select id="modalLaporanSelectSekolah" class="form-control" onchange="onModalLaporanSekolahChange()" style="height: 32px; font-size: 12px; font-weight: 700; border-radius: 6px; min-width: 220px;">
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 2px; display: block;">Kelas:</label>
+            <select id="modalLaporanSelectKelas" class="form-control" onchange="updateLaporanSekolahContent()" style="height: 32px; font-size: 12px; font-weight: 600; border-radius: 6px; min-width: 130px;">
+              <option value="">Semua Kelas</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 2px; display: block;">Tahun CKG:</label>
+            <select id="modalLaporanSelectTahun" class="form-control" onchange="updateLaporanSekolahContent()" style="height: 32px; font-size: 12px; font-weight: 700; color: #1e40af; border-radius: 6px;">
+              <option value="2026" selected>2026</option>
+              <option value="2027">2027</option>
+              <option value="2025">2025</option>
+              <option value="all">Semua Tahun</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 2px; display: block;">Filter Status Siswa:</label>
+            <select id="modalLaporanFilterStatus" class="form-control" onchange="updateLaporanSekolahContent()" style="height: 32px; font-size: 12px; font-weight: 600; border-radius: 6px;">
+              <option value="all">Tampilkan Semua Siswa</option>
+              <option value="masalah">Hanya yang Ada Masalah / Rekomendasi Rujukan</option>
+              <option value="sehat">Hanya Siswa Sehat</option>
+              <option value="sudah">Hanya yang Sudah Diperiksa Lengkap</option>
+            </select>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: #64748b; font-weight: 600;">
+          Total Siswa: <strong id="modalLaporanTotalLabel" style="color: #0284c7;">0 Siswa</strong>
+        </div>
+      </div>
+
+      <!-- Printable Area -->
+      <div class="modal-body" style="padding: 24px; overflow-y: auto; flex: 1; background: #ffffff;">
+        <div id="printLaporanSekolahContainer" class="printable-report-paper" style="max-width: 1180px; margin: 0 auto; background: #ffffff; color: #1e293b;">
+          <!-- Content dynamically rendered via renderPrintableLaporanSekolah() -->
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer no-print" style="padding: 10px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px; color: #64748b;">
+          <i class="bi bi-info-circle-fill" style="color: #0284c7;"></i> Laporan resmi dapat langsung dicetak atau disimpan sebagai PDF dengan menekan tombol <strong>Cetak / Simpan PDF</strong>.
+        </span>
+        <button type="button" class="btn btn-secondary" onclick="closeLaporanSekolahModal()" style="border-radius: 8px; padding: 6px 18px; font-weight: 600;">
+          Tutup
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL OUTPUT LEMBAR HASIL INDIVIDU SISWA (RAPOR KESEHATAN) -->
+  <div id="modalHasilIndividu" class="modal-overlay">
+    <div class="modal-container sekolah-modal-container"
+      style="max-width: 850px; width: 95%; max-height: 94vh; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #0d9488; box-shadow: 0 25px 50px -12px rgba(13, 148, 136, 0.35); display: flex; flex-direction: column;">
+      
+      <div class="modal-header no-print"
+        style="background: linear-gradient(135deg, #0d9488, #0f766e); color: #ffffff; padding: 14px 22px; display: flex; align-items: center; justify-content: space-between;">
+        <div class="modal-title" style="font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-person-badge-fill" style="font-size: 20px;"></i> Lembar Hasil Pemeriksaan Kesehatan Siswa
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-sm" onclick="printHasilIndividu()"
+            style="background: #ffffff; color: #0f766e; font-weight: 800; font-size: 12px; border-radius: 8px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            <i class="bi bi-printer-fill"></i> Cetak / Simpan PDF
+          </button>
+          <button class="modal-close" onclick="closeHasilIndividuModal()"
+            style="color: #ffffff; opacity: 0.9; background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+      </div>
+
+      <div class="modal-body" style="padding: 24px; overflow-y: auto; flex: 1; background: #ffffff;">
+        <div id="printHasilIndividuContainer" class="printable-report-paper" style="max-width: 780px; margin: 0 auto; color: #1e293b;">
+          <!-- Content dynamically rendered via renderPrintableHasilIndividu() -->
+        </div>
+      </div>
+
+      <div class="modal-footer no-print" style="padding: 10px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="closeHasilIndividuModal()" style="border-radius: 8px; padding: 6px 18px; font-weight: 600;">
+          Tutup
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Fullscreen Loading Overlay -->
@@ -3973,7 +4100,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=3.2"></script>
+  <script src="app.js?v=3.3"></script>
 </body>
 
 </html>

@@ -11484,6 +11484,9 @@ function renderSekolahView() {
             <button type="button" class="btn btn-primary btn-sm" onclick="openPemeriksaanModal('${safeId}')" title="Periksa / Edit Siswa" style="padding: 5px 10px; font-size: 11.5px; border-radius: 8px;">
               <i class="bi bi-heart-pulse"></i> Periksa
             </button>
+            <button type="button" class="btn btn-sm" onclick="cetakHasilSiswaIndividu('${safeId}')" title="Cetak Surat / Lembar Hasil Pemeriksaan Siswa Ini" style="padding: 5px 8px; font-size: 11px; border-radius: 8px; background: #0d9488; color: #fff;">
+              <i class="bi bi-printer-fill"></i>
+            </button>
             <button type="button" class="btn btn-danger btn-sm" onclick="deleteSiswaSekolah('${safeId}')" title="Hapus Siswa" style="padding: 5px 8px; font-size: 11px; border-radius: 8px;">
               <i class="bi bi-trash-fill"></i>
             </button>
@@ -15666,6 +15669,917 @@ async function executeSekolahXLSXImport() {
       confirmButtonColor: '#dc2626'
     });
   }
+}
+
+// ==========================================================================
+// 📋 OUTPUT LAPORAN HASIL PEMERIKSAAN SEKOLAH BESERTA KETERANGANNYA
+// ==========================================================================
+
+/**
+ * Otomatis mendiagnosa dan merumuskan keterangan & rekomendasi tindak lanjut
+ * berdasarkan data hasil pemeriksaan tiap pos CKG Sekolah.
+ */
+function generateKeteranganSiswa(r) {
+  const findings = [];
+  const actions = [];
+
+  // 1. Antropometri & Status Gizi
+  if (r.bb && r.tb) {
+    const tbM = r.tb / 100;
+    if (tbM > 0) {
+      const imt = r.bb / (tbM * tbM);
+      if (imt < 17.0) {
+        findings.push(`Gizi Buruk / Sangat Kurus (IMT: ${imt.toFixed(1)})`);
+        actions.push('Konseling gizi seimbang, PMT (Pemberian Makanan Tambahan) & evaluasi berkala');
+      } else if (imt < 18.5) {
+        findings.push(`Kurus / Kurang Gizi (IMT: ${imt.toFixed(1)})`);
+        actions.push('Edukasi gizi seimbang & pola makan tinggi protein');
+      } else if (imt > 27.0) {
+        findings.push(`Obesitas (IMT: ${imt.toFixed(1)})`);
+        actions.push('Konseling gizi klinis, batasi gula/lemak & rutin olahraga');
+      } else if (imt > 25.0) {
+        findings.push(`Gemuk / Overweight (IMT: ${imt.toFixed(1)})`);
+        actions.push('Edukasi pola hidup sehat & aktivitas fisik teratur min. 30 menit/hari');
+      }
+    }
+  }
+
+  // 2. Tanda Vital (Tekanan Darah)
+  if (r.td_sistolik && r.td_diastolik) {
+    const s = Number(r.td_sistolik);
+    const d = Number(r.td_diastolik);
+    if (s >= 140 || d >= 90) {
+      findings.push(`Hipertensi (${s}/${d} mmHg)`);
+      actions.push('Rujukan ke Poli Umum Puskesmas untuk pemeriksaan & tatalaksana tensi');
+    } else if (s >= 130 || d >= 85) {
+      findings.push(`Prehipertensi (${s}/${d} mmHg)`);
+      actions.push('Kurangi konsumsi garam/asin, hindari begadang & pantau tensi berkala');
+    }
+  }
+
+  // 3. Laboratorium
+  if (r.hb && r.hb !== '-' && !String(r.hb).toLowerCase().includes('tidak')) {
+    const hbNum = parseFloat(r.hb);
+    if (!isNaN(hbNum) && hbNum > 0) {
+      if (hbNum < 12.0) {
+        findings.push(`Anemia (Kadar Hb: ${hbNum} g/dL)`);
+        actions.push('Pemberian Tablet Tambah Darah (TTD) & perbanyak sayur hijau/daging');
+      }
+    }
+  }
+  if (r.gula_darah && r.gula_darah !== '-' && !String(r.gula_darah).toLowerCase().includes('tidak')) {
+    const gdsNum = parseFloat(r.gula_darah);
+    if (!isNaN(gdsNum) && gdsNum >= 140) {
+      findings.push(`Gula Darah Tinggi (GDS: ${gdsNum} mg/dL)`);
+      actions.push('Rujukan pemeriksaan konfirmasi GDP/G2PP ke Puskesmas');
+    }
+  }
+
+  // 4. Organ Indera
+  // Gigi & Mulut
+  if (r.gigi && r.gigi !== '-' && r.gigi !== 'Tidak ada' && r.gigi !== '0') {
+    const gigiStr = String(r.gigi).toLowerCase().includes('karies') ? r.gigi : `Karies Gigi (${r.gigi})`;
+    findings.push(gigiStr);
+    actions.push('Rujukan ke Poli Gigi Puskesmas untuk penambalan/perawatan');
+  }
+  // Mata / Penglihatan
+  if (r.mata && r.mata !== '-' && String(r.mata).toLowerCase() !== 'normal') {
+    findings.push(`Gangguan Penglihatan (${r.mata})`);
+    actions.push('Pemeriksaan visus/refraksi mata lanjutan di Puskesmas / Optik');
+  }
+  // Telinga
+  if (r.telinga && r.telinga !== '-' && String(r.telinga).toLowerCase().includes('ada') && !String(r.telinga).toLowerCase().includes('tidak')) {
+    findings.push(`Serumen Telinga (${r.telinga})`);
+    actions.push('Pembersihan/ekstraksi serumen di Poli Puskesmas');
+  }
+  // Kebersihan Kuku
+  if (r.kuku && (String(r.kuku).toLowerCase().includes('panjang') || String(r.kuku).toLowerCase().includes('kotor'))) {
+    findings.push('Kebersihan Kuku Kurang');
+    actions.push('Edukasi memotong kuku berkala & Cuci Tangan Pakai Sabun (CTPS)');
+  }
+  // Kebugaran Jasmani
+  if (r.kebugaran && String(r.kebugaran).toLowerCase().includes('kurang')) {
+    findings.push('Kebugaran Jasmani Kurang');
+    actions.push('Tingkatkan aktivitas gerak jasmani di sekolah dan di rumah');
+  }
+
+  // 5. Skrining Merokok (Khusus Laki-laki)
+  if (r.jk === 'L' && r.merokok) {
+    if (r.merokok === 'Aktif') {
+      if (r.jenis_rokok === 'Elektrik') {
+        findings.push('Perokok Aktif (Elektrik / Vape)');
+        actions.push('Konseling bahaya uap nikotin & Upaya Berhenti Merokok (UBM)');
+      } else {
+        const detail = [r.intensitas_merokok, r.jumlah_batang ? `${r.jumlah_batang} btg/hari` : ''].filter(Boolean).join(', ');
+        findings.push(`Perokok Aktif Konvensional (${detail || 'Aktif'})`);
+        actions.push('Konseling & intervensi Upaya Berhenti Merokok (UBM) di Puskesmas');
+      }
+    } else if (r.merokok === 'Pasif') {
+      findings.push('Perokok Pasif (Terpapar Asap Rokok di Lingkungan)');
+      actions.push('Edukasi menciptakan lingkungan rumah bebas asap rokok');
+    }
+  }
+
+  // 6. Catatan Manual Petugas / Rujukan Tambahan
+  if (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== '') {
+    actions.push(`Catatan Khusus: ${r.catatan_rujukan.trim()}`);
+  }
+
+  // Tentukan Status Kesimpulan
+  let statusSummary = r.status_kesehatan || 'Sehat';
+  if (findings.length === 0) {
+    return {
+      status: 'Sehat',
+      statusClass: 'status-sehat',
+      diagnosaText: 'Tidak ditemukan kelainan bermakna (Kondisi Fisik Sehat).',
+      tindakLanjutText: 'Pertahankan Pola Hidup Bersih & Sehat (PHBS) serta konsumsi makanan bergizi seimbang.'
+    };
+  } else {
+    const isRujukan = statusSummary === 'Perlu Rujukan' || actions.some(a => a.toLowerCase().includes('rujukan'));
+    const finalStatus = isRujukan ? 'Perlu Rujukan' : (statusSummary === 'Perlu Perhatian' ? 'Perlu Perhatian' : 'Perlu Rujukan');
+    return {
+      status: finalStatus,
+      statusClass: finalStatus === 'Perlu Rujukan' ? 'status-rujukan' : 'status-perhatian',
+      diagnosaText: findings.join('; '),
+      tindakLanjutText: actions.join('; ')
+    };
+  }
+}
+
+/**
+ * Membuka Modal Laporan Hasil Pemeriksaan Sekolah (Kolektif)
+ */
+function openLaporanSekolahModal() {
+  const modal = document.getElementById('modalLaporanSekolah');
+  if (!modal) return;
+
+  const selectSekolah = document.getElementById('modalLaporanSelectSekolah');
+  const currentMainSekolah = (document.getElementById('filterSelectSekolah')?.value || '').trim();
+
+  // Populate Daftar Sekolah
+  if (selectSekolah) {
+    const masterSet = new Set(MASTER_SARANA_SEKOLAH.map(s => s.nama.toUpperCase()));
+    const allSchools = [...MASTER_SARANA_SEKOLAH.map(s => s.nama)];
+    sekolahRecords.forEach(r => {
+      if (r.sekolah && r.sekolah.trim()) {
+        const up = r.sekolah.trim().toUpperCase();
+        if (!masterSet.has(up)) {
+          masterSet.add(up);
+          allSchools.push(r.sekolah.trim());
+        }
+      }
+    });
+
+    let html = '';
+    allSchools.sort().forEach(s => {
+      html += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
+    });
+    selectSekolah.innerHTML = html;
+
+    if (currentMainSekolah && allSchools.some(s => s.toUpperCase() === currentMainSekolah.toUpperCase())) {
+      selectSekolah.value = currentMainSekolah;
+    }
+  }
+
+  // Sync filter tahun
+  const selectTahun = document.getElementById('modalLaporanSelectTahun');
+  const mainTahun = document.getElementById('filterSelectTahun')?.value || '2026';
+  if (selectTahun) {
+    const yearsSet = new Set(['2026', '2027', '2025']);
+    sekolahRecords.forEach(r => {
+      if (r.tahun_skrining) yearsSet.add(String(r.tahun_skrining).trim());
+    });
+    let thHtml = '';
+    Array.from(yearsSet).sort((a,b) => b.localeCompare(a)).forEach(y => {
+      thHtml += `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`;
+    });
+    thHtml += `<option value="all">Semua Tahun</option>`;
+    selectTahun.innerHTML = thHtml;
+    selectTahun.value = mainTahun;
+  }
+
+  onModalLaporanSekolahChange();
+
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+}
+
+function closeLaporanSekolahModal() {
+  const modal = document.getElementById('modalLaporanSekolah');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('open');
+  }
+}
+
+function onModalLaporanSekolahChange() {
+  const selectSekolah = document.getElementById('modalLaporanSelectSekolah');
+  const selectKelas = document.getElementById('modalLaporanSelectKelas');
+  if (!selectSekolah || !selectKelas) return;
+
+  const chosenSchool = selectSekolah.value.trim().toUpperCase();
+  const currentKelasFilter = (document.getElementById('filterSelectKelas')?.value || '').trim().toUpperCase();
+
+  // Ambil kelas unik pada sekolah tersebut
+  const classesSet = new Set();
+  sekolahRecords.forEach(r => {
+    if ((r.sekolah || '').trim().toUpperCase() === chosenSchool && r.kelas) {
+      classesSet.add(r.kelas.trim());
+    }
+  });
+
+  const sortedClasses = Array.from(classesSet).sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+    return numA - numB || a.localeCompare(b);
+  });
+
+  let html = '<option value="">Semua Kelas</option>';
+  sortedClasses.forEach(k => {
+    html += `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`;
+  });
+  selectKelas.innerHTML = html;
+
+  if (currentKelasFilter && sortedClasses.some(k => k.toUpperCase() === currentKelasFilter)) {
+    selectKelas.value = currentKelasFilter;
+  }
+
+  updateLaporanSekolahContent();
+}
+
+function updateLaporanSekolahContent() {
+  const chosenSekolah = (document.getElementById('modalLaporanSelectSekolah')?.value || '').trim().toUpperCase();
+  const chosenKelas = (document.getElementById('modalLaporanSelectKelas')?.value || '').trim().toUpperCase();
+  const chosenTahun = (document.getElementById('modalLaporanSelectTahun')?.value || '2026').trim();
+  const filterStatus = (document.getElementById('modalLaporanFilterStatus')?.value || 'all').trim();
+
+  let dataset = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === chosenSekolah);
+
+  if (chosenKelas) {
+    dataset = dataset.filter(r => (r.kelas || '').toUpperCase() === chosenKelas);
+  }
+
+  if (chosenTahun && chosenTahun !== 'all') {
+    dataset = dataset.filter(r => {
+      const recYear = String(r.tahun_skrining || (r.tanggal_entry ? r.tanggal_entry.substring(0, 4) : '2026')).trim();
+      if (recYear === chosenTahun) return true;
+      if (Array.isArray(r.riwayat_pemeriksaan) && r.riwayat_pemeriksaan.length > 0) {
+        return r.riwayat_pemeriksaan.some(h => {
+          const hy = String(h.tahun || (h.tanggal_pemeriksaan ? h.tanggal_pemeriksaan.substring(0, 4) : '') || h.tahun_ajaran || '').trim();
+          return hy === chosenTahun || hy.includes(chosenTahun);
+        });
+      }
+      return false;
+    });
+  }
+
+  if (filterStatus === 'masalah') {
+    dataset = dataset.filter(r => {
+      const ket = generateKeteranganSiswa(r);
+      return ket.status !== 'Sehat';
+    });
+  } else if (filterStatus === 'sehat') {
+    dataset = dataset.filter(r => {
+      const ket = generateKeteranganSiswa(r);
+      return ket.status === 'Sehat';
+    });
+  } else if (filterStatus === 'sudah') {
+    dataset = dataset.filter(r => isSekolahRecordExamined(r));
+  }
+
+  const totalLbl = document.getElementById('modalLaporanTotalLabel');
+  if (totalLbl) totalLbl.textContent = `${dataset.length} Siswa`;
+
+  renderPrintableLaporanSekolah(dataset, chosenSekolah, chosenKelas, chosenTahun);
+}
+
+/**
+ * Merender Dokumen Cetak Laporan Resmi Kolektif Sekolah
+ */
+function renderPrintableLaporanSekolah(dataset, schoolName, kelasName, tahunVal) {
+  const container = document.getElementById('printLaporanSekolahContainer');
+  if (!container) return;
+
+  const totalSiswa = dataset.length;
+  let sehatCount = 0;
+  let perhatianCount = 0;
+  let rujukanCount = 0;
+
+  // Breakdown temuan
+  let kurusCount = 0;
+  let obesitasCount = 0;
+  let hipertensiCount = 0;
+  let anemiaCount = 0;
+  let gdsCount = 0;
+  let gigiCount = 0;
+  let mataCount = 0;
+  let serumenCount = 0;
+  let rokokAktifCount = 0;
+  let rokokPasifCount = 0;
+
+  const rowsWithKeterangan = dataset.map((r, i) => {
+    const ket = generateKeteranganSiswa(r);
+    if (ket.status === 'Sehat') sehatCount++;
+    else if (ket.status === 'Perlu Perhatian') perhatianCount++;
+    else rujukanCount++;
+
+    // Hitung breakdown
+    const diag = ket.diagnosaText.toLowerCase();
+    if (diag.includes('kurus')) kurusCount++;
+    if (diag.includes('obesitas') || diag.includes('gemuk')) obesitasCount++;
+    if (diag.includes('hipertensi')) hipertensiCount++;
+    if (diag.includes('anemia')) anemiaCount++;
+    if (diag.includes('gula darah')) gdsCount++;
+    if (diag.includes('karies') || diag.includes('gigi')) gigiCount++;
+    if (diag.includes('penglihatan') || diag.includes('mata')) mataCount++;
+    if (diag.includes('serumen')) serumenCount++;
+    if (diag.includes('perokok aktif')) rokokAktifCount++;
+    if (diag.includes('perokok pasif')) rokokPasifCount++;
+
+    return { record: r, index: i + 1, keterangan: ket };
+  });
+
+  const displaySchool = schoolName || 'SEMUA SEKOLAH';
+  const displayKelas = kelasName ? `Kelas ${kelasName}` : 'Semua Kelas';
+  const displayTahun = tahunVal && tahunVal !== 'all' ? tahunVal : 'Semua Tahun';
+  const todayFormatted = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  let tableRowsHtml = '';
+  if (rowsWithKeterangan.length === 0) {
+    tableRowsHtml = `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 40px; color: #64748b; font-style: italic;">
+          Tidak ada data siswa yang memenuhi filter yang dipilih.
+        </td>
+      </tr>
+    `;
+  } else {
+    tableRowsHtml = rowsWithKeterangan.map(item => {
+      const r = item.record;
+      const k = item.keterangan;
+      const ageObj = calculateRealtimeAge(r.tanggal_lahir);
+      const ageStr = ageObj ? `${ageObj.years} Th` : '-';
+
+      // Antro
+      const antroStr = (r.bb && r.tb) ? `${r.bb}kg / ${r.tb}cm<br><span style="font-size: 10px; color: #475569;">IMT: ${r.imt || '-'} (${r.status_imt || 'Normal'})</span>` : '-';
+      
+      // TD
+      const tdStr = (r.td_sistolik && r.td_diastolik) ? `${r.td_sistolik}/${r.td_diastolik} mmHg` : '-';
+
+      // Lab
+      let labStr = '-';
+      if ((r.hb && r.hb !== '-') || (r.gula_darah && r.gula_darah !== '-')) {
+        const parts = [];
+        if (r.hb && r.hb !== '-') parts.push(`Hb: ${r.hb}`);
+        if (r.gula_darah && r.gula_darah !== '-') parts.push(`GDS: ${r.gula_darah}`);
+        labStr = parts.join('<br>');
+      }
+
+      // Organ & Rokok
+      const organParts = [];
+      if (r.gigi && r.gigi !== '-' && r.gigi !== 'Tidak ada' && r.gigi !== '0') organParts.push(`Gigi: ${r.gigi}`);
+      if (r.mata && r.mata !== '-' && String(r.mata).toLowerCase() !== 'normal') organParts.push(`Mata: ${r.mata}`);
+      if (r.telinga && r.telinga !== '-' && String(r.telinga).toLowerCase().includes('ada') && !String(r.telinga).toLowerCase().includes('tidak')) organParts.push(`Telinga: ${r.telinga}`);
+      if (r.jk === 'L' && r.merokok && r.merokok !== 'Tidak' && r.merokok !== '-') {
+        organParts.push(`Rokok: ${r.merokok}${r.jenis_rokok && r.jenis_rokok !== '-' ? ' (' + r.jenis_rokok + ')' : ''}`);
+      }
+      const organStr = organParts.length > 0 ? organParts.join('<br>') : '<span style="color:#059669;">Normal</span>';
+
+      // Status Badge Style
+      let statusColor = '#047857';
+      let statusBg = '#ecfdf5';
+      if (k.status === 'Perlu Rujukan') {
+        statusColor = '#b91c1c';
+        statusBg = '#fef2f2';
+      } else if (k.status === 'Perlu Perhatian') {
+        statusColor = '#b45309';
+        statusBg = '#fffbeb';
+      }
+
+      return `
+        <tr>
+          <td style="text-align: center; font-weight: 700;">${item.index}</td>
+          <td>
+            <strong>${escapeHtml(r.nama)}</strong><br>
+            <span style="font-size: 10px; color: #64748b;">NIK: ${escapeHtml(r.nik || '-')}</span>
+          </td>
+          <td style="text-align: center;">${r.jk === 'P' ? 'P' : 'L'} / ${ageStr}</td>
+          <td style="text-align: center; font-weight: 700;">${escapeHtml(r.kelas || '-')}</td>
+          <td>${antroStr}</td>
+          <td style="text-align: center;">${tdStr}</td>
+          <td style="text-align: center;">${labStr}</td>
+          <td>${organStr}</td>
+          <td style="text-align: center;">
+            <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 10px; background: ${statusBg}; color: ${statusColor}; border: 1px solid ${statusColor}44;">
+              ${escapeHtml(k.status)}
+            </span>
+          </td>
+          <td style="font-size: 10.5px; line-height: 1.4;">
+            <div style="font-weight: 700; color: #0f172a; margin-bottom: 3px;">
+              ${escapeHtml(k.diagnosaText)}
+            </div>
+            <div style="color: #0369a1; font-style: italic;">
+              <strong>Rekomendasi / Tindak Lanjut:</strong> ${escapeHtml(k.tindakLanjutText)}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  container.innerHTML = `
+    <!-- KOP RESMI PUSKESMAS -->
+    <div class="report-kop-header">
+      <div class="report-kop-instansi">PEMERINTAH KABUPATEN BANDUNG</div>
+      <div class="report-kop-dinas">DINAS KESEHATAN</div>
+      <div class="report-kop-puskesmas">UPTD PUSKESMAS BANJARAN KOTA</div>
+      <div class="report-kop-alamat">Jl. Raya Banjaran No. 58, Kec. Banjaran, Kabupaten Bandung, Jawa Barat 40377 • Telp. (022) 5940822 • Email: pkmbanjarankota@gmail.com</div>
+    </div>
+
+    <!-- JUDUL LAPORAN -->
+    <div class="report-title-box">
+      <h2 class="report-main-title">LAPORAN HASIL PENJARINGAN KESEHATAN & SKRINING CKG SISWA SEKOLAH</h2>
+      <div class="report-sub-title">Program Usaha Kesehatan Sekolah (UKS) & Cek Kesehatan Gratis (CKG) Remaja</div>
+    </div>
+
+    <!-- METADATA SEKOLAH -->
+    <div class="report-meta-grid">
+      <div class="report-meta-item">
+        <span class="report-meta-label">Nama Sekolah:</span>
+        <span class="report-meta-val">${escapeHtml(displaySchool)}</span>
+      </div>
+      <div class="report-meta-item">
+        <span class="report-meta-label">Tingkat Kelas:</span>
+        <span class="report-meta-val">${escapeHtml(displayKelas)}</span>
+      </div>
+      <div class="report-meta-item">
+        <span class="report-meta-label">Tahun Skrining:</span>
+        <span class="report-meta-val">Tahun ${escapeHtml(displayTahun)}</span>
+      </div>
+      <div class="report-meta-item">
+        <span class="report-meta-label">Tanggal Pelaksanaan:</span>
+        <span class="report-meta-val">${todayFormatted}</span>
+      </div>
+      <div class="report-meta-item">
+        <span class="report-meta-label">Wilayah Kerja:</span>
+        <span class="report-meta-val">UPTD Puskesmas Banjaran Kota</span>
+      </div>
+      <div class="report-meta-item">
+        <span class="report-meta-label">Total Sasaran:</span>
+        <span class="report-meta-val">${totalSiswa} Siswa Terdata</span>
+      </div>
+    </div>
+
+    <!-- RINGKASAN EKSEKUTIF STATISTIK TEMUAN -->
+    <div style="margin-bottom: 16px;">
+      <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 8px; text-transform: uppercase;">
+        <i class="bi bi-bar-chart-fill" style="color: #0284c7;"></i> Ringkasan Rekapitulasi Temuan Kesehatan
+      </div>
+
+      <div class="report-summary-cards">
+        <div class="report-summary-card card-total">
+          <div class="report-card-num">${totalSiswa}</div>
+          <div class="report-card-lbl">Total Siswa</div>
+        </div>
+        <div class="report-summary-card card-sehat">
+          <div class="report-card-num">${sehatCount}</div>
+          <div class="report-card-lbl">Kondisi Sehat</div>
+        </div>
+        <div class="report-summary-card card-perhatian">
+          <div class="report-card-num">${perhatianCount}</div>
+          <div class="report-card-lbl">Perlu Perhatian</div>
+        </div>
+        <div class="report-summary-card card-rujukan">
+          <div class="report-card-num">${rujukanCount}</div>
+          <div class="report-card-lbl">Perlu Rujukan</div>
+        </div>
+      </div>
+
+      <!-- Detail Masalah Grid -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 11.5px; line-height: 1.6;">
+        <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">Detail Identifikasi Masalah Kesehatan Terbanyak:</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px;">
+          <div>🦷 Karies Gigi / Gigi Berlubang: <strong>${gigiCount} siswa</strong></div>
+          <div>👓 Gangguan Penglihatan (Mata Minus): <strong>${mataCount} siswa</strong></div>
+          <div>👂 Serumen Telinga: <strong>${serumenCount} siswa</strong></div>
+          <div>🥗 Masalah Gizi: Kurus <strong>${kurusCount}</strong>, Gemuk/Obes <strong>${obesitasCount}</strong></div>
+          <div>🩸 Anemia (Hb Rendah): <strong>${anemiaCount} siswa</strong></div>
+          <div>💓 Hipertensi / Prehipertensi: <strong>${hipertensiCount} siswa</strong></div>
+          <div>🚭 Skrining Rokok (Laki-laki): Aktif <strong>${rokokAktifCount}</strong>, Pasif <strong>${rokokPasifCount}</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABEL HASIL PEMERIKSAAN & KETERANGAN TINDAK LANJUT -->
+    <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 8px; text-transform: uppercase;">
+      <i class="bi bi-table" style="color: #0284c7;"></i> Data Rinci Siswa Beserta Hasil Pemeriksaan & Keterangan Rujukan
+    </div>
+
+    <table class="table-laporan-sekolah">
+      <thead>
+        <tr>
+          <th style="width: 30px;">No</th>
+          <th style="width: 150px;">Nama Siswa & NIK</th>
+          <th style="width: 70px;">JK/Usia</th>
+          <th style="width: 55px;">Kelas</th>
+          <th style="width: 120px;">Antropometri & Gizi</th>
+          <th style="width: 85px;">Tekanan Darah</th>
+          <th style="width: 80px;">Laboratorium</th>
+          <th style="width: 110px;">Organ Indera & Rokok</th>
+          <th style="width: 90px;">Kesimpulan</th>
+          <th style="min-width: 200px;">Keterangan Diagnosa & Rekomendasi Tindak Lanjut</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRowsHtml}
+      </tbody>
+    </table>
+
+    <!-- REKOMENDASI PUSKESMAS -->
+    <div class="page-break-avoid" style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 11.5px; line-height: 1.6; color: #166534;">
+      <div style="font-weight: 800; font-size: 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+        <i class="bi bi-shield-check" style="font-size: 16px; color: #15803d;"></i> REKOMENDASI DAN SARAN TINDAK LANJUT MEDIS DARI PUSKESMAS:
+      </div>
+      <ol style="margin: 0; padding-left: 18px;">
+        <li>Bagi siswa yang berstatus <strong>Perlu Rujukan</strong> (Karies gigi, gangguan visus refraksi, anemia, dll), dimohon pihak sekolah/guru UKS menyampaikan kepada orang tua untuk memeriksakan anak ke <strong>UPTD Puskesmas Banjaran Kota</strong> pada jam pelayanan kerja dengan membawa fotokopi KK / BPJS.</li>
+        <li>Bagi siswa yang berstatus <strong>Perokok Aktif</strong> (konvensional maupun elektrik/vape), disarankan untuk mengikuti konseling <strong>Klinik Upaya Berhenti Merokok (UBM)</strong> di Puskesmas guna mencegah ketergantungan nikotin jangka panjang.</li>
+        <li>Mengoptimalkan peran <strong>Kader Kesehatan Remaja (KKR) / Dokter Kecil</strong> serta pembiasaan <strong>Pola Hidup Bersih dan Sehat (PHBS)</strong>, sarapan pagi gizi seimbang, dan Cuci Tangan Pakai Sabun (CTPS) di lingkungan sekolah.</li>
+      </ol>
+    </div>
+
+    <!-- TANDA TANGAN PENGESAHAN -->
+    <div class="report-ttd-container page-break-avoid">
+      <div class="report-ttd-box">
+        <div>Mengetahui,</div>
+        <div style="font-weight: 700;">Kepala Sekolah / Pembina UKS</div>
+        <div style="margin-top: 5px; font-weight: 600; color: #475569;">${escapeHtml(displaySchool)}</div>
+        <div style="margin-top: 55px; border-bottom: 1px solid #000; font-weight: 800; padding-bottom: 2px;">
+          ( .................................................... )
+        </div>
+        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">NIP. ...................................................</div>
+      </div>
+
+      <div class="report-ttd-box">
+        <div>Banjaran, ${todayFormatted}</div>
+        <div style="font-weight: 700;">Penanggung Jawab Skrining UKS</div>
+        <div style="margin-top: 5px; font-weight: 600; color: #475569;">UPTD Puskesmas Banjaran Kota</div>
+        <div style="margin-top: 55px; border-bottom: 1px solid #000; font-weight: 800; padding-bottom: 2px;">
+          ( ${escapeHtml(sessionStorage.getItem('ckg_user_name') || 'Tim UKS Puskesmas')} )
+        </div>
+        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">NIP. ...................................................</div>
+      </div>
+    </div>
+  `;
+}
+
+function printLaporanSekolah() {
+  window.print();
+}
+
+/**
+ * Ekspor Laporan Hasil Pemeriksaan Beserta Keterangannya ke Excel (.xlsx)
+ */
+function exportLaporanSekolahToXLSX() {
+  if (typeof XLSX === 'undefined') {
+    showToast('Library SheetJS XLSX belum dimuat.', 'danger');
+    return;
+  }
+
+  const chosenSekolah = (document.getElementById('modalLaporanSelectSekolah')?.value || '').trim().toUpperCase();
+  const chosenKelas = (document.getElementById('modalLaporanSelectKelas')?.value || '').trim().toUpperCase();
+  const chosenTahun = (document.getElementById('modalLaporanSelectTahun')?.value || '2026').trim();
+  const filterStatus = (document.getElementById('modalLaporanFilterStatus')?.value || 'all').trim();
+
+  let dataset = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === chosenSekolah);
+  if (chosenKelas) dataset = dataset.filter(r => (r.kelas || '').toUpperCase() === chosenKelas);
+  if (chosenTahun && chosenTahun !== 'all') {
+    dataset = dataset.filter(r => {
+      const recYear = String(r.tahun_skrining || (r.tanggal_entry ? r.tanggal_entry.substring(0, 4) : '2026')).trim();
+      return recYear === chosenTahun;
+    });
+  }
+
+  if (filterStatus === 'masalah') {
+    dataset = dataset.filter(r => generateKeteranganSiswa(r).status !== 'Sehat');
+  } else if (filterStatus === 'sehat') {
+    dataset = dataset.filter(r => generateKeteranganSiswa(r).status === 'Sehat');
+  }
+
+  if (dataset.length === 0) {
+    showToast('Tidak ada data siswa untuk diekspor.', 'warning');
+    return;
+  }
+
+  const headers = [
+    'NO', 'NAMA SISWA', 'NIK', 'JENIS KELAMIN', 'USIA', 'SEKOLAH', 'KELAS', 'TAHUN SKRINING',
+    'BB (KG)', 'TB (CM)', 'LP (CM)', 'IMT', 'STATUS GIZI',
+    'TD SISTOLIK', 'TD DIASTOLIK', 'GULA DARAH', 'HB',
+    'TELINGA', 'GIGI KARIES', 'PEMERIKSAAN MATA', 'KUKU', 'KEBUGARAN', 'MENSTRUASI',
+    'STATUS MEROKOK', 'JENIS ROKOK', 'INTENSITAS MEROKOK', 'JUMLAH BATANG',
+    'KESIMPULAN STATUS KESEHATAN',
+    'HASIL TEMUAN / DIAGNOSA MEDIS',
+    'KETERANGAN TINDAK LANJUT / REKOMENDASI RUJUKAN',
+    'CATATAN MANUAL PETUGAS', 'TANGGAL PEMERIKSAAN'
+  ];
+
+  const rows = dataset.map((r, idx) => {
+    const ket = generateKeteranganSiswa(r);
+    const ageObj = calculateRealtimeAge(r.tanggal_lahir);
+    const ageStr = ageObj ? `${ageObj.years} Tahun` : '';
+
+    return [
+      idx + 1,
+      r.nama || '',
+      r.nik || '',
+      r.jk === 'P' ? 'Perempuan' : 'Laki-laki',
+      ageStr,
+      r.sekolah || '',
+      r.kelas || '',
+      r.tahun_skrining || '2026',
+      r.bb || '',
+      r.tb || '',
+      r.lp || '',
+      r.imt || '',
+      r.status_imt || 'Normal',
+      r.td_sistolik || '',
+      r.td_diastolik || '',
+      r.gula_darah || '-',
+      r.hb || '-',
+      r.telinga || 'Tidak ada serumen',
+      r.gigi || 'Tidak ada',
+      r.mata || 'Normal',
+      r.kuku || 'Pendek Bersih',
+      r.kebugaran || 'Baik',
+      r.jk === 'P' ? (r.menstruasi || 'Belum') : '-',
+      r.jk === 'L' ? (r.merokok || 'Tidak') : '-',
+      (r.jk === 'L' && r.merokok === 'Aktif') ? (r.jenis_rokok || '-') : '-',
+      (r.jk === 'L' && r.merokok === 'Aktif' && r.jenis_rokok === 'Konvensional') ? (r.intensitas_merokok || '-') : '-',
+      (r.jk === 'L' && r.merokok === 'Aktif' && r.jenis_rokok === 'Konvensional') ? (r.jumlah_batang || '-') : '-',
+      ket.status,
+      ket.diagnosaText,
+      ket.tindakLanjutText,
+      r.catatan_rujukan || '-',
+      r.tanggal_entry || ''
+    ];
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'LAPORAN_HASIL_CKG');
+
+  const fileName = `LAPORAN_HASIL_CKG_${chosenSekolah.replace(/\s+/g, '_')}_${chosenKelas ? chosenKelas.replace(/\s+/g, '_') : 'SEMUA_KELAS'}_TAHUN_${chosenTahun}_${new Date().toISOString().substring(0, 10)}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+  showToast(`Berhasil mendownload Excel Laporan Hasil (${dataset.length} Siswa).`, 'success');
+}
+
+/**
+ * Membuka Modal Lembar Hasil Pemeriksaan Individu Siswa (Rapor Kesehatan)
+ */
+function cetakHasilSiswaIndividu(siswaId) {
+  const siswa = sekolahRecords.find(r => String(r.id) === String(siswaId));
+  if (!siswa) {
+    showToast('Data siswa tidak ditemukan.', 'warning');
+    return;
+  }
+
+  const modal = document.getElementById('modalHasilIndividu');
+  if (!modal) return;
+
+  renderPrintableHasilIndividu(siswa);
+
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+}
+
+function closeHasilIndividuModal() {
+  const modal = document.getElementById('modalHasilIndividu');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('open');
+  }
+}
+
+function printHasilIndividu() {
+  window.print();
+}
+
+/**
+ * Merender Lembar Hasil Pemeriksaan Individu (Surat Rujukan / Rapor Kesehatan Siswa)
+ */
+function renderPrintableHasilIndividu(r) {
+  const container = document.getElementById('printHasilIndividuContainer');
+  if (!container) return;
+
+  const ket = generateKeteranganSiswa(r);
+  const ageObj = calculateRealtimeAge(r.tanggal_lahir);
+  const ageStr = ageObj ? `${ageObj.years} Tahun ${ageObj.months ? ageObj.months + ' Bulan' : ''}` : '-';
+  const todayFormatted = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  // Antro IMT
+  const antroStr = (r.bb && r.tb) ? `${r.bb} kg / ${r.tb} cm (IMT: ${r.imt || '-'})` : '-';
+  const giziStr = r.status_imt || 'Normal';
+
+  // TD
+  const tdStr = (r.td_sistolik && r.td_diastolik) ? `${r.td_sistolik}/${r.td_diastolik} mmHg` : '-';
+
+  // Status Badge Color
+  let statusBadgeColor = '#047857';
+  let statusBadgeBg = '#ecfdf5';
+  if (ket.status === 'Perlu Rujukan') {
+    statusBadgeColor = '#b91c1c';
+    statusBadgeBg = '#fef2f2';
+  } else if (ket.status === 'Perlu Perhatian') {
+    statusBadgeColor = '#b45309';
+    statusBadgeBg = '#fffbeb';
+  }
+
+  container.innerHTML = `
+    <!-- KOP PUSKESMAS -->
+    <div class="report-kop-header">
+      <div class="report-kop-instansi">PEMERINTAH KABUPATEN BANDUNG</div>
+      <div class="report-kop-dinas">DINAS KESEHATAN</div>
+      <div class="report-kop-puskesmas">UPTD PUSKESMAS BANJARAN KOTA</div>
+      <div class="report-kop-alamat">Jl. Raya Banjaran No. 58, Kec. Banjaran, Kab. Bandung, Jawa Barat 40377 • Telp. (022) 5940822</div>
+    </div>
+
+    <!-- JUDUL SURAT -->
+    <div style="text-align: center; margin-bottom: 20px;">
+      <h3 style="font-size: 15px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; color: #0f172a;">
+        LEMBAR HASIL PENJARINGAN KESEHATAN & SKRINING CKG SISWA
+      </h3>
+      <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+        Nomor Surat: 440 / UKS-CKG / ${(r.sekolah || 'SCH').substring(0, 4).toUpperCase()} / ${r.tahun_skrining || '2026'}
+      </div>
+    </div>
+
+    <!-- IDENTITAS SISWA -->
+    <table style="width: 100%; font-size: 12px; margin-bottom: 16px; border-collapse: collapse;">
+      <tr>
+        <td style="width: 150px; padding: 4px 0; color: #475569; font-weight: 600;">Nama Lengkap</td>
+        <td style="width: 15px; padding: 4px 0;">:</td>
+        <td style="padding: 4px 0; font-weight: 800; color: #0f172a; font-size: 13px;">${escapeHtml(r.nama)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0; color: #475569; font-weight: 600;">Nomor Induk Kependudukan (NIK)</td>
+        <td style="padding: 4px 0;">:</td>
+        <td style="padding: 4px 0; font-weight: 700;">${escapeHtml(r.nik || '-')}</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0; color: #475569; font-weight: 600;">Jenis Kelamin / Usia</td>
+        <td style="padding: 4px 0;">:</td>
+        <td style="padding: 4px 0;">${r.jk === 'P' ? 'Perempuan' : 'Laki-laki'} (${ageStr})</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0; color: #475569; font-weight: 600;">Sekolah / Kelas</td>
+        <td style="padding: 4px 0;">:</td>
+        <td style="padding: 4px 0; font-weight: 700;">${escapeHtml(r.sekolah || '-')} &bull; ${escapeHtml(r.kelas || '-')}</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0; color: #475569; font-weight: 600;">Tahun Skrining</td>
+        <td style="padding: 4px 0;">:</td>
+        <td style="padding: 4px 0; font-weight: 700; color: #1e40af;">Tahun ${escapeHtml(r.tahun_skrining || '2026')}</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0; color: #475569; font-weight: 600;">Alamat Tempat Tinggal</td>
+        <td style="padding: 4px 0;">:</td>
+        <td style="padding: 4px 0;">${escapeHtml(r.alamat || '-')}</td>
+      </tr>
+    </table>
+
+    <!-- TABEL HASIL PEMERIKSAAN MEDIS -->
+    <div style="font-weight: 800; font-size: 12px; margin-bottom: 6px; text-transform: uppercase; color: #0f172a;">
+      <i class="bi bi-heart-pulse-fill" style="color: #0d9488;"></i> Hasil Pemeriksaan Tiap Pos / Stasiun Kesehatan:
+    </div>
+
+    <table class="table-laporan-sekolah" style="font-size: 11.5px; margin-bottom: 16px;">
+      <thead>
+        <tr>
+          <th style="width: 40px;">No</th>
+          <th style="width: 180px;">Parameter Pemeriksaan</th>
+          <th style="width: 200px;">Hasil Pengukuran</th>
+          <th>Kategori / Penilaian Klinis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align: center; font-weight: 700;">1</td>
+          <td style="font-weight: 700;">Antropometri</td>
+          <td>${antroStr}</td>
+          <td>Status Gizi: <strong>${escapeHtml(giziStr)}</strong></td>
+        </tr>
+        <tr>
+          <td style="text-align: center; font-weight: 700;">2</td>
+          <td style="font-weight: 700;">Tekanan Darah (Vital)</td>
+          <td>${tdStr}</td>
+          <td>${r.td_sistolik ? escapeHtml(getKategoriTekananDarah(r.td_sistolik, r.td_diastolik) || 'Normal') : '-'}</td>
+        </tr>
+        <tr>
+          <td style="text-align: center; font-weight: 700;">3</td>
+          <td style="font-weight: 700;">Laboratorium (Hb / Gula)</td>
+          <td>
+            ${r.hb && r.hb !== '-' ? `Hb: ${escapeHtml(r.hb)} g/dL<br>` : ''}
+            ${r.gula_darah && r.gula_darah !== '-' ? `GDS: ${escapeHtml(r.gula_darah)} mg/dL` : ''}
+            ${(!r.hb || r.hb === '-') && (!r.gula_darah || r.gula_darah === '-') ? 'Tidak Diperiksa' : ''}
+          </td>
+          <td>
+            ${(() => {
+              const notes = [];
+              if (r.hb && r.hb !== '-') {
+                const hbKat = getKategoriHb(r.hb, ageObj?.years || 12, r.jk);
+                if (hbKat) notes.push(`Hb: ${hbKat}`);
+              }
+              if (r.gula_darah && r.gula_darah !== '-') {
+                const gdsKat = getKategoriGulaDarah(r.gula_darah, ageObj?.years || 12);
+                if (gdsKat) notes.push(`GDS: ${gdsKat}`);
+              }
+              return notes.length > 0 ? notes.join(', ') : 'Dalam Batas Normal';
+            })()}
+          </td>
+        </tr>
+        <tr>
+          <td style="text-align: center; font-weight: 700;">4</td>
+          <td style="font-weight: 700;">Kesehatan Gigi & Mulut</td>
+          <td>${escapeHtml(r.gigi || 'Tidak ada')}</td>
+          <td>${r.gigi && r.gigi !== '-' && r.gigi !== 'Tidak ada' && r.gigi !== '0' ? '<span style="color:#b91c1c; font-weight:700;">Ada Karies Gigi</span>' : 'Gigi Bersih / Sehat'}</td>
+        </tr>
+        <tr>
+          <td style="text-align: center; font-weight: 700;">5</td>
+          <td style="font-weight: 700;">Pemeriksaan Penglihatan (Mata)</td>
+          <td>${escapeHtml(r.mata || 'Normal')}</td>
+          <td>${r.mata && String(r.mata).toLowerCase() !== 'normal' ? '<span style="color:#b91c1c; font-weight:700;">Perlu Periksa Visus Lanjut</span>' : 'Penglihatan Baik'}</td>
+        </tr>
+        <tr>
+          <td style="text-align: center; font-weight: 700;">6</td>
+          <td style="font-weight: 700;">Pemeriksaan Telinga</td>
+          <td>${escapeHtml(r.telinga || 'Tidak ada serumen')}</td>
+          <td>${r.telinga && String(r.telinga).toLowerCase().includes('ada') && !String(r.telinga).toLowerCase().includes('tidak') ? '<span style="color:#b45309; font-weight:700;">Perlu Pembersihan Serumen</span>' : 'Bersih'}</td>
+        </tr>
+        <tr>
+          <td style="text-align: center; font-weight: 700;">7</td>
+          <td style="font-weight: 700;">Kebersihan Kuku & Kebugaran</td>
+          <td>Kuku: ${escapeHtml(r.kuku || '-')} &bull; Bugar: ${escapeHtml(r.kebugaran || '-')}</td>
+          <td>${escapeHtml(r.kebugaran || 'Baik')}</td>
+        </tr>
+        ${r.jk === 'L' ? `
+          <tr>
+            <td style="text-align: center; font-weight: 700;">8</td>
+            <td style="font-weight: 700;">Skrining Merokok</td>
+            <td>
+              ${escapeHtml(r.merokok || 'Tidak')}
+              ${r.merokok === 'Aktif' ? ` (${escapeHtml(r.jenis_rokok || '-')}${r.jenis_rokok === 'Konvensional' ? ', ' + (r.intensitas_merokok || '-') + ', ' + (r.jumlah_batang || '-') + ' btg' : ''})` : ''}
+            </td>
+            <td>
+              ${r.merokok === 'Aktif' ? '<span style="color:#b91c1c; font-weight:700;">Perokok Aktif (Perlu Konseling UBM)</span>' : (r.merokok === 'Pasif' ? '<span style="color:#b45309; font-weight:700;">Perokok Pasif</span>' : 'Bebas Rokok')}
+            </td>
+          </tr>
+        ` : ''}
+      </tbody>
+    </table>
+
+    <!-- KESIMPULAN STATUS KESEHATAN -->
+    <div style="background: ${statusBadgeBg}; border: 1.5px solid ${statusBadgeColor}44; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span style="font-size: 12px; font-weight: 800; color: #1e293b; text-transform: uppercase;">
+          KESIMPULAN STATUS KESEHATAN SISWA:
+        </span>
+        <span style="display: inline-block; padding: 3px 12px; border-radius: 20px; font-weight: 900; font-size: 11px; background: ${statusBadgeColor}; color: #ffffff;">
+          ${escapeHtml(ket.status)}
+        </span>
+      </div>
+      <div style="font-size: 12px; line-height: 1.6; color: #1e293b;">
+        <div style="margin-bottom: 4px;">
+          <strong>Temuan Masalah:</strong> ${escapeHtml(ket.diagnosaText)}
+        </div>
+        <div style="color: #0369a1;">
+          <strong>Keterangan Tindak Lanjut:</strong> ${escapeHtml(ket.tindakLanjutText)}
+        </div>
+      </div>
+    </div>
+
+    <!-- PESAN UNTUK ORANG TUA / SEKOLAH -->
+    <div style="font-size: 11.5px; line-height: 1.5; color: #475569; margin-bottom: 24px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px 14px;">
+      <strong>Catatan untuk Orang Tua / Wali Murid:</strong><br>
+      Lembar hasil skrining ini merupakan laporan awal status kesehatan siswa di sekolah. Apabila anak memerlukan rujukan / penanganan lebih lanjut, silakan mengunjungi <strong>UPTD Puskesmas Banjaran Kota</strong> dengan membawa lembar hasil ini.
+    </div>
+
+    <!-- TANDA TANGAN DOKTER / PETUGAS -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px; padding: 0 10px;">
+      <div style="font-size: 11.5px; color: #475569;">
+        <div>Diterima oleh Pihak Sekolah / Orang Tua:</div>
+        <div style="margin-top: 50px; border-bottom: 1px solid #333; width: 180px;"></div>
+        <div style="margin-top: 3px;">Tanda Tangan & Nama Terang</div>
+      </div>
+
+      <div style="text-align: center; font-size: 11.5px;">
+        <div>Banjaran, ${todayFormatted}</div>
+        <div style="font-weight: 700;">Petugas Pemeriksa UKS / Dokter,</div>
+        <div style="margin-top: 50px; border-bottom: 1px solid #333; font-weight: 800; min-width: 180px; padding-bottom: 2px;">
+          ${escapeHtml(r.petugas_entry || sessionStorage.getItem('ckg_user_name') || 'Tim Medis Puskesmas')}
+        </div>
+        <div style="color: #64748b; font-size: 10.5px; margin-top: 2px;">UPTD Puskesmas Banjaran Kota</div>
+      </div>
+    </div>
+  `;
 }
 
 // ==========================================================================
