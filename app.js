@@ -10104,6 +10104,7 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
   }
 
   try {
+    fetchMasterSekolahFromCloud();
     const res = await fetch('/api/sekolah');
     if (res.ok) {
       const result = await res.json();
@@ -10241,7 +10242,7 @@ function saveSekolahRecordsToStorage() {
 // ==========================================================================
 // 🏫 MASTER SARANA SEKOLAH PUSKESMAS BANJARAN KOTA (Daftar_Sekolah.md)
 // ==========================================================================
-const MASTER_SARANA_SEKOLAH = [
+const DEFAULT_MASTER_SARANA_SEKOLAH = [
   // --- 1. SD / MI (Kelas 1 - 6) ---
   { nama: 'MI CHOIRUL HUDA', level: 'SD' },
   { nama: 'MI PERSIS 119 CIHAMERANG', level: 'SD' },
@@ -10288,6 +10289,76 @@ const MASTER_SARANA_SEKOLAH = [
   { nama: 'SMK PGRI CIBARIBIS', level: 'SMA' },
   { nama: 'SMK PLUS PRATAMA ADI', level: 'SMA' }
 ];
+
+function loadMasterSekolahFromStorage() {
+  try {
+    const raw = localStorage.getItem('ckg_master_sekolah');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(s => ({
+          nama: (s.nama || '').trim().toUpperCase(),
+          level: (s.level || 'SD').trim().toUpperCase()
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading ckg_master_sekolah:', e);
+  }
+  return [...DEFAULT_MASTER_SARANA_SEKOLAH];
+}
+
+let MASTER_SARANA_SEKOLAH = loadMasterSekolahFromStorage();
+
+function saveMasterSekolahToStorage(newList) {
+  if (Array.isArray(newList)) {
+    MASTER_SARANA_SEKOLAH = newList;
+  }
+  try {
+    localStorage.setItem('ckg_master_sekolah', JSON.stringify(MASTER_SARANA_SEKOLAH));
+  } catch (e) {
+    console.warn('Error saving ckg_master_sekolah:', e);
+  }
+  if (typeof CkgIdb !== 'undefined') {
+    try { CkgIdb.set('master_sekolah', MASTER_SARANA_SEKOLAH); } catch (_) {}
+  }
+  syncMasterSekolahToCloud(MASTER_SARANA_SEKOLAH);
+  populateSekolahFilterDropdowns();
+}
+
+async function syncMasterSekolahToCloud(list) {
+  if (!Array.isArray(list)) return;
+  try {
+    await fetch('/api/master-sekolah', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(list)
+    });
+  } catch (err) {
+    console.warn('Sync /api/master-sekolah error:', err);
+  }
+}
+
+async function fetchMasterSekolahFromCloud() {
+  try {
+    const res = await fetch('/api/master-sekolah');
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        MASTER_SARANA_SEKOLAH = result.data.map(item => ({
+          nama: (item.nama || '').trim().toUpperCase(),
+          level: (item.level || 'SD').trim().toUpperCase()
+        }));
+        try {
+          localStorage.setItem('ckg_master_sekolah', JSON.stringify(MASTER_SARANA_SEKOLAH));
+        } catch (_) {}
+        populateSekolahFilterDropdowns();
+      }
+    }
+  } catch (err) {
+    console.warn('Fetch master sekolah notice (offline/fallback):', err);
+  }
+}
 
 function getSchoolLevel(schoolName) {
   if (!schoolName) return null;
@@ -13496,6 +13567,429 @@ async function autoResolveAllDuplicates() {
       confirmButtonColor: '#dc2626'
     });
   }
+}
+
+/* ==========================================================================
+   🏫 FITUR KELOLA MASTER SARANA SEKOLAH: TAMBAH & EDIT (KHUSUS ADMIN)
+   ========================================================================== */
+
+let currentKelolaLevelFilter = 'ALL';
+
+function openKelolaSekolahModal() {
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (!currentUserRole.includes('admin')) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Akses Khusus Admin',
+      text: 'Mohon maaf, fitur Tambah dan Edit Sekolah hanya dapat diakses oleh Administrator Sistem.'
+    });
+    return;
+  }
+
+  const modal = document.getElementById('modalKelolaSekolah');
+  if (!modal) return;
+
+  resetFormKelolaSekolah();
+  currentKelolaLevelFilter = 'ALL';
+  
+  const searchInput = document.getElementById('inputSearchKelolaSekolah');
+  if (searchInput) searchInput.value = '';
+
+  filterKelolaSekolahTable('ALL');
+  renderKelolaSekolahTable();
+
+  modal.classList.add('open');
+  modal.style.display = 'flex';
+}
+
+function closeKelolaSekolahModal() {
+  const modal = document.getElementById('modalKelolaSekolah');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+  resetFormKelolaSekolah();
+}
+
+// Event listener click outside modal content to close
+document.addEventListener('DOMContentLoaded', () => {
+  const modalKelola = document.getElementById('modalKelolaSekolah');
+  if (modalKelola) {
+    modalKelola.addEventListener('click', (e) => {
+      if (e.target === modalKelola) {
+        closeKelolaSekolahModal();
+      }
+    });
+  }
+});
+
+function resetFormKelolaSekolah() {
+  const oldNamaInput = document.getElementById('kelolaOldNamaSekolah');
+  const namaInput = document.getElementById('kelolaInputNamaSekolah');
+  const levelSelect = document.getElementById('kelolaSelectLevelSekolah');
+  const titleForm = document.getElementById('titleFormKelolaSekolah');
+  const iconForm = document.getElementById('iconFormKelolaSekolah');
+  const textBtn = document.getElementById('textBtnSubmitKelola');
+  const btnCancel = document.getElementById('btnCancelEditSekolah');
+  const noticeEdit = document.getElementById('noticeEditSekolahSiswa');
+
+  if (oldNamaInput) oldNamaInput.value = '';
+  if (namaInput) namaInput.value = '';
+  if (levelSelect) levelSelect.value = 'SD';
+  if (titleForm) titleForm.textContent = 'Tambah Sekolah Baru';
+  if (iconForm) iconForm.className = 'bi bi-plus-circle-fill';
+  if (textBtn) textBtn.textContent = 'Simpan';
+  if (btnCancel) btnCancel.style.display = 'none';
+  if (noticeEdit) noticeEdit.style.display = 'none';
+}
+
+function editSekolahItem(nama) {
+  const school = MASTER_SARANA_SEKOLAH.find(s => s.nama.toUpperCase() === (nama || '').trim().toUpperCase());
+  if (!school) return;
+
+  const oldNamaInput = document.getElementById('kelolaOldNamaSekolah');
+  const namaInput = document.getElementById('kelolaInputNamaSekolah');
+  const levelSelect = document.getElementById('kelolaSelectLevelSekolah');
+  const titleForm = document.getElementById('titleFormKelolaSekolah');
+  const iconForm = document.getElementById('iconFormKelolaSekolah');
+  const textBtn = document.getElementById('textBtnSubmitKelola');
+  const btnCancel = document.getElementById('btnCancelEditSekolah');
+  const noticeEdit = document.getElementById('noticeEditSekolahSiswa');
+
+  if (oldNamaInput) oldNamaInput.value = school.nama;
+  if (namaInput) {
+    namaInput.value = school.nama;
+    setTimeout(() => {
+      namaInput.focus();
+      namaInput.select();
+    }, 100);
+  }
+  if (levelSelect) levelSelect.value = school.level;
+  if (titleForm) titleForm.textContent = `Edit Sekolah: ${school.nama}`;
+  if (iconForm) iconForm.className = 'bi bi-pencil-square';
+  if (textBtn) textBtn.textContent = 'Simpan Perubahan';
+  if (btnCancel) btnCancel.style.display = 'inline-block';
+
+  // Check how many students are enrolled
+  const enrolledCount = (sekolahRecords || []).filter(r => (r.sekolah || '').trim().toUpperCase() === school.nama.toUpperCase()).length;
+  if (noticeEdit) {
+    if (enrolledCount > 0) {
+      noticeEdit.innerHTML = `<i class="bi bi-info-circle-fill"></i> Terdapat <strong>${enrolledCount} data siswa</strong> terdaftar di sekolah ini. Mengubah nama sekolah akan otomatis memperbarui seluruh data siswa tersebut ke nama baru di database.`;
+      noticeEdit.style.display = 'block';
+    } else {
+      noticeEdit.style.display = 'none';
+    }
+  }
+
+  const cardForm = document.getElementById('cardFormKelolaSekolah');
+  if (cardForm) {
+    cardForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+async function submitFormKelolaSekolah(event) {
+  event.preventDefault();
+
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (!currentUserRole.includes('admin')) {
+    Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat menambah atau mengedit sekolah.', 'warning');
+    return;
+  }
+
+  const oldNamaInput = document.getElementById('kelolaOldNamaSekolah');
+  const namaInput = document.getElementById('kelolaInputNamaSekolah');
+  const levelSelect = document.getElementById('kelolaSelectLevelSekolah');
+
+  const oldNama = (oldNamaInput?.value || '').trim();
+  const newNama = (namaInput?.value || '').trim().toUpperCase();
+  const level = (levelSelect?.value || 'SD').trim().toUpperCase();
+
+  if (!newNama) {
+    showToast('Nama sekolah tidak boleh kosong.', 'warning');
+    return;
+  }
+
+  // Check duplicate name
+  const isDuplicate = MASTER_SARANA_SEKOLAH.some(s => s.nama.toUpperCase() === newNama.toUpperCase() && s.nama.toUpperCase() !== oldNama.toUpperCase());
+  if (isDuplicate) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Nama Sekolah Sudah Terdaftar',
+      text: `Sekolah dengan nama "${newNama}" sudah ada di dalam database master sekolah.`,
+      confirmButtonColor: '#4f46e5'
+    });
+    return;
+  }
+
+  if (oldNama) {
+    // Mode EDIT
+    const oldUpper = oldNama.toUpperCase();
+    const enrolledStudents = (sekolahRecords || []).filter(r => (r.sekolah || '').trim().toUpperCase() === oldUpper);
+
+    if (oldUpper !== newNama && enrolledStudents.length > 0) {
+      const confirm = await Swal.fire({
+        icon: 'question',
+        title: 'Perbarui Nama Sekolah & Data Siswa?',
+        html: `Anda akan mengubah nama sekolah dari <strong>${escapeHtml(oldNama)}</strong> menjadi <strong>${escapeHtml(newNama)}</strong>.<br><br>Sebanyak <strong>${enrolledStudents.length} siswa</strong> di database akan otomatis diperbarui ke nama sekolah yang baru. Lanjutkan?`,
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Simpan Perubahan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#4f46e5',
+        cancelButtonColor: '#64748b'
+      });
+      if (!confirm.isConfirmed) return;
+    }
+
+    // Update in MASTER_SARANA_SEKOLAH array
+    const targetIdx = MASTER_SARANA_SEKOLAH.findIndex(s => s.nama.toUpperCase() === oldUpper);
+    if (targetIdx !== -1) {
+      MASTER_SARANA_SEKOLAH[targetIdx] = { nama: newNama, level };
+    } else {
+      MASTER_SARANA_SEKOLAH.push({ nama: newNama, level });
+    }
+
+    // If name changed, cascade update student records in memory & sync
+    if (oldUpper !== newNama) {
+      let changedCount = 0;
+      (sekolahRecords || []).forEach(r => {
+        if ((r.sekolah || '').trim().toUpperCase() === oldUpper) {
+          r.sekolah = newNama;
+          changedCount++;
+        }
+      });
+      if (changedCount > 0) {
+        saveSekolahRecordsToStorage();
+      }
+
+      // Update active filter if user currently selected this school
+      const selectFilter = document.getElementById('filterSelectSekolah');
+      if (selectFilter && selectFilter.value.trim().toUpperCase() === oldUpper) {
+        selectFilter.value = newNama;
+        const labelEl = document.getElementById('comboboxSekolahLabel');
+        if (labelEl) labelEl.textContent = newNama;
+      }
+    }
+
+    // Send PUT to backend Cloudflare D1
+    try {
+      await fetch('/api/master-sekolah', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldNama, newNama, level })
+      });
+    } catch (err) {
+      console.warn('PUT /api/master-sekolah notice:', err);
+    }
+
+    saveMasterSekolahToStorage([...MASTER_SARANA_SEKOLAH]);
+    showToast(`Sekolah "${newNama}" berhasil diperbarui.`, 'success');
+  } else {
+    // Mode TAMBAH
+    MASTER_SARANA_SEKOLAH.push({ nama: newNama, level });
+
+    // Send POST to backend Cloudflare D1
+    try {
+      await fetch('/api/master-sekolah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nama: newNama, level })
+      });
+    } catch (err) {
+      console.warn('POST /api/master-sekolah notice:', err);
+    }
+
+    saveMasterSekolahToStorage([...MASTER_SARANA_SEKOLAH]);
+    showToast(`Sekolah baru "${newNama}" (${level}) berhasil ditambahkan!`, 'success');
+  }
+
+  resetFormKelolaSekolah();
+  renderKelolaSekolahTable();
+  renderSekolahView();
+}
+
+async function deleteSekolahItem(nama) {
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (!currentUserRole.includes('admin')) {
+    Swal.fire('Akses Ditolak', 'Hanya Admin yang dapat menghapus data sekolah.', 'warning');
+    return;
+  }
+
+  const cleanNama = (nama || '').trim().toUpperCase();
+  const enrolledCount = (sekolahRecords || []).filter(r => (r.sekolah || '').trim().toUpperCase() === cleanNama).length;
+
+  if (enrolledCount > 0) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Tidak Dapat Menghapus!',
+      html: `Sekolah <strong>${escapeHtml(cleanNama)}</strong> masih memiliki <strong>${enrolledCount} data siswa</strong> terdaftar di database.<br><br>Gunakan fitur <strong>Migrasi Sekolah</strong> untuk memindahkan data siswa terlebih dahulu sebelum menghapus sarana sekolah ini.`,
+      confirmButtonColor: '#4f46e5'
+    });
+    return;
+  }
+
+  const confirm = await Swal.fire({
+    icon: 'warning',
+    title: 'Hapus Sekolah?',
+    html: `Apakah Anda yakin ingin menghapus sekolah <strong>${escapeHtml(cleanNama)}</strong> dari daftar master data?`,
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b'
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  MASTER_SARANA_SEKOLAH = MASTER_SARANA_SEKOLAH.filter(s => s.nama.toUpperCase() !== cleanNama);
+
+  try {
+    await fetch(`/api/master-sekolah?nama=${encodeURIComponent(cleanNama)}`, { method: 'DELETE' });
+  } catch (err) {
+    console.warn('DELETE /api/master-sekolah error:', err);
+  }
+
+  saveMasterSekolahToStorage([...MASTER_SARANA_SEKOLAH]);
+  showToast(`Sekolah "${cleanNama}" berhasil dihapus.`, 'info');
+  renderKelolaSekolahTable();
+}
+
+function filterKelolaSekolahTable(level) {
+  currentKelolaLevelFilter = level;
+  document.querySelectorAll('.btn-filter-kelola').forEach(btn => {
+    if (btn.getAttribute('data-level') === level) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  renderKelolaSekolahTable();
+}
+
+function renderKelolaSekolahTable() {
+  const tbody = document.getElementById('tbodyKelolaSekolah');
+  if (!tbody) return;
+
+  const searchKw = (document.getElementById('inputSearchKelolaSekolah')?.value || '').trim().toLowerCase();
+
+  // 1. Calculate Stats
+  const totalCount = MASTER_SARANA_SEKOLAH.length;
+  const sdCount = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SD').length;
+  const smpCount = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMP').length;
+  const smaCount = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMA').length;
+
+  const statTotal = document.getElementById('statKelolaTotalSekolah');
+  const statSd = document.getElementById('statKelolaSd');
+  const statSmp = document.getElementById('statKelolaSmp');
+  const statSma = document.getElementById('statKelolaSma');
+
+  if (statTotal) statTotal.textContent = totalCount;
+  if (statSd) statSd.textContent = sdCount;
+  if (statSmp) statSmp.textContent = smpCount;
+  if (statSma) statSma.textContent = smaCount;
+
+  const tabTotal = document.getElementById('countTabKelolaAll');
+  const tabSd = document.getElementById('countTabKelolaSd');
+  const tabSmp = document.getElementById('countTabKelolaSmp');
+  const tabSma = document.getElementById('countTabKelolaSma');
+
+  if (tabTotal) tabTotal.textContent = totalCount;
+  if (tabSd) tabSd.textContent = sdCount;
+  if (tabSmp) tabSmp.textContent = smpCount;
+  if (tabSma) tabSma.textContent = smaCount;
+
+  // 2. Filter items
+  let filtered = [...MASTER_SARANA_SEKOLAH];
+  if (currentKelolaLevelFilter !== 'ALL') {
+    filtered = filtered.filter(s => s.level === currentKelolaLevelFilter);
+  }
+  if (searchKw) {
+    filtered = filtered.filter(s => s.nama.toLowerCase().includes(searchKw) || s.level.toLowerCase().includes(searchKw));
+  }
+
+  // Sort by level order (SD, SMP, SMA) then alphabetically
+  const levelOrder = { 'SD': 1, 'SMP': 2, 'SMA': 3 };
+  filtered.sort((a, b) => {
+    const lA = levelOrder[a.level] || 99;
+    const lB = levelOrder[b.level] || 99;
+    if (lA !== lB) return lA - lB;
+    return a.nama.localeCompare(b.nama);
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 32px 16px; color: #94a3b8;">
+          <i class="bi bi-search" style="font-size: 24px; display: block; margin-bottom: 8px;"></i>
+          Tidak ada data sekolah yang sesuai dengan pencarian.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  // Pre-calculate enrolled students count per school
+  const studentCountMap = {};
+  (sekolahRecords || []).forEach(r => {
+    if (r.sekolah) {
+      const up = r.sekolah.trim().toUpperCase();
+      studentCountMap[up] = (studentCountMap[up] || 0) + 1;
+    }
+  });
+
+  let html = '';
+  filtered.forEach((school, idx) => {
+    const count = studentCountMap[school.nama.toUpperCase()] || 0;
+    let badgeClass = 'badge-level-sd';
+    let badgeIcon = 'bi bi-mortarboard-fill';
+    let levelLabel = 'SD / MI';
+    if (school.level === 'SMP') {
+      badgeClass = 'badge-level-smp';
+      badgeIcon = 'bi bi-buildings-fill';
+      levelLabel = 'SMP / MTs';
+    } else if (school.level === 'SMA') {
+      badgeClass = 'badge-level-sma';
+      badgeIcon = 'bi bi-award-fill';
+      levelLabel = 'SMA / SMK / MA';
+    }
+
+    html += `
+      <tr class="tr-kelola-sekolah" style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 10px 14px; text-align: center; color: #64748b; font-weight: 600;">${idx + 1}</td>
+        <td style="padding: 10px 14px; font-weight: 700; color: #1e293b;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-building" style="color: #6366f1;"></i>
+            <span>${escapeHtml(school.nama)}</span>
+          </div>
+        </td>
+        <td style="padding: 10px 14px; text-align: center;">
+          <span class="${badgeClass}">
+            <i class="${badgeIcon}"></i> ${levelLabel}
+          </span>
+        </td>
+        <td style="padding: 10px 14px; text-align: center;">
+          <span style="font-weight: 800; font-size: 12px; background: ${count > 0 ? '#e0e7ff' : '#f1f5f9'}; color: ${count > 0 ? '#4338ca' : '#94a3b8'}; padding: 3px 10px; border-radius: 999px;">
+            ${count} Siswa
+          </span>
+        </td>
+        <td style="padding: 10px 14px; text-align: center;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button type="button" class="btn btn-sm" onclick="editSekolahItem('${escapeHtml(school.nama)}')"
+              title="Edit Data Sekolah"
+              style="padding: 4px 10px; font-size: 11.5px; font-weight: 700; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+              <i class="bi bi-pencil-fill"></i> Edit
+            </button>
+            <button type="button" class="btn btn-sm" onclick="deleteSekolahItem('${escapeHtml(school.nama)}')"
+              title="Hapus Sekolah"
+              style="padding: 4px 8px; font-size: 11.5px; font-weight: 700; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; border-radius: 6px; cursor: pointer;">
+              <i class="bi bi-trash3-fill"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
 }
 
 /* ==========================================================================

@@ -745,6 +745,152 @@ export default {
       }
     }
 
+    // 4.1 ROUTE: /api/master-sekolah (Pengelolaan Master Data Sekolah: Tambah, Edit, Hapus - Khusus Admin)
+    if (url.pathname === '/api/master-sekolah' || url.pathname.startsWith('/api/master-sekolah/')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
+      }
+
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS master_sekolah (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nama TEXT NOT NULL UNIQUE,
+            level TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (_) {}
+
+      // GET: Ambil daftar seluruh sekolah master
+      if (request.method === 'GET') {
+        try {
+          let { results } = await env.DB.prepare('SELECT id, nama, level, created_at FROM master_sekolah ORDER BY level ASC, nama ASC').all();
+          
+          // Auto-seed default 35 schools jika tabel masih kosong
+          if (!results || results.length === 0) {
+            const defaultSchools = [
+              { nama: 'MI CHOIRUL HUDA', level: 'SD' },
+              { nama: 'MI PERSIS 119 CIHAMERANG', level: 'SD' },
+              { nama: 'MIS DARUSSALAM', level: 'SD' },
+              { nama: 'MIS M. THREE', level: 'SD' },
+              { nama: 'MIS MIFTAHUS SAADAH', level: 'SD' },
+              { nama: 'MIS PERSIS 278 PANGKALAN', level: 'SD' },
+              { nama: 'SDIT ZAKIA', level: 'SD' },
+              { nama: 'SDN ARIASACANAGARA', level: 'SD' },
+              { nama: 'SDN BANJARAN 01', level: 'SD' },
+              { nama: 'SDN BANJARAN 02', level: 'SD' },
+              { nama: 'SDN CIHAMERANG', level: 'SD' },
+              { nama: 'SDN CIPEUNDEUY', level: 'SD' },
+              { nama: 'SDN KIARAPAYUNG 01', level: 'SD' },
+              { nama: 'SDN KIARAPAYUNG 02', level: 'SD' },
+              { nama: 'SDN MEKARJAYA', level: 'SD' },
+              { nama: 'SDN PANGAUBAN', level: 'SD' },
+              { nama: 'SDN PASIRWARU', level: 'SD' },
+              { nama: 'SDN PONDOKSIRAP', level: 'SD' },
+              { nama: 'SDN SIRAH RANCA 01', level: 'SD' },
+              { nama: 'SDN SIRAH RANCA 02', level: 'SD' },
+              { nama: 'SDN TARAJUSARI', level: 'SD' },
+              { nama: 'MTS DARUL HIKMAH AL - USMANI', level: 'SMP' },
+              { nama: 'MTS PERSIS 282 CILEUTIK', level: 'SMP' },
+              { nama: 'MTSS PERSIS BANJARAN', level: 'SMP' },
+              { nama: 'MTSS MIFTAHUL HUDA KIARAPAYUNG', level: 'SMP' },
+              { nama: 'MIFTAHUL HUDA KIARAPAYUNG', level: 'SMP' },
+              { nama: 'SMP PASUNDAN 1 BANJARAN', level: 'SMP' },
+              { nama: 'SMP PGRI BANJARAN', level: 'SMP' },
+              { nama: 'SMP PGRI CIBARIBIS BANJARAN', level: 'SMP' },
+              { nama: 'SMP TERPADU AL FALAH', level: 'SMP' },
+              { nama: 'SMPN 1 BANJARAN', level: 'SMP' },
+              { nama: 'SMPN 3 BANJARAN', level: 'SMP' },
+              { nama: 'MAS PERSIS 31 BANJARAN', level: 'SMA' },
+              { nama: 'SMA PASUNDAN BANJARAN', level: 'SMA' },
+              { nama: 'SMAN 1 BANJARAN', level: 'SMA' },
+              { nama: 'SMK KHARISMA NUSANTARA', level: 'SMA' },
+              { nama: 'SMK PASUNDAN 1 BANJARAN', level: 'SMA' },
+              { nama: 'SMK PASUNDAN 2 BANJARAN', level: 'SMA' },
+              { nama: 'SMK PGRI CIBARIBIS', level: 'SMA' },
+              { nama: 'SMK PLUS PRATAMA ADI', level: 'SMA' }
+            ];
+            const insertStmt = env.DB.prepare('INSERT OR IGNORE INTO master_sekolah (nama, level) VALUES (?, ?)');
+            const stmts = defaultSchools.map(s => insertStmt.bind(s.nama, s.level));
+            await env.DB.batch(stmts);
+            const refetched = await env.DB.prepare('SELECT id, nama, level, created_at FROM master_sekolah ORDER BY level ASC, nama ASC').all();
+            results = refetched.results || [];
+          }
+
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // POST: Tambah sekolah baru (atau batch seed)
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const items = Array.isArray(body) ? body : [body];
+          const stmt = env.DB.prepare(`
+            INSERT INTO master_sekolah (nama, level) VALUES (?, ?)
+            ON CONFLICT(nama) DO UPDATE SET level = excluded.level
+          `);
+          const statements = items.map(item => stmt.bind((item.nama || '').trim().toUpperCase(), (item.level || 'SD').trim().toUpperCase()));
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: items.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // PUT: Edit sekolah (Ubah nama dan/atau level, serta otomatis perbarui data siswa jika nama sekolah berubah)
+      if (request.method === 'PUT') {
+        try {
+          const { oldNama, newNama, level } = await request.json();
+          if (!oldNama || !newNama) {
+            return new Response(JSON.stringify({ success: false, error: 'oldNama and newNama required' }), { status: 400, headers: corsHeaders });
+          }
+          const cleanOld = oldNama.trim().toUpperCase();
+          const cleanNew = newNama.trim().toUpperCase();
+          const cleanLevel = (level || 'SD').trim().toUpperCase();
+
+          // 1. Update di master_sekolah
+          await env.DB.prepare(`
+            UPDATE master_sekolah 
+            SET nama = ?, level = ? 
+            WHERE UPPER(nama) = ?
+          `).bind(cleanNew, cleanLevel, cleanOld).run();
+
+          // 2. Jika nama sekolah berubah, otomatis update juga data seluruh siswa di ckg_sekolah_records
+          let updatedStudents = 0;
+          if (cleanOld !== cleanNew) {
+            const updateRes = await env.DB.prepare(`
+              UPDATE ckg_sekolah_records 
+              SET sekolah = ? 
+              WHERE UPPER(sekolah) = ?
+            `).bind(cleanNew, cleanOld).run();
+            updatedStudents = updateRes.meta?.changes || 0;
+          }
+
+          return new Response(JSON.stringify({ success: true, updatedStudents }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // DELETE: Hapus sekolah dari master data
+      if (request.method === 'DELETE') {
+        try {
+          const nama = url.searchParams.get('nama');
+          if (!nama) {
+            return new Response(JSON.stringify({ success: false, error: 'nama parameter required' }), { status: 400, headers: corsHeaders });
+          }
+          await env.DB.prepare('DELETE FROM master_sekolah WHERE UPPER(nama) = ?').bind(nama.trim().toUpperCase()).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
     // 4. ROUTE: /api/recycle
     if (url.pathname === '/api/recycle' || url.pathname.startsWith('/api/recycle/')) {
       if (!env.DB) {
