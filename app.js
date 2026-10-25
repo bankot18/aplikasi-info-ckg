@@ -13448,19 +13448,364 @@ async function deleteSiswaSekolah(id) {
   showToast(`Data ${namaSiswa} berhasil dihapus dari Cloud Database.`, 'info');
 }
 
-async function confirmDeleteAllSekolahRecords() {
+// ==========================================================================
+// 🗑️ FITUR HAPUS DATA SISWA SPESIFIK & BULK (SEKOLAH, KELAS, TAHUN, STATUS)
+// ==========================================================================
+
+function openHapusDataSekolahModal() {
   const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
   if (!currentUserRole.includes('admin') && !currentUserRole.includes('koordinator')) {
-    showToast('Hanya Koordinator dan Admin yang dapat menghapus seluruh database CKG Sekolah.', 'warning');
+    showToast('Hanya Koordinator dan Admin yang memiliki izin untuk menghapus data CKG Sekolah.', 'warning');
     return;
   }
 
+  const modal = document.getElementById('modalHapusDataSekolah');
+  if (!modal) return;
+
+  const selectSekolah = document.getElementById('hapusSekolahPilihSekolah');
+  if (selectSekolah) {
+    const masterSet = new Set(MASTER_SARANA_SEKOLAH.map(s => s.nama.toUpperCase()));
+    const extraSchools = [];
+    sekolahRecords.forEach(r => {
+      if (r.sekolah && r.sekolah.trim()) {
+        const up = r.sekolah.trim().toUpperCase();
+        if (!masterSet.has(up) && !extraSchools.includes(up)) extraSchools.push(up);
+      }
+    });
+
+    const sdList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SD').map(s => s.nama);
+    const smpList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMP').map(s => s.nama);
+    const smaList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMA').map(s => s.nama);
+
+    let html = '<option value="">-- Pilih Sekolah Target --</option>';
+    html += '<option value="all" style="font-weight: 800; color: #dc2626;">⚠️ [SEMUA SEKOLAH] (Hapus Seluruh Sekolah Terdaftar)</option>';
+    html += '<optgroup label="📚 SD / MI (Kelas 1 - 6)">';
+    html += sdList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    html += '</optgroup>';
+    html += '<optgroup label="🏫 SMP / MTs (Kelas 7 - 9)">';
+    html += smpList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    html += '</optgroup>';
+    html += '<optgroup label="🎓 SMA / SMK / MA (Kelas 10 - 12)">';
+    html += smaList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    html += '</optgroup>';
+    if (extraSchools.length > 0) {
+      html += '<optgroup label="📌 Sekolah Lainnya">';
+      html += extraSchools.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+      html += '</optgroup>';
+    }
+
+    selectSekolah.innerHTML = html;
+
+    // Sinkronkan otomatis jika filter sekolah sedang aktif di halaman utama CKG Sekolah
+    const activeSekolah = document.getElementById('filterSelectSekolah')?.value;
+    if (activeSekolah) {
+      selectSekolah.value = activeSekolah;
+    }
+  }
+
+  // Populate Dropdown Tahun Skrining
+  const selectTahun = document.getElementById('hapusSekolahPilihTahun');
+  if (selectTahun) {
+    const yearsSet = new Set(['2026', '2027', '2025']);
+    sekolahRecords.forEach(r => {
+      if (r.tahun_skrining && String(r.tahun_skrining).trim()) {
+        yearsSet.add(String(r.tahun_skrining).trim());
+      }
+      if (r.tanggal_entry && r.tanggal_entry.length >= 4) {
+        const y = r.tanggal_entry.substring(0, 4);
+        if (/^\d{4}$/.test(y)) yearsSet.add(y);
+      }
+    });
+
+    const sortedYears = Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+    let htmlTahun = '<option value="all">-- Semua Tahun --</option>';
+    sortedYears.forEach(y => {
+      const isCur = y === '2026' ? ' (Tahun Berjalan)' : '';
+      htmlTahun += `<option value="${escapeHtml(y)}">${escapeHtml(y)}${isCur}</option>`;
+    });
+    selectTahun.innerHTML = htmlTahun;
+
+    const activeTahun = document.getElementById('filterSelectTahun')?.value;
+    if (activeTahun && (activeTahun === 'all' || sortedYears.includes(activeTahun))) {
+      selectTahun.value = activeTahun;
+    } else {
+      selectTahun.value = '2026';
+    }
+  }
+
+  // Reset status filter ke Semua
+  const selectStatus = document.getElementById('hapusSekolahPilihStatus');
+  if (selectStatus) selectStatus.value = 'all';
+
+  // Reset checkbox konfirmasi & disable tombol hapus
+  const chk = document.getElementById('hapusSekolahConfirmCheck');
+  if (chk) chk.checked = false;
+  const btn = document.getElementById('btnSubmitHapusSekolah');
+  if (btn) btn.disabled = true;
+
+  // Update opsi kelas berdasarkan sekolah yang terpilih
+  onHapusSekolahChange();
+
+  modal.classList.add('open');
+  modal.style.display = 'flex';
+}
+
+function closeHapusDataSekolahModal() {
+  const modal = document.getElementById('modalHapusDataSekolah');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+}
+
+function onHapusSekolahChange() {
+  const selectSekolah = document.getElementById('hapusSekolahPilihSekolah');
+  const selectKelas = document.getElementById('hapusSekolahPilihKelas');
+  if (!selectKelas) return;
+
+  const chosenSekolah = (selectSekolah?.value || '').trim();
+  const currentKelasVal = selectKelas.value;
+
+  const kelasSet = new Set();
+  if (chosenSekolah && chosenSekolah !== 'all') {
+    const standardClasses = getClassesForSchool(chosenSekolah);
+    standardClasses.forEach(k => kelasSet.add(k.toUpperCase()));
+    sekolahRecords.forEach(r => {
+      if ((r.sekolah || '').toUpperCase() === chosenSekolah.toUpperCase()) {
+        if (r.kelas && r.kelas.trim()) kelasSet.add(r.kelas.trim().toUpperCase());
+      }
+    });
+  } else {
+    ['Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6',
+     'Kelas 7', 'Kelas 8', 'Kelas 9', 'Kelas 10', 'Kelas 11', 'Kelas 12', 'Lulus'].forEach(k => kelasSet.add(k.toUpperCase()));
+    sekolahRecords.forEach(r => {
+      if (r.kelas && r.kelas.trim()) kelasSet.add(r.kelas.trim().toUpperCase());
+    });
+  }
+
+  const sortedKelas = Array.from(kelasSet).sort((a, b) => {
+    if (a.toUpperCase() === 'LULUS') return 1;
+    if (b.toUpperCase() === 'LULUS') return -1;
+    const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+    const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+    return numA - numB || a.localeCompare(b);
+  });
+
+  let html = '<option value="all">-- Semua Kelas --</option>';
+  html += sortedKelas.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
+  selectKelas.innerHTML = html;
+
+  const activeMainKelas = document.getElementById('filterSelectKelas')?.value;
+  if (activeMainKelas && kelasSet.has(activeMainKelas.toUpperCase())) {
+    selectKelas.value = activeMainKelas;
+  } else if (currentKelasVal && kelasSet.has(currentKelasVal.toUpperCase())) {
+    selectKelas.value = currentKelasVal;
+  } else {
+    selectKelas.value = 'all';
+  }
+
+  updateHapusSekolahPreview();
+}
+
+function getFilteredRecordsForDeletion() {
+  const chosenSekolah = (document.getElementById('hapusSekolahPilihSekolah')?.value || '').trim();
+  const chosenKelas = (document.getElementById('hapusSekolahPilihKelas')?.value || 'all').trim();
+  const chosenTahun = (document.getElementById('hapusSekolahPilihTahun')?.value || 'all').trim();
+  const chosenStatus = (document.getElementById('hapusSekolahPilihStatus')?.value || 'all').trim();
+
+  if (!chosenSekolah) return [];
+
+  return sekolahRecords.filter(r => {
+    // 1. Filter Sekolah
+    if (chosenSekolah !== 'all') {
+      if ((r.sekolah || '').toUpperCase() !== chosenSekolah.toUpperCase()) return false;
+    }
+
+    // 2. Filter Kelas
+    if (chosenKelas !== 'all') {
+      if ((r.kelas || '').toUpperCase() !== chosenKelas.toUpperCase()) return false;
+    }
+
+    // 3. Filter Tahun
+    if (chosenTahun !== 'all') {
+      const recYear = String(r.tahun_skrining || (r.tanggal_entry ? r.tanggal_entry.substring(0, 4) : '2026')).trim();
+      let matchYear = (recYear === chosenTahun);
+      if (!matchYear && Array.isArray(r.riwayat_pemeriksaan) && r.riwayat_pemeriksaan.length > 0) {
+        matchYear = r.riwayat_pemeriksaan.some(h => {
+          const hy = String(h.tahun || (h.tanggal_pemeriksaan ? h.tanggal_pemeriksaan.substring(0, 4) : '') || h.tahun_ajaran || '').trim();
+          return hy === chosenTahun || hy.includes(chosenTahun);
+        });
+      }
+      if (!matchYear) return false;
+    }
+
+    // 4. Filter Status
+    if (chosenStatus === 'sudah') {
+      if (!isSekolahRecordExamined(r)) return false;
+    } else if (chosenStatus === 'belum') {
+      if (!isSekolahRecordBelumExamined(r)) return false;
+    } else if (chosenStatus === 'sebagian') {
+      if (!isSekolahRecordPartialExamined(r)) return false;
+    }
+
+    return true;
+  });
+}
+
+function updateHapusSekolahPreview() {
+  const chosenSekolah = (document.getElementById('hapusSekolahPilihSekolah')?.value || '').trim();
+  const chosenKelas = (document.getElementById('hapusSekolahPilihKelas')?.value || 'all').trim();
+  const chosenTahun = (document.getElementById('hapusSekolahPilihTahun')?.value || 'all').trim();
+  const chosenStatus = (document.getElementById('hapusSekolahPilihStatus')?.value || 'all').trim();
+
+  const previewDetails = document.getElementById('hapusSekolahPreviewDetails');
+  const countBadge = document.getElementById('hapusSekolahTotalCountBadge');
+
+  if (!chosenSekolah) {
+    if (previewDetails) {
+      previewDetails.innerHTML = '<span style="color: #64748b;"><i class="bi bi-info-circle"></i> Silakan pilih sekolah target terlebih dahulu untuk melihat ringkasan data yang akan dihapus.</span>';
+    }
+    if (countBadge) {
+      countBadge.textContent = '0 Siswa Terpilih';
+      countBadge.style.background = '#f1f5f9';
+      countBadge.style.color = '#64748b';
+      countBadge.style.borderColor = '#cbd5e1';
+    }
+    toggleHapusSekolahSubmitBtn(0);
+    return;
+  }
+
+  const matched = getFilteredRecordsForDeletion();
+  const matchedCount = matched.length;
+
+  const sudahCount = matched.filter(r => isSekolahRecordExamined(r)).length;
+  const belumCount = matched.filter(r => isSekolahRecordBelumExamined(r)).length;
+  const sebagianCount = matched.filter(r => isSekolahRecordPartialExamined(r)).length;
+
+  let statusText = 'Semua Status (Sudah & Belum Diperiksa)';
+  if (chosenStatus === 'belum') statusText = 'Hanya Siswa yang BELUM Diperiksa';
+  else if (chosenStatus === 'sudah') statusText = 'Hanya Siswa yang SUDAH Diperiksa';
+  else if (chosenStatus === 'sebagian') statusText = 'Hanya Siswa yang Diperiksa Sebagian';
+
+  if (countBadge) {
+    countBadge.textContent = `${matchedCount.toLocaleString('id-ID')} Siswa Terpilih`;
+    countBadge.style.background = matchedCount > 0 ? '#fee2e2' : '#f1f5f9';
+    countBadge.style.color = matchedCount > 0 ? '#991b1b' : '#64748b';
+    countBadge.style.borderColor = matchedCount > 0 ? '#fca5a5' : '#cbd5e1';
+  }
+
+  if (previewDetails) {
+    if (matchedCount === 0) {
+      previewDetails.innerHTML = `
+        <div style="color: #64748b; line-height: 1.6;">
+          <div>• <strong>Sekolah:</strong> ${chosenSekolah === 'all' ? '<span style="color:#dc2626; font-weight:700;">SEMUA SEKOLAH</span>' : escapeHtml(chosenSekolah)}</div>
+          <div>• <strong>Kelas:</strong> ${chosenKelas === 'all' ? 'Semua Kelas' : escapeHtml(chosenKelas)}</div>
+          <div>• <strong>Tahun Skrining:</strong> ${chosenTahun === 'all' ? 'Semua Tahun' : escapeHtml(chosenTahun)}</div>
+          <div>• <strong>Status:</strong> ${escapeHtml(statusText)}</div>
+          <div style="margin-top: 8px; padding: 8px 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; color: #64748b; font-weight: 600;">
+            <i class="bi bi-info-circle"></i> Tidak ada data siswa yang cocok dengan kriteria filter di atas.
+          </div>
+        </div>
+      `;
+    } else {
+      previewDetails.innerHTML = `
+        <div style="line-height: 1.7;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 4px; margin-bottom: 4px;">
+            <span><i class="bi bi-building"></i> <strong>Sekolah Target:</strong></span>
+            <strong style="color: ${chosenSekolah === 'all' ? '#dc2626' : '#1e40af'};">${chosenSekolah === 'all' ? '⚠️ SEMUA SEKOLAH (Seluruh Database)' : escapeHtml(chosenSekolah)}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 4px; margin-bottom: 4px;">
+            <span><i class="bi bi-grid-fill"></i> <strong>Tingkat Kelas:</strong></span>
+            <strong style="color: #0369a1;">${chosenKelas === 'all' ? 'Semua Kelas' : escapeHtml(chosenKelas)}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 4px; margin-bottom: 4px;">
+            <span><i class="bi bi-calendar-check-fill" style="color: #2563eb;"></i> <strong>Tahun Skrining:</strong></span>
+            <strong style="color: #1e40af;">${chosenTahun === 'all' ? 'Semua Tahun' : escapeHtml(chosenTahun)}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 4px; margin-bottom: 6px;">
+            <span><i class="bi bi-ui-checks"></i> <strong>Filter Status:</strong></span>
+            <span style="font-weight: 600; color: #475569;">${escapeHtml(statusText)}</span>
+          </div>
+          <div style="margin-top: 8px; padding: 10px 14px; background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 8px; color: #9f1239;">
+            <div style="font-size: 13.5px; font-weight: 800; display: flex; align-items: center; justify-content: space-between;">
+              <span><i class="bi bi-exclamation-octagon-fill" style="color: #e11d48;"></i> Total Siswa Akan Dihapus:</span>
+              <span style="font-size: 15px; color: #be123c; font-weight: 900;">${matchedCount.toLocaleString('id-ID')} Siswa</span>
+            </div>
+            <div style="font-size: 11.5px; margin-top: 4px; color: #b91c1c;">
+              Rincian: <strong>${sudahCount}</strong> Sudah Periksa | <strong>${sebagianCount}</strong> Periksa Sebagian | <strong>${belumCount}</strong> Belum Periksa
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  toggleHapusSekolahSubmitBtn(matchedCount);
+}
+
+function toggleHapusSekolahSubmitBtn(forcedCount) {
+  const count = forcedCount !== undefined ? forcedCount : getFilteredRecordsForDeletion().length;
+  const isChecked = document.getElementById('hapusSekolahConfirmCheck')?.checked;
+  const btn = document.getElementById('btnSubmitHapusSekolah');
+  if (btn) {
+    btn.disabled = !(count > 0 && isChecked);
+  }
+}
+
+async function executeHapusDataSekolah(event) {
+  if (event) event.preventDefault();
+
+  const currentUserRole = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  if (!currentUserRole.includes('admin') && !currentUserRole.includes('koordinator')) {
+    showToast('Hanya Koordinator dan Admin yang memiliki izin untuk menghapus data CKG Sekolah.', 'warning');
+    return;
+  }
+
+  const chosenSekolah = (document.getElementById('hapusSekolahPilihSekolah')?.value || '').trim();
+  const chosenKelas = (document.getElementById('hapusSekolahPilihKelas')?.value || 'all').trim();
+  const chosenTahun = (document.getElementById('hapusSekolahPilihTahun')?.value || 'all').trim();
+  const chosenStatus = (document.getElementById('hapusSekolahPilihStatus')?.value || 'all').trim();
+
+  if (!chosenSekolah) {
+    Swal.fire('Peringatan', 'Silakan pilih sekolah target terlebih dahulu.', 'warning');
+    return;
+  }
+
+  const matched = getFilteredRecordsForDeletion();
+  if (matched.length === 0) {
+    Swal.fire('Tidak Ada Data', 'Tidak ada data siswa yang cocok dengan kriteria filter yang dipilih.', 'info');
+    return;
+  }
+
+  const isChecked = document.getElementById('hapusSekolahConfirmCheck')?.checked;
+  if (!isChecked) {
+    Swal.fire('Konfirmasi Diperlukan', 'Harap beri centang pada kotak persetujuan konfirmasi sebelum melanjutkan.', 'warning');
+    return;
+  }
+
+  const targetSekolahLabel = chosenSekolah === 'all' ? 'SEMUA SEKOLAH' : chosenSekolah;
+  const targetKelasLabel = chosenKelas === 'all' ? 'Semua Kelas' : chosenKelas;
+  const targetTahunLabel = chosenTahun === 'all' ? 'Semua Tahun' : chosenTahun;
+
   const result = await Swal.fire({
     icon: 'warning',
-    title: 'Hapus SEMUA Data CKG Sekolah?',
-    text: 'PERHATIAN: Seluruh database anak sekolah akan dihapus secara permanen dari server Cloudflare D1!',
+    title: `Hapus ${matched.length.toLocaleString('id-ID')} Data Siswa?`,
+    html: `
+      <div style="text-align: left; font-size: 13px; color: #334155; line-height: 1.6;">
+        <p>Apakah Anda benar-benar yakin ingin menghapus data siswa dengan rincian berikut?</p>
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;">
+          <div>🏫 <strong>Sekolah:</strong> <span style="color: ${chosenSekolah === 'all' ? '#dc2626' : '#1e40af'}; font-weight: 700;">${escapeHtml(targetSekolahLabel)}</span></div>
+          <div>📚 <strong>Kelas:</strong> <span style="color: #0284c7; font-weight: 700;">${escapeHtml(targetKelasLabel)}</span></div>
+          <div>📅 <strong>Tahun Skrining:</strong> <span style="color: #1e40af; font-weight: 700;">${escapeHtml(targetTahunLabel)}</span></div>
+          <div style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1;">👥 <strong>Total Siswa Dihapus:</strong> <strong style="color: #be123c; font-size: 14px;">${matched.length.toLocaleString('id-ID')} Siswa</strong></div>
+        </div>
+        <p style="color: #dc2626; font-weight: 700; margin-bottom: 0;">
+          ⚠️ PERINGATAN: Tindakan ini bersifat PERMANEN dan menghapus data langsung dari server Cloud Database D1!
+        </p>
+      </div>
+    `,
     showCancelButton: true,
-    confirmButtonText: 'Ya, Hapus SEMUA',
+    confirmButtonText: `<i class="bi bi-trash3-fill"></i> Ya, Hapus ${matched.length} Siswa`,
     cancelButtonText: 'Batal',
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#64748b'
@@ -13468,14 +13813,61 @@ async function confirmDeleteAllSekolahRecords() {
 
   if (!result.isConfirmed) return;
 
-  try {
-    await fetch('/api/sekolah', { method: 'DELETE' });
-  } catch (err) {
-    console.warn('Delete all from cloud error:', err);
-  }
+  Swal.fire({
+    title: 'Menghapus Data Siswa...',
+    html: 'Mohon tunggu, sedang menghapus data dari Cloud Database D1.',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
 
-  await fetchSekolahRecordsFromCloud();
-  showToast('Seluruh database CKG Sekolah berhasil dihapus dari Cloud Database.', 'info');
+  const matchedIds = matched.map(r => r.id).filter(Boolean);
+
+  try {
+    const params = new URLSearchParams();
+    if (chosenSekolah && chosenSekolah !== 'all') params.append('sekolah', chosenSekolah);
+    if (chosenKelas && chosenKelas !== 'all') params.append('kelas', chosenKelas);
+    if (chosenTahun && chosenTahun !== 'all') params.append('tahun', chosenTahun);
+    if (chosenStatus && chosenStatus !== 'all') params.append('status', chosenStatus);
+
+    await fetch(`/api/sekolah?${params.toString()}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sekolah: chosenSekolah,
+        kelas: chosenKelas,
+        tahun: chosenTahun,
+        status: chosenStatus,
+        ids: matchedIds
+      })
+    });
+
+    // Hapus dari memori lokal dan IndexedDB secara instan
+    const idSet = new Set(matchedIds);
+    sekolahRecords = sekolahRecords.filter(r => !idSet.has(r.id));
+    if (typeof CkgIdb !== 'undefined') {
+      try { await CkgIdb.set('sekolah_records', sekolahRecords); } catch (_) {}
+    }
+
+    closeHapusDataSekolahModal();
+    await fetchSekolahRecordsFromCloud();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Berhasil Dihapus',
+      text: `Sebanyak ${matched.length.toLocaleString('id-ID')} data siswa dari ${targetSekolahLabel} berhasil dihapus secara permanen.`,
+      confirmButtonColor: '#059669'
+    });
+  } catch (err) {
+    console.warn('Hapus data sekolah error:', err);
+    closeHapusDataSekolahModal();
+    await fetchSekolahRecordsFromCloud();
+    Swal.fire('Terjadi Kesalahan', `Gagal menghapus data: ${err.message}`, 'error');
+  }
+}
+
+// Alias untuk kompatibilitas ke fungsi lama
+async function confirmDeleteAllSekolahRecords() {
+  openHapusDataSekolahModal();
 }
 
 // ==========================================================================

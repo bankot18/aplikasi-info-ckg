@@ -392,15 +392,79 @@ export async function onRequestDelete(context) {
 
   try {
     const url = new URL(request.url);
-    const id = url.searchParams.get('id');
+    let body = null;
+    try {
+      if (request.headers.get('content-type')?.includes('application/json')) {
+        body = await request.json();
+      }
+    } catch (_) {}
+
+    const id = url.searchParams.get('id') || body?.id;
 
     if (id) {
       await env.DB.prepare('DELETE FROM ckg_sekolah_records WHERE id = ?').bind(id).run();
-    } else {
-      await env.DB.prepare('DELETE FROM ckg_sekolah_records').run();
+      return new Response(JSON.stringify({ success: true, count: 1 }), {
+        headers: corsHeaders
+      });
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    if (body && Array.isArray(body.ids) && body.ids.length > 0) {
+      const batchSize = 50;
+      let totalDeleted = 0;
+      for (let i = 0; i < body.ids.length; i += batchSize) {
+        const chunk = body.ids.slice(i, i + batchSize);
+        const placeholders = chunk.map(() => '?').join(',');
+        const stmt = env.DB.prepare(`DELETE FROM ckg_sekolah_records WHERE id IN (${placeholders})`).bind(...chunk);
+        const res = await stmt.run();
+        totalDeleted += (res?.meta?.changes ?? chunk.length);
+      }
+      return new Response(JSON.stringify({ success: true, count: totalDeleted }), {
+        headers: corsHeaders
+      });
+    }
+
+    const sekolah = url.searchParams.get('sekolah') || body?.sekolah;
+    const kelas = url.searchParams.get('kelas') || body?.kelas;
+    const tahun = url.searchParams.get('tahun') || body?.tahun;
+    const status = url.searchParams.get('status') || body?.status;
+
+    let query = 'DELETE FROM ckg_sekolah_records';
+    const conditions = [];
+    const params = [];
+
+    if (sekolah && sekolah !== 'all' && sekolah !== 'ALL') {
+      conditions.push('UPPER(TRIM(sekolah)) = UPPER(TRIM(?))');
+      params.push(sekolah);
+    }
+    if (kelas && kelas !== 'all' && kelas !== 'ALL') {
+      conditions.push('UPPER(TRIM(kelas)) = UPPER(TRIM(?))');
+      params.push(kelas);
+    }
+    if (tahun && tahun !== 'all' && tahun !== 'ALL') {
+      conditions.push('(tahun_skrining = ? OR (tahun_skrining IS NULL AND substr(tanggal_entry, 1, 4) = ?))');
+      params.push(tahun, tahun);
+    }
+    if (status && status !== 'all' && status !== 'ALL') {
+      if (status === 'sudah') {
+        conditions.push('is_examined = 1');
+      } else if (status === 'belum') {
+        conditions.push('(is_examined = 0 AND antro_done = 0 AND vital_done = 0 AND lab_done = 0 AND organ_done = 0 AND kesimpulan_done = 0)');
+      } else if (status === 'sebagian') {
+        conditions.push('(is_examined = 0 AND (antro_done = 1 OR vital_done = 1 OR lab_done = 1 OR organ_done = 1 OR kesimpulan_done = 1))');
+      }
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    let stmt = env.DB.prepare(query);
+    if (params.length > 0) {
+      stmt = stmt.bind(...params);
+    }
+    const res = await stmt.run();
+
+    return new Response(JSON.stringify({ success: true, count: res?.meta?.changes ?? 0 }), {
       headers: corsHeaders
     });
   } catch (err) {
