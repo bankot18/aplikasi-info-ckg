@@ -1456,8 +1456,17 @@
                 </select>
               </div>
 
+              <div class="filter-item">
+                <i class="bi bi-flag-fill"></i> Status Kegiatan:
+                <select id="filterAlatBnhpPemakaianStatus" class="filter-control" onchange="renderAlatBnhpPemakaianTable()">
+                  <option value="">Semua Status</option>
+                  <option value="Dibawa ke Lapangan">⏳ Sedang di Lapangan</option>
+                  <option value="Selesai">✓ Selesai</option>
+                </select>
+              </div>
+
               <button class="btn btn-emerald btn-sm" onclick="openCatatPemakaianModal()">
-                <i class="bi bi-plus-lg"></i> Catat Pemakaian Baru
+                <i class="bi bi-plus-lg"></i> Ambil / Catat BNHP
               </button>
             </div>
 
@@ -1466,14 +1475,15 @@
               <table class="simpus-registration-table" id="tableAlatBnhpPemakaian" style="width: 100%;">
                 <thead>
                   <tr>
-                    <th style="width: 50px; text-align: center;">NO</th>
-                    <th style="width: 110px;">TANGGAL</th>
-                    <th style="width: 220px;">KEGIATAN & LOKASI</th>
-                    <th style="width: 170px;">PETUGAS PELAKSANA</th>
-                    <th>RINCIAN BNHP DIPAKAI</th>
-                    <th style="width: 100px; text-align: center;">SASARAN</th>
-                    <th style="width: 150px;">CATATAN</th>
-                    <th style="width: 70px; text-align: center;">AKSI</th>
+                    <th style="width: 45px; text-align: center;">NO</th>
+                    <th style="width: 105px;">TANGGAL</th>
+                    <th style="width: 200px;">KEGIATAN & LOKASI</th>
+                    <th style="width: 160px;">PETUGAS PELAKSANA</th>
+                    <th>RINCIAN BNHP (BAWA / SISA / PAKAI)</th>
+                    <th style="width: 85px; text-align: center;">SASARAN</th>
+                    <th style="width: 120px; text-align: center;">STATUS</th>
+                    <th style="width: 140px;">CATATAN</th>
+                    <th style="width: 120px; text-align: center;">AKSI</th>
                   </tr>
                 </thead>
                 <tbody id="tbodyAlatBnhpPemakaian">
@@ -4694,6 +4704,20 @@
       </div>
 
       <div class="modal-body" style="padding: 22px; background: #ffffff;">
+        <!-- Tahap Pencatatan BNHP -->
+        <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;">
+          <label style="font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 5px; display: block;">
+            <i class="bi bi-clock-history"></i> Tahap Pencatatan BNHP:
+          </label>
+          <select id="selectPemakaianTahap" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #059669; font-weight: 700;" onchange="handlePemakaianTahapChange()">
+            <option value="Dibawa ke Lapangan" selected>⏳ Ambil Bawaan (Sisa & sasaran riil dikonfirmasi saat retur sisa)</option>
+            <option value="Selesai">✓ Langsung Selesai (Sudah tahu sisa barang / pencatatan sekaligus)</option>
+          </select>
+          <div id="hintPemakaianTahap" style="font-size: 11px; margin-top: 4px; color: #15803d; line-height: 1.3;">
+            <i class="bi bi-info-circle"></i> Stok Puskesmas akan berkurang sejumlah barang yang Anda bawa. Setelah kegiatan selesai, Anda tinggal klik tombol <strong>Retur Sisa</strong> di tabel untuk mengembalikan sisa barang ke stok Puskesmas.
+          </div>
+        </div>
+
         <!-- Baris 1: Tanggal & Petugas Pelaksana -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
           <div>
@@ -4797,8 +4821,8 @@
 
       <div class="modal-footer" style="padding: 14px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
         <button type="button" class="btn btn-secondary" onclick="closeCatatPemakaianModal()" style="border-radius: 8px; font-weight: 600;">Batal</button>
-        <button type="button" class="btn btn-emerald" onclick="saveCatatPemakaian()" style="background: linear-gradient(135deg, #059669, #047857); color: #fff; border-radius: 8px; font-weight: 700; padding: 7px 18px;">
-          <i class="bi bi-check-circle-fill"></i> Simpan Catatan Pemakaian
+        <button type="button" class="btn btn-emerald" id="btnSimpanPemakaian" onclick="saveCatatPemakaian()" style="background: linear-gradient(135deg, #059669, #047857); color: #fff; border-radius: 8px; font-weight: 700; padding: 7px 18px;">
+          <i class="bi bi-box-arrow-up-right"></i> Simpan Bawaan Lapangan
         </button>
       </div>
     </div>
@@ -4958,6 +4982,70 @@
         <button type="button" class="btn btn-secondary" onclick="closePengembalianModal()" style="border-radius: 8px; font-weight: 600;">Batal</button>
         <button type="button" class="btn btn-teal" onclick="prosesPengembalianAlat()" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff; border-radius: 8px; font-weight: 700; padding: 7px 18px;">
           <i class="bi bi-check2-all"></i> Konfirmasi Kembali
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. MODAL KONFIRMASI RETUR SISA & SELESAI PEMAKAIAN BNHP -->
+  <div id="modalReturSisaBnhp" class="modal-overlay">
+    <div class="modal-container" style="max-width: 600px; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: #fff; padding: 14px 20px;">
+        <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
+          <i class="bi bi-box-arrow-in-down-left"></i> Konfirmasi Retur Sisa & Selesai Kegiatan BNHP
+        </div>
+        <button class="modal-close" onclick="closeReturSisaBnhpModal()" style="color: #fff; opacity: 0.9; font-size: 22px;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 22px; background: #ffffff;">
+        <input type="hidden" id="returPemakaianId" value="">
+
+        <div style="background: #f0fdf4; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #059669;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 12.5px; color: #15803d; font-weight: 800;" id="returInfoKegiatanLokasi">-</div>
+            <div style="font-size: 11px; color: #64748b;" id="returInfoTanggal">-</div>
+          </div>
+          <div style="font-size: 13.5px; font-weight: 700; color: #0f172a; margin-top: 3px;" id="returInfoPetugas">-</div>
+        </div>
+
+        <!-- Daftar Item Bawaan & Input Sisa -->
+        <div style="margin-bottom: 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+          <label style="font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 8px; display: block;">
+            <i class="bi bi-box2-heart"></i> Barang yang Dibawa & Input Sisa Kembali:
+          </label>
+          <div style="display: grid; grid-template-columns: minmax(180px, 2fr) minmax(70px, 0.9fr) minmax(80px, 1fr) minmax(80px, 1fr); gap: 8px; font-size: 11px; font-weight: 800; color: #475569; margin-bottom: 6px;">
+            <div>NAMA BARANG</div>
+            <div style="text-align: center;">BAWA</div>
+            <div style="text-align: center;">SISA KEMBALI</div>
+            <div style="text-align: center; color: #059669;">RIIL PAKAI</div>
+          </div>
+          <div id="containerReturItemRows" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Rendered dynamically via JS -->
+          </div>
+          <div style="font-size: 11px; color: #059669; margin-top: 8px;">
+            <i class="bi bi-arrow-repeat"></i> <em>Jumlah sisa yang dikembalikan akan otomatis <strong>ditambahkan kembali ke stok Puskesmas</strong>.</em>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
+            Realisasi Jumlah Sasaran Diperiksa (Siswa / Pasien)
+          </label>
+          <input type="number" id="inputReturSasaran" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 700;" min="0" placeholder="Jumlah riil sasaran terperiksa...">
+        </div>
+
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
+            Catatan Tambahan & Keterangan Pengembalian
+          </label>
+          <input type="text" id="inputReturCatatan" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Contoh: Sisa 30 strip utuh dikembalikan ke lemari Puskesmas...">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 14px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeReturSisaBnhpModal()" style="border-radius: 8px; font-weight: 600;">Batal</button>
+        <button type="button" class="btn btn-emerald" onclick="prosesReturSisaBnhp()" style="background: linear-gradient(135deg, #059669, #047857); color: #fff; border-radius: 8px; font-weight: 700; padding: 7px 18px;">
+          <i class="bi bi-check2-all"></i> Simpan & Kembalikan Sisa ke Stok
         </button>
       </div>
     </div>

@@ -1662,6 +1662,7 @@ Saran Medis:`;
             items_json TEXT NOT NULL,
             items_detail_json TEXT,
             jumlah_sasaran INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Selesai',
             catatan TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )
@@ -1686,6 +1687,7 @@ Saran Medis:`;
         `).run();
 
         try { await env.DB.prepare("ALTER TABLE ckg_logistik_pemakaian ADD COLUMN kegiatan TEXT DEFAULT 'CKG Sekolah'").run(); } catch (_) {}
+        try { await env.DB.prepare("ALTER TABLE ckg_logistik_pemakaian ADD COLUMN status TEXT DEFAULT 'Selesai'").run(); } catch (_) {}
         try { await env.DB.prepare("ALTER TABLE ckg_logistik_peminjaman ADD COLUMN kegiatan TEXT DEFAULT 'CKG Sekolah'").run(); } catch (_) {}
         try { await env.DB.prepare("ALTER TABLE ckg_logistik_peminjaman ADD COLUMN lokasi TEXT").run(); } catch (_) {}
       } catch (_) {}
@@ -1780,8 +1782,8 @@ Saran Medis:`;
             const p = payload;
             await env.DB.prepare(`
               INSERT INTO ckg_logistik_pemakaian (
-                id, tanggal, kegiatan, lokasi_kegiatan, petugas, items_json, items_detail_json, jumlah_sasaran, catatan
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                id, tanggal, kegiatan, lokasi_kegiatan, petugas, items_json, items_detail_json, jumlah_sasaran, status, catatan
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).bind(
               p.id,
               p.tanggal,
@@ -1791,18 +1793,56 @@ Saran Medis:`;
               p.items_json || '',
               JSON.stringify(p.items_detail || []),
               Number(p.jumlah_sasaran || 0),
+              p.status || 'Selesai',
               p.catatan || ''
             ).run();
 
             if (Array.isArray(p.items_detail)) {
               for (const it of p.items_detail) {
-                await env.DB.prepare(`
-                  UPDATE ckg_logistik_items 
-                  SET stok = MAX(0, stok - ?), updated_at = ?
-                  WHERE id = ?
-                `).bind(Number(it.qty || 0), new Date().toISOString(), it.id).run();
+                const reduceQty = Number(it.qty || it.bawa || 0);
+                if (reduceQty > 0) {
+                  await env.DB.prepare(`
+                    UPDATE ckg_logistik_items 
+                    SET stok = MAX(0, stok - ?), updated_at = ?
+                    WHERE id = ?
+                  `).bind(reduceQty, new Date().toISOString(), it.id).run();
+                }
               }
             }
+
+            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          }
+
+          if (action === 'retur_bnhp') {
+            const p = payload;
+            const { id, status, sasaran, sisa_items, items_json, items_detail, catatan } = p;
+            
+            // Kembalikan sisa ke stok di Cloudflare D1 (+sisa)
+            if (Array.isArray(sisa_items)) {
+              for (const it of sisa_items) {
+                const returQty = Number(it.sisa || 0);
+                if (returQty > 0) {
+                  await env.DB.prepare(`
+                    UPDATE ckg_logistik_items 
+                    SET stok = stok + ?, updated_at = ?
+                    WHERE id = ?
+                  `).bind(returQty, new Date().toISOString(), it.id).run();
+                }
+              }
+            }
+
+            await env.DB.prepare(`
+              UPDATE ckg_logistik_pemakaian 
+              SET status = ?, jumlah_sasaran = ?, items_json = ?, items_detail_json = ?, catatan = ?
+              WHERE id = ?
+            `).bind(
+              status || 'Selesai',
+              Number(sasaran || 0),
+              items_json || '',
+              JSON.stringify(items_detail || []),
+              catatan || '',
+              id
+            ).run();
 
             return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
           }

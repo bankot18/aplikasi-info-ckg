@@ -402,6 +402,7 @@ function renderAlatBnhpPemakaianTable() {
 
   const searchQuery = (document.getElementById('searchAlatBnhpPemakaian')?.value || '').toLowerCase().trim();
   const filterBulan = document.getElementById('filterAlatBnhpPemakaianBulan')?.value || '';
+  const filterStatus = document.getElementById('filterAlatBnhpPemakaianStatus')?.value || '';
 
   let list = (stateAlatBnhp.pemakaian || []).filter(p => {
     const matchSearch = !searchQuery ||
@@ -417,15 +418,19 @@ function renderAlatBnhpPemakaianTable() {
         matchBulan = parts[1] === filterBulan;
       }
     }
-    return matchSearch && matchBulan;
+
+    const recStatus = p.status || 'Selesai';
+    const matchStatus = !filterStatus || recStatus === filterStatus;
+
+    return matchSearch && matchBulan && matchStatus;
   });
 
   if (list.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" style="text-align: center; padding: 40px; color: #64748b;">
+        <td colspan="9" style="text-align: center; padding: 40px; color: #64748b;">
           <i class="bi bi-clipboard2-x" style="font-size: 32px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
-          Belum ada rekaman pemakaian BNHP di lapangan. Klik tombol <strong>Catat Pemakaian Baru</strong> untuk menambah.
+          Belum ada rekaman pemakaian BNHP di lapangan. Klik tombol <strong>Ambil / Catat BNHP</strong> untuk menambah.
         </td>
       </tr>
     `;
@@ -437,6 +442,17 @@ function renderAlatBnhpPemakaianTable() {
 
   let html = '';
   list.forEach((p, idx) => {
+    const isDiLapangan = (p.status === 'Dibawa ke Lapangan');
+    const statusBadge = isDiLapangan
+      ? `<span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 800; font-size: 11px; padding: 4px 8px; border-radius: 6px;"><i class="bi bi-hourglass-split"></i> Di Lapangan</span>`
+      : `<span class="badge" style="background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-weight: 800; font-size: 11px; padding: 4px 8px; border-radius: 6px;"><i class="bi bi-check2-circle"></i> Selesai</span>`;
+
+    const aksiRetur = isDiLapangan
+      ? `<button class="btn btn-emerald btn-sm" onclick="openReturSisaBnhpModal('${p.id}')" title="Selesaikan & Retur Sisa BNHP" style="background: #059669; color: #fff; padding: 4px 8px; font-size: 11.5px; border-radius: 6px; font-weight: 700;">
+           <i class="bi bi-box-arrow-in-down-left"></i> Retur Sisa
+         </button>`
+      : '';
+
     let itemsDetailHtml = '';
     if (Array.isArray(p.items_detail)) {
       itemsDetailHtml = p.items_detail.map(d => {
@@ -472,11 +488,15 @@ function renderAlatBnhpPemakaianTable() {
             ${Number(p.jumlah_sasaran || 0).toLocaleString('id-ID')}
           </span>
         </td>
+        <td style="text-align: center;">${statusBadge}</td>
         <td style="font-size: 12px; color: #64748b;">${p.catatan || '-'}</td>
         <td style="text-align: center;">
-          <button class="btn btn-danger btn-sm" onclick="hapusPemakaianLogistik('${p.id}')" title="Hapus Rekaman Pemakaian" style="padding: 4px 8px; font-size: 11.5px;">
-            <i class="bi bi-trash"></i>
-          </button>
+          <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+            ${aksiRetur}
+            <button class="btn btn-danger btn-sm" onclick="hapusPemakaianLogistik('${p.id}')" title="Hapus Rekaman Pemakaian" style="padding: 4px 8px; font-size: 11.5px;">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -1053,8 +1073,22 @@ function handlePinjamKegiatanChange() {
 }
 
 // ==========================================================================
-// 9. CATAT PEMAKAIAN LAPANGAN MODAL
+// 9. CATAT PEMAKAIAN LAPANGAN MODAL & ALUR LOGISTIK (AMBIL & RETUR)
 // ==========================================================================
+
+function handlePemakaianTahapChange() {
+  const tahap = document.getElementById('selectPemakaianTahap')?.value || 'Dibawa ke Lapangan';
+  const btn = document.getElementById('btnSimpanPemakaian');
+  const hint = document.getElementById('hintPemakaianTahap');
+
+  if (tahap === 'Dibawa ke Lapangan') {
+    if (btn) btn.innerHTML = '<i class="bi bi-box-arrow-up-right"></i> Simpan Bawaan Lapangan';
+    if (hint) hint.innerHTML = '<i class="bi bi-info-circle"></i> <strong>Mode Ambil Bawaan:</strong> Stok Puskesmas langsung dipotong sejumlah barang yang Anda bawa. Setelah kegiatan selesai, cukup klik tombol <span class="badge" style="background:#059669; color:#fff; font-size:10.5px; padding:2px 6px;">Retur Sisa</span> di tabel untuk mengembalikan sisa barang kembali ke lemari Puskesmas.';
+  } else {
+    if (btn) btn.innerHTML = '<i class="bi bi-check2-circle"></i> Simpan Catatan Pemakaian';
+    if (hint) hint.innerHTML = '<i class="bi bi-info-circle"></i> <strong>Mode Langsung Selesai:</strong> Pencatatan pemakaian riil (Bawa dikurangi Sisa). Hanya jumlah <strong>Terpakai</strong> yang akan memotong stok Puskesmas dan status langsung diset <em>Selesai</em>.';
+  }
+}
 
 function openCatatPemakaianModal() {
   document.getElementById('inputPemakaianTanggal').value = new Date().toISOString().split('T')[0];
@@ -1078,14 +1112,19 @@ function openCatatPemakaianModal() {
   document.getElementById('inputPemakaianSasaran').value = '';
   document.getElementById('inputPemakaianCatatan').value = '';
 
+  // Set default tahap pencatatan: Ambil Bawaan
+  const selectTahap = document.getElementById('selectPemakaianTahap');
+  if (selectTahap) selectTahap.value = 'Dibawa ke Lapangan';
+  handlePemakaianTahapChange();
+
   handlePemakaianKegiatanChange();
 
   const container = document.getElementById('containerPemakaianItemRows');
   if (container) {
     container.innerHTML = '';
-    // Tambah 2 baris awal default: contoh Bawa 200, Sisa 30 -> Terpakai 170
-    addPemakaianItemRow('itm-10', 200, 30); // Strip Gula
-    addPemakaianItemRow('itm-14', 200, 30); // Blood Lancet
+    // Tambah 2 baris awal default: contoh Bawa 200, Sisa 0 -> Terpakai 200
+    addPemakaianItemRow('itm-10', 200, 0); // Strip Gula
+    addPemakaianItemRow('itm-14', 200, 0); // Blood Lancet
   }
 
   const modal = document.getElementById('modalCatatPemakaian');
@@ -1119,7 +1158,7 @@ function addPemakaianItemRow(selectedId = '', defaultBawa = 200, defaultSisa = 0
     </select>
     <input type="number" class="filter-control input-pemakaian-bawa" min="0" value="${defaultBawa}" placeholder="Bawa" title="Jumlah barang yang dibawa ke lapangan" oninput="calcPemakaianRow(this)" style="font-weight: 700; text-align: center; color: #1e293b;">
     <input type="number" class="filter-control input-pemakaian-sisa" min="0" value="${defaultSisa}" placeholder="Sisa" title="Jumlah sisa yang dikembalikan ke puskesmas" oninput="calcPemakaianRow(this)" style="font-weight: 700; text-align: center; color: #d97706;">
-    <input type="number" class="filter-control input-pemakaian-qty" min="0" value="${defaultPakai}" placeholder="Pakai" title="Jumlah riil terpakai (hanya ini yang memotong stok)" style="font-weight: 800; text-align: center; color: #059669; background: #ecfdf5; border-color: #6ee7b7;">
+    <input type="number" class="filter-control input-pemakaian-qty" min="0" value="${defaultPakai}" placeholder="Pakai" title="Jumlah riil terpakai" style="font-weight: 800; text-align: center; color: #059669; background: #ecfdf5; border-color: #6ee7b7;">
     <button type="button" class="btn btn-danger btn-sm" onclick="removePemakaianItemRow(this)" style="padding: 6px; line-height: 1; border-radius: 6px;" title="Hapus Baris">
       <i class="bi bi-x-lg"></i>
     </button>
@@ -1149,6 +1188,7 @@ function saveCatatPemakaian() {
   const tanggal = document.getElementById('inputPemakaianTanggal')?.value;
   const petugas = document.getElementById('selectPemakaianPetugas')?.value || sessionStorage.getItem('ckg_user_name') || 'Petugas';
   const kegiatan = document.getElementById('selectPemakaianKegiatan')?.value || 'CKG Sekolah';
+  const tahap = document.getElementById('selectPemakaianTahap')?.value || 'Dibawa ke Lapangan';
 
   let lokasi = '';
   if (kegiatan === 'CKG Sekolah') {
@@ -1183,38 +1223,51 @@ function saveCatatPemakaian() {
   const rows = document.querySelectorAll('.pemakaian-item-row');
   const details = [];
 
-  rows.forEach(r => {
+  for (const r of rows) {
     const select = r.querySelector('.select-pemakaian-item');
     const inputBawa = r.querySelector('.input-pemakaian-bawa');
     const inputSisa = r.querySelector('.input-pemakaian-sisa');
-    const inputQty = r.querySelector('.input-pemakaian-qty');
 
     const itemId = select?.value;
     const bawa = Number(inputBawa?.value || 0);
     const sisa = Number(inputSisa?.value || 0);
-    const qty = Number(inputQty?.value || 0);
 
-    if (itemId && qty > 0) {
+    // Jika Dibawa ke Lapangan (ambil bawaan), pemotongan awal adalah jumlah yang dibawa
+    // Jika Selesai, pemotongan adalah riil terpakai (bawa - sisa)
+    const qty = (tahap === 'Dibawa ke Lapangan') ? bawa : Math.max(0, bawa - sisa);
+
+    if (itemId && bawa > 0) {
       const it = stateAlatBnhp.items.find(x => x.id === itemId);
       if (it) {
+        if (bawa > Number(it.stok || 0)) {
+          if (typeof Swal !== 'undefined') {
+            Swal.fire(
+              'Stok Tidak Mencukupi',
+              `Stok <strong>${it.nama}</strong> di Puskesmas hanya ${it.stok} ${it.satuan}. Anda memasukkan bawa ${bawa} ${it.satuan}.`,
+              'warning'
+            );
+          }
+          return;
+        }
+
         details.push({
           id: it.id,
           nama: it.nama,
           satuan: it.satuan,
           bawa: bawa,
-          sisa: sisa,
-          qty: qty // Hanya qty yang memotong stok
+          sisa: (tahap === 'Dibawa ke Lapangan') ? 0 : sisa,
+          qty: qty
         });
       }
     }
-  });
+  }
 
   if (details.length === 0) {
-    if (typeof Swal !== 'undefined') Swal.fire('Item Kosong', 'Pilih minimal 1 bahan BNHP dengan jumlah terpakai lebih dari 0.', 'warning');
+    if (typeof Swal !== 'undefined') Swal.fire('Item Kosong', 'Pilih minimal 1 bahan BNHP dengan jumlah bawa lebih dari 0.', 'warning');
     return;
   }
 
-  // Kurangi stok masing-masing item HANYA sejumlah qty riil terpakai
+  // Kurangi stok masing-masing item di state lokal sesuai qty
   details.forEach(d => {
     const idx = stateAlatBnhp.items.findIndex(x => x.id === d.id);
     if (idx !== -1) {
@@ -1222,6 +1275,8 @@ function saveCatatPemakaian() {
       stateAlatBnhp.items[idx].stok = Math.max(0, sisaStok);
     }
   });
+
+  const isDiLapangan = (tahap === 'Dibawa ke Lapangan');
 
   const newRecord = {
     id: 'pmk-' + Date.now(),
@@ -1231,7 +1286,14 @@ function saveCatatPemakaian() {
     petugas,
     jumlah_sasaran: sasaran,
     items_detail: details,
-    items_json: details.map(d => `${d.nama}: Bawa ${d.bawa || d.qty}, Sisa ${d.sisa || 0} ➔ Pakai ${d.qty} ${d.satuan}`).join('; '),
+    items_json: details.map(d => {
+      if (isDiLapangan) {
+        return `${d.nama}: Bawa ${d.bawa} ${d.satuan}`;
+      } else {
+        return `${d.nama}: Bawa ${d.bawa}, Sisa ${d.sisa || 0} ➔ Pakai ${d.qty} ${d.satuan}`;
+      }
+    }).join('; '),
+    status: isDiLapangan ? 'Dibawa ke Lapangan' : 'Selesai',
     catatan,
     created_at: new Date().toISOString()
   };
@@ -1243,12 +1305,226 @@ function saveCatatPemakaian() {
   renderAlatBnhpView();
 
   if (typeof Swal !== 'undefined') {
+    if (isDiLapangan) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Bawaan Lapangan Dicatat!',
+        html: `
+          <div style="font-size: 13px; line-height: 1.5; text-align: left;">
+            <p><strong>Status:</strong> <span style="color:#d97706; font-weight:800;">⏳ Sedang di Lapangan</span></p>
+            <p>Stok barang di Puskesmas telah diamankan/dipotong sebesar barang yang Anda bawa.</p>
+            <p style="background:#f0fdf4; padding:8px 10px; border-radius:6px; color:#15803d; border-left:3px solid #059669;">
+              <i class="bi bi-box-arrow-in-down-left"></i> Nanti saat kembali ke Puskesmas, klik tombol <strong>Retur Sisa</strong> di tabel untuk mengembalikan sisa barang kembali ke lemari/stok Puskesmas.
+            </p>
+          </div>
+        `,
+        confirmButtonColor: '#059669',
+        timer: 3500
+      });
+    } else {
+      Swal.fire({
+        icon: 'success',
+        title: 'Pemakaian Berhasil Dicatat!',
+        text: `Data logistik telah diperbarui dan stok bahan habis pakai otomatis dikurangi riil terpakai.`,
+        confirmButtonColor: '#059669',
+        timer: 2200
+      });
+    }
+  }
+}
+
+// ==========================================================================
+// 9B. KONFIRMASI RETUR SISA & SELESAI PEMAKAIAN BNHP
+// ==========================================================================
+
+function openReturSisaBnhpModal(pemakaianId) {
+  const p = (stateAlatBnhp.pemakaian || []).find(x => x.id === pemakaianId);
+  if (!p) {
+    if (typeof Swal !== 'undefined') Swal.fire('Data Tidak Ditemukan', 'Rekaman pemakaian tidak ditemukan.', 'error');
+    return;
+  }
+
+  const hiddenId = document.getElementById('returPemakaianId');
+  if (hiddenId) hiddenId.value = p.id;
+
+  const infoKegiatan = document.getElementById('returInfoKegiatanLokasi');
+  if (infoKegiatan) infoKegiatan.innerText = `${p.kegiatan || 'Kegiatan CKG'} • ${p.lokasi_kegiatan || '-'}`;
+
+  const infoTanggal = document.getElementById('returInfoTanggal');
+  if (infoTanggal) infoTanggal.innerText = `Tanggal: ${p.tanggal || '-'}`;
+
+  const infoPetugas = document.getElementById('returInfoPetugas');
+  if (infoPetugas) infoPetugas.innerHTML = `<i class="bi bi-person-fill" style="color: #059669;"></i> Petugas Pelaksana: <strong>${p.petugas || '-'}</strong>`;
+
+  const inputSasaran = document.getElementById('inputReturSasaran');
+  if (inputSasaran) inputSasaran.value = p.jumlah_sasaran || '';
+
+  const inputCatatan = document.getElementById('inputReturCatatan');
+  if (inputCatatan) inputCatatan.value = p.catatan || '';
+
+  const container = document.getElementById('containerReturItemRows');
+  if (container) {
+    container.innerHTML = '';
+    const details = Array.isArray(p.items_detail) ? p.items_detail : [];
+
+    details.forEach(d => {
+      const bawa = Number(d.bawa !== undefined ? d.bawa : d.qty || 0);
+      const sisa = Number(d.sisa || 0);
+      const pakai = Math.max(0, bawa - sisa);
+
+      const row = document.createElement('div');
+      row.className = 'retur-item-row';
+      row.dataset.id = d.id;
+      row.dataset.bawa = bawa;
+      row.style.cssText = 'display: grid; grid-template-columns: minmax(180px, 2fr) minmax(70px, 0.9fr) minmax(80px, 1fr) minmax(80px, 1fr); gap: 8px; align-items: center; background: #fff; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1;';
+      row.innerHTML = `
+        <div>
+          <strong style="font-size: 13px; color: #0f172a;">${d.nama}</strong>
+          <div style="font-size: 11px; color: #64748b;">Satuan: ${d.satuan || 'Pcs'}</div>
+        </div>
+        <div style="text-align: center;">
+          <span class="badge" style="background: #e2e8f0; color: #334155; font-size: 12.5px; font-weight: 800; padding: 4px 8px; border-radius: 6px;">
+            ${bawa}
+          </span>
+        </div>
+        <div>
+          <input type="number" class="filter-control input-retur-sisa" min="0" max="${bawa}" value="${sisa}" oninput="calcReturRow(this)" style="font-weight: 800; text-align: center; color: #d97706; border-color: #f59e0b; width: 100%;" placeholder="0">
+        </div>
+        <div style="text-align: center;">
+          <span class="retur-riil-pakai" style="font-weight: 800; font-size: 13.5px; color: #059669;">
+            ${pakai}
+          </span>
+        </div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  const modal = document.getElementById('modalReturSisaBnhp');
+  if (modal) modal.classList.add('active');
+}
+
+function closeReturSisaBnhpModal() {
+  const modal = document.getElementById('modalReturSisaBnhp');
+  if (modal) modal.classList.remove('active');
+}
+
+function calcReturRow(inputEl) {
+  const row = inputEl.closest('.retur-item-row');
+  if (!row) return;
+
+  const bawa = Number(row.dataset.bawa || 0);
+  let sisa = Number(inputEl.value || 0);
+
+  if (sisa < 0) {
+    sisa = 0;
+    inputEl.value = 0;
+  }
+  if (sisa > bawa) {
+    sisa = bawa;
+    inputEl.value = bawa;
+  }
+
+  const pakai = Math.max(0, bawa - sisa);
+  const pakaiEl = row.querySelector('.retur-riil-pakai');
+  if (pakaiEl) pakaiEl.innerText = pakai;
+}
+
+function prosesReturSisaBnhp() {
+  const pemakaianId = document.getElementById('returPemakaianId')?.value;
+  const pIndex = (stateAlatBnhp.pemakaian || []).findIndex(x => x.id === pemakaianId);
+
+  if (pIndex === -1) {
+    if (typeof Swal !== 'undefined') Swal.fire('Error', 'Data pemakaian tidak ditemukan.', 'error');
+    return;
+  }
+
+  const rows = document.querySelectorAll('#containerReturItemRows .retur-item-row');
+  const updatedDetails = [];
+  const sisaItems = [];
+
+  rows.forEach(row => {
+    const itemId = row.dataset.id;
+    const bawa = Number(row.dataset.bawa || 0);
+    const sisa = Number(row.querySelector('.input-retur-sisa')?.value || 0);
+    const pakai = Math.max(0, bawa - sisa);
+
+    const orig = (stateAlatBnhp.pemakaian[pIndex].items_detail || []).find(d => d.id === itemId);
+    const nama = orig ? orig.nama : itemId;
+    const satuan = orig ? orig.satuan : 'Pcs';
+
+    updatedDetails.push({
+      id: itemId,
+      nama,
+      satuan,
+      bawa,
+      sisa,
+      qty: pakai
+    });
+
+    // Tambahkan sisa kembali ke stok lokal Puskesmas (+sisa)
+    if (sisa > 0) {
+      const itIdx = stateAlatBnhp.items.findIndex(it => it.id === itemId);
+      if (itIdx !== -1) {
+        stateAlatBnhp.items[itIdx].stok = Number(stateAlatBnhp.items[itIdx].stok || 0) + sisa;
+      }
+      sisaItems.push({ id: itemId, sisa, nama, satuan });
+    }
+  });
+
+  const realSasaran = Number(document.getElementById('inputReturSasaran')?.value || 0);
+  const catatan = document.getElementById('inputReturCatatan')?.value.trim();
+
+  // Update record state
+  stateAlatBnhp.pemakaian[pIndex].status = 'Selesai';
+  if (realSasaran > 0) {
+    stateAlatBnhp.pemakaian[pIndex].jumlah_sasaran = realSasaran;
+  }
+  if (catatan) {
+    stateAlatBnhp.pemakaian[pIndex].catatan = catatan;
+  }
+  stateAlatBnhp.pemakaian[pIndex].items_detail = updatedDetails;
+  stateAlatBnhp.pemakaian[pIndex].items_json = updatedDetails.map(d => 
+    `${d.nama}: Bawa ${d.bawa}, Sisa ${d.sisa || 0} ➔ Pakai ${d.qty} ${d.satuan}`
+  ).join('; ');
+
+  closeReturSisaBnhpModal();
+  saveAlatBnhpToLocal();
+
+  // Sync perubahan retur & penambahan stok ke Cloudflare D1
+  syncAlatBnhpToCloud('retur_bnhp', {
+    id: pemakaianId,
+    status: 'Selesai',
+    sasaran: realSasaran,
+    sisa_items: sisaItems,
+    items_json: stateAlatBnhp.pemakaian[pIndex].items_json,
+    items_detail: updatedDetails,
+    catatan: catatan
+  });
+
+  renderAlatBnhpView();
+
+  if (typeof Swal !== 'undefined') {
+    let detailReturText = '';
+    if (sisaItems.length > 0) {
+      detailReturText = sisaItems.map(s => `• <strong>${s.nama}</strong>: +${s.sisa} ${s.satuan} dikembalikan ke stok Puskesmas`).join('<br>');
+    } else {
+      detailReturText = 'Semua barang habis terpakai di lapangan (sisa: 0).';
+    }
+
     Swal.fire({
       icon: 'success',
-      title: 'Pemakaian Berhasil Dicatat!',
-      text: `Data logistik telah diperbarui dan stok bahan habis pakai otomatis dikurangi.`,
+      title: 'Retur BNHP Berhasil & Status Selesai!',
+      html: `
+        <div style="text-align: left; font-size: 13px; line-height: 1.6;">
+          <p>Status kegiatan telah diperbarui menjadi <span class="badge" style="background:#dcfce7; color:#15803d; font-weight:800; padding:2px 6px;">✓ Selesai</span>.</p>
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:10px 12px; border-radius:6px; margin-top:8px;">
+            ${detailReturText}
+          </div>
+        </div>
+      `,
       confirmButtonColor: '#059669',
-      timer: 2200
+      timer: 3500
     });
   }
 }
