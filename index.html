@@ -32,8 +32,284 @@
 
 <body>
 
-  <!-- FULLSCREEN SPLIT-SCREEN AUTH FORM OVERLAY -->
-  <div id="loginViewContainer" class="login-view-container">
+  <!-- ==========================================================================
+       PORTAL SELECTION GATE CONTAINER (GERBANG UTAMA PILIH AKSES)
+       ========================================================================== -->
+  <div id="portalSelectionContainer" class="portal-gate-container">
+    <div class="portal-gate-header">
+      <div class="portal-gate-brand">
+        <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" onerror="this.style.display='none'">
+        <div class="portal-gate-brand-title">
+          <h3>Puskesmas Banjaran Kota</h3>
+          <p>Sistem Informasi CKG (BNBA)</p>
+        </div>
+      </div>
+      <div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDarkMode()"
+          style="border-radius: 20px; padding: 6px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff;">
+          <i class="bi bi-sun-fill" style="color: #f59e0b;"></i>
+          <span>Mode Tema</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="portal-gate-main">
+      <div class="portal-headline-tag">
+        <i class="bi bi-shield-check"></i> Multi-Portal Access Gate
+      </div>
+      <h1 class="portal-headline-title">
+        Pilih Portal Akses Pengguna
+      </h1>
+      <p class="portal-headline-subtitle">
+        Selamat datang di Sistem Informasi Pencatatan Cek Kesehatan Gratis (CKG). Silakan tentukan pintu masuk sesuai instansi atau peran Anda.
+      </p>
+
+      <div class="portal-cards-grid">
+        <!-- CARD 1: PUSKESMAS BANJARAN KOTA -->
+        <div class="portal-card card-puskesmas" onclick="openPuskesmasGate()">
+          <div>
+            <div class="portal-card-icon-wrap">
+              <i class="bi bi-hospital-fill"></i>
+            </div>
+            <span class="portal-card-badge">Puskesmas Internal</span>
+            <h2 class="portal-card-title">Puskesmas Banjaran Kota</h2>
+            <p class="portal-card-desc">
+              Akses khusus staf medis, petugas skrining, koordinator, dan administrator Puskesmas Banjaran Kota.
+            </p>
+          </div>
+          <button type="button" class="portal-card-btn">
+            Masuk Portal Puskesmas <i class="bi bi-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- CARD 2: SEKOLAH -->
+        <div class="portal-card card-sekolah" onclick="openSekolahPortal()">
+          <div>
+            <div class="portal-card-icon-wrap">
+              <i class="bi bi-mortarboard-fill"></i>
+            </div>
+            <span class="portal-card-badge">Instansi Pendidikan</span>
+            <h2 class="portal-card-title">Sekolah (UKS / Guru)</h2>
+            <p class="portal-card-desc">
+              Akses instansi sekolah jenjang SD/MI, SMP/MTs, dan SMA/SMK untuk entri & monitoring hasil skrining CKG siswa.
+            </p>
+          </div>
+          <button type="button" class="portal-card-btn">
+            Masuk Portal Sekolah <i class="bi bi-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- CARD 3: POSYANDU / KADER -->
+        <div class="portal-card card-posyandu" onclick="openPosyanduPortal()">
+          <div>
+            <div class="portal-card-icon-wrap">
+              <i class="bi bi-heart-pulse-fill"></i>
+            </div>
+            <span class="portal-card-badge">Kader Desa</span>
+            <h2 class="portal-card-title">Posyandu / Kader</h2>
+            <p class="portal-card-desc">
+              Akses kader kesehatan Posyandu desa/kelurahan untuk skrining terpadu balita, remaja, lansia, dan masyarakat.
+            </p>
+          </div>
+          <button type="button" class="portal-card-btn">
+            Masuk Portal Posyandu <i class="bi bi-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="portal-gate-footer">
+      <span>Create by: Mochamad Fauzie, S.Gz @2026</span>
+      <span>Puskesmas Banjaran Kota • v1.2</span>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       PORTAL SEKOLAH LOGIN OVERLAY
+       ========================================================================== -->
+  <div id="sekolahLoginContainer" class="portal-sublogin-container hidden">
+    <div class="portal-sublogin-card">
+      <!-- Left Visual Panel -->
+      <div class="split-visual-panel" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #4338ca 100%);">
+        <div class="visual-brand-header">
+          <div class="visual-brand-logo" style="background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.2); padding: 4px; border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;">
+            <img src="logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
+          </div>
+          <div class="visual-brand-title">
+            <h3>Portal Sekolah CKG</h3>
+            <p>Puskesmas Banjaran Kota</p>
+          </div>
+        </div>
+        <div class="visual-body-content">
+          <h2 class="visual-hero-headline">Skrining Kesehatan Siswa Sekolah Terpadu & Terukur</h2>
+          <p class="visual-hero-subtitle">Portal khusus guru pembina UKS dan pihak sekolah untuk pengelolaan data skrining CKG By Name By Address.</p>
+          <div class="feature-cards-stack">
+            <div class="feature-pill-card">
+              <div class="feature-pill-icon icon-blue"><i class="bi bi-mortarboard-fill"></i></div>
+              <div class="feature-pill-text">
+                <h4>Database Seluruh Sekolah</h4>
+                <p>Terintegrasi langsung dengan database 39+ sekolah wilayah Puskesmas Banjaran Kota.</p>
+              </div>
+            </div>
+            <div class="feature-pill-card">
+              <div class="feature-pill-icon icon-cyan"><i class="bi bi-shield-lock-fill"></i></div>
+              <div class="feature-pill-text">
+                <h4>Autentikasi Terverifikasi</h4>
+                <p>Akses akun sekolah diproteksi dengan kata sandi resmi yang diatur oleh Admin Puskesmas.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="visual-footer-info">
+          <span>Portal CKG Sekolah</span>
+          <span>v1.2</span>
+        </div>
+      </div>
+
+      <!-- Right Form Panel -->
+      <div class="split-form-panel">
+        <div style="position: absolute; top: 20px; right: 24px; display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="returnToPortalPicker()" style="border-radius: 20px; padding: 6px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="bi bi-arrow-left"></i> Ganti Portal
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDarkMode()" style="border-radius: 20px; padding: 6px 14px; font-weight: 700;">
+            <i class="bi bi-sun-fill" style="color: #f59e0b;"></i>
+          </button>
+        </div>
+
+        <div class="form-panel-content">
+          <div class="auth-form-logo" style="text-align: center; margin-bottom: 16px;">
+            <div style="width: 72px; height: 72px; margin: 0 auto; background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 8px 20px rgba(37,99,235,0.3);">
+              <i class="bi bi-mortarboard-fill"></i>
+            </div>
+          </div>
+          <div class="auth-header-text" style="text-align: center;">
+            <h2>Masuk Akun Sekolah</h2>
+            <p>Pilih nama sekolah Anda dan masukkan kata sandi yang telah diset oleh Admin Puskesmas.</p>
+          </div>
+
+          <form id="sekolahLoginForm" onsubmit="handleSekolahLogin(event)" class="login-form">
+            <div class="form-group">
+              <label class="form-label" for="loginSekolahSelect">Nama Sekolah <span class="required">*</span></label>
+              <select id="loginSekolahSelect" class="form-control" required style="height: 48px; font-size: 14px; font-weight: 600;">
+                <option value="">-- Pilih Sekolah --</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 14px;">
+              <label class="form-label" for="loginSekolahPassword">Kata Sandi Sekolah <span class="required">*</span></label>
+              <div style="position: relative;">
+                <input type="password" id="loginSekolahPassword" class="form-control" placeholder="Masukkan kata sandi sekolah..." required style="height: 48px; font-size: 14px; padding-right: 44px;" autocomplete="current-password">
+                <button type="button" onclick="togglePasswordVisibility('loginSekolahPassword', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; cursor: pointer; font-size: 16px;">
+                  <i class="bi bi-eye-slash-fill"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="btnSekolahSubmit"
+              style="height: 48px; font-size: 14.5px; border-radius: var(--radius-md); font-weight: 800; background: linear-gradient(135deg, #2563eb, #4f46e5); margin-top: 12px; width: 100%;">
+              Masuk Portal Sekolah <i class="bi bi-box-arrow-in-right" style="font-size: 16px;"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       PORTAL POSYANDU LOGIN OVERLAY
+       ========================================================================== -->
+  <div id="posyanduLoginContainer" class="portal-sublogin-container hidden">
+    <div class="portal-sublogin-card">
+      <!-- Left Visual Panel -->
+      <div class="split-visual-panel" style="background: linear-gradient(135deg, #0f172a 0%, #881337 50%, #e11d48 100%);">
+        <div class="visual-brand-header">
+          <div class="visual-brand-logo" style="background: #ffffff; box-shadow: 0 4px 14px rgba(0,0,0,0.2); padding: 4px; border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;">
+            <img src="logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
+          </div>
+          <div class="visual-brand-title">
+            <h3>Portal Posyandu CKG</h3>
+            <p>Puskesmas Banjaran Kota</p>
+          </div>
+        </div>
+        <div class="visual-body-content">
+          <h2 class="visual-hero-headline">Skrining Kesehatan Masyarakat Tingkat Desa & Posyandu</h2>
+          <p class="visual-hero-subtitle">Platform khusus kader posyandu untuk pencatatan skrining kesehatan luar gedung secara langsung dan real-time.</p>
+          <div class="feature-cards-stack">
+            <div class="feature-pill-card">
+              <div class="feature-pill-icon icon-emerald"><i class="bi bi-heart-pulse-fill"></i></div>
+              <div class="feature-pill-text">
+                <h4>Kader Posyandu Terintegrasi</h4>
+                <p>Mempermudah kader posyandu dalam melakukan entri data skrining warga binaan.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="visual-footer-info">
+          <span>Portal CKG Posyandu</span>
+          <span>v1.2</span>
+        </div>
+      </div>
+
+      <!-- Right Form Panel -->
+      <div class="split-form-panel">
+        <div style="position: absolute; top: 20px; right: 24px; display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="returnToPortalPicker()" style="border-radius: 20px; padding: 6px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="bi bi-arrow-left"></i> Ganti Portal
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDarkMode()" style="border-radius: 20px; padding: 6px 14px; font-weight: 700;">
+            <i class="bi bi-sun-fill" style="color: #f59e0b;"></i>
+          </button>
+        </div>
+
+        <div class="form-panel-content">
+          <div class="auth-form-logo" style="text-align: center; margin-bottom: 16px;">
+            <div style="width: 72px; height: 72px; margin: 0 auto; background: linear-gradient(135deg, #e11d48, #db2777); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 8px 20px rgba(225,29,72,0.3);">
+              <i class="bi bi-heart-pulse-fill"></i>
+            </div>
+          </div>
+          <div class="auth-header-text" style="text-align: center;">
+            <h2>Masuk Akun Posyandu / Kader</h2>
+            <p>Pilih nama Posyandu Anda dan masukkan kata sandi yang telah diset oleh Admin Puskesmas.</p>
+          </div>
+
+          <form id="posyanduLoginForm" onsubmit="handlePosyanduLogin(event)" class="login-form">
+            <div class="form-group">
+              <label class="form-label" for="loginPosyanduDesaFilter">Filter Kelurahan / Desa</label>
+              <select id="loginPosyanduDesaFilter" class="form-control" onchange="filterPosyanduDropdownByDesa(this.value)" style="height: 44px; font-size: 13.5px;">
+                <option value="">Semua Desa / Kelurahan</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 12px;">
+              <label class="form-label" for="loginPosyanduSelect">Nama Posyandu <span class="required">*</span></label>
+              <select id="loginPosyanduSelect" class="form-control" required style="height: 48px; font-size: 14px; font-weight: 600;">
+                <option value="">-- Pilih Posyandu --</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 14px;">
+              <label class="form-label" for="loginPosyanduPassword">Kata Sandi Posyandu <span class="required">*</span></label>
+              <div style="position: relative;">
+                <input type="password" id="loginPosyanduPassword" class="form-control" placeholder="Masukkan kata sandi posyandu..." required style="height: 48px; font-size: 14px; padding-right: 44px;" autocomplete="current-password">
+                <button type="button" onclick="togglePasswordVisibility('loginPosyanduPassword', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; cursor: pointer; font-size: 16px;">
+                  <i class="bi bi-eye-slash-fill"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="btnPosyanduSubmit"
+              style="height: 48px; font-size: 14.5px; border-radius: var(--radius-md); font-weight: 800; background: linear-gradient(135deg, #e11d48, #db2777); margin-top: 12px; width: 100%;">
+              Masuk Portal Posyandu <i class="bi bi-box-arrow-in-right" style="font-size: 16px;"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULLSCREEN SPLIT-SCREEN AUTH FORM OVERLAY (PUSKESMAS BANJARAN KOTA) -->
+  <div id="loginViewContainer" class="login-view-container hidden">
     <div class="split-auth-card">
 
       <!-- LEFT COLUMN: Visual Branding & Feature Showcase Panel -->
@@ -106,7 +382,11 @@
 
       <!-- RIGHT COLUMN: Auth Form Fields Panel -->
       <div class="split-form-panel">
-        <div style="position: absolute; top: 20px; right: 24px;">
+        <div style="position: absolute; top: 20px; right: 24px; display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="returnToPortalPicker()" id="btnBackToPortalPuskesmas"
+            style="border-radius: 20px; padding: 6px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="bi bi-arrow-left"></i> Ganti Portal
+          </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDarkMode()" id="loginThemeToggleBtn"
             style="border-radius: 20px; padding: 6px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
             <i id="loginThemeIcon" class="bi bi-sun-fill" style="color: #f59e0b;"></i>
@@ -329,6 +609,26 @@
 
     <!-- Main Content Container -->
     <main class="main-content">
+
+      <!-- VIEW: EMPTY ACCESS STATE (Bila Akun Sekolah / Posyandu Belum Diberi Izin Menu oleh Admin) -->
+      <section id="view-empty-access" class="view-panel" style="display: none;">
+        <div class="empty-access-card">
+          <div style="width: 76px; height: 76px; border-radius: 50%; background: #fef3c7; color: #d97706; display: inline-flex; align-items: center; justify-content: center; font-size: 36px; margin-bottom: 16px; box-shadow: 0 6px 16px rgba(217,119,6,0.18);">
+            <i class="bi bi-shield-lock-fill"></i>
+          </div>
+          <h2 style="font-size: 20px; font-weight: 800; margin: 0 0 10px 0;">Akun Terverifikasi, Namun Belum Ada Menu Aktif</h2>
+          <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6; margin: 0 0 20px 0;">
+            Akun Anda (<strong id="emptyAccessAccountName">-</strong>) telah berhasil masuk ke sistem CKG Puskesmas Banjaran Kota.
+            Namun, Administrator Puskesmas belum memberikan izin menu aktif untuk akun ini.
+          </p>
+          <div style="background: rgba(37, 99, 235, 0.06); border: 1px dashed rgba(37, 99, 235, 0.3); border-radius: 12px; padding: 14px; font-size: 13px; color: var(--primary); font-weight: 600; margin-bottom: 24px; text-align: left;">
+            <i class="bi bi-info-circle-fill"></i> Silakan hubungi Administrator Puskesmas Banjaran Kota untuk mengaktifkan modul hak akses menu CKG bagi akun ini.
+          </div>
+          <button type="button" class="btn btn-secondary" onclick="handleLogout()" style="border-radius: 20px; padding: 10px 24px; font-weight: 700; background: #fff1f2; color: #e11d48; border-color: #fecdd3;">
+            <i class="bi bi-power"></i> Keluar / Ganti Akun
+          </button>
+        </div>
+      </section>
 
       <!-- VIEW 1: DASHBOARD ANALYTICS -->
       <section id="view-dashboard" class="view-panel active">
@@ -1709,47 +2009,199 @@
 
       <!-- VIEW 7: ADMIN PANEL & DATABASE USER -->
       <section id="view-admin-panel" class="view-panel admin-only">
-        <div class="card-panel">
-          <div class="card-header-bar">
-            <div>
-              <div class="card-header-title">
-                <i class="bi bi-database-fill-gear"></i> Database User System CKG
+
+        <!-- Admin Subtabs Navigation -->
+        <div class="admin-subtabs-nav">
+          <button type="button" class="btn btn-primary btn-sm admin-subtab-btn active" id="btnSubtabAdminUsers" onclick="switchAdminSubtab('users')">
+            <i class="bi bi-person-badge-fill"></i> Pegawai Puskesmas
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm admin-subtab-btn" id="btnSubtabAdminSekolah" onclick="switchAdminSubtab('sekolah')">
+            <i class="bi bi-mortarboard-fill"></i> Akun & Hak Akses Sekolah
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm admin-subtab-btn" id="btnSubtabAdminPosyandu" onclick="switchAdminSubtab('posyandu')">
+            <i class="bi bi-heart-pulse-fill"></i> Akun & Hak Akses Posyandu
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm admin-subtab-btn" id="btnSubtabAdminGate" onclick="switchAdminSubtab('gate')">
+            <i class="bi bi-shield-lock-fill"></i> Password Gerbang Puskesmas
+          </button>
+        </div>
+
+        <!-- SUBSECTION 1: PEGAWAI PUSKESMAS -->
+        <div id="adminSectionUsers" class="admin-panel-section">
+          <div class="card-panel">
+            <div class="card-header-bar">
+              <div>
+                <div class="card-header-title">
+                  <i class="bi bi-database-fill-gear"></i> Database User Pegawai Puskesmas
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                  Manajemen akun pegawai sistem CKG Puskesmas Banjaran Kota (Format: Nama User, Password, Level User/Role)
+                </p>
               </div>
-              <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Manajemen akun pengguna sistem CKG Puskesmas Banjaran Kota (Format: Nama User, Password, Level
-                User/Role)
-              </p>
+              <div class="action-buttons-group">
+                <button class="btn btn-amber" onclick="openCustomLogoModal()">
+                  <i class="bi bi-image-fill"></i> Custom Logo PNG
+                </button>
+                <button class="btn btn-emerald" onclick="manualRefreshLiveSessions()"
+                  style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; font-weight: 700;">
+                  <i class="bi bi-arrow-clockwise"></i> Refresh Status Sesi
+                </button>
+                <button class="btn btn-primary" onclick="openAddUserModal()">
+                  <i class="bi bi-person-plus-fill"></i> + Tambah User Baru
+                </button>
+              </div>
             </div>
-            <div class="action-buttons-group">
-              <button class="btn btn-amber" onclick="openCustomLogoModal()">
-                <i class="bi bi-image-fill"></i> Custom Logo PNG
-              </button>
-              <button class="btn btn-emerald" onclick="manualRefreshLiveSessions()"
-                style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; font-weight: 700;">
-                <i class="bi bi-arrow-clockwise"></i> Refresh Status Sesi
-              </button>
-              <button class="btn btn-primary" onclick="openAddUserModal()">
-                <i class="bi bi-person-plus-fill"></i> + Tambah User Baru
-              </button>
+
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">No</th>
+                    <th>Nama User</th>
+                    <th>Password</th>
+                    <th>Level User / Role</th>
+                    <th>Status Sesi</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="userTableBody">
+                  <!-- Rendered dynamically via JS -->
+                </tbody>
+              </table>
             </div>
           </div>
+        </div>
 
-          <div class="table-responsive">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th style="width: 50px;">No</th>
-                  <th>Nama User</th>
-                  <th>Password</th>
-                  <th>Level User / Role</th>
-                  <th>Status Sesi</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="userTableBody">
-                <!-- Rendered dynamically via JS -->
-              </tbody>
-            </table>
+        <!-- SUBSECTION 2: AKUN & HAK AKSES SEKOLAH (Mengambil dari database master_sekolah) -->
+        <div id="adminSectionSekolah" class="admin-panel-section" style="display: none;">
+          <div class="card-panel">
+            <div class="card-header-bar">
+              <div>
+                <div class="card-header-title">
+                  <i class="bi bi-mortarboard-fill" style="color: var(--primary);"></i> Kelola Akun & Hak Akses Sekolah
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                  Daftar seluruh sekolah dari database <strong style="color: var(--primary);">master_sekolah</strong>. Tentukan kata sandi dan centang menu yang diizinkan untuk setiap sekolah.
+                </p>
+              </div>
+              <div class="action-buttons-group" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <input type="text" id="adminSearchSekolahInput" class="filter-control" placeholder="Cari nama sekolah..."
+                  oninput="renderAdminSekolahTable()" style="max-width: 200px;">
+                <select id="adminFilterLevelSekolah" class="filter-control" onchange="renderAdminSekolahTable()">
+                  <option value="">Semua Tingkat</option>
+                  <option value="SD">SD / MI</option>
+                  <option value="SMP">SMP / MTs</option>
+                  <option value="SMA">SMA / SMK</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">No</th>
+                    <th>Nama Sekolah</th>
+                    <th>Tingkat</th>
+                    <th>Status Password</th>
+                    <th>Hak Akses Menu</th>
+                    <th>Status Akun</th>
+                    <th style="text-align: center; width: 140px;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="adminSekolahTableBody">
+                  <!-- Rendered dynamically via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUBSECTION 3: AKUN & HAK AKSES POSYANDU -->
+        <div id="adminSectionPosyandu" class="admin-panel-section" style="display: none;">
+          <div class="card-panel">
+            <div class="card-header-bar">
+              <div>
+                <div class="card-header-title">
+                  <i class="bi bi-heart-pulse-fill" style="color: #e11d48;"></i> Kelola Akun & Hak Akses Posyandu / Kader
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                  Manajemen akun dan hak akses menu untuk posyandu per desa/kelurahan wilayah Puskesmas Banjaran Kota.
+                </p>
+              </div>
+              <div class="action-buttons-group" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <input type="text" id="adminSearchPosyanduInput" class="filter-control" placeholder="Cari posyandu..."
+                  oninput="renderAdminPosyanduTable()" style="max-width: 180px;">
+                <select id="adminFilterDesaPosyandu" class="filter-control" onchange="renderAdminPosyanduTable()">
+                  <option value="">Semua Desa / Kelurahan</option>
+                </select>
+                <button class="btn btn-primary" onclick="openAddPosyanduModal()" style="background: linear-gradient(135deg, #e11d48, #db2777); border: none;">
+                  <i class="bi bi-plus-circle-fill"></i> + Tambah Posyandu
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">No</th>
+                    <th>Nama Posyandu</th>
+                    <th>Kelurahan / Desa</th>
+                    <th>RW</th>
+                    <th>Status Password</th>
+                    <th>Hak Akses Menu</th>
+                    <th>Status Akun</th>
+                    <th style="text-align: center; width: 140px;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="adminPosyanduTableBody">
+                  <!-- Rendered dynamically via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUBSECTION 4: PASSWORD GERBANG PUSKESMAS -->
+        <div id="adminSectionGate" class="admin-panel-section" style="display: none;">
+          <div class="card-panel" style="max-width: 640px; margin: 0 auto;">
+            <div class="card-header-bar" style="margin-bottom: 20px;">
+              <div>
+                <div class="card-header-title">
+                  <i class="bi bi-shield-lock-fill" style="color: #059669;"></i> Pengaturan Kata Sandi Gerbang Puskesmas
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.5;">
+                  Kata sandi ini digunakan untuk memproteksi gerbang awal portal Puskesmas Banjaran Kota sebelum menampilkan formulir daftar nama pegawai.
+                </p>
+              </div>
+            </div>
+
+            <div style="background: rgba(5, 150, 105, 0.06); border: 1px solid rgba(5, 150, 105, 0.2); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px;">
+              <div style="font-size: 13px; color: #065f46; font-weight: 600;">
+                <i class="bi bi-info-circle-fill" style="color: #059669;"></i> Fungsi Kata Sandi Gerbang
+              </div>
+              <p style="font-size: 12px; color: #047857; margin: 4px 0 0 0; line-height: 1.5;">
+                Mencegah masyarakat umum / pihak luar melihat daftar nama pegawai Puskesmas. Pegawai yang ingin login harus memasukkan kata sandi gerbang ini terlebih dahulu.
+              </p>
+            </div>
+
+            <form id="formGatePassword" onsubmit="handleSaveGatePassword(event)">
+              <div class="form-group" style="margin-bottom: 20px;">
+                <label class="form-label" for="inputGatePasswordPuskesmas">Kata Sandi Gerbang Puskesmas <span class="required">*</span></label>
+                <div style="position: relative;">
+                  <input type="text" id="inputGatePasswordPuskesmas" class="form-control" placeholder="Masukkan password gerbang baru..." required style="height: 46px; font-weight: 700; font-size: 15px; letter-spacing: 0.5px; padding-right: 44px;">
+                  <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 18px;"><i class="bi bi-key-fill"></i></span>
+                </div>
+                <small style="color: var(--text-muted); font-size: 11.5px; margin-top: 4px; display: block;">Default awal: <strong>213</strong></small>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="submit" class="btn btn-emerald" style="height: 44px; padding: 0 24px; font-weight: 700; background: linear-gradient(135deg, #059669, #0284c7); border: none;">
+                  <i class="bi bi-check2-circle"></i> Simpan Password Gerbang
+                </button>
+              </div>
+            </form>
           </div>
         </div>
         <!-- KAMUS ALAMAT & AUTO-LEARNING CONTROL PANEL -->
@@ -2030,6 +2482,193 @@
           <div class="modal-footer" style="padding-right: 0; padding-left: 0; margin-top: 10px;">
             <button type="button" class="btn btn-secondary" onclick="closeAddUserModal()">Batal</button>
             <button type="submit" id="btnSubmitUser" class="btn btn-primary">Simpan User</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ATUR PASSWORD & HAK AKSES SEKOLAH -->
+  <div id="modalEditSekolahAksesOverlay" class="modal-overlay">
+    <div class="modal-container" style="max-width: 520px;">
+      <div class="modal-header">
+        <div class="modal-title" style="color: var(--primary);">
+          <i class="bi bi-mortarboard-fill"></i> Atur Password & Hak Akses Sekolah
+        </div>
+        <button class="modal-close" onclick="closeEditSekolahAksesModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditSekolahAkses" onsubmit="handleSaveSekolahAkses(event)">
+          <input type="hidden" id="editAksesSekolahNama" value="">
+
+          <div style="background: rgba(37, 99, 235, 0.08); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
+            <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--primary);">Sekolah Terpilih</div>
+            <div id="editAksesSekolahLabel" style="font-size: 16px; font-weight: 800; color: var(--text-color); margin-top: 2px;">-</div>
+            <div id="editAksesSekolahLevelBadge" style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Tingkat: -</div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" for="editAksesSekolahPassword">Kata Sandi Akun Sekolah <span class="required">*</span></label>
+            <div style="position: relative;">
+              <input type="text" id="editAksesSekolahPassword" class="form-control" placeholder="Contoh: smpn1ckg2026" required style="height: 44px; font-weight: 600;">
+            </div>
+            <small style="color: var(--text-muted); font-size: 11px; margin-top: 3px; display: block;">Kata sandi ini digunakan guru/pihak sekolah saat login ke portal.</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="margin-bottom: 8px;">Hak Akses Menu (Centang menu yang boleh dibuka):</label>
+            <div style="background: var(--bg-hover, #f8fafc); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px;">
+              <label style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; cursor: pointer; margin: 0; font-weight: 600;">
+                <input type="checkbox" id="chkMenuSekolah_sekolah" value="sekolah" style="width: 17px; height: 17px; accent-color: var(--primary);">
+                <span><i class="bi bi-mortarboard-fill" style="color: var(--primary);"></i> Menu CKG Sekolah (Input & Rekap Siswa)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; cursor: pointer; margin: 0; font-weight: 600;">
+                <input type="checkbox" id="chkMenuSekolah_alat" value="alat-bnhp" style="width: 17px; height: 17px; accent-color: var(--primary);">
+                <span><i class="bi bi-box-seam-fill" style="color: #0284c7;"></i> Menu Alat & BNHP CKG</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; cursor: pointer; margin: 0; font-weight: 600;">
+                <input type="checkbox" id="chkMenuSekolah_dashboard" value="dashboard" style="width: 17px; height: 17px; accent-color: var(--primary);">
+                <span><i class="bi bi-speedometer2" style="color: #10b981;"></i> Menu Dashboard Analytics</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; cursor: pointer; margin: 0; font-weight: 600;">
+                <input type="checkbox" id="chkMenuSekolah_records" value="data-records" style="width: 17px; height: 17px; accent-color: var(--primary);">
+                <span><i class="bi bi-folder-symlink-fill" style="color: #f59e0b;"></i> Menu Records Data Umum</span>
+              </label>
+            </div>
+            <small style="color: #64748b; font-size: 11px; margin-top: 4px; display: block;">*Jika tidak ada yang dicentang, akun sekolah berstatus kosongan (tidak ada menu aktif).</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label" for="editAksesSekolahStatus">Status Akun</label>
+            <select id="editAksesSekolahStatus" class="form-control" style="font-weight: 700;">
+              <option value="1">Aktif (Bisa Login)</option>
+              <option value="0">Nonaktif / Terkunci</option>
+            </select>
+          </div>
+
+          <div class="modal-footer" style="padding: 10px 0 0 0; display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn btn-secondary" onclick="closeEditSekolahAksesModal()">Batal</button>
+            <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #2563eb, #0284c7); border: none; font-weight: 700;">
+              <i class="bi bi-check2-circle"></i> Simpan Akses Sekolah
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ATUR PASSWORD & HAK AKSES POSYANDU -->
+  <div id="modalEditPosyanduAksesOverlay" class="modal-overlay">
+    <div class="modal-container" style="max-width: 520px;">
+      <div class="modal-header">
+        <div class="modal-title" style="color: #e11d48;">
+          <i class="bi bi-heart-pulse-fill"></i> Atur Password & Hak Akses Posyandu
+        </div>
+        <button class="modal-close" onclick="closeEditPosyanduAksesModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditPosyanduAkses" onsubmit="handleSavePosyanduAkses(event)">
+          <input type="hidden" id="editAksesPosyanduId" value="">
+
+          <div style="background: rgba(225, 29, 72, 0.08); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
+            <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #e11d48;">Posyandu Terpilih</div>
+            <div id="editAksesPosyanduLabel" style="font-size: 16px; font-weight: 800; color: var(--text-color); margin-top: 2px;">-</div>
+            <div id="editAksesPosyanduDesaBadge" style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Desa: -</div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" for="editAksesPosyanduPassword">Kata Sandi Akun Posyandu <span class="required">*</span></label>
+            <div style="position: relative;">
+              <input type="text" id="editAksesPosyanduPassword" class="form-control" placeholder="Contoh: mawar12026" required style="height: 44px; font-weight: 600;">
+            </div>
+            <small style="color: var(--text-muted); font-size: 11px; margin-top: 3px; display: block;">Kata sandi ini digunakan kader posyandu saat login ke portal.</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="margin-bottom: 8px;">Hak Akses Menu (Centang menu yang boleh dibuka):</label>
+            <div style="background: var(--bg-hover, #f8fafc); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px;">
+              <label style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; cursor: pointer; margin: 0; font-weight: 600;">
+                <input type="checkbox" id="chkMenuPosyandu_records" value="data-records" style="width: 17px; height: 17px; accent-color: #e11d48;">
+                <span><i class="bi bi-folder-symlink-fill" style="color: #f59e0b;"></i> Menu Records / Skrining Masyarakat</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; cursor: pointer; margin: 0; font-weight: 600;">
+                <input type="checkbox" id="chkMenuPosyandu_dashboard" value="dashboard" style="width: 17px; height: 17px; accent-color: #e11d48;">
+                <span><i class="bi bi-speedometer2" style="color: #10b981;"></i> Menu Dashboard Analytics</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; cursor: pointer; margin: 0; font-weight: 600;">
+                <input type="checkbox" id="chkMenuPosyandu_alat" value="alat-bnhp" style="width: 17px; height: 17px; accent-color: #e11d48;">
+                <span><i class="bi bi-box-seam-fill" style="color: #0284c7;"></i> Menu Alat & BNHP CKG</span>
+              </label>
+            </div>
+            <small style="color: #64748b; font-size: 11px; margin-top: 4px; display: block;">*Jika tidak ada yang dicentang, akun posyandu berstatus kosongan (tidak ada menu aktif).</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label" for="editAksesPosyanduStatus">Status Akun</label>
+            <select id="editAksesPosyanduStatus" class="form-control" style="font-weight: 700;">
+              <option value="1">Aktif (Bisa Login)</option>
+              <option value="0">Nonaktif / Terkunci</option>
+            </select>
+          </div>
+
+          <div class="modal-footer" style="padding: 10px 0 0 0; display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn btn-secondary" onclick="closeEditPosyanduAksesModal()">Batal</button>
+            <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #e11d48, #db2777); border: none; font-weight: 700;">
+              <i class="bi bi-check2-circle"></i> Simpan Akses Posyandu
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: TAMBAH POSYANDU BARU -->
+  <div id="modalAddPosyanduOverlay" class="modal-overlay">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title" style="color: #e11d48;">
+          <i class="bi bi-plus-circle-fill"></i> Tambah Data Posyandu Baru
+        </div>
+        <button class="modal-close" onclick="closeAddPosyanduModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="formAddPosyandu" onsubmit="handleSaveNewPosyandu(event)">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="newPosyanduNama">Nama Posyandu <span class="required">*</span></label>
+            <input type="text" id="newPosyanduNama" class="form-control" placeholder="Contoh: Posyandu Mawar 3" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="newPosyanduDesa">Kelurahan / Desa <span class="required">*</span></label>
+            <select id="newPosyanduDesa" class="form-control" required style="font-weight: 600;">
+              <option value="Tarajusari">Tarajusari</option>
+              <option value="Banjaran Kulon">Banjaran Kulon</option>
+              <option value="Banjaran Wetan">Banjaran Wetan</option>
+              <option value="Ciapus">Ciapus</option>
+              <option value="Kamasan">Kamasan</option>
+              <option value="Kiangroke">Kiangroke</option>
+              <option value="Margahayu">Margahayu</option>
+              <option value="Neglasari">Neglasari</option>
+              <option value="Pasirhuni">Pasirhuni</option>
+              <option value="Sindangpanon">Sindangpanon</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="newPosyanduRw">RW (Optional)</label>
+            <input type="text" id="newPosyanduRw" class="form-control" placeholder="Contoh: RW 03">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="newPosyanduPassword">Kata Sandi Awal (Optional)</label>
+            <input type="text" id="newPosyanduPassword" class="form-control" placeholder="Bisa diset sekarang atau nanti">
+          </div>
+
+          <div class="modal-footer" style="padding: 10px 0 0 0; display: flex; justify-content: flex-end; gap: 8px;">
+            <button type="button" class="btn btn-secondary" onclick="closeAddPosyanduModal()">Batal</button>
+            <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #e11d48, #db2777); border: none; font-weight: 700;">
+              Simpan Posyandu
+            </button>
           </div>
         </form>
       </div>

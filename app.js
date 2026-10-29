@@ -135,6 +135,8 @@ let activeSimpusTab = 'belum_bagi'; // 'belum_bagi' or 'sudah_bagi'
 let currentRole = 'Admin';
 let currentEditingId = null;
 let activeSessionsMap = {};
+let gatePasswordPuskesmas = '213';
+let masterPosyanduDb = [];
 
 async function sendUserHeartbeat(status = 'active') {
   const loggedUser = sessionStorage.getItem('ckg_user_name');
@@ -241,6 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initWilayahDropdowns();
   setupEventListeners();
   setupAuthFormEvents();
+  fetchMasterSekolahFromCloud();
+  fetchMasterPosyanduFromCloud();
   checkAuthSession();
 
   // Load maintenance settings from Cloud D1 and poll periodically
@@ -791,10 +795,11 @@ function setupImportDropzone() {
 function setupUserSessionUI() {
   const savedName = sessionStorage.getItem('ckg_user_name') || 'Mochamad Fauzie, S.Gz';
   const savedRole = sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas';
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || 'puskesmas').toLowerCase();
   currentRole = savedRole;
 
-  document.body.classList.remove('role-admin', 'role-koordinator', 'role-petugas');
-  document.body.classList.add('role-' + (savedRole || 'Petugas').toLowerCase());
+  document.body.classList.remove('role-admin', 'role-koordinator', 'role-petugas', 'role-sekolah', 'role-posyandu');
+  document.body.classList.add('role-' + (savedRole || 'Petugas').toLowerCase().replace(/\s+/g, '-'));
 
   const nameEl = document.getElementById('headerUserName');
   const roleBadgeEl = document.getElementById('headerUserRoleBadge');
@@ -804,11 +809,90 @@ function setupUserSessionUI() {
   if (roleBadgeEl) {
     const roleUpper = (savedRole || 'Petugas').toUpperCase();
     roleBadgeEl.textContent = roleUpper;
-    roleBadgeEl.className = 'badge-role-pill role-' + (savedRole || 'Petugas').toLowerCase();
+    roleBadgeEl.className = 'badge-role-pill role-' + (savedRole || 'Petugas').toLowerCase().replace(/\s+/g, '-');
   }
   if (avatarEl) {
     const initials = savedName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     avatarEl.textContent = initials;
+  }
+
+  // Multi-Portal Menu Scoping & Empty State Handling
+  const emptyAccessView = document.getElementById('view-empty-access');
+  const emptyAccName = document.getElementById('emptyAccessAccountName');
+  if (emptyAccName) emptyAccName.textContent = savedName;
+
+  if (portalType === 'sekolah' || portalType === 'posyandu') {
+    let allowedMenus = [];
+    try {
+      const raw = sessionStorage.getItem('ckg_allowed_menus') || '[]';
+      allowedMenus = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch (_) { allowedMenus = []; }
+    if (!Array.isArray(allowedMenus)) allowedMenus = [];
+
+    if (allowedMenus.length === 0) {
+      // Default: Akun Kosongan (Belum ada menu yang diizinkan Admin)
+      document.querySelectorAll('.nav-tab-btn').forEach(b => b.style.display = 'none');
+      document.querySelectorAll('.view-panel').forEach(p => {
+        p.classList.remove('active');
+        p.style.display = 'none';
+      });
+      if (emptyAccessView) {
+        emptyAccessView.style.display = 'block';
+        emptyAccessView.classList.add('active');
+      }
+    } else {
+      if (emptyAccessView) {
+        emptyAccessView.style.display = 'none';
+        emptyAccessView.classList.remove('active');
+      }
+      document.querySelectorAll('.nav-tab-btn').forEach(b => {
+        const v = b.getAttribute('data-view');
+        if (allowedMenus.includes(v)) {
+          b.style.display = 'inline-flex';
+        } else {
+          b.style.display = 'none';
+        }
+      });
+
+      const activeBtn = document.querySelector('.nav-tab-btn.active');
+      const activeView = activeBtn ? activeBtn.getAttribute('data-view') : '';
+      if (!allowedMenus.includes(activeView)) {
+        switchView(allowedMenus[0]);
+      }
+    }
+
+    // If sekolah: lock filter to this school
+    if (portalType === 'sekolah') {
+      const filterSelectSekolah = document.getElementById('filterSelectSekolah');
+      if (filterSelectSekolah) {
+        filterSelectSekolah.value = savedName;
+        filterSelectSekolah.disabled = true;
+        if (typeof applySekolahFilter === 'function') applySekolahFilter();
+      }
+    }
+  } else {
+    // Regular Puskesmas User: restore default role visibility
+    if (emptyAccessView) {
+      emptyAccessView.style.display = 'none';
+      emptyAccessView.classList.remove('active');
+    }
+    const roleLower = (savedRole || 'Petugas').toLowerCase();
+    document.querySelectorAll('.nav-tab-btn').forEach(b => {
+      const isAdmOnly = b.classList.contains('admin-only');
+      const isAdmKoorOnly = b.classList.contains('admin-koordinator-only');
+      if (isAdmOnly && !roleLower.includes('admin')) {
+        b.style.display = 'none';
+      } else if (isAdmKoorOnly && !roleLower.includes('admin') && !roleLower.includes('koordinator')) {
+        b.style.display = 'none';
+      } else {
+        b.style.display = 'inline-flex';
+      }
+    });
+
+    const filterSelectSekolah = document.getElementById('filterSelectSekolah');
+    if (filterSelectSekolah && filterSelectSekolah.disabled) {
+      filterSelectSekolah.disabled = false;
+    }
   }
 
   renderApp();
@@ -835,15 +919,32 @@ function setupUserSessionUI() {
 
 async function checkAuthSession() {
   const isLoggedIn = sessionStorage.getItem('ckg_logged_in') === 'true';
+  const portalOverlay = document.getElementById('portalSelectionContainer');
   const loginOverlay = document.getElementById('loginViewContainer');
+  const sekolahOverlay = document.getElementById('sekolahLoginContainer');
+  const posyanduOverlay = document.getElementById('posyanduLoginContainer');
   const mainApp = document.getElementById('appMainContainer');
   const savedRole = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
   const isAdmin = savedRole.includes('admin');
 
+  function hideAllLoginOverlays() {
+    if (portalOverlay) { portalOverlay.classList.add('hidden'); portalOverlay.style.display = 'none'; }
+    if (loginOverlay) { loginOverlay.classList.add('hidden'); loginOverlay.style.display = 'none'; }
+    if (sekolahOverlay) { sekolahOverlay.classList.add('hidden'); sekolahOverlay.style.display = 'none'; }
+    if (posyanduOverlay) { posyanduOverlay.classList.add('hidden'); posyanduOverlay.style.display = 'none'; }
+  }
+
+  function showPortalGate() {
+    if (loginOverlay) { loginOverlay.classList.add('hidden'); loginOverlay.style.display = 'none'; }
+    if (sekolahOverlay) { sekolahOverlay.classList.add('hidden'); sekolahOverlay.style.display = 'none'; }
+    if (posyanduOverlay) { posyanduOverlay.classList.add('hidden'); posyanduOverlay.style.display = 'none'; }
+    if (portalOverlay) { portalOverlay.classList.remove('hidden'); portalOverlay.style.display = 'flex'; }
+  }
+
   // 1. Fast sync check from cached maintenance state (locks out instantly on refresh)
   const isCachedMaint = maintenanceState.maintenance_web || (localStorage.getItem('ckg_cached_maint_web') === '1');
   if (isCachedMaint && !isAdmin) {
-    if (loginOverlay) loginOverlay.classList.add('hidden');
+    hideAllLoginOverlays();
     if (mainApp) mainApp.style.display = 'none';
     showMaintenanceScreen(maintenanceState.maintenance_web_message || localStorage.getItem('ckg_cached_maint_msg'));
     return;
@@ -855,11 +956,11 @@ async function checkAuthSession() {
     if (existingOverlay) existingOverlay.remove();
 
     if (isLoggedIn) {
-      if (loginOverlay) loginOverlay.classList.add('hidden');
+      hideAllLoginOverlays();
       if (mainApp) mainApp.style.display = 'block';
       setupUserSessionUI();
     } else {
-      if (loginOverlay) loginOverlay.classList.remove('hidden');
+      showPortalGate();
       if (mainApp) mainApp.style.display = 'none';
     }
     return;
@@ -875,13 +976,15 @@ async function checkAuthSession() {
         maintenanceState.maintenance_web_message = data.maintenance_web_message || maintenanceState.maintenance_web_message;
         maintenanceState.locked_menus = data.locked_menus || [];
         maintenanceState.maintenance_menu_message = data.maintenance_menu_message || maintenanceState.maintenance_menu_message;
+        if (data.gate_password_puskesmas) {
+          gatePasswordPuskesmas = String(data.gate_password_puskesmas).trim();
+        }
 
         safeLocalStorageSet('ckg_cached_maint_web', maintenanceState.maintenance_web ? '1' : '0');
         safeLocalStorageSet('ckg_cached_maint_msg', maintenanceState.maintenance_web_message);
 
         if (maintenanceState.maintenance_web) {
-          // Maintenance is active -> BLOCK non-admin completely!
-          if (loginOverlay) loginOverlay.classList.add('hidden');
+          hideAllLoginOverlays();
           if (mainApp) mainApp.style.display = 'none';
           showMaintenanceScreen(maintenanceState.maintenance_web_message);
           return;
@@ -897,11 +1000,11 @@ async function checkAuthSession() {
   if (existingOverlay) existingOverlay.remove();
 
   if (isLoggedIn) {
-    if (loginOverlay) loginOverlay.classList.add('hidden');
+    hideAllLoginOverlays();
     if (mainApp) mainApp.style.display = 'block';
     setupUserSessionUI();
   } else {
-    if (loginOverlay) loginOverlay.classList.remove('hidden');
+    showPortalGate();
     if (mainApp) mainApp.style.display = 'none';
   }
 }
@@ -1236,6 +1339,7 @@ function performLoginSuccess(user) {
   setTimeout(() => {
     // Set session
     sessionStorage.setItem('ckg_logged_in', 'true');
+    sessionStorage.setItem('ckg_portal_type', 'puskesmas');
     sessionStorage.setItem('ckg_user_name', user.nama_user);
     sessionStorage.setItem('ckg_user_role', user.role || 'Petugas');
 
@@ -1282,8 +1386,11 @@ function handleLogout() {
       if (result.isConfirmed) {
         sendUserHeartbeat('offline');
         sessionStorage.removeItem('ckg_logged_in');
+        sessionStorage.removeItem('ckg_portal_type');
         sessionStorage.removeItem('ckg_user_name');
         sessionStorage.removeItem('ckg_user_role');
+        sessionStorage.removeItem('ckg_allowed_menus');
+        sessionStorage.removeItem('ckg_sekolah_filter');
         checkAuthSession();
         Swal.fire({
           icon: 'success',
@@ -1296,10 +1403,752 @@ function handleLogout() {
     });
   } else {
     sessionStorage.removeItem('ckg_logged_in');
+    sessionStorage.removeItem('ckg_portal_type');
     sessionStorage.removeItem('ckg_user_name');
     sessionStorage.removeItem('ckg_user_role');
+    sessionStorage.removeItem('ckg_allowed_menus');
+    sessionStorage.removeItem('ckg_sekolah_filter');
     checkAuthSession();
     showToast('Anda telah keluar dari sistem CKG.', 'info');
+  }
+}
+
+/* ==========================================================================
+   🚪 MULTI-PORTAL ACCESS GATE & AUTHENTICATION HANDLERS
+   ========================================================================== */
+
+function returnToPortalPicker() {
+  const portalOverlay = document.getElementById('portalSelectionContainer');
+  const puskesmasOverlay = document.getElementById('loginViewContainer');
+  const sekolahOverlay = document.getElementById('sekolahLoginContainer');
+  const posyanduOverlay = document.getElementById('posyanduLoginContainer');
+
+  if (puskesmasOverlay) { puskesmasOverlay.classList.add('hidden'); puskesmasOverlay.style.display = 'none'; }
+  if (sekolahOverlay) { sekolahOverlay.classList.add('hidden'); sekolahOverlay.style.display = 'none'; }
+  if (posyanduOverlay) { posyanduOverlay.classList.add('hidden'); posyanduOverlay.style.display = 'none'; }
+  if (portalOverlay) { portalOverlay.classList.remove('hidden'); portalOverlay.style.display = 'flex'; }
+}
+
+function openPuskesmasGate() {
+  Swal.fire({
+    title: 'Kata Sandi Gerbang Puskesmas',
+    html: `
+      <div style="text-align: center; margin-bottom: 12px;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #059669, #0284c7); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #fff; font-size: 26px; box-shadow: 0 6px 16px rgba(5,150,105,0.25);">
+          <i class="bi bi-shield-lock-fill"></i>
+        </div>
+        <div style="font-size: 13.5px; color: #64748b; line-height: 1.5;">
+          Masukkan kata sandi akses internal Puskesmas Banjaran Kota untuk membuka daftar nama pegawai.
+        </div>
+      </div>
+    `,
+    input: 'password',
+    inputPlaceholder: 'Masukkan sandi gerbang puskesmas...',
+    inputAttributes: {
+      autocapitalize: 'off',
+      autocorrect: 'off'
+    },
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-box-arrow-in-right"></i> Buka Portal Pegawai',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#059669',
+    cancelButtonColor: '#64748b',
+    preConfirm: (inputPass) => {
+      if (!inputPass || inputPass.trim() === '') {
+        Swal.showValidationMessage('Kata sandi gerbang tidak boleh kosong!');
+        return false;
+      }
+      const targetPass = (gatePasswordPuskesmas || '213').trim();
+      if (inputPass.trim() !== targetPass) {
+        Swal.showValidationMessage('Kata Sandi Gerbang Puskesmas Salah!');
+        return false;
+      }
+      return inputPass;
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const portalOverlay = document.getElementById('portalSelectionContainer');
+      const puskesmasOverlay = document.getElementById('loginViewContainer');
+      if (portalOverlay) { portalOverlay.classList.add('hidden'); portalOverlay.style.display = 'none'; }
+      if (puskesmasOverlay) {
+        puskesmasOverlay.classList.remove('hidden');
+        puskesmasOverlay.style.display = 'flex';
+      }
+      if (typeof populatePegawaiDropdown === 'function') populatePegawaiDropdown();
+    }
+  });
+}
+
+function openSekolahPortal() {
+  const portalOverlay = document.getElementById('portalSelectionContainer');
+  const sekolahOverlay = document.getElementById('sekolahLoginContainer');
+  if (portalOverlay) { portalOverlay.classList.add('hidden'); portalOverlay.style.display = 'none'; }
+  if (sekolahOverlay) {
+    sekolahOverlay.classList.remove('hidden');
+    sekolahOverlay.style.display = 'flex';
+  }
+  populateLoginSekolahDropdown();
+}
+
+function openPosyanduPortal() {
+  const portalOverlay = document.getElementById('portalSelectionContainer');
+  const posyanduOverlay = document.getElementById('posyanduLoginContainer');
+  if (portalOverlay) { portalOverlay.classList.add('hidden'); portalOverlay.style.display = 'none'; }
+  if (posyanduOverlay) {
+    posyanduOverlay.classList.remove('hidden');
+    posyanduOverlay.style.display = 'flex';
+  }
+  populateLoginPosyanduDesaFilter();
+  populateLoginPosyanduDropdown();
+}
+
+function togglePasswordVisibility(inputId, btnEl) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const isPass = input.type === 'password';
+  input.type = isPass ? 'text' : 'password';
+  const icon = btnEl.querySelector('i');
+  if (icon) {
+    icon.className = isPass ? 'bi bi-eye-fill' : 'bi bi-eye-slash-fill';
+  }
+}
+
+function populateLoginSekolahDropdown() {
+  const select = document.getElementById('loginSekolahSelect');
+  if (!select) return;
+
+  const currentVal = select.value;
+  const sdList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SD');
+  const smpList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMP');
+  const smaList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMA');
+
+  let html = '<option value="">-- Pilih Sekolah --</option>';
+  if (sdList.length > 0) {
+    html += '<optgroup label="📚 Tingkat SD / MI">';
+    html += sdList.map(s => `<option value="${escapeHtml(s.nama)}">${escapeHtml(s.nama)}</option>`).join('');
+    html += '</optgroup>';
+  }
+  if (smpList.length > 0) {
+    html += '<optgroup label="🏫 Tingkat SMP / MTs">';
+    html += smpList.map(s => `<option value="${escapeHtml(s.nama)}">${escapeHtml(s.nama)}</option>`).join('');
+    html += '</optgroup>';
+  }
+  if (smaList.length > 0) {
+    html += '<optgroup label="🎓 Tingkat SMA / SMK / MA">';
+    html += smaList.map(s => `<option value="${escapeHtml(s.nama)}">${escapeHtml(s.nama)}</option>`).join('');
+    html += '</optgroup>';
+  }
+  select.innerHTML = html;
+  if (currentVal) select.value = currentVal;
+}
+
+function handleSekolahLogin(e) {
+  e.preventDefault();
+  const select = document.getElementById('loginSekolahSelect');
+  const passInput = document.getElementById('loginSekolahPassword');
+  if (!select || !select.value) {
+    Swal.fire({ icon: 'warning', title: 'Pilih Sekolah', text: 'Silakan pilih nama sekolah terlebih dahulu.', confirmButtonColor: '#2563eb' });
+    return;
+  }
+  const schoolName = select.value.trim().toUpperCase();
+  const inputPass = passInput ? passInput.value.trim() : '';
+
+  const school = MASTER_SARANA_SEKOLAH.find(s => s.nama.toUpperCase() === schoolName);
+  if (!school) {
+    Swal.fire({ icon: 'error', title: 'Sekolah Tidak Ditemukan', text: 'Sekolah yang dipilih tidak terdaftar di database.', confirmButtonColor: '#dc2626' });
+    return;
+  }
+
+  const schoolPass = (school.password || '').trim();
+  if (schoolPass === '') {
+    Swal.fire({
+      icon: 'info',
+      title: 'Akun Belum Diaktifkan',
+      html: `Akun untuk <strong>${school.nama}</strong> belum diatur kata sandinya oleh Administrator Puskesmas.<br><br><span style="font-size:12.5px; color:#64748b;">Silakan hubungi Admin Puskesmas Banjaran Kota untuk meminta aktivasi kata sandi.</span>`,
+      confirmButtonColor: '#2563eb'
+    });
+    return;
+  }
+
+  if (school.is_active === 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Akun Dinonaktifkan',
+      html: `Akun untuk <strong>${school.nama}</strong> saat ini dalam status nonaktif / terkunci.<br><br><span style="font-size:12.5px; color:#64748b;">Silakan hubungi Administrator Puskesmas.</span>`,
+      confirmButtonColor: '#f59e0b'
+    });
+    return;
+  }
+
+  if (inputPass !== schoolPass) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Kata Sandi Salah',
+      text: 'Kata sandi sekolah yang Anda masukkan salah. Silakan periksa kembali.',
+      confirmButtonColor: '#dc2626'
+    });
+    return;
+  }
+
+  // Login Success as Sekolah!
+  sessionStorage.setItem('ckg_logged_in', 'true');
+  sessionStorage.setItem('ckg_portal_type', 'sekolah');
+  sessionStorage.setItem('ckg_user_name', school.nama);
+  sessionStorage.setItem('ckg_user_role', 'Sekolah');
+  sessionStorage.setItem('ckg_allowed_menus', school.allowed_menus || '[]');
+  sessionStorage.setItem('ckg_sekolah_filter', school.nama);
+
+  showLoadingOverlay('Memverifikasi Akun...', `Login sebagai ${school.nama}`);
+  setTimeout(() => {
+    checkAuthSession();
+    hideLoadingOverlay();
+    Swal.fire({
+      icon: 'success',
+      title: 'Selamat Datang!',
+      html: `Berhasil masuk ke portal CKG sebagai <strong>${school.nama}</strong>`,
+      timer: 1600,
+      showConfirmButton: false
+    });
+  }, 250);
+}
+
+function populateLoginPosyanduDesaFilter() {
+  const filter = document.getElementById('loginPosyanduDesaFilter');
+  if (!filter) return;
+  const desaSet = new Set();
+  masterPosyanduDb.forEach(p => { if (p.desa) desaSet.add(p.desa); });
+  const sortedDesa = Array.from(desaSet).sort();
+
+  let html = '<option value="">Semua Desa / Kelurahan</option>';
+  sortedDesa.forEach(d => {
+    html += `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`;
+  });
+  filter.innerHTML = html;
+}
+
+function filterPosyanduDropdownByDesa(selectedDesa) {
+  populateLoginPosyanduDropdown(selectedDesa);
+}
+
+function populateLoginPosyanduDropdown(desaFilter = '') {
+  const select = document.getElementById('loginPosyanduSelect');
+  if (!select) return;
+
+  let list = [...masterPosyanduDb];
+  if (desaFilter) {
+    list = list.filter(p => p.desa === desaFilter);
+  }
+
+  let html = '<option value="">-- Pilih Posyandu --</option>';
+  list.forEach(p => {
+    const rwStr = p.rw ? ` (${p.rw})` : '';
+    html += `<option value="${p.id || escapeHtml(p.nama)}">${escapeHtml(p.nama)}${rwStr}</option>`;
+  });
+  select.innerHTML = html;
+}
+
+function handlePosyanduLogin(e) {
+  e.preventDefault();
+  const select = document.getElementById('loginPosyanduSelect');
+  const passInput = document.getElementById('loginPosyanduPassword');
+  if (!select || !select.value) {
+    Swal.fire({ icon: 'warning', title: 'Pilih Posyandu', text: 'Silakan pilih nama Posyandu terlebih dahulu.', confirmButtonColor: '#e11d48' });
+    return;
+  }
+  const posyanduVal = select.value;
+  const inputPass = passInput ? passInput.value.trim() : '';
+
+  const posyandu = masterPosyanduDb.find(p => String(p.id) === String(posyanduVal) || p.nama.toUpperCase() === posyanduVal.toUpperCase());
+  if (!posyandu) {
+    Swal.fire({ icon: 'error', title: 'Posyandu Tidak Ditemukan', text: 'Data Posyandu tidak ditemukan di database.', confirmButtonColor: '#dc2626' });
+    return;
+  }
+
+  const posPass = (posyandu.password || '').trim();
+  if (posPass === '') {
+    Swal.fire({
+      icon: 'info',
+      title: 'Akun Belum Diaktifkan',
+      html: `Akun untuk <strong>${posyandu.nama}</strong> belum diatur kata sandinya oleh Administrator Puskesmas.<br><br><span style="font-size:12.5px; color:#64748b;">Silakan hubungi Admin Puskesmas Banjaran Kota untuk meminta aktivasi kata sandi.</span>`,
+      confirmButtonColor: '#e11d48'
+    });
+    return;
+  }
+
+  if (posyandu.is_active === 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Akun Dinonaktifkan',
+      html: `Akun untuk <strong>${posyandu.nama}</strong> saat ini dalam status nonaktif / terkunci. Silakan hubungi Administrator Puskesmas.`,
+      confirmButtonColor: '#f59e0b'
+    });
+    return;
+  }
+
+  if (inputPass !== posPass) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Kata Sandi Salah',
+      text: 'Kata sandi Posyandu yang Anda masukkan salah. Silakan periksa kembali.',
+      confirmButtonColor: '#dc2626'
+    });
+    return;
+  }
+
+  // Login Success as Posyandu!
+  sessionStorage.setItem('ckg_logged_in', 'true');
+  sessionStorage.setItem('ckg_portal_type', 'posyandu');
+  sessionStorage.setItem('ckg_user_name', posyandu.nama);
+  sessionStorage.setItem('ckg_user_role', 'Posyandu');
+  sessionStorage.setItem('ckg_allowed_menus', posyandu.allowed_menus || '[]');
+
+  showLoadingOverlay('Memverifikasi Akun...', `Login sebagai ${posyandu.nama}`);
+  setTimeout(() => {
+    checkAuthSession();
+    hideLoadingOverlay();
+    Swal.fire({
+      icon: 'success',
+      title: 'Selamat Datang!',
+      html: `Berhasil masuk ke portal CKG sebagai <strong>${posyandu.nama}</strong>`,
+      timer: 1600,
+      showConfirmButton: false
+    });
+  }, 250);
+}
+
+/* ==========================================================================
+   🏢 ADMIN PANEL: MULTI-PORTAL MANAGEMENT (SEKOLAH, POSYANDU, GATE)
+   ========================================================================== */
+
+function switchAdminSubtab(tabName) {
+  const tabs = ['users', 'sekolah', 'posyandu', 'gate'];
+  tabs.forEach(t => {
+    const btn = document.getElementById(`btnSubtabAdmin${t.charAt(0).toUpperCase() + t.slice(1)}`);
+    const sec = document.getElementById(`adminSection${t.charAt(0).toUpperCase() + t.slice(1)}`);
+    if (btn) {
+      if (t === tabName) {
+        btn.classList.add('active');
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-primary');
+      } else {
+        btn.classList.remove('active');
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-secondary');
+      }
+    }
+    if (sec) {
+      sec.style.display = (t === tabName) ? 'block' : 'none';
+    }
+  });
+
+  if (tabName === 'sekolah') {
+    renderAdminSekolahTable();
+  } else if (tabName === 'posyandu') {
+    renderAdminPosyanduTable();
+  } else if (tabName === 'gate') {
+    const gateInput = document.getElementById('inputGatePasswordPuskesmas');
+    if (gateInput) gateInput.value = gatePasswordPuskesmas || '213';
+  }
+}
+
+function renderAdminSekolahTable() {
+  const tbody = document.getElementById('adminSekolahTableBody');
+  if (!tbody) return;
+
+  const search = (document.getElementById('adminSearchSekolahInput')?.value || '').trim().toUpperCase();
+  const levelFilter = document.getElementById('adminFilterLevelSekolah')?.value || '';
+
+  let filtered = [...MASTER_SARANA_SEKOLAH];
+  if (levelFilter) {
+    filtered = filtered.filter(s => s.level === levelFilter);
+  }
+  if (search) {
+    filtered = filtered.filter(s => s.nama.toUpperCase().includes(search));
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">Tidak ada data sekolah yang cocok dengan filter pencarian.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((s, idx) => {
+    const hasPassword = s.password && s.password.trim() !== '';
+    const passBadge = hasPassword
+      ? `<span class="badge badge-emerald" style="font-size: 11px;"><i class="bi bi-shield-check"></i> Sudah Diset</span>`
+      : `<span class="badge badge-rose" style="font-size: 11px;"><i class="bi bi-shield-slash"></i> Belum Diset</span>`;
+
+    let allowedArr = [];
+    try {
+      allowedArr = typeof s.allowed_menus === 'string' ? JSON.parse(s.allowed_menus || '[]') : (s.allowed_menus || []);
+    } catch (_) { allowedArr = []; }
+
+    const menuLabels = {
+      'sekolah': 'CKG Sekolah',
+      'alat-bnhp': 'Alat & BNHP',
+      'dashboard': 'Dashboard',
+      'data-records': 'Records'
+    };
+
+    const menuBadges = allowedArr.length > 0
+      ? allowedArr.map(m => `<span class="badge badge-blue" style="font-size: 10.5px; margin-right: 4px;">${menuLabels[m] || m}</span>`).join('')
+      : `<span style="font-size: 11.5px; color: #94a3b8; font-style: italic;">(Kosongan / 0 Menu)</span>`;
+
+    const statusBadge = (s.is_active === 1 || (s.is_active === undefined && hasPassword))
+      ? `<span class="badge badge-emerald" style="font-size: 11px;">Aktif</span>`
+      : `<span class="badge badge-gray" style="font-size: 11px;">Nonaktif</span>`;
+
+    return `
+      <tr>
+        <td style="text-align: center; font-weight: 700;">${idx + 1}</td>
+        <td style="font-weight: 700; color: var(--text-color);">${escapeHtml(s.nama)}</td>
+        <td><span class="badge badge-blue" style="font-size: 11px;">${s.level}</span></td>
+        <td>${passBadge}</td>
+        <td>${menuBadges}</td>
+        <td>${statusBadge}</td>
+        <td style="text-align: center;">
+          <button class="btn btn-primary btn-sm" onclick="openEditSekolahAksesModal('${encodeURIComponent(s.nama)}')"
+            style="border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 700; background: linear-gradient(135deg, #2563eb, #0284c7); border: none;">
+            <i class="bi bi-gear-fill"></i> Atur Akses
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openEditSekolahAksesModal(encodedNama) {
+  const nama = decodeURIComponent(encodedNama);
+  const school = MASTER_SARANA_SEKOLAH.find(s => s.nama.toUpperCase() === nama.toUpperCase());
+  if (!school) return;
+
+  document.getElementById('editAksesSekolahNama').value = school.nama;
+  document.getElementById('editAksesSekolahLabel').textContent = school.nama;
+  document.getElementById('editAksesSekolahLevelBadge').textContent = `Tingkat: ${school.level}`;
+  document.getElementById('editAksesSekolahPassword').value = school.password || '';
+  document.getElementById('editAksesSekolahStatus').value = (school.is_active !== undefined) ? String(school.is_active) : (school.password ? '1' : '0');
+
+  let allowedArr = [];
+  try {
+    allowedArr = typeof school.allowed_menus === 'string' ? JSON.parse(school.allowed_menus || '[]') : (school.allowed_menus || []);
+  } catch (_) { allowedArr = []; }
+
+  document.getElementById('chkMenuSekolah_sekolah').checked = allowedArr.includes('sekolah');
+  document.getElementById('chkMenuSekolah_alat').checked = allowedArr.includes('alat-bnhp');
+  document.getElementById('chkMenuSekolah_dashboard').checked = allowedArr.includes('dashboard');
+  document.getElementById('chkMenuSekolah_records').checked = allowedArr.includes('data-records');
+
+  document.getElementById('modalEditSekolahAksesOverlay').classList.add('open');
+}
+
+function closeEditSekolahAksesModal() {
+  document.getElementById('modalEditSekolahAksesOverlay').classList.remove('open');
+}
+
+async function handleSaveSekolahAkses(e) {
+  e.preventDefault();
+  const nama = document.getElementById('editAksesSekolahNama').value;
+  const password = document.getElementById('editAksesSekolahPassword').value.trim();
+  const is_active = parseInt(document.getElementById('editAksesSekolahStatus').value, 10);
+
+  const allowed = [];
+  if (document.getElementById('chkMenuSekolah_sekolah').checked) allowed.push('sekolah');
+  if (document.getElementById('chkMenuSekolah_alat').checked) allowed.push('alat-bnhp');
+  if (document.getElementById('chkMenuSekolah_dashboard').checked) allowed.push('dashboard');
+  if (document.getElementById('chkMenuSekolah_records').checked) allowed.push('data-records');
+
+  const school = MASTER_SARANA_SEKOLAH.find(s => s.nama.toUpperCase() === nama.toUpperCase());
+  if (school) {
+    school.password = password;
+    school.allowed_menus = JSON.stringify(allowed);
+    school.is_active = is_active;
+  }
+
+  try {
+    const res = await fetch('/api/master-sekolah', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nama: nama,
+        password: password,
+        allowed_menus: JSON.stringify(allowed),
+        is_active: is_active
+      })
+    });
+    if (res.ok) {
+      showToast(`Akses untuk ${nama} berhasil disimpan!`, 'success');
+    }
+  } catch (err) {
+    console.warn('Save sekolah akses notice:', err);
+    showToast(`Tersimpan lokal: Akses untuk ${nama}`, 'info');
+  }
+
+  try {
+    localStorage.setItem('ckg_master_sekolah', JSON.stringify(MASTER_SARANA_SEKOLAH));
+  } catch (_) {}
+
+  closeEditSekolahAksesModal();
+  renderAdminSekolahTable();
+}
+
+async function fetchMasterPosyanduFromCloud() {
+  try {
+    const res = await fetch('/api/master-posyandu');
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success && Array.isArray(result.data)) {
+        masterPosyanduDb = result.data;
+        populateLoginPosyanduDesaFilter();
+        populateLoginPosyanduDropdown();
+        renderAdminPosyanduTable();
+      }
+    }
+  } catch (err) {
+    console.warn('Fetch master posyandu notice:', err);
+  }
+}
+
+function renderAdminPosyanduTable() {
+  const tbody = document.getElementById('adminPosyanduTableBody');
+  if (!tbody) return;
+
+  const search = (document.getElementById('adminSearchPosyanduInput')?.value || '').trim().toUpperCase();
+  const desaFilter = document.getElementById('adminFilterDesaPosyandu')?.value || '';
+
+  // Also populate the filter options if empty
+  const filterEl = document.getElementById('adminFilterDesaPosyandu');
+  if (filterEl && filterEl.options.length <= 1) {
+    const desaSet = new Set();
+    masterPosyanduDb.forEach(p => { if (p.desa) desaSet.add(p.desa); });
+    Array.from(desaSet).sort().forEach(d => {
+      filterEl.innerHTML += `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`;
+    });
+  }
+
+  let filtered = [...masterPosyanduDb];
+  if (desaFilter) {
+    filtered = filtered.filter(p => p.desa === desaFilter);
+  }
+  if (search) {
+    filtered = filtered.filter(p => p.nama.toUpperCase().includes(search) || (p.desa && p.desa.toUpperCase().includes(search)));
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">Tidak ada data posyandu yang cocok dengan filter pencarian.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((p, idx) => {
+    const hasPassword = p.password && p.password.trim() !== '';
+    const passBadge = hasPassword
+      ? `<span class="badge badge-emerald" style="font-size: 11px;"><i class="bi bi-shield-check"></i> Sudah Diset</span>`
+      : `<span class="badge badge-rose" style="font-size: 11px;"><i class="bi bi-shield-slash"></i> Belum Diset</span>`;
+
+    let allowedArr = [];
+    try {
+      allowedArr = typeof p.allowed_menus === 'string' ? JSON.parse(p.allowed_menus || '[]') : (p.allowed_menus || []);
+    } catch (_) { allowedArr = []; }
+
+    const menuLabels = {
+      'data-records': 'Records',
+      'dashboard': 'Dashboard',
+      'alat-bnhp': 'Alat & BNHP',
+      'sekolah': 'CKG Sekolah'
+    };
+
+    const menuBadges = allowedArr.length > 0
+      ? allowedArr.map(m => `<span class="badge badge-blue" style="font-size: 10.5px; margin-right: 4px;">${menuLabels[m] || m}</span>`).join('')
+      : `<span style="font-size: 11.5px; color: #94a3b8; font-style: italic;">(Kosongan / 0 Menu)</span>`;
+
+    const statusBadge = (p.is_active === 1 || (p.is_active === undefined && hasPassword))
+      ? `<span class="badge badge-emerald" style="font-size: 11px;">Aktif</span>`
+      : `<span class="badge badge-gray" style="font-size: 11px;">Nonaktif</span>`;
+
+    return `
+      <tr>
+        <td style="text-align: center; font-weight: 700;">${idx + 1}</td>
+        <td style="font-weight: 700; color: var(--text-color);">${escapeHtml(p.nama)}</td>
+        <td><span class="badge badge-emerald" style="font-size: 11px;">${escapeHtml(p.desa || '-')}</span></td>
+        <td>${escapeHtml(p.rw || '-')}</td>
+        <td>${passBadge}</td>
+        <td>${menuBadges}</td>
+        <td>${statusBadge}</td>
+        <td style="text-align: center;">
+          <button class="btn btn-primary btn-sm" onclick="openEditPosyanduAksesModal('${p.id}')"
+            style="border-radius: 6px; padding: 5px 10px; font-size: 11.5px; font-weight: 700; background: linear-gradient(135deg, #e11d48, #db2777); border: none;">
+            <i class="bi bi-gear-fill"></i> Akses
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="deletePosyandu('${p.id}', '${encodeURIComponent(p.nama)}')"
+            style="border-radius: 6px; padding: 5px 8px; font-size: 11.5px; color: #dc2626;" title="Hapus Posyandu">
+            <i class="bi bi-trash3-fill"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openEditPosyanduAksesModal(id) {
+  const posyandu = masterPosyanduDb.find(p => String(p.id) === String(id));
+  if (!posyandu) return;
+
+  document.getElementById('editAksesPosyanduId').value = posyandu.id;
+  document.getElementById('editAksesPosyanduLabel').textContent = posyandu.nama;
+  document.getElementById('editAksesPosyanduDesaBadge').textContent = `Desa: ${posyandu.desa || '-'} • RW: ${posyandu.rw || '-'}`;
+  document.getElementById('editAksesPosyanduPassword').value = posyandu.password || '';
+  document.getElementById('editAksesPosyanduStatus').value = (posyandu.is_active !== undefined) ? String(posyandu.is_active) : (posyandu.password ? '1' : '0');
+
+  let allowedArr = [];
+  try {
+    allowedArr = typeof posyandu.allowed_menus === 'string' ? JSON.parse(posyandu.allowed_menus || '[]') : (posyandu.allowed_menus || []);
+  } catch (_) { allowedArr = []; }
+
+  document.getElementById('chkMenuPosyandu_records').checked = allowedArr.includes('data-records');
+  document.getElementById('chkMenuPosyandu_dashboard').checked = allowedArr.includes('dashboard');
+  document.getElementById('chkMenuPosyandu_alat').checked = allowedArr.includes('alat-bnhp');
+
+  document.getElementById('modalEditPosyanduAksesOverlay').classList.add('open');
+}
+
+function closeEditPosyanduAksesModal() {
+  document.getElementById('modalEditPosyanduAksesOverlay').classList.remove('open');
+}
+
+async function handleSavePosyanduAkses(e) {
+  e.preventDefault();
+  const id = document.getElementById('editAksesPosyanduId').value;
+  const password = document.getElementById('editAksesPosyanduPassword').value.trim();
+  const is_active = parseInt(document.getElementById('editAksesPosyanduStatus').value, 10);
+
+  const allowed = [];
+  if (document.getElementById('chkMenuPosyandu_records').checked) allowed.push('data-records');
+  if (document.getElementById('chkMenuPosyandu_dashboard').checked) allowed.push('dashboard');
+  if (document.getElementById('chkMenuPosyandu_alat').checked) allowed.push('alat-bnhp');
+
+  const posyandu = masterPosyanduDb.find(p => String(p.id) === String(id));
+  if (posyandu) {
+    posyandu.password = password;
+    posyandu.allowed_menus = JSON.stringify(allowed);
+    posyandu.is_active = is_active;
+  }
+
+  try {
+    await fetch('/api/master-posyandu', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: id,
+        password: password,
+        allowed_menus: JSON.stringify(allowed),
+        is_active: is_active
+      })
+    });
+    showToast('Akses Posyandu berhasil disimpan!', 'success');
+  } catch (err) {
+    console.warn('Save posyandu akses notice:', err);
+  }
+
+  closeEditPosyanduAksesModal();
+  renderAdminPosyanduTable();
+}
+
+function openAddPosyanduModal() {
+  document.getElementById('formAddPosyandu').reset();
+  document.getElementById('modalAddPosyanduOverlay').classList.add('open');
+}
+
+function closeAddPosyanduModal() {
+  document.getElementById('modalAddPosyanduOverlay').classList.remove('open');
+}
+
+async function handleSaveNewPosyandu(e) {
+  e.preventDefault();
+  const nama = document.getElementById('newPosyanduNama').value.trim();
+  const desa = document.getElementById('newPosyanduDesa').value;
+  const rw = document.getElementById('newPosyanduRw').value.trim();
+  const password = document.getElementById('newPosyanduPassword').value.trim();
+
+  if (!nama) {
+    showToast('Nama Posyandu wajib diisi!', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/master-posyandu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nama: nama,
+        desa: desa,
+        rw: rw,
+        password: password,
+        allowed_menus: '[]',
+        is_active: password ? 1 : 0
+      })
+    });
+    if (res.ok) {
+      showToast(`Posyandu ${nama} berhasil ditambahkan!`, 'success');
+      await fetchMasterPosyanduFromCloud();
+    }
+  } catch (err) {
+    console.warn('Add posyandu notice:', err);
+  }
+
+  closeAddPosyanduModal();
+}
+
+async function deletePosyandu(id, encodedNama) {
+  const nama = decodeURIComponent(encodedNama);
+  const confirm = await Swal.fire({
+    title: 'Hapus Posyandu?',
+    html: `Apakah Anda yakin ingin menghapus data <strong>${nama}</strong> dari database?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal'
+  });
+
+  if (confirm.isConfirmed) {
+    try {
+      await fetch(`/api/master-posyandu?id=${id}`, { method: 'DELETE' });
+      showToast(`Posyandu ${nama} berhasil dihapus.`, 'success');
+      await fetchMasterPosyanduFromCloud();
+    } catch (err) {
+      console.warn('Delete posyandu notice:', err);
+    }
+  }
+}
+
+async function handleSaveGatePassword(e) {
+  e.preventDefault();
+  const input = document.getElementById('inputGatePasswordPuskesmas');
+  if (!input) return;
+  const newPass = input.value.trim();
+  if (!newPass) {
+    showToast('Kata sandi gerbang tidak boleh kosong!', 'error');
+    return;
+  }
+
+  gatePasswordPuskesmas = newPass;
+
+  try {
+    const res = await fetch('/api/maintenance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gate_password_puskesmas: newPass })
+    });
+    if (res.ok) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Kata Sandi Gerbang Disimpan',
+        text: 'Kata sandi gerbang Puskesmas Banjaran Kota berhasil diperbarui.',
+        timer: 1800,
+        showConfirmButton: false
+      });
+    }
+  } catch (err) {
+    console.warn('Save gate password error:', err);
+    showToast('Tersimpan lokal: Password Gerbang Puskesmas', 'info');
   }
 }
 
@@ -1449,6 +2298,25 @@ function switchView(viewId) {
   closeUserProfileDropdown();
 
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || 'puskesmas').toLowerCase();
+
+  // Multi-Portal Role & Permission Check
+  if (portalType === 'sekolah' || portalType === 'posyandu') {
+    let allowedArr = [];
+    try {
+      const raw = sessionStorage.getItem('ckg_allowed_menus') || '[]';
+      allowedArr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch (_) { allowedArr = []; }
+    if (!Array.isArray(allowedArr) || !allowedArr.includes(viewId)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Akses Ditolak',
+        text: 'Akun Anda tidak memiliki izin untuk membuka menu ini.',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+  }
 
   if (role === 'petugas') {
     if (viewId === 'laporan' || viewId === 'recycle-data' || viewId === 'admin-panel') {
@@ -9591,6 +10459,13 @@ async function loadMaintenanceSettings() {
         maintenanceState.maintenance_web_message = data.maintenance_web_message || maintenanceState.maintenance_web_message;
         maintenanceState.locked_menus = data.locked_menus || [];
         maintenanceState.maintenance_menu_message = data.maintenance_menu_message || maintenanceState.maintenance_menu_message;
+        if (data.gate_password_puskesmas) {
+          gatePasswordPuskesmas = String(data.gate_password_puskesmas).trim();
+          const gateInput = document.getElementById('inputGatePasswordPuskesmas');
+          if (gateInput && !gateInput.matches(':focus')) {
+            gateInput.value = gatePasswordPuskesmas;
+          }
+        }
 
         safeLocalStorageSet('ckg_cached_maint_web', maintenanceState.maintenance_web ? '1' : '0');
         safeLocalStorageSet('ckg_cached_maint_msg', maintenanceState.maintenance_web_message);
@@ -10307,14 +11182,22 @@ function loadMasterSekolahFromStorage() {
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map(s => ({
           nama: (s.nama || '').trim().toUpperCase(),
-          level: (s.level || 'SD').trim().toUpperCase()
+          level: (s.level || 'SD').trim().toUpperCase(),
+          password: s.password || '',
+          allowed_menus: s.allowed_menus || '',
+          is_active: s.is_active !== undefined ? s.is_active : (s.password ? 1 : 0)
         }));
       }
     }
   } catch (e) {
     console.warn('Error reading ckg_master_sekolah:', e);
   }
-  return [...DEFAULT_MASTER_SARANA_SEKOLAH];
+  return DEFAULT_MASTER_SARANA_SEKOLAH.map(s => ({
+    ...s,
+    password: '',
+    allowed_menus: '',
+    is_active: 0
+  }));
 }
 
 let MASTER_SARANA_SEKOLAH = loadMasterSekolahFromStorage();
@@ -10333,6 +11216,8 @@ function saveMasterSekolahToStorage(newList) {
   }
   syncMasterSekolahToCloud(MASTER_SARANA_SEKOLAH);
   populateSekolahFilterDropdowns();
+  populateLoginSekolahDropdown();
+  renderAdminSekolahTable();
 }
 
 async function syncMasterSekolahToCloud(list) {
@@ -10356,12 +11241,17 @@ async function fetchMasterSekolahFromCloud() {
       if (result.success && Array.isArray(result.data) && result.data.length > 0) {
         MASTER_SARANA_SEKOLAH = result.data.map(item => ({
           nama: (item.nama || '').trim().toUpperCase(),
-          level: (item.level || 'SD').trim().toUpperCase()
+          level: (item.level || 'SD').trim().toUpperCase(),
+          password: item.password || '',
+          allowed_menus: item.allowed_menus || '',
+          is_active: item.is_active !== undefined ? item.is_active : (item.password ? 1 : 0)
         }));
         try {
           localStorage.setItem('ckg_master_sekolah', JSON.stringify(MASTER_SARANA_SEKOLAH));
         } catch (_) {}
         populateSekolahFilterDropdowns();
+        populateLoginSekolahDropdown();
+        renderAdminSekolahTable();
       }
     }
   } catch (err) {

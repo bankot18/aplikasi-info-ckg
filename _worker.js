@@ -816,7 +816,7 @@ export default {
       }
     }
 
-    // 4.1 ROUTE: /api/master-sekolah (Pengelolaan Master Data Sekolah: Tambah, Edit, Hapus - Khusus Admin)
+    // 4.1 ROUTE: /api/master-sekolah (Pengelolaan Master Data Sekolah: Tambah, Edit, Hapus, Password & Akses)
     if (url.pathname === '/api/master-sekolah' || url.pathname.startsWith('/api/master-sekolah/')) {
       if (!env.DB) {
         return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
@@ -828,15 +828,22 @@ export default {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nama TEXT NOT NULL UNIQUE,
             level TEXT NOT NULL,
+            password TEXT DEFAULT '',
+            allowed_menus TEXT DEFAULT '',
+            is_active INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )
         `).run();
       } catch (_) {}
 
+      try { await env.DB.prepare("ALTER TABLE master_sekolah ADD COLUMN password TEXT DEFAULT ''").run(); } catch (_) {}
+      try { await env.DB.prepare("ALTER TABLE master_sekolah ADD COLUMN allowed_menus TEXT DEFAULT ''").run(); } catch (_) {}
+      try { await env.DB.prepare("ALTER TABLE master_sekolah ADD COLUMN is_active INTEGER DEFAULT 0").run(); } catch (_) {}
+
       // GET: Ambil daftar seluruh sekolah master
       if (request.method === 'GET') {
         try {
-          let { results } = await env.DB.prepare('SELECT id, nama, level, created_at FROM master_sekolah ORDER BY level ASC, nama ASC').all();
+          let { results } = await env.DB.prepare('SELECT id, nama, level, password, allowed_menus, is_active, created_at FROM master_sekolah ORDER BY level ASC, nama ASC').all();
           
           // Auto-seed default 35 schools jika tabel masih kosong
           if (!results || results.length === 0) {
@@ -885,7 +892,7 @@ export default {
             const insertStmt = env.DB.prepare('INSERT OR IGNORE INTO master_sekolah (nama, level) VALUES (?, ?)');
             const stmts = defaultSchools.map(s => insertStmt.bind(s.nama, s.level));
             await env.DB.batch(stmts);
-            const refetched = await env.DB.prepare('SELECT id, nama, level, created_at FROM master_sekolah ORDER BY level ASC, nama ASC').all();
+            const refetched = await env.DB.prepare('SELECT id, nama, level, password, allowed_menus, is_active, created_at FROM master_sekolah ORDER BY level ASC, nama ASC').all();
             results = refetched.results || [];
           }
 
@@ -901,10 +908,20 @@ export default {
           const body = await request.json();
           const items = Array.isArray(body) ? body : [body];
           const stmt = env.DB.prepare(`
-            INSERT INTO master_sekolah (nama, level) VALUES (?, ?)
-            ON CONFLICT(nama) DO UPDATE SET level = excluded.level
+            INSERT INTO master_sekolah (nama, level, password, allowed_menus, is_active) VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(nama) DO UPDATE SET 
+              level = excluded.level,
+              password = CASE WHEN excluded.password != '' THEN excluded.password ELSE master_sekolah.password END,
+              allowed_menus = excluded.allowed_menus,
+              is_active = excluded.is_active
           `);
-          const statements = items.map(item => stmt.bind((item.nama || '').trim().toUpperCase(), (item.level || 'SD').trim().toUpperCase()));
+          const statements = items.map(item => stmt.bind(
+            (item.nama || '').trim().toUpperCase(), 
+            (item.level || 'SD').trim().toUpperCase(),
+            (item.password || '').trim(),
+            (item.allowed_menus || '').trim(),
+            item.is_active ? 1 : 0
+          ));
           await env.DB.batch(statements);
           return new Response(JSON.stringify({ success: true, count: items.length }), { headers: corsHeaders });
         } catch (err) {
@@ -912,25 +929,48 @@ export default {
         }
       }
 
-      // PUT: Edit sekolah (Ubah nama dan/atau level, serta otomatis perbarui data siswa jika nama sekolah berubah)
-      if (request.method === 'PUT') {
+      // PUT: Edit sekolah (Nama/Level, atau Password, Hak Akses, Status Aktif)
+      if (request.method === 'PUT' || request.method === 'PATCH') {
         try {
-          const { oldNama, newNama, level } = await request.json();
-          if (!oldNama || !newNama) {
-            return new Response(JSON.stringify({ success: false, error: 'oldNama and newNama required' }), { status: 400, headers: corsHeaders });
+          const body = await request.json();
+          const targetNama = (body.oldNama || body.nama || '').trim().toUpperCase();
+          if (!targetNama) {
+            return new Response(JSON.stringify({ success: false, error: 'Nama sekolah required' }), { status: 400, headers: corsHeaders });
           }
-          const cleanOld = oldNama.trim().toUpperCase();
-          const cleanNew = newNama.trim().toUpperCase();
-          const cleanLevel = (level || 'SD').trim().toUpperCase();
 
-          // 1. Update di master_sekolah
+          // If updating permissions / password specifically:
+          if (body.password !== undefined || body.allowed_menus !== undefined || body.is_active !== undefined) {
+            const updates = [];
+            const params = [];
+            if (body.password !== undefined) {
+              updates.push('password = ?');
+              params.push(String(body.password).trim());
+            }
+            if (body.allowed_menus !== undefined) {
+              updates.push('allowed_menus = ?');
+              params.push(typeof body.allowed_menus === 'string' ? body.allowed_menus : JSON.stringify(body.allowed_menus));
+            }
+            if (body.is_active !== undefined) {
+              updates.push('is_active = ?');
+              params.push(body.is_active ? 1 : 0);
+            }
+            params.push(targetNama);
+
+            await env.DB.prepare(`UPDATE master_sekolah SET ${updates.join(', ')} WHERE UPPER(nama) = ?`).bind(...params).run();
+            return new Response(JSON.stringify({ success: true, message: 'Akses sekolah berhasil diperbarui' }), { headers: corsHeaders });
+          }
+
+          // Otherwise, name / level rename flow
+          const cleanOld = targetNama;
+          const cleanNew = (body.newNama || body.nama || '').trim().toUpperCase();
+          const cleanLevel = (body.level || 'SD').trim().toUpperCase();
+
           await env.DB.prepare(`
             UPDATE master_sekolah 
             SET nama = ?, level = ? 
             WHERE UPPER(nama) = ?
           `).bind(cleanNew, cleanLevel, cleanOld).run();
 
-          // 2. Jika nama sekolah berubah, otomatis update juga data seluruh siswa di ckg_sekolah_records
           let updatedStudents = 0;
           if (cleanOld !== cleanNew) {
             const updateRes = await env.DB.prepare(`
@@ -955,6 +995,156 @@ export default {
             return new Response(JSON.stringify({ success: false, error: 'nama parameter required' }), { status: 400, headers: corsHeaders });
           }
           await env.DB.prepare('DELETE FROM master_sekolah WHERE UPPER(nama) = ?').bind(nama.trim().toUpperCase()).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
+    // 4.2 ROUTE: /api/master-posyandu (Pengelolaan Master Data Posyandu: Tambah, Edit, Hapus, Password & Akses)
+    if (url.pathname === '/api/master-posyandu' || url.pathname.startsWith('/api/master-posyandu/')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), { status: 500, headers: corsHeaders });
+      }
+
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS master_posyandu (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nama TEXT NOT NULL UNIQUE,
+            desa TEXT NOT NULL,
+            rw TEXT DEFAULT '',
+            password TEXT DEFAULT '',
+            allowed_menus TEXT DEFAULT '',
+            is_active INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (_) {}
+
+      // GET: Ambil daftar seluruh posyandu
+      if (request.method === 'GET') {
+        try {
+          let { results } = await env.DB.prepare('SELECT id, nama, desa, rw, password, allowed_menus, is_active, created_at FROM master_posyandu ORDER BY desa ASC, nama ASC').all();
+
+          // Auto-seed default Posyandu untuk wilayah Banjaran jika masih kosong
+          if (!results || results.length === 0) {
+            const defaultPosyandu = [
+              { nama: 'Posyandu Mawar 1 (Tarajusari)', desa: 'Tarajusari', rw: 'RW 01' },
+              { nama: 'Posyandu Mawar 2 (Tarajusari)', desa: 'Tarajusari', rw: 'RW 02' },
+              { nama: 'Posyandu Melati 1 (Banjaran Kulon)', desa: 'Banjaran Kulon', rw: 'RW 01' },
+              { nama: 'Posyandu Melati 2 (Banjaran Kulon)', desa: 'Banjaran Kulon', rw: 'RW 02' },
+              { nama: 'Posyandu Cempaka 1 (Banjaran Wetan)', desa: 'Banjaran Wetan', rw: 'RW 01' },
+              { nama: 'Posyandu Cempaka 2 (Banjaran Wetan)', desa: 'Banjaran Wetan', rw: 'RW 02' },
+              { nama: 'Posyandu Teratai 1 (Kiangroke)', desa: 'Kiangroke', rw: 'RW 01' },
+              { nama: 'Posyandu Anggrek 1 (Kamasan)', desa: 'Kamasan', rw: 'RW 01' },
+              { nama: 'Posyandu Dahlia 1 (Ciapus)', desa: 'Ciapus', rw: 'RW 01' },
+              { nama: 'Posyandu Kenanga 1 (Margahayu)', desa: 'Margahayu', rw: 'RW 01' },
+              { nama: 'Posyandu Flamboyan 1 (Neglasari)', desa: 'Neglasari', rw: 'RW 01' },
+              { nama: 'Posyandu Kamboja 1 (Pasirhuni)', desa: 'Pasirhuni', rw: 'RW 01' },
+              { nama: 'Posyandu Nusa Indah 1 (Sindangpanon)', desa: 'Sindangpanon', rw: 'RW 01' }
+            ];
+            const insertStmt = env.DB.prepare('INSERT OR IGNORE INTO master_posyandu (nama, desa, rw) VALUES (?, ?, ?)');
+            const stmts = defaultPosyandu.map(p => insertStmt.bind(p.nama, p.desa, p.rw));
+            await env.DB.batch(stmts);
+            const refetched = await env.DB.prepare('SELECT id, nama, desa, rw, password, allowed_menus, is_active, created_at FROM master_posyandu ORDER BY desa ASC, nama ASC').all();
+            results = refetched.results || [];
+          }
+
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // POST: Tambah posyandu baru
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nama = (body.nama || '').trim();
+          const desa = (body.desa || 'Tarajusari').trim();
+          const rw = (body.rw || '').trim();
+          const password = (body.password || '').trim();
+          const allowed_menus = typeof body.allowed_menus === 'string' ? body.allowed_menus : JSON.stringify(body.allowed_menus || []);
+          const is_active = body.is_active ? 1 : 0;
+
+          if (!nama) {
+            return new Response(JSON.stringify({ success: false, error: 'Nama Posyandu required' }), { status: 400, headers: corsHeaders });
+          }
+
+          await env.DB.prepare(`
+            INSERT INTO master_posyandu (nama, desa, rw, password, allowed_menus, is_active)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(nama) DO UPDATE SET
+              desa = excluded.desa,
+              rw = excluded.rw,
+              password = excluded.password,
+              allowed_menus = excluded.allowed_menus,
+              is_active = excluded.is_active
+          `).bind(nama, desa, rw, password, allowed_menus, is_active).run();
+
+          return new Response(JSON.stringify({ success: true, message: 'Posyandu berhasil disimpan' }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // PUT / PATCH: Update posyandu (password, allowed_menus, is_active, nama, desa)
+      if (request.method === 'PUT' || request.method === 'PATCH') {
+        try {
+          const body = await request.json();
+          const id = body.id;
+          const nama = (body.nama || '').trim();
+
+          if (!id && !nama) {
+            return new Response(JSON.stringify({ success: false, error: 'id or nama required' }), { status: 400, headers: corsHeaders });
+          }
+
+          const updates = [];
+          const params = [];
+
+          if (body.newNama !== undefined && body.newNama.trim()) { updates.push('nama = ?'); params.push(body.newNama.trim()); }
+          if (body.desa !== undefined) { updates.push('desa = ?'); params.push(body.desa.trim()); }
+          if (body.rw !== undefined) { updates.push('rw = ?'); params.push(body.rw.trim()); }
+          if (body.password !== undefined) { updates.push('password = ?'); params.push(String(body.password).trim()); }
+          if (body.allowed_menus !== undefined) {
+            updates.push('allowed_menus = ?');
+            params.push(typeof body.allowed_menus === 'string' ? body.allowed_menus : JSON.stringify(body.allowed_menus));
+          }
+          if (body.is_active !== undefined) { updates.push('is_active = ?'); params.push(body.is_active ? 1 : 0); }
+
+          if (updates.length === 0) {
+            return new Response(JSON.stringify({ success: false, error: 'No fields to update' }), { status: 400, headers: corsHeaders });
+          }
+
+          if (id) {
+            params.push(id);
+            await env.DB.prepare(`UPDATE master_posyandu SET ${updates.join(', ')} WHERE id = ?`).bind(...params).run();
+          } else {
+            params.push(nama);
+            await env.DB.prepare(`UPDATE master_posyandu SET ${updates.join(', ')} WHERE UPPER(nama) = UPPER(?)`).bind(...params).run();
+          }
+
+          return new Response(JSON.stringify({ success: true, message: 'Data posyandu berhasil diperbarui' }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // DELETE: Hapus posyandu
+      if (request.method === 'DELETE') {
+        try {
+          const id = url.searchParams.get('id');
+          const nama = url.searchParams.get('nama');
+          if (!id && !nama) {
+            return new Response(JSON.stringify({ success: false, error: 'id or nama required' }), { status: 400, headers: corsHeaders });
+          }
+          if (id) {
+            await env.DB.prepare('DELETE FROM master_posyandu WHERE id = ?').bind(id).run();
+          } else {
+            await env.DB.prepare('DELETE FROM master_posyandu WHERE UPPER(nama) = UPPER(?)').bind(nama.trim()).run();
+          }
           return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
@@ -1178,7 +1368,8 @@ export default {
             maintenance_web: settings['maintenance_web'] === 'true',
             maintenance_web_message: settings['maintenance_web_message'] || 'Sistem sedang dalam maintenance. Silakan coba beberapa saat lagi.',
             locked_menus: settings['locked_menus'] ? JSON.parse(settings['locked_menus']) : [],
-            maintenance_menu_message: settings['maintenance_menu_message'] || 'Menu ini sedang dalam maintenance oleh Admin.'
+            maintenance_menu_message: settings['maintenance_menu_message'] || 'Menu ini sedang dalam maintenance oleh Admin.',
+            gate_password_puskesmas: settings['gate_password_puskesmas'] || '213'
           }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
@@ -1215,6 +1406,12 @@ export default {
               INSERT INTO maintenance_settings (key, value, updated_at) VALUES (?, ?, ?)
               ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
             `).bind('maintenance_menu_message', String(body.maintenance_menu_message), now));
+          }
+          if (body.gate_password_puskesmas !== undefined) {
+            statements.push(env.DB.prepare(`
+              INSERT INTO maintenance_settings (key, value, updated_at) VALUES (?, ?, ?)
+              ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+            `).bind('gate_password_puskesmas', String(body.gate_password_puskesmas).trim(), now));
           }
 
           if (statements.length > 0) {
