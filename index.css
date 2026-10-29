@@ -6863,38 +6863,66 @@ body.dark-mode #modalPengembalianAlat .filter-control {
   text-align: center;
 }
 
-.portal-headline-tag {
-  display: inline-flex;
+.portal-banner-container {
+  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 6px 16px;
-  border-radius: 30px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: #6ee7b7;
-  text-transform: uppercase;
-  margin-bottom: 14px;
+  margin: 0 auto 16px auto;
+  max-width: 540px;
+  width: 100%;
+}
+
+.portal-hero-banner {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.45));
+  animation: floatBanner 4s ease-in-out infinite alternate;
+  transition: transform 0.3s ease;
+}
+
+.portal-hero-banner:hover {
+  transform: scale(1.02);
+}
+
+@keyframes floatBanner {
+  0% { transform: translateY(0px); }
+  100% { transform: translateY(-5px); }
+}
+
+@media (max-width: 640px) {
+  .portal-hero-banner {
+    max-width: 300px;
+  }
 }
 
 .portal-headline-title {
-  font-size: 32px;
-  font-weight: 800;
+  font-size: 34px;
+  font-weight: 900;
   letter-spacing: -0.5px;
-  margin: 0 0 10px 0;
+  margin: 0 0 6px 0;
   background: linear-gradient(135deg, #ffffff 40%, #93c5fd 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
+.portal-headline-instansi {
+  font-size: 21px;
+  font-weight: 800;
+  color: #34d399;
+  letter-spacing: 0.2px;
+  margin: 0 0 10px 0;
+  display: block;
+  text-shadow: 0 2px 10px rgba(52, 211, 153, 0.3);
+}
+
 .portal-headline-subtitle {
-  font-size: 15px;
+  font-size: 14.5px;
   color: #cbd5e1;
-  max-width: 620px;
-  margin: 0 auto 36px auto;
-  line-height: 1.6;
+  max-width: 580px;
+  margin: 0 auto 30px auto;
+  line-height: 1.55;
 }
 
 .portal-cards-grid {
