@@ -301,6 +301,14 @@
         <i class="bi bi-speedometer2"></i>
         <span>Dashboard</span>
       </button>
+      <button class="nav-tab-btn" data-view="sekolah">
+        <i class="bi bi-mortarboard-fill"></i>
+        <span>Sekolah</span>
+      </button>
+      <button class="nav-tab-btn" data-view="alat-bnhp">
+        <i class="bi bi-box-seam-fill"></i>
+        <span>Alat&BNHP CKG</span>
+      </button>
       <button class="nav-tab-btn admin-koordinator-only" data-view="laporan">
         <i class="bi bi-file-earmark-bar-graph"></i>
         <span>Laporan</span>
@@ -308,14 +316,6 @@
       <button class="nav-tab-btn" data-view="data-records">
         <i class="bi bi-folder-symlink-fill"></i>
         <span>Records</span>
-      </button>
-      <button class="nav-tab-btn" data-view="simpus">
-        <i class="bi bi-hdd-network"></i>
-        <span>SIMPUS</span>
-      </button>
-      <button class="nav-tab-btn" data-view="sekolah">
-        <i class="bi bi-mortarboard-fill"></i>
-        <span>Sekolah</span>
       </button>
       <button class="nav-tab-btn admin-koordinator-only" data-view="recycle-data">
         <i class="bi bi-trash3-fill"></i>
@@ -1275,6 +1275,300 @@
         </div>
       </section>
 
+      <!-- VIEW: ALAT & BNHP CKG (LOGISTIK & INVENTARIS SKRINING) -->
+      <section id="view-alat-bnhp" class="view-panel">
+        <div class="card-panel">
+          <div class="card-header-bar">
+            <div>
+              <div class="card-header-title">
+                <i class="bi bi-box-seam-fill" style="color: #0284c7;"></i> Inventaris & Logistik Alat & BNHP CKG
+              </div>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                Pengelolaan stok alat kesehatan (Alkes), pencatatan pemakaian bahan habis pakai (BNHP/BMHP), serta sirkulasi peminjaman alat untuk kegiatan skrining CKG.
+              </p>
+            </div>
+            <div class="action-buttons-group">
+              <button class="btn btn-sky" onclick="openTambahItemModal()" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff;">
+                <i class="bi bi-plus-circle-fill"></i> Tambah Item Baru
+              </button>
+              <button class="btn btn-emerald" onclick="openCatatPemakaianModal()" style="background: linear-gradient(135deg, #059669, #047857); color: #fff;">
+                <i class="bi bi-clipboard-plus-fill"></i> Catat Pemakaian Lapangan
+              </button>
+              <button class="btn btn-purple" onclick="openPeminjamanModal()" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff;">
+                <i class="bi bi-arrow-left-right"></i> Pinjam Alat Medis
+              </button>
+              <button class="btn btn-emerald" onclick="exportAlatBnhpToXLSX()" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff;">
+                <i class="bi bi-file-earmark-arrow-down-fill"></i> Eksport Excel
+              </button>
+              <button class="btn btn-secondary" onclick="fetchAlatBnhpFromCloud(true)">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Data
+              </button>
+            </div>
+          </div>
+
+          <!-- Metric Cards Summary Alat & BNHP (Clickable Filters) -->
+          <div class="metric-cards-grid" style="margin-bottom: 16px;">
+            <div class="metric-card-solid bg-cyan clickable-card active-filter" id="cardFilterAlatBnhpAll" onclick="setAlatBnhpQuickFilter('all')" role="button" tabindex="0" title="Klik untuk tampilkan semua item">
+              <div class="metric-card-info">
+                <span class="metric-card-title">TOTAL ITEM LOGISTIK</span>
+                <span class="metric-card-value" id="metricAlatBnhpTotal">0</span>
+              </div>
+              <i class="bi bi-box-seam-fill metric-card-icon"></i>
+            </div>
+
+            <div class="metric-card-solid bg-amber clickable-card" id="cardFilterAlatBnhpMenipis" onclick="setAlatBnhpQuickFilter('menipis')" role="button" tabindex="0" title="Klik untuk filter: Stok Menipis / Kritis">
+              <div class="metric-card-info">
+                <span class="metric-card-title">STOK MENIPIS / HABIS</span>
+                <span class="metric-card-value" id="metricAlatBnhpMenipis">0</span>
+              </div>
+              <i class="bi bi-exclamation-triangle-fill metric-card-icon"></i>
+            </div>
+
+            <div class="metric-card-solid bg-rose clickable-card" id="cardFilterAlatBnhpExpired" onclick="setAlatBnhpQuickFilter('expired')" role="button" tabindex="0" title="Klik untuk filter: Expired Segera (≤60 Hari)">
+              <div class="metric-card-info">
+                <span class="metric-card-title">EXPIRED SEGERA (≤60 HARI)</span>
+                <span class="metric-card-value" id="metricAlatBnhpExpired">0</span>
+              </div>
+              <i class="bi bi-calendar2-x-fill metric-card-icon"></i>
+            </div>
+
+            <div class="metric-card-solid bg-purple clickable-card" id="cardFilterAlatBnhpDipinjam" onclick="switchAlatBnhpTab('peminjaman', 'Dipinjam')" role="button" tabindex="0" title="Klik untuk lihat alat yang sedang dipinjam">
+              <div class="metric-card-info">
+                <span class="metric-card-title">ALAT SEDANG DIPINJAM</span>
+                <span class="metric-card-value" id="metricAlatBnhpDipinjam">0</span>
+              </div>
+              <i class="bi bi-arrow-left-right metric-card-icon"></i>
+            </div>
+          </div>
+
+          <!-- Sub-Tab Pills Navigation Bar -->
+          <div class="simpus-status-bar" style="margin-bottom: 16px;">
+            <span class="simpus-status-label" style="color: #0369a1;">
+              <i class="bi bi-layers-fill"></i> Navigasi Logistik:
+            </span>
+
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button id="btnTabAlatBnhpStok" class="simpus-pill-btn active-purple" onclick="switchAlatBnhpTab('stok')">
+                <i class="bi bi-box-seam-fill"></i> Stok & Inventaris <span id="badgeCountAlatBnhpStok" class="badge-count">0</span>
+              </button>
+
+              <button id="btnTabAlatBnhpPemakaian" class="simpus-pill-btn" onclick="switchAlatBnhpTab('pemakaian')">
+                <i class="bi bi-clipboard-pulse"></i> Pemakaian Lapangan <span id="badgeCountAlatBnhpPemakaian" class="badge-count emerald-count">0</span>
+              </button>
+
+              <button id="btnTabAlatBnhpPeminjaman" class="simpus-pill-btn" onclick="switchAlatBnhpTab('peminjaman')">
+                <i class="bi bi-arrow-left-right"></i> Peminjaman Alat <span id="badgeCountAlatBnhpPeminjaman" class="badge-count">0</span>
+              </button>
+
+              <button id="btnTabAlatBnhpRekap" class="simpus-pill-btn" onclick="switchAlatBnhpTab('rekap')">
+                <i class="bi bi-file-earmark-spreadsheet-fill"></i> Rekap Mutasi & Laporan
+              </button>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 1: STOK & INVENTARIS -->
+          <div id="subviewAlatBnhpStok" class="alatbnhp-subview">
+            <!-- Dynamic Filter Bar -->
+            <div class="filter-bar-box" style="margin-bottom: 16px; padding: 12px 14px;">
+              <div class="filter-item" style="flex: 2; min-width: 220px;">
+                <i class="bi bi-search" style="color: var(--primary);"></i> Cari Item:
+                <input type="text" id="searchAlatBnhp" class="filter-control" placeholder="Cari kode, nama alat / BNHP..." oninput="renderAlatBnhpTable()">
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-tags-fill"></i> Kategori:
+                <select id="filterAlatBnhpKategori" class="filter-control" onchange="renderAlatBnhpTable()">
+                  <option value="">Semua Kategori</option>
+                  <option value="Alat">Alat Medis (Alkes)</option>
+                  <option value="BNHP">BNHP (Habis Pakai)</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-shield-check"></i> Status Stok:
+                <select id="filterAlatBnhpStatus" class="filter-control" onchange="renderAlatBnhpTable()">
+                  <option value="">Semua Status</option>
+                  <option value="aman">Stok Aman</option>
+                  <option value="menipis">Stok Menipis (≤ Min)</option>
+                  <option value="habis">Stok Habis (0)</option>
+                  <option value="expired">Expired Segera (≤60 Hari)</option>
+                </select>
+              </div>
+
+              <button class="btn btn-secondary btn-sm" onclick="resetAlatBnhpFilters()">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+              </button>
+            </div>
+
+            <!-- Table Container -->
+            <div class="table-responsive simpus-table-wrapper" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden;">
+              <table class="simpus-registration-table" id="tableAlatBnhpStok" style="width: 100%;">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">NO</th>
+                    <th style="width: 90px;">KODE</th>
+                    <th>NAMA ALAT / BNHP</th>
+                    <th style="width: 140px; text-align: center;">KATEGORI</th>
+                    <th style="width: 80px; text-align: center;">SATUAN</th>
+                    <th style="width: 130px; text-align: center;">STOK TERSEDIA</th>
+                    <th style="width: 90px; text-align: center;">STOK MIN</th>
+                    <th style="width: 170px;">KONDISI / EXPIRED</th>
+                    <th style="width: 130px; text-align: center;">AKSI</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyAlatBnhpStok">
+                  <!-- Rendered dynamically via JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Summary Bar -->
+            <div id="infoAlatBnhpStok" style="margin-top: 12px; font-size: 12.5px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+              <span id="textAlatBnhpSummary">Menampilkan 0 item</span>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 2: PEMAKAIAN LAPANGAN -->
+          <div id="subviewAlatBnhpPemakaian" class="alatbnhp-subview" style="display: none;">
+            <!-- Filter Bar Pemakaian -->
+            <div class="filter-bar-box" style="margin-bottom: 16px; padding: 12px 14px;">
+              <div class="filter-item" style="flex: 2; min-width: 220px;">
+                <i class="bi bi-search" style="color: var(--primary);"></i> Cari Kegiatan / Petugas:
+                <input type="text" id="searchAlatBnhpPemakaian" class="filter-control" placeholder="Cari nama kegiatan, desa, sekolah, atau petugas..." oninput="renderAlatBnhpPemakaianTable()">
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-calendar-event"></i> Periode Bulan:
+                <select id="filterAlatBnhpPemakaianBulan" class="filter-control" onchange="renderAlatBnhpPemakaianTable()">
+                  <option value="">Semua Bulan</option>
+                  <option value="01">Januari</option>
+                  <option value="02">Februari</option>
+                  <option value="03">Maret</option>
+                  <option value="04">April</option>
+                  <option value="05">Mei</option>
+                  <option value="06">Juni</option>
+                  <option value="07">Juli</option>
+                  <option value="08">Agustus</option>
+                  <option value="09">September</option>
+                  <option value="10">Oktober</option>
+                  <option value="11">November</option>
+                  <option value="12">Desember</option>
+                </select>
+              </div>
+
+              <button class="btn btn-emerald btn-sm" onclick="openCatatPemakaianModal()">
+                <i class="bi bi-plus-lg"></i> Catat Pemakaian Baru
+              </button>
+            </div>
+
+            <!-- Table Container Pemakaian -->
+            <div class="table-responsive simpus-table-wrapper" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden;">
+              <table class="simpus-registration-table" id="tableAlatBnhpPemakaian" style="width: 100%;">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">NO</th>
+                    <th style="width: 110px;">TANGGAL</th>
+                    <th>LOKASI / NAMA KEGIATAN CKG</th>
+                    <th style="width: 180px;">PETUGAS PELAKSANA</th>
+                    <th>RINCIAN BNHP DIPAKAI</th>
+                    <th style="width: 100px; text-align: center;">SASARAN</th>
+                    <th style="width: 150px;">CATATAN</th>
+                    <th style="width: 70px; text-align: center;">AKSI</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyAlatBnhpPemakaian">
+                  <!-- Rendered dynamically via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 3: PEMINJAMAN ALAT MEDIS -->
+          <div id="subviewAlatBnhpPeminjaman" class="alatbnhp-subview" style="display: none;">
+            <!-- Filter Bar Peminjaman -->
+            <div class="filter-bar-box" style="margin-bottom: 16px; padding: 12px 14px;">
+              <div class="filter-item" style="flex: 2; min-width: 220px;">
+                <i class="bi bi-search" style="color: var(--primary);"></i> Cari Petugas / Alat:
+                <input type="text" id="searchAlatBnhpPeminjaman" class="filter-control" placeholder="Cari nama peminjam, alat yang dibawa..." oninput="renderAlatBnhpPeminjamanTable()">
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-flag-fill"></i> Status Peminjaman:
+                <select id="filterAlatBnhpPeminjamanStatus" class="filter-control" onchange="renderAlatBnhpPeminjamanTable()">
+                  <option value="">Semua Status</option>
+                  <option value="Dipinjam">Sedang Dipinjam</option>
+                  <option value="Dikembalikan">Sudah Dikembalikan</option>
+                </select>
+              </div>
+
+              <button class="btn btn-purple btn-sm" onclick="openPeminjamanModal()">
+                <i class="bi bi-plus-lg"></i> Form Peminjaman Alat
+              </button>
+            </div>
+
+            <!-- Table Container Peminjaman -->
+            <div class="table-responsive simpus-table-wrapper" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden;">
+              <table class="simpus-registration-table" id="tableAlatBnhpPeminjaman" style="width: 100%;">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">NO</th>
+                    <th style="width: 110px;">TGL PINJAM</th>
+                    <th style="width: 110px;">TGL KEMBALI</th>
+                    <th style="width: 180px;">PETUGAS PEMINJAM</th>
+                    <th>DAFTAR ALAT YANG DIBAWA</th>
+                    <th style="width: 130px; text-align: center;">STATUS</th>
+                    <th style="width: 140px;">KONDISI KEMBALI</th>
+                    <th style="width: 120px; text-align: center;">AKSI</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyAlatBnhpPeminjaman">
+                  <!-- Rendered dynamically via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 4: REKAPITULASI MUTASI & LAPORAN -->
+          <div id="subviewAlatBnhpRekap" class="alatbnhp-subview" style="display: none;">
+            <div class="card-header-bar" style="margin-bottom: 12px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div>
+                <strong style="color: #0f172a; font-size: 14px;"><i class="bi bi-file-earmark-spreadsheet-fill" style="color: #059669;"></i> Laporan Rekapitulasi Mutasi Logistik CKG</strong>
+                <div style="font-size: 12px; color: #64748b;">Rekap perhitungan sirkulasi barang masuk, pemakaian di lapangan, dan sisa stok akhir.</div>
+              </div>
+              <div class="action-buttons-group">
+                <button class="btn btn-emerald btn-sm" onclick="exportAlatBnhpToXLSX()">
+                  <i class="bi bi-download"></i> Unduh File Rekap Excel (.xlsx)
+                </button>
+              </div>
+            </div>
+
+            <!-- Table Container Rekap -->
+            <div class="table-responsive simpus-table-wrapper" style="box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden;">
+              <table class="simpus-registration-table" id="tableAlatBnhpRekap" style="width: 100%;">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">NO</th>
+                    <th style="width: 90px;">KODE</th>
+                    <th>NAMA ITEM LOGISTIK</th>
+                    <th style="width: 120px; text-align: center;">KATEGORI</th>
+                    <th style="width: 80px; text-align: center;">SATUAN</th>
+                    <th style="width: 110px; text-align: center;">STOK AWAL</th>
+                    <th style="width: 110px; text-align: center;">MASUK (+)</th>
+                    <th style="width: 110px; text-align: center;">TERPAKAI (-)</th>
+                    <th style="width: 120px; text-align: center;">SISA AKHIR</th>
+                    <th style="width: 120px; text-align: center;">STATUS</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyAlatBnhpRekap">
+                  <!-- Rendered dynamically via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       <!-- VIEW 6: RECYCLE DATA (TRASH BIN) -->
       <section id="view-recycle-data" class="view-panel admin-koordinator-only">
         <div class="card-panel">
@@ -1614,20 +1908,20 @@
                     class="bi bi-speedometer2"></i> Dashboard
                 </label>
                 <label class="menu-lock-item">
+                  <input type="checkbox" value="sekolah" class="menu-lock-checkbox"> <i
+                    class="bi bi-mortarboard-fill"></i> CKG Sekolah
+                </label>
+                <label class="menu-lock-item">
+                  <input type="checkbox" value="alat-bnhp" class="menu-lock-checkbox"> <i
+                    class="bi bi-box-seam-fill"></i> Alat & BNHP CKG
+                </label>
+                <label class="menu-lock-item">
                   <input type="checkbox" value="laporan" class="menu-lock-checkbox"> <i
                     class="bi bi-file-earmark-bar-graph"></i> Laporan Data
                 </label>
                 <label class="menu-lock-item">
                   <input type="checkbox" value="data-records" class="menu-lock-checkbox"> <i
                     class="bi bi-folder-symlink-fill"></i> Data Records CKG
-                </label>
-                <label class="menu-lock-item">
-                  <input type="checkbox" value="simpus" class="menu-lock-checkbox"> <i class="bi bi-hdd-network"></i>
-                  Data Entry SIMPUS
-                </label>
-                <label class="menu-lock-item">
-                  <input type="checkbox" value="sekolah" class="menu-lock-checkbox"> <i
-                    class="bi bi-mortarboard-fill"></i> CKG Sekolah
                 </label>
                 <label class="menu-lock-item">
                   <input type="checkbox" value="recycle-data" class="menu-lock-checkbox"> <i
@@ -4199,6 +4493,396 @@
     </div>
   </div>
 
+  <!-- ============================================================== -->
+  <!-- MODALS: ALAT & BNHP CKG LOGISTIK -->
+  <!-- ============================================================== -->
+
+  <!-- 1. MODAL TAMBAH / EDIT ITEM LOGISTIK -->
+  <div id="modalItemLogistik" class="modal-overlay">
+    <div class="modal-box" style="max-width: 620px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff;">
+        <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
+          <i class="bi bi-box-seam-fill"></i> <span id="titleModalItemLogistik">Tambah Item Alat / BNHP</span>
+        </div>
+        <button class="modal-close" onclick="closeTambahItemModal()" style="color: #fff;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px;">
+        <input type="hidden" id="editItemLogistikId" value="">
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Kategori Barang <span style="color: #ef4444;">*</span>
+            </label>
+            <select id="inputItemKategori" class="filter-control" style="width: 100%;" onchange="toggleItemKategoriFields()">
+              <option value="BNHP">BNHP (Bahan Habis Pakai)</option>
+              <option value="Alat">Alat Medis (Alkes)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Kode Item
+            </label>
+            <input type="text" id="inputItemKode" class="filter-control" style="width: 100%;" placeholder="Contoh: BNHP-01 atau ALK-01">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Nama Lengkap Alat / BNHP <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="text" id="inputItemNama" class="filter-control" style="width: 100%;" placeholder="Contoh: Strip Tes Gula Darah EasyTouch">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Satuan Unit <span style="color: #ef4444;">*</span>
+            </label>
+            <input type="text" id="inputItemSatuan" class="filter-control" style="width: 100%;" placeholder="Strip/Box/Unit/Pcs" list="listSatuanItem">
+            <datalist id="listSatuanItem">
+              <option value="Strip"></option>
+              <option value="Box"></option>
+              <option value="Pcs"></option>
+              <option value="Unit"></option>
+              <option value="Pasang"></option>
+              <option value="Lembar"></option>
+              <option value="Rol"></option>
+              <option value="Botol"></option>
+            </datalist>
+          </div>
+
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Stok Saat Ini <span style="color: #ef4444;">*</span>
+            </label>
+            <input type="number" id="inputItemStok" class="filter-control" style="width: 100%; font-weight: 700;" min="0" value="0">
+          </div>
+
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Batas Min (Alert)
+            </label>
+            <input type="number" id="inputItemStokMin" class="filter-control" style="width: 100%;" min="0" value="10">
+          </div>
+        </div>
+
+        <!-- Conditional fields for BNHP: Batch & Expired Date -->
+        <div id="groupFieldBnhp" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Nomor Batch
+            </label>
+            <input type="text" id="inputItemBatch" class="filter-control" style="width: 100%;" placeholder="Contoh: B-2026X">
+          </div>
+
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Tanggal Kadaluwarsa (Expired)
+            </label>
+            <input type="date" id="inputItemExpired" class="filter-control" style="width: 100%;">
+          </div>
+        </div>
+
+        <!-- Conditional fields for Alat: Kondisi Alat -->
+        <div id="groupFieldAlat" style="margin-bottom: 14px; display: none;">
+          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Kondisi Fisik Alat Medis
+          </label>
+          <select id="inputItemKondisi" class="filter-control" style="width: 100%;">
+            <option value="Baik">Baik & Berfungsi Normal</option>
+            <option value="Rusak Ringan">Rusak Ringan</option>
+            <option value="Perlu Kalibrasi">Perlu Kalibrasi Ulang</option>
+            <option value="Rusak Berat">Rusak Berat / Tidak Bisa Dipakai</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Catatan / Spesifikasi Tambahan
+          </label>
+          <textarea id="inputItemCatatan" class="filter-control" style="width: 100%; height: 60px;" placeholder="Keterangan merk, lokasi simpan lemari, dll..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeTambahItemModal()">Batal</button>
+        <button type="button" class="btn btn-primary" onclick="saveItemLogistik()" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none;">
+          <i class="bi bi-save-fill"></i> Simpan Item
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. MODAL TAMBAH STOK CEPAT (RESTOCK) -->
+  <div id="modalQuickRestock" class="modal-overlay">
+    <div class="modal-box" style="max-width: 500px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: #fff;">
+        <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
+          <i class="bi bi-plus-circle-fill"></i> Tambah Stok Barang (Restock)
+        </div>
+        <button class="modal-close" onclick="closeQuickRestockModal()" style="color: #fff;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px;">
+        <input type="hidden" id="restockItemId" value="">
+
+        <div style="background: #f1f5f9; padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #059669;">
+          <div style="font-size: 12px; color: #64748b; font-weight: 600;">Nama Barang:</div>
+          <div id="restockItemNama" style="font-size: 14px; font-weight: 800; color: #0f172a;">-</div>
+          <div style="font-size: 12px; color: #0284c7; font-weight: 700; margin-top: 4px;">
+            Sisa Stok Saat Ini: <span id="restockItemStokNow" style="font-size: 14px;">0</span> <span id="restockItemSatuan">Pcs</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Jumlah Penambahan Stok (+) <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="number" id="inputRestockQty" class="filter-control" style="width: 100%; font-size: 16px; font-weight: 800; color: #059669;" min="1" placeholder="Masukkan jumlah...">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Sumber Pengadaan
+            </label>
+            <select id="inputRestockSumber" class="filter-control" style="width: 100%;">
+              <option value="Gudang Farmasi Puskesmas">Gudang Farmasi Puskesmas</option>
+              <option value="Drop Dinas Kesehatan">Drop Dinas Kesehatan</option>
+              <option value="Pengadaan BOK">Pengadaan BOK Puskesmas</option>
+              <option value="Lainnya">Lainnya / Hibah</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Tanggal Penerimaan
+            </label>
+            <input type="date" id="inputRestockTanggal" class="filter-control" style="width: 100%;">
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Catatan Restock
+          </label>
+          <input type="text" id="inputRestockCatatan" class="filter-control" style="width: 100%;" placeholder="No. SBBK / Berita Acara Penerimaan...">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeQuickRestockModal()">Batal</button>
+        <button type="button" class="btn btn-emerald" onclick="saveQuickRestock()" style="background: linear-gradient(135deg, #059669, #047857); color: #fff;">
+          <i class="bi bi-check2-circle"></i> Tambahkan Stok
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. MODAL CATAT PEMAKAIAN LAPANGAN -->
+  <div id="modalCatatPemakaian" class="modal-overlay">
+    <div class="modal-box" style="max-width: 680px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: #fff;">
+        <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
+          <i class="bi bi-clipboard-pulse"></i> Catat Pemakaian BNHP di Lapangan
+        </div>
+        <button class="modal-close" onclick="closeCatatPemakaianModal()" style="color: #fff;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Tanggal Kegiatan <span style="color: #ef4444;">*</span>
+            </label>
+            <input type="date" id="inputPemakaianTanggal" class="filter-control" style="width: 100%;">
+          </div>
+
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Petugas Pelaksana <span style="color: #ef4444;">*</span>
+            </label>
+            <input type="text" id="inputPemakaianPetugas" class="filter-control" style="width: 100%;" placeholder="Nama petugas pemeriksa...">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 16px;">
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Lokasi / Nama Kegiatan CKG <span style="color: #ef4444;">*</span>
+            </label>
+            <input type="text" id="inputPemakaianLokasi" class="filter-control" style="width: 100%;" placeholder="Contoh: Posyandu Dahlia RW 04 Ds. Banjaran / SMPN 1 Banjaran">
+          </div>
+
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Jumlah Sasaran
+            </label>
+            <input type="number" id="inputPemakaianSasaran" class="filter-control" style="width: 100%;" min="0" placeholder="Jml pasien...">
+          </div>
+        </div>
+
+        <!-- Rincian Bahan yang Terpakai -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <strong style="font-size: 13px; color: #0f172a;"><i class="bi bi-box2-heart-fill" style="color: #059669;"></i> Rincian Bahan Habis Pakai (BNHP) yang Digunakan:</strong>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addPemakaianItemRow()" style="font-size: 12px; padding: 3px 10px;">
+              <i class="bi bi-plus"></i> Tambah Baris
+            </button>
+          </div>
+
+          <div id="containerPemakaianItemRows" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Rendered dynamically via addPemakaianItemRow() -->
+          </div>
+        </div>
+
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Catatan Tambahan
+          </label>
+          <input type="text" id="inputPemakaianCatatan" class="filter-control" style="width: 100%;" placeholder="Keterangan strip rusak, sasaran melebihi target, dll...">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeCatatPemakaianModal()">Batal</button>
+        <button type="button" class="btn btn-emerald" onclick="saveCatatPemakaian()" style="background: linear-gradient(135deg, #059669, #047857); color: #fff;">
+          <i class="bi bi-check-circle-fill"></i> Simpan Catatan Pemakaian
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. MODAL PEMINJAMAN ALAT MEDIS -->
+  <div id="modalPeminjamanAlat" class="modal-overlay">
+    <div class="modal-box" style="max-width: 650px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff;">
+        <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
+          <i class="bi bi-arrow-left-right"></i> Form Peminjaman Alat Medis Lapangan
+        </div>
+        <button class="modal-close" onclick="closePeminjamanModal()" style="color: #fff;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Petugas Peminjam <span style="color: #ef4444;">*</span>
+            </label>
+            <input type="text" id="inputPinjamPetugas" class="filter-control" style="width: 100%;" placeholder="Nama lengkap petugas...">
+          </div>
+
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Nomor WhatsApp / HP
+            </label>
+            <input type="text" id="inputPinjamKontak" class="filter-control" style="width: 100%;" placeholder="08xxxxxxxxxx">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Tanggal Pinjam <span style="color: #ef4444;">*</span>
+            </label>
+            <input type="date" id="inputPinjamTanggal" class="filter-control" style="width: 100%;">
+          </div>
+
+          <div>
+            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+              Rencana Tanggal Pengembalian
+            </label>
+            <input type="date" id="inputPinjamRencanaKembali" class="filter-control" style="width: 100%;">
+          </div>
+        </div>
+
+        <!-- Checklist Alat Medis yang Dibawa -->
+        <div style="background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+          <strong style="font-size: 13px; color: #86198f; margin-bottom: 8px; display: block;">
+            <i class="bi bi-check2-square"></i> Pilih Alat Medis yang Dipinjam:
+          </strong>
+          <div id="containerChecklistAlatMedis" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
+            <!-- Rendered dynamically via JS -->
+          </div>
+        </div>
+
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Tujuan / Lokasi Skrining
+          </label>
+          <input type="text" id="inputPinjamTujuan" class="filter-control" style="width: 100%;" placeholder="Contoh: Skrining Lansia Posbindu RW 08">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closePeminjamanModal()">Batal</button>
+        <button type="button" class="btn btn-purple" onclick="savePeminjaman()" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff;">
+          <i class="bi bi-arrow-left-right"></i> Simpan Peminjaman
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. MODAL KONFIRMASI PENGEMBALIAN ALAT -->
+  <div id="modalPengembalianAlat" class="modal-overlay">
+    <div class="modal-box" style="max-width: 520px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;">
+        <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
+          <i class="bi bi-box-arrow-in-down-left"></i> Konfirmasi Pengembalian Alat
+        </div>
+        <button class="modal-close" onclick="closePengembalianModal()" style="color: #fff;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px;">
+        <input type="hidden" id="returnPeminjamanId" value="">
+
+        <div style="background: #f0fdfa; padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #0d9488;">
+          <div style="font-size: 12px; color: #64748b; font-weight: 600;">Peminjam:</div>
+          <div id="returnNamaPeminjam" style="font-size: 14px; font-weight: 800; color: #0f172a;">-</div>
+          <div style="font-size: 12px; color: #0f766e; font-weight: 600; margin-top: 4px;">Alat yang dibawa:</div>
+          <div id="returnDaftarAlat" style="font-size: 13px; color: #1e293b; margin-top: 2px;">-</div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Tanggal Pengembalian Riil <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="date" id="inputReturnTanggal" class="filter-control" style="width: 100%;">
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Kondisi Fisik Alat Saat Kembali <span style="color: #ef4444;">*</span>
+          </label>
+          <select id="inputReturnKondisi" class="filter-control" style="width: 100%;">
+            <option value="Lengkap & Berfungsi Baik">Lengkap & Berfungsi Baik</option>
+            <option value="Baterai Habis">Baterai Habis (Perlu Ganti)</option>
+            <option value="Rusak Ringan">Rusak Ringan</option>
+            <option value="Perlu Kalibrasi">Perlu Kalibrasi</option>
+            <option value="Alat Rusak/Hilang">Alat Rusak Berat / Hilang</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            Catatan Petugas Penerima
+          </label>
+          <input type="text" id="inputReturnCatatan" class="filter-control" style="width: 100%;" placeholder="Pengecekan kelengkapan manset, kabel, dll...">
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closePengembalianModal()">Batal</button>
+        <button type="button" class="btn btn-teal" onclick="prosesPengembalianAlat()" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;">
+          <i class="bi bi-check2-all"></i> Konfirmasi Kembali
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Fullscreen Loading Overlay -->
@@ -4212,6 +4896,7 @@
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
   <script src="app.js?v=3.3"></script>
+  <script src="alat-bnhp.js"></script>
 </body>
 
 </html>

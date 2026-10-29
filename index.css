@@ -6650,5 +6650,55 @@ button[disabled] {
   }
 }
 
+/* ==========================================================================
+   📦 ALAT & BNHP CKG LOGISTIK DESIGN STYLES
+   ========================================================================== */
+
+.alatbnhp-subview {
+  animation: fadeInSubView 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInSubView {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pemakaian-item-row {
+  transition: background-color 0.15s ease;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.pemakaian-item-row:hover {
+  background-color: #f1f5f9;
+}
+
+body.dark-mode .alatbnhp-subview .filter-bar-box,
+body.dark-mode .alatbnhp-subview .simpus-table-wrapper {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .alatbnhp-subview table.simpus-registration-table th {
+  background: #0f172a !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .alatbnhp-subview table.simpus-registration-table td {
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+body.dark-mode .pemakaian-item-row:hover {
+  background-color: #334155 !important;
+}
+
 
 

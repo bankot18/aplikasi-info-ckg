@@ -1506,6 +1506,8 @@ function switchView(viewId) {
     renderLaporanView();
   } else if (viewId === 'sekolah') {
     fetchSekolahRecordsFromCloud(false);
+  } else if (viewId === 'alat-bnhp') {
+    if (typeof initAlatBnhpView === 'function') initAlatBnhpView();
   } else if (viewId === 'data-records') {
     renderTableRecords();
   } else if (viewId === 'recycle-data') {
