@@ -405,6 +405,7 @@ function renderAlatBnhpPemakaianTable() {
 
   let list = (stateAlatBnhp.pemakaian || []).filter(p => {
     const matchSearch = !searchQuery ||
+      (p.kegiatan || '').toLowerCase().includes(searchQuery) ||
       (p.lokasi_kegiatan || '').toLowerCase().includes(searchQuery) ||
       (p.petugas || '').toLowerCase().includes(searchQuery) ||
       (p.catatan || '').toLowerCase().includes(searchQuery);
@@ -452,6 +453,9 @@ function renderAlatBnhpPemakaianTable() {
         <td style="text-align: center; font-weight: 600; color: #64748b;">${idx + 1}</td>
         <td><strong style="color: #0369a1; font-size: 12.5px;">${p.tanggal || '-'}</strong></td>
         <td>
+          <span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 700; margin-bottom: 3px; display: inline-block;">
+            ${p.kegiatan || 'CKG'}
+          </span>
           <div style="font-weight: 700; color: #0f172a; font-size: 13.5px;">${p.lokasi_kegiatan}</div>
         </td>
         <td>
@@ -490,6 +494,8 @@ function renderAlatBnhpPeminjamanTable() {
   let list = (stateAlatBnhp.peminjaman || []).filter(p => {
     const matchSearch = !searchQuery ||
       (p.peminjam || '').toLowerCase().includes(searchQuery) ||
+      (p.kegiatan || '').toLowerCase().includes(searchQuery) ||
+      (p.lokasi || '').toLowerCase().includes(searchQuery) ||
       (p.daftar_alat_text || '').toLowerCase().includes(searchQuery) ||
       (p.catatan || '').toLowerCase().includes(searchQuery);
 
@@ -500,7 +506,7 @@ function renderAlatBnhpPeminjamanTable() {
   if (list.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" style="text-align: center; padding: 40px; color: #64748b;">
+        <td colspan="9" style="text-align: center; padding: 40px; color: #64748b;">
           <i class="bi bi-box-arrow-right" style="font-size: 32px; display: block; margin-bottom: 8px; color: #94a3b8;"></i>
           Belum ada riwayat peminjaman alat medis. Klik tombol <strong>Form Peminjaman Alat</strong> untuk mencatat.
         </td>
@@ -542,8 +548,13 @@ function renderAlatBnhpPeminjamanTable() {
         <td><strong style="color: #1e293b; font-size: 12.5px;">${p.tanggal_pinjam || '-'}</strong></td>
         <td><span style="color: #64748b; font-size: 12.5px;">${p.tanggal_kembali || p.rencana_kembali || '-'}</span></td>
         <td>
-          <div style="font-weight: 700; color: #0f172a; font-size: 13.5px;">${p.peminjam}</div>
-          ${p.kontak ? `<div style="font-size: 11.5px; color: #0284c7;"><i class="bi bi-whatsapp"></i> ${p.kontak}</div>` : ''}
+          <div style="font-weight: 700; color: #0f172a; font-size: 13.5px;"><i class="bi bi-person-fill" style="color: #7c3aed;"></i> ${p.peminjam}</div>
+        </td>
+        <td>
+          <span class="badge" style="background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 700; margin-bottom: 3px; display: inline-block;">
+            ${p.kegiatan || 'Kegiatan CKG'}
+          </span>
+          <div style="font-weight: 700; color: #0f172a; font-size: 13px;">${p.lokasi || p.catatan || '-'}</div>
         </td>
         <td>${alatListHtml}</td>
         <td style="text-align: center;">${statusBadge}</td>
@@ -833,15 +844,236 @@ function saveQuickRestock() {
 }
 
 // ==========================================================================
+// 8. HELPER DROPDOWN PETUGAS & SEKOLAH
+// ==========================================================================
+
+function populatePetugasDropdown(selectEl, hintEl) {
+  if (!selectEl) return;
+  selectEl.innerHTML = '';
+
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Mochamad Fauzie, S.Gz';
+  const role = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  const isAdmin = (role === 'admin');
+
+  // Ambil daftar petugas dari usersDb / ckg_user_db
+  let userList = [];
+  if (typeof usersDb !== 'undefined' && Array.isArray(usersDb) && usersDb.length > 0) {
+    userList = usersDb.map(u => (u.nama_user || u.nama || '').trim()).filter(Boolean);
+  }
+  if (userList.length === 0) {
+    try {
+      const stored = JSON.parse(localStorage.getItem('ckg_user_db') || '[]');
+      if (Array.isArray(stored) && stored.length > 0) {
+        userList = stored.map(u => (u.nama_user || u.nama || '').trim()).filter(Boolean);
+      }
+    } catch (_) {}
+  }
+
+  // Fallback defaults jika belum ada database user
+  if (userList.length === 0) {
+    userList = [
+      'Mochamad Fauzie, S.Gz',
+      'Admin',
+      'Tim UKS Puskesmas',
+      'Tim Medis CKG',
+      'Bidan Desa Banjaran'
+    ];
+  }
+
+  userList = Array.from(new Set(userList));
+  if (loggedUser && !userList.includes(loggedUser)) {
+    userList.unshift(loggedUser);
+  }
+
+  userList.forEach(uName => {
+    const opt = document.createElement('option');
+    opt.value = uName;
+    opt.textContent = uName;
+    if (uName.toLowerCase() === loggedUser.toLowerCase()) {
+      opt.selected = true;
+    }
+    selectEl.appendChild(opt);
+  });
+
+  if (isAdmin) {
+    selectEl.disabled = false;
+    selectEl.style.backgroundColor = '#ffffff';
+    selectEl.style.cursor = 'pointer';
+    selectEl.style.color = '#0f172a';
+    if (hintEl) {
+      hintEl.innerHTML = `<i class="bi bi-unlock-fill" style="color: #059669; font-size: 12px;"></i> <strong style="color: #059669;">Akses Admin:</strong> Anda dapat memilih dari total ${userList.length} petugas di database.`;
+    }
+  } else {
+    // Non-Admin: Terkunci ke nama petugas yang sedang login
+    selectEl.value = loggedUser;
+    selectEl.disabled = true;
+    selectEl.style.backgroundColor = '#f1f5f9';
+    selectEl.style.cursor = 'not-allowed';
+    selectEl.style.color = '#334155';
+    if (hintEl) {
+      hintEl.innerHTML = `<i class="bi bi-lock-fill" style="color: #dc2626; font-size: 12px;"></i> <strong style="color: #dc2626;">Terkunci:</strong> Petugas sesuai akun login Anda (${loggedUser}).`;
+    }
+  }
+}
+
+function getMasterSekolahOptions() {
+  let schools = [];
+  if (typeof MASTER_SARANA_SEKOLAH !== 'undefined' && Array.isArray(MASTER_SARANA_SEKOLAH) && MASTER_SARANA_SEKOLAH.length > 0) {
+    schools = MASTER_SARANA_SEKOLAH.map(s => typeof s === 'string' ? { nama: s, level: 'Sekolah' } : s);
+  } else {
+    try {
+      const stored = JSON.parse(localStorage.getItem('ckg_master_sekolah') || '[]');
+      if (Array.isArray(stored) && stored.length > 0) {
+        schools = stored.map(s => typeof s === 'string' ? { nama: s, level: 'Sekolah' } : s);
+      }
+    } catch (_) {}
+  }
+
+  // Tambah sekolah dari data sekolahRecords jika ada yang belum terdaftar di master
+  if (typeof sekolahRecords !== 'undefined' && Array.isArray(sekolahRecords)) {
+    const existingNames = new Set(schools.map(s => (s.nama || '').trim().toUpperCase()));
+    sekolahRecords.forEach(r => {
+      const sNama = (r.sekolah || '').trim();
+      if (sNama && !existingNames.has(sNama.toUpperCase())) {
+        existingNames.add(sNama.toUpperCase());
+        schools.push({ nama: sNama, level: 'Sekolah' });
+      }
+    });
+  }
+
+  return schools;
+}
+
+function populateSchoolsSelect(selectEl, defaultSchool = '') {
+  if (!selectEl) return;
+  selectEl.innerHTML = '<option value="">-- Pilih Sekolah Terdaftar --</option>';
+
+  const schools = getMasterSekolahOptions();
+  
+  // Kelompokkan per level jika ada
+  const sd = schools.filter(s => (s.level || '').toUpperCase() === 'SD');
+  const smp = schools.filter(s => (s.level || '').toUpperCase() === 'SMP');
+  const sma = schools.filter(s => (s.level || '').toUpperCase() === 'SMA');
+  const lainnya = schools.filter(s => !['SD', 'SMP', 'SMA'].includes((s.level || '').toUpperCase()));
+
+  const appendGroup = (groupLabel, list) => {
+    if (list.length === 0) return;
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = groupLabel;
+    list.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+    list.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.nama;
+      opt.textContent = s.nama;
+      if (defaultSchool && s.nama.toUpperCase() === defaultSchool.toUpperCase()) {
+        opt.selected = true;
+      }
+      optgroup.appendChild(opt);
+    });
+    selectEl.appendChild(optgroup);
+  };
+
+  appendGroup('Tingkat SD / MI', sd);
+  appendGroup('Tingkat SMP / MTs', smp);
+  appendGroup('Tingkat SMA / SMK / MA', sma);
+  if (lainnya.length > 0) appendGroup('Sekolah Lainnya', lainnya);
+}
+
+function getStudentCountForSchool(schoolName) {
+  if (!schoolName) return 0;
+  const target = schoolName.trim().toUpperCase();
+  if (typeof sekolahRecords !== 'undefined' && Array.isArray(sekolahRecords)) {
+    return sekolahRecords.filter(r => (r.sekolah || '').trim().toUpperCase() === target).length;
+  }
+  return 0;
+}
+
+function handlePemakaianKegiatanChange() {
+  const kegiatan = document.getElementById('selectPemakaianKegiatan')?.value || 'CKG Sekolah';
+  const wrapperSekolah = document.getElementById('wrapperPemakaianSekolah');
+  const wrapperManual = document.getElementById('wrapperPemakaianManual');
+  const hintSasaran = document.getElementById('hintPemakaianSasaran');
+
+  if (kegiatan === 'CKG Sekolah') {
+    if (wrapperSekolah) wrapperSekolah.style.display = 'block';
+    if (wrapperManual) wrapperManual.style.display = 'none';
+    handlePemakaianSekolahSelect();
+  } else {
+    if (wrapperSekolah) wrapperSekolah.style.display = 'none';
+    if (wrapperManual) wrapperManual.style.display = 'block';
+    if (hintSasaran) {
+      hintSasaran.innerHTML = `<i class="bi bi-pencil" style="color: #64748b;"></i> Masukkan target sasaran secara manual.`;
+    }
+  }
+}
+
+function handlePemakaianSekolahSelect() {
+  const selectSekolah = document.getElementById('selectPemakaianSekolah');
+  const inputSasaran = document.getElementById('inputPemakaianSasaran');
+  const hintSasaran = document.getElementById('hintPemakaianSasaran');
+  if (!selectSekolah || !inputSasaran) return;
+
+  const school = selectSekolah.value.trim();
+  if (!school) {
+    if (hintSasaran) hintSasaran.innerHTML = `<i class="bi bi-info-circle"></i> Pilih sekolah di atas untuk mengisi sasaran secara otomatis.`;
+    return;
+  }
+
+  const count = getStudentCountForSchool(school);
+  if (count > 0) {
+    inputSasaran.value = count;
+    if (hintSasaran) {
+      hintSasaran.innerHTML = `<i class="bi bi-check-circle-fill" style="color: #059669;"></i> Otomatis terisi <strong>${count}</strong> data siswa terdaftar di database (bisa diedit).`;
+    }
+  } else {
+    inputSasaran.value = '';
+    if (hintSasaran) {
+      hintSasaran.innerHTML = `<i class="bi bi-info-circle" style="color: #d97706;"></i> Belum ada data siswa untuk sekolah ini di database. Silakan isi sasaran secara manual.`;
+    }
+  }
+}
+
+function handlePinjamKegiatanChange() {
+  const kegiatan = document.getElementById('selectPinjamKegiatan')?.value || 'CKG Sekolah';
+  const wrapperSekolah = document.getElementById('wrapperPinjamSekolah');
+  const wrapperManual = document.getElementById('wrapperPinjamManual');
+
+  if (kegiatan === 'CKG Sekolah') {
+    if (wrapperSekolah) wrapperSekolah.style.display = 'block';
+    if (wrapperManual) wrapperManual.style.display = 'none';
+  } else {
+    if (wrapperSekolah) wrapperSekolah.style.display = 'none';
+    if (wrapperManual) wrapperManual.style.display = 'block';
+  }
+}
+
+// ==========================================================================
 // 9. CATAT PEMAKAIAN LAPANGAN MODAL
 // ==========================================================================
 
 function openCatatPemakaianModal() {
   document.getElementById('inputPemakaianTanggal').value = new Date().toISOString().split('T')[0];
-  document.getElementById('inputPemakaianPetugas').value = (typeof currentRole !== 'undefined' && currentRole ? currentRole : '') || (sessionStorage.getItem('ckg_user_name') || '');
-  document.getElementById('inputPemakaianLokasi').value = '';
+
+  // Inisialisasi dropdown petugas sesuai hak akses & sesi login
+  populatePetugasDropdown(
+    document.getElementById('selectPemakaianPetugas'),
+    document.getElementById('hintPemakaianPetugas')
+  );
+
+  // Inisialisasi dropdown sekolah
+  populateSchoolsSelect(document.getElementById('selectPemakaianSekolah'));
+
+  // Reset kegiatan ke CKG Sekolah
+  const selectKegiatan = document.getElementById('selectPemakaianKegiatan');
+  if (selectKegiatan) selectKegiatan.value = 'CKG Sekolah';
+
+  const inputLokasiManual = document.getElementById('inputPemakaianLokasiManual');
+  if (inputLokasiManual) inputLokasiManual.value = '';
+
   document.getElementById('inputPemakaianSasaran').value = '';
   document.getElementById('inputPemakaianCatatan').value = '';
+
+  handlePemakaianKegiatanChange();
 
   const container = document.getElementById('containerPemakaianItemRows');
   if (container) {
@@ -894,8 +1126,28 @@ function removePemakaianItemRow(btn) {
 
 function saveCatatPemakaian() {
   const tanggal = document.getElementById('inputPemakaianTanggal')?.value;
-  const petugas = document.getElementById('inputPemakaianPetugas')?.value.trim();
-  const lokasi = document.getElementById('inputPemakaianLokasi')?.value.trim();
+  const petugas = document.getElementById('selectPemakaianPetugas')?.value || sessionStorage.getItem('ckg_user_name') || 'Petugas';
+  const kegiatan = document.getElementById('selectPemakaianKegiatan')?.value || 'CKG Sekolah';
+
+  let lokasi = '';
+  if (kegiatan === 'CKG Sekolah') {
+    lokasi = (document.getElementById('selectPemakaianSekolah')?.value || '').trim();
+    if (!lokasi) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire('Sekolah Belum Dipilih', 'Silakan pilih sekolah terdaftar untuk kegiatan CKG Sekolah.', 'warning');
+      }
+      return;
+    }
+  } else {
+    lokasi = (document.getElementById('inputPemakaianLokasiManual')?.value || '').trim();
+    if (!lokasi) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire('Lokasi Belum Diisi', 'Silakan isi lokasi atau nama tempat pelaksanaan kegiatan.', 'warning');
+      }
+      return;
+    }
+  }
+
   const sasaran = Number(document.getElementById('inputPemakaianSasaran')?.value || 0);
   const catatan = document.getElementById('inputPemakaianCatatan')?.value.trim();
 
@@ -946,6 +1198,7 @@ function saveCatatPemakaian() {
   const newRecord = {
     id: 'pmk-' + Date.now(),
     tanggal,
+    kegiatan,
     lokasi_kegiatan: lokasi,
     petugas,
     jumlah_sasaran: sasaran,
@@ -1002,9 +1255,27 @@ function hapusPemakaianLogistik(id) {
 function openPeminjamanModal() {
   document.getElementById('inputPinjamTanggal').value = new Date().toISOString().split('T')[0];
   document.getElementById('inputPinjamRencanaKembali').value = new Date().toISOString().split('T')[0];
-  document.getElementById('inputPinjamPetugas').value = (sessionStorage.getItem('ckg_user_name') || '');
-  document.getElementById('inputPinjamKontak').value = '';
-  document.getElementById('inputPinjamTujuan').value = '';
+
+  // Inisialisasi dropdown petugas peminjam sesuai hak akses login
+  populatePetugasDropdown(
+    document.getElementById('selectPinjamPetugas'),
+    document.getElementById('hintPinjamPetugas')
+  );
+
+  // Inisialisasi dropdown sekolah
+  populateSchoolsSelect(document.getElementById('selectPinjamSekolah'));
+
+  // Reset kegiatan ke CKG Sekolah
+  const selectKegiatan = document.getElementById('selectPinjamKegiatan');
+  if (selectKegiatan) selectKegiatan.value = 'CKG Sekolah';
+
+  const inputManual = document.getElementById('inputPinjamLokasiManual');
+  if (inputManual) inputManual.value = '';
+
+  const inputCatatan = document.getElementById('inputPinjamCatatan');
+  if (inputCatatan) inputCatatan.value = '';
+
+  handlePinjamKegiatanChange();
 
   const container = document.getElementById('containerChecklistAlatMedis');
   if (container) {
@@ -1027,11 +1298,27 @@ function closePeminjamanModal() {
 }
 
 function savePeminjaman() {
-  const petugas = document.getElementById('inputPinjamPetugas')?.value.trim();
-  const kontak = document.getElementById('inputPinjamKontak')?.value.trim();
+  const petugas = document.getElementById('selectPinjamPetugas')?.value || sessionStorage.getItem('ckg_user_name') || 'Petugas';
   const tglPinjam = document.getElementById('inputPinjamTanggal')?.value;
   const rencanaKembali = document.getElementById('inputPinjamRencanaKembali')?.value;
-  const tujuan = document.getElementById('inputPinjamTujuan')?.value.trim();
+  const kegiatan = document.getElementById('selectPinjamKegiatan')?.value || 'CKG Sekolah';
+
+  let lokasi = '';
+  if (kegiatan === 'CKG Sekolah') {
+    lokasi = (document.getElementById('selectPinjamSekolah')?.value || '').trim();
+    if (!lokasi) {
+      if (typeof Swal !== 'undefined') Swal.fire('Sekolah Belum Dipilih', 'Silakan pilih sekolah untuk kegiatan peminjaman alat.', 'warning');
+      return;
+    }
+  } else {
+    lokasi = (document.getElementById('inputPinjamLokasiManual')?.value || '').trim();
+    if (!lokasi) {
+      if (typeof Swal !== 'undefined') Swal.fire('Lokasi Belum Diisi', 'Silakan isi lokasi tempat peminjaman alat.', 'warning');
+      return;
+    }
+  }
+
+  const catatanExtra = document.getElementById('inputPinjamCatatan')?.value.trim();
 
   if (!petugas || !tglPinjam) {
     if (typeof Swal !== 'undefined') Swal.fire('Form Belum Lengkap', 'Petugas peminjam dan tanggal pinjam wajib diisi.', 'warning');
@@ -1050,12 +1337,14 @@ function savePeminjaman() {
     rencana_kembali: rencanaKembali,
     tanggal_kembali: '-',
     peminjam: petugas,
-    kontak: kontak,
+    kegiatan: kegiatan,
+    lokasi: lokasi,
+    kontak: '-',
     daftar_alat: checked,
     daftar_alat_text: checked.join(', '),
     status: 'Dipinjam',
     kondisi_kembali: '-',
-    catatan: tujuan,
+    catatan: catatanExtra ? `${kegiatan} - ${lokasi} (${catatanExtra})` : `${kegiatan} - ${lokasi}`,
     created_at: new Date().toISOString()
   };
 
@@ -1069,9 +1358,9 @@ function savePeminjaman() {
     Swal.fire({
       icon: 'success',
       title: 'Peminjaman Dicatat!',
-      text: `${checked.length} alat medis berhasil dicatat sedang dipinjam oleh ${petugas}.`,
+      text: `${checked.length} alat medis berhasil dicatat sedang dipinjam oleh ${petugas} untuk ${kegiatan} (${lokasi}).`,
       confirmButtonColor: '#7c3aed',
-      timer: 2200
+      timer: 2300
     });
   }
 }
@@ -1185,7 +1474,8 @@ function exportAlatBnhpToXLSX() {
     const pemakaianData = (stateAlatBnhp.pemakaian || []).map((p, idx) => ({
       'No': idx + 1,
       'Tanggal Kegiatan': p.tanggal || '-',
-      'Lokasi Kegiatan': p.lokasi_kegiatan || '-',
+      'Jenis Kegiatan': p.kegiatan || 'CKG Sekolah',
+      'Lokasi Pelaksanaan': p.lokasi_kegiatan || '-',
       'Petugas Pelaksana': p.petugas || '-',
       'Rincian BNHP Terpakai': p.items_json || (Array.isArray(p.items_detail) ? p.items_detail.map(d => `${d.nama} (${d.qty} ${d.satuan})`).join(', ') : '-'),
       'Sasaran Pasien': Number(p.jumlah_sasaran || 0),
@@ -1201,11 +1491,12 @@ function exportAlatBnhpToXLSX() {
       'Rencana Kembali': p.rencana_kembali || '-',
       'Tanggal Pengembalian': p.tanggal_kembali || '-',
       'Petugas Peminjam': p.peminjam || '-',
-      'Kontak WA': p.kontak || '-',
+      'Jenis Kegiatan': p.kegiatan || 'CKG Sekolah',
+      'Lokasi Pelaksanaan': p.lokasi || p.catatan || '-',
       'Daftar Alat Dibawa': Array.isArray(p.daftar_alat) ? p.daftar_alat.join(', ') : (p.daftar_alat_text || '-'),
       'Status': p.status || 'Dipinjam',
       'Kondisi Saat Kembali': p.kondisi_kembali || '-',
-      'Tujuan Kegiatan': p.catatan || '-'
+      'Catatan': p.catatan || '-'
     }));
     const wsPeminjaman = XLSX.utils.json_to_sheet(peminjamanData);
     XLSX.utils.book_append_sheet(wb, wsPeminjaman, 'Riwayat_Peminjaman_Alat');

@@ -1656,6 +1656,7 @@ Saran Medis:`;
           CREATE TABLE IF NOT EXISTS ckg_logistik_pemakaian (
             id TEXT PRIMARY KEY,
             tanggal TEXT NOT NULL,
+            kegiatan TEXT DEFAULT 'CKG Sekolah',
             lokasi_kegiatan TEXT NOT NULL,
             petugas TEXT NOT NULL,
             items_json TEXT NOT NULL,
@@ -1673,7 +1674,9 @@ Saran Medis:`;
             rencana_kembali TEXT,
             tanggal_kembali TEXT DEFAULT '-',
             peminjam TEXT NOT NULL,
-            kontak TEXT,
+            kegiatan TEXT DEFAULT 'CKG Sekolah',
+            lokasi TEXT,
+            kontak TEXT DEFAULT '-',
             daftar_alat_json TEXT NOT NULL,
             status TEXT DEFAULT 'Dipinjam',
             kondisi_kembali TEXT DEFAULT '-',
@@ -1681,6 +1684,10 @@ Saran Medis:`;
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )
         `).run();
+
+        try { await env.DB.prepare("ALTER TABLE ckg_logistik_pemakaian ADD COLUMN kegiatan TEXT DEFAULT 'CKG Sekolah'").run(); } catch (_) {}
+        try { await env.DB.prepare("ALTER TABLE ckg_logistik_peminjaman ADD COLUMN kegiatan TEXT DEFAULT 'CKG Sekolah'").run(); } catch (_) {}
+        try { await env.DB.prepare("ALTER TABLE ckg_logistik_peminjaman ADD COLUMN lokasi TEXT").run(); } catch (_) {}
       } catch (_) {}
 
       if (request.method === 'GET') {
@@ -1773,11 +1780,12 @@ Saran Medis:`;
             const p = payload;
             await env.DB.prepare(`
               INSERT INTO ckg_logistik_pemakaian (
-                id, tanggal, lokasi_kegiatan, petugas, items_json, items_detail_json, jumlah_sasaran, catatan
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                id, tanggal, kegiatan, lokasi_kegiatan, petugas, items_json, items_detail_json, jumlah_sasaran, catatan
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).bind(
               p.id,
               p.tanggal,
+              p.kegiatan || 'CKG Sekolah',
               p.lokasi_kegiatan,
               p.petugas,
               p.items_json || '',
@@ -1803,15 +1811,17 @@ Saran Medis:`;
             const p = payload;
             await env.DB.prepare(`
               INSERT INTO ckg_logistik_peminjaman (
-                id, tanggal_pinjam, rencana_kembali, tanggal_kembali, peminjam, kontak, daftar_alat_json, status, kondisi_kembali, catatan
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                id, tanggal_pinjam, rencana_kembali, tanggal_kembali, peminjam, kegiatan, lokasi, kontak, daftar_alat_json, status, kondisi_kembali, catatan
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).bind(
               p.id,
               p.tanggal_pinjam,
               p.rencana_kembali || '',
               p.tanggal_kembali || '-',
               p.peminjam,
-              p.kontak || '',
+              p.kegiatan || 'CKG Sekolah',
+              p.lokasi || '',
+              p.kontak || '-',
               JSON.stringify(p.daftar_alat || []),
               p.status || 'Dipinjam',
               p.kondisi_kembali || '-',
