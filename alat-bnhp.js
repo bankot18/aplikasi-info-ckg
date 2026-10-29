@@ -439,11 +439,16 @@ function renderAlatBnhpPemakaianTable() {
   list.forEach((p, idx) => {
     let itemsDetailHtml = '';
     if (Array.isArray(p.items_detail)) {
-      itemsDetailHtml = p.items_detail.map(d => `
-        <span class="badge" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 11.5px; padding: 3px 8px; border-radius: 6px; margin: 2px; display: inline-block;">
-          <strong>${d.nama}</strong>: <span style="color: #059669; font-weight: 800;">${d.qty} ${d.satuan || 'Pcs'}</span>
-        </span>
-      `).join('');
+      itemsDetailHtml = p.items_detail.map(d => {
+        const hasBawa = d.bawa !== undefined && d.bawa > 0;
+        return `
+          <div style="background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1; font-size: 11.5px; padding: 4px 8px; border-radius: 6px; margin: 3px 0; line-height: 1.4;">
+            <strong>${d.nama}</strong>: 
+            ${hasBawa ? `<span style="color: #64748b; font-size: 11px;">Bawa: <strong>${d.bawa}</strong> | Sisa: <strong style="color: #d97706;">${d.sisa || 0}</strong> ➔ </span>` : ''}
+            <span style="color: #059669; font-weight: 800;">Pakai: ${d.qty} ${d.satuan || 'Pcs'}</span>
+          </div>
+        `;
+      }).join('');
     } else {
       itemsDetailHtml = `<span style="color: #64748b; font-size: 12px;">${p.items_json || '-'}</span>`;
     }
@@ -1078,9 +1083,9 @@ function openCatatPemakaianModal() {
   const container = document.getElementById('containerPemakaianItemRows');
   if (container) {
     container.innerHTML = '';
-    // Tambah 2 baris awal default
-    addPemakaianItemRow('itm-10', 50); // Strip Gula
-    addPemakaianItemRow('itm-14', 50); // Blood Lancet
+    // Tambah 2 baris awal default: contoh Bawa 200, Sisa 30 -> Terpakai 170
+    addPemakaianItemRow('itm-10', 200, 30); // Strip Gula
+    addPemakaianItemRow('itm-14', 200, 30); // Blood Lancet
   }
 
   const modal = document.getElementById('modalCatatPemakaian');
@@ -1092,31 +1097,47 @@ function closeCatatPemakaianModal() {
   if (modal) modal.classList.remove('active');
 }
 
-function addPemakaianItemRow(selectedId = '', defaultQty = 1) {
+function addPemakaianItemRow(selectedId = '', defaultBawa = 200, defaultSisa = 0) {
   const container = document.getElementById('containerPemakaianItemRows');
   if (!container) return;
 
   const bnhpItems = (stateAlatBnhp.items || []).filter(it => it.kategori === 'BNHP');
   let optionsHtml = bnhpItems.map(it => `
     <option value="${it.id}" ${it.id === selectedId ? 'selected' : ''}>
-      ${it.nama} (Sisa: ${it.stok} ${it.satuan})
+      ${it.nama} (Sisa Stok: ${it.stok} ${it.satuan})
     </option>
   `).join('');
 
+  const defaultPakai = Math.max(0, Number(defaultBawa || 0) - Number(defaultSisa || 0));
+
   const row = document.createElement('div');
   row.className = 'pemakaian-item-row';
-  row.style.cssText = 'display: grid; grid-template-columns: 3fr 1fr 40px; gap: 8px; align-items: center;';
+  row.style.cssText = 'display: grid; grid-template-columns: minmax(170px, 2.5fr) minmax(65px, 0.9fr) minmax(65px, 0.9fr) minmax(75px, 1fr) 36px; gap: 8px; align-items: center;';
   row.innerHTML = `
-    <select class="filter-control select-pemakaian-item" style="width: 100%;">
+    <select class="filter-control select-pemakaian-item" style="width: 100%; font-size: 13px;">
       ${optionsHtml}
     </select>
-    <input type="number" class="filter-control input-pemakaian-qty" min="1" value="${defaultQty}" placeholder="Qty" style="font-weight: 700; color: #059669;">
-    <button type="button" class="btn btn-danger btn-sm" onclick="removePemakaianItemRow(this)" style="padding: 6px; line-height: 1;" title="Hapus Baris">
+    <input type="number" class="filter-control input-pemakaian-bawa" min="0" value="${defaultBawa}" placeholder="Bawa" title="Jumlah barang yang dibawa ke lapangan" oninput="calcPemakaianRow(this)" style="font-weight: 700; text-align: center; color: #1e293b;">
+    <input type="number" class="filter-control input-pemakaian-sisa" min="0" value="${defaultSisa}" placeholder="Sisa" title="Jumlah sisa yang dikembalikan ke puskesmas" oninput="calcPemakaianRow(this)" style="font-weight: 700; text-align: center; color: #d97706;">
+    <input type="number" class="filter-control input-pemakaian-qty" min="0" value="${defaultPakai}" placeholder="Pakai" title="Jumlah riil terpakai (hanya ini yang memotong stok)" style="font-weight: 800; text-align: center; color: #059669; background: #ecfdf5; border-color: #6ee7b7;">
+    <button type="button" class="btn btn-danger btn-sm" onclick="removePemakaianItemRow(this)" style="padding: 6px; line-height: 1; border-radius: 6px;" title="Hapus Baris">
       <i class="bi bi-x-lg"></i>
     </button>
   `;
 
   container.appendChild(row);
+}
+
+function calcPemakaianRow(inputEl) {
+  const row = inputEl.closest('.pemakaian-item-row');
+  if (!row) return;
+
+  const bawa = Number(row.querySelector('.input-pemakaian-bawa')?.value || 0);
+  const sisa = Number(row.querySelector('.input-pemakaian-sisa')?.value || 0);
+  const qtyInput = row.querySelector('.input-pemakaian-qty');
+
+  const terpakai = Math.max(0, bawa - sisa);
+  if (qtyInput) qtyInput.value = terpakai;
 }
 
 function removePemakaianItemRow(btn) {
@@ -1158,14 +1179,19 @@ function saveCatatPemakaian() {
     return;
   }
 
-  // Parse rows
+  // Parse rows (Bawa, Sisa, Riil Terpakai)
   const rows = document.querySelectorAll('.pemakaian-item-row');
   const details = [];
 
   rows.forEach(r => {
     const select = r.querySelector('.select-pemakaian-item');
+    const inputBawa = r.querySelector('.input-pemakaian-bawa');
+    const inputSisa = r.querySelector('.input-pemakaian-sisa');
     const inputQty = r.querySelector('.input-pemakaian-qty');
+
     const itemId = select?.value;
+    const bawa = Number(inputBawa?.value || 0);
+    const sisa = Number(inputSisa?.value || 0);
     const qty = Number(inputQty?.value || 0);
 
     if (itemId && qty > 0) {
@@ -1175,23 +1201,25 @@ function saveCatatPemakaian() {
           id: it.id,
           nama: it.nama,
           satuan: it.satuan,
-          qty: qty
+          bawa: bawa,
+          sisa: sisa,
+          qty: qty // Hanya qty yang memotong stok
         });
       }
     }
   });
 
   if (details.length === 0) {
-    if (typeof Swal !== 'undefined') Swal.fire('Item Kosong', 'Pilih minimal 1 bahan BNHP yang dipakai.', 'warning');
+    if (typeof Swal !== 'undefined') Swal.fire('Item Kosong', 'Pilih minimal 1 bahan BNHP dengan jumlah terpakai lebih dari 0.', 'warning');
     return;
   }
 
-  // Kurangi stok masing-masing item
+  // Kurangi stok masing-masing item HANYA sejumlah qty riil terpakai
   details.forEach(d => {
     const idx = stateAlatBnhp.items.findIndex(x => x.id === d.id);
     if (idx !== -1) {
-      const sisa = Number(stateAlatBnhp.items[idx].stok || 0) - d.qty;
-      stateAlatBnhp.items[idx].stok = Math.max(0, sisa);
+      const sisaStok = Number(stateAlatBnhp.items[idx].stok || 0) - d.qty;
+      stateAlatBnhp.items[idx].stok = Math.max(0, sisaStok);
     }
   });
 
@@ -1203,7 +1231,7 @@ function saveCatatPemakaian() {
     petugas,
     jumlah_sasaran: sasaran,
     items_detail: details,
-    items_json: details.map(d => `${d.nama}: ${d.qty}`).join(', '),
+    items_json: details.map(d => `${d.nama}: Bawa ${d.bawa || d.qty}, Sisa ${d.sisa || 0} ➔ Pakai ${d.qty} ${d.satuan}`).join('; '),
     catatan,
     created_at: new Date().toISOString()
   };
@@ -1476,9 +1504,9 @@ function exportAlatBnhpToXLSX() {
       'Tanggal Kegiatan': p.tanggal || '-',
       'Jenis Kegiatan': p.kegiatan || 'CKG Sekolah',
       'Lokasi Pelaksanaan': p.lokasi_kegiatan || '-',
-      'Petugas Pelaksana': p.petugas || '-',
-      'Rincian BNHP Terpakai': p.items_json || (Array.isArray(p.items_detail) ? p.items_detail.map(d => `${d.nama} (${d.qty} ${d.satuan})`).join(', ') : '-'),
-      'Sasaran Pasien': Number(p.jumlah_sasaran || 0),
+      'Rincian BNHP Terpakai': Array.isArray(p.items_detail) 
+        ? p.items_detail.map(d => `${d.nama} (Bawa: ${d.bawa !== undefined ? d.bawa : d.qty}, Sisa: ${d.sisa || 0} ➔ Pakai: ${d.qty} ${d.satuan || 'Pcs'})`).join('; ')
+        : (p.items_json || '-'),
       'Catatan': p.catatan || '-'
     }));
     const wsPemakaian = XLSX.utils.json_to_sheet(pemakaianData);

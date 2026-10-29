@@ -4763,22 +4763,35 @@
         <!-- Rincian Bahan yang Terpakai -->
         <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <strong style="font-size: 13px; color: #0f172a;"><i class="bi bi-box2-heart-fill" style="color: #059669;"></i> Rincian Bahan Habis Pakai (BNHP) yang Digunakan:</strong>
+            <strong style="font-size: 13px; color: #0f172a;"><i class="bi bi-box2-heart-fill" style="color: #059669;"></i> Rincian Bahan Habis Pakai (BNHP):</strong>
             <button type="button" class="btn btn-secondary btn-sm" onclick="addPemakaianItemRow()" style="font-size: 12px; padding: 4px 10px; font-weight: 600;">
               <i class="bi bi-plus"></i> Tambah Baris
             </button>
           </div>
 
+          <!-- Header Kolom Bawa, Sisa, Terpakai -->
+          <div style="display: grid; grid-template-columns: minmax(170px, 2.5fr) minmax(65px, 0.9fr) minmax(65px, 0.9fr) minmax(75px, 1fr) 36px; gap: 8px; font-size: 11px; font-weight: 800; color: #475569; margin-bottom: 6px; padding: 0 2px;">
+            <div>NAMA BARANG (BNHP)</div>
+            <div style="text-align: center;">BAWA</div>
+            <div style="text-align: center;">SISA</div>
+            <div style="text-align: center; color: #059669;">TERPAKAI</div>
+            <div></div>
+          </div>
+
           <div id="containerPemakaianItemRows" style="display: flex; flex-direction: column; gap: 8px;">
             <!-- Rendered dynamically via addPemakaianItemRow() -->
+          </div>
+
+          <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
+            <i class="bi bi-calculator"></i> <em>Ketik jumlah <strong>Bawa</strong> dan <strong>Sisa</strong>, kolom <strong>Terpakai</strong> akan otomatis terhitung (hanya jumlah terpakai yang memotong stok).</em>
           </div>
         </div>
 
         <div style="margin-bottom: 8px;">
           <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
-            Catatan Tambahan
+            Catatan Tambahan & Keterangan Sisa
           </label>
-          <input type="text" id="inputPemakaianCatatan" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Keterangan strip rusak, sasaran melebihi target, dll...">
+          <input type="text" id="inputPemakaianCatatan" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Contoh: Bawa 200 strip, terpakai 170 (168 berhasil, 2 error), sisa 30 strip utuh dikembalikan ke stok Puskesmas...">
         </div>
       </div>
 
