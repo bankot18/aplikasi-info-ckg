@@ -4499,49 +4499,49 @@
 
   <!-- 1. MODAL TAMBAH / EDIT ITEM LOGISTIK -->
   <div id="modalItemLogistik" class="modal-overlay">
-    <div class="modal-box" style="max-width: 620px;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff;">
+    <div class="modal-container" style="max-width: 620px; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; padding: 14px 20px; border-bottom: 1px solid rgba(0,0,0,0.08);">
         <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
           <i class="bi bi-box-seam-fill"></i> <span id="titleModalItemLogistik">Tambah Item Alat / BNHP</span>
         </div>
-        <button class="modal-close" onclick="closeTambahItemModal()" style="color: #fff;">&times;</button>
+        <button class="modal-close" onclick="closeTambahItemModal()" style="color: #fff; opacity: 0.9; font-size: 22px;">&times;</button>
       </div>
 
-      <div class="modal-body" style="padding: 20px;">
+      <div class="modal-body" style="padding: 22px; background: #ffffff;">
         <input type="hidden" id="editItemLogistikId" value="">
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Kategori Barang <span style="color: #ef4444;">*</span>
             </label>
-            <select id="inputItemKategori" class="filter-control" style="width: 100%;" onchange="toggleItemKategoriFields()">
+            <select id="inputItemKategori" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;" onchange="toggleItemKategoriFields()">
               <option value="BNHP">BNHP (Bahan Habis Pakai)</option>
               <option value="Alat">Alat Medis (Alkes)</option>
             </select>
           </div>
 
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Kode Item
             </label>
-            <input type="text" id="inputItemKode" class="filter-control" style="width: 100%;" placeholder="Contoh: BNHP-01 atau ALK-01">
+            <input type="text" id="inputItemKode" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;" placeholder="Contoh: BNHP-01 atau ALK-01">
           </div>
         </div>
 
         <div style="margin-bottom: 14px;">
-          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Nama Lengkap Alat / BNHP <span style="color: #ef4444;">*</span>
           </label>
-          <input type="text" id="inputItemNama" class="filter-control" style="width: 100%;" placeholder="Contoh: Strip Tes Gula Darah EasyTouch">
+          <input type="text" id="inputItemNama" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 700;" placeholder="Contoh: Strip Tes Gula Darah EasyTouch">
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Satuan Unit <span style="color: #ef4444;">*</span>
             </label>
-            <input type="text" id="inputItemSatuan" class="filter-control" style="width: 100%;" placeholder="Strip/Box/Unit/Pcs" list="listSatuanItem">
+            <input type="text" id="inputItemSatuan" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;" placeholder="Strip/Box/Unit/Pcs" list="listSatuanItem">
             <datalist id="listSatuanItem">
               <option value="Strip"></option>
               <option value="Box"></option>
@@ -4555,43 +4555,43 @@
           </div>
 
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Stok Saat Ini <span style="color: #ef4444;">*</span>
             </label>
-            <input type="number" id="inputItemStok" class="filter-control" style="width: 100%; font-weight: 700;" min="0" value="0">
+            <input type="number" id="inputItemStok" class="filter-control" style="width: 100%; font-weight: 800; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" min="0" value="0">
           </div>
 
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Batas Min (Alert)
             </label>
-            <input type="number" id="inputItemStokMin" class="filter-control" style="width: 100%;" min="0" value="10">
+            <input type="number" id="inputItemStokMin" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;" min="0" value="10">
           </div>
         </div>
 
         <!-- Conditional fields for BNHP: Batch & Expired Date -->
         <div id="groupFieldBnhp" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Nomor Batch
             </label>
-            <input type="text" id="inputItemBatch" class="filter-control" style="width: 100%;" placeholder="Contoh: B-2026X">
+            <input type="text" id="inputItemBatch" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Contoh: B-2026X">
           </div>
 
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Tanggal Kadaluwarsa (Expired)
             </label>
-            <input type="date" id="inputItemExpired" class="filter-control" style="width: 100%;">
+            <input type="date" id="inputItemExpired" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;">
           </div>
         </div>
 
         <!-- Conditional fields for Alat: Kondisi Alat -->
         <div id="groupFieldAlat" style="margin-bottom: 14px; display: none;">
-          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Kondisi Fisik Alat Medis
           </label>
-          <select id="inputItemKondisi" class="filter-control" style="width: 100%;">
+          <select id="inputItemKondisi" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;">
             <option value="Baik">Baik & Berfungsi Normal</option>
             <option value="Rusak Ringan">Rusak Ringan</option>
             <option value="Perlu Kalibrasi">Perlu Kalibrasi Ulang</option>
@@ -4600,16 +4600,16 @@
         </div>
 
         <div style="margin-bottom: 10px;">
-          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Catatan / Spesifikasi Tambahan
           </label>
-          <textarea id="inputItemCatatan" class="filter-control" style="width: 100%; height: 60px;" placeholder="Keterangan merk, lokasi simpan lemari, dll..."></textarea>
+          <textarea id="inputItemCatatan" class="filter-control" style="width: 100%; height: 68px; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Keterangan merk, lokasi simpan lemari, dll..."></textarea>
         </div>
       </div>
 
-      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
-        <button type="button" class="btn btn-secondary" onclick="closeTambahItemModal()">Batal</button>
-        <button type="button" class="btn btn-primary" onclick="saveItemLogistik()" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none;">
+      <div class="modal-footer" style="padding: 14px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeTambahItemModal()" style="border-radius: 8px; font-weight: 600;">Batal</button>
+        <button type="button" class="btn btn-primary" onclick="saveItemLogistik()" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; border-radius: 8px; font-weight: 700; padding: 7px 18px;">
           <i class="bi bi-save-fill"></i> Simpan Item
         </button>
       </div>
@@ -4618,38 +4618,38 @@
 
   <!-- 2. MODAL TAMBAH STOK CEPAT (RESTOCK) -->
   <div id="modalQuickRestock" class="modal-overlay">
-    <div class="modal-box" style="max-width: 500px;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: #fff;">
+    <div class="modal-container" style="max-width: 500px; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: #fff; padding: 14px 20px;">
         <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
           <i class="bi bi-plus-circle-fill"></i> Tambah Stok Barang (Restock)
         </div>
-        <button class="modal-close" onclick="closeQuickRestockModal()" style="color: #fff;">&times;</button>
+        <button class="modal-close" onclick="closeQuickRestockModal()" style="color: #fff; opacity: 0.9; font-size: 22px;">&times;</button>
       </div>
 
-      <div class="modal-body" style="padding: 20px;">
+      <div class="modal-body" style="padding: 22px; background: #ffffff;">
         <input type="hidden" id="restockItemId" value="">
 
-        <div style="background: #f1f5f9; padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #059669;">
+        <div style="background: #f1f5f9; padding: 14px 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #059669;">
           <div style="font-size: 12px; color: #64748b; font-weight: 600;">Nama Barang:</div>
-          <div id="restockItemNama" style="font-size: 14px; font-weight: 800; color: #0f172a;">-</div>
-          <div style="font-size: 12px; color: #0284c7; font-weight: 700; margin-top: 4px;">
-            Sisa Stok Saat Ini: <span id="restockItemStokNow" style="font-size: 14px;">0</span> <span id="restockItemSatuan">Pcs</span>
+          <div id="restockItemNama" style="font-size: 15px; font-weight: 800; color: #0f172a;">-</div>
+          <div style="font-size: 12.5px; color: #0284c7; font-weight: 700; margin-top: 4px;">
+            Sisa Stok Saat Ini: <span id="restockItemStokNow" style="font-size: 15px;">0</span> <span id="restockItemSatuan">Pcs</span>
           </div>
         </div>
 
         <div style="margin-bottom: 14px;">
-          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Jumlah Penambahan Stok (+) <span style="color: #ef4444;">*</span>
           </label>
-          <input type="number" id="inputRestockQty" class="filter-control" style="width: 100%; font-size: 16px; font-weight: 800; color: #059669;" min="1" placeholder="Masukkan jumlah...">
+          <input type="number" id="inputRestockQty" class="filter-control" style="width: 100%; font-size: 16px; font-weight: 800; color: #059669; background: #fff; border: 1.5px solid #cbd5e1;" min="1" placeholder="Masukkan jumlah...">
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Sumber Pengadaan
             </label>
-            <select id="inputRestockSumber" class="filter-control" style="width: 100%;">
+            <select id="inputRestockSumber" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;">
               <option value="Gudang Farmasi Puskesmas">Gudang Farmasi Puskesmas</option>
               <option value="Drop Dinas Kesehatan">Drop Dinas Kesehatan</option>
               <option value="Pengadaan BOK">Pengadaan BOK Puskesmas</option>
@@ -4658,24 +4658,24 @@
           </div>
 
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Tanggal Penerimaan
             </label>
-            <input type="date" id="inputRestockTanggal" class="filter-control" style="width: 100%;">
+            <input type="date" id="inputRestockTanggal" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;">
           </div>
         </div>
 
         <div style="margin-bottom: 10px;">
-          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Catatan Restock
           </label>
-          <input type="text" id="inputRestockCatatan" class="filter-control" style="width: 100%;" placeholder="No. SBBK / Berita Acara Penerimaan...">
+          <input type="text" id="inputRestockCatatan" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="No. SBBK / Berita Acara Penerimaan...">
         </div>
       </div>
 
-      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
-        <button type="button" class="btn btn-secondary" onclick="closeQuickRestockModal()">Batal</button>
-        <button type="button" class="btn btn-emerald" onclick="saveQuickRestock()" style="background: linear-gradient(135deg, #059669, #047857); color: #fff;">
+      <div class="modal-footer" style="padding: 14px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeQuickRestockModal()" style="border-radius: 8px; font-weight: 600;">Batal</button>
+        <button type="button" class="btn btn-emerald" onclick="saveQuickRestock()" style="background: linear-gradient(135deg, #059669, #047857); color: #fff; border-radius: 8px; font-weight: 700; padding: 7px 18px;">
           <i class="bi bi-check2-circle"></i> Tambahkan Stok
         </button>
       </div>
@@ -4684,52 +4684,52 @@
 
   <!-- 3. MODAL CATAT PEMAKAIAN LAPANGAN -->
   <div id="modalCatatPemakaian" class="modal-overlay">
-    <div class="modal-box" style="max-width: 680px;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: #fff;">
+    <div class="modal-container" style="max-width: 680px; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #059669, #047857); color: #fff; padding: 14px 20px;">
         <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
           <i class="bi bi-clipboard-pulse"></i> Catat Pemakaian BNHP di Lapangan
         </div>
-        <button class="modal-close" onclick="closeCatatPemakaianModal()" style="color: #fff;">&times;</button>
+        <button class="modal-close" onclick="closeCatatPemakaianModal()" style="color: #fff; opacity: 0.9; font-size: 22px;">&times;</button>
       </div>
 
-      <div class="modal-body" style="padding: 20px;">
+      <div class="modal-body" style="padding: 22px; background: #ffffff;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Tanggal Kegiatan <span style="color: #ef4444;">*</span>
             </label>
-            <input type="date" id="inputPemakaianTanggal" class="filter-control" style="width: 100%;">
+            <input type="date" id="inputPemakaianTanggal" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;">
           </div>
 
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Petugas Pelaksana <span style="color: #ef4444;">*</span>
             </label>
-            <input type="text" id="inputPemakaianPetugas" class="filter-control" style="width: 100%;" placeholder="Nama petugas pemeriksa...">
+            <input type="text" id="inputPemakaianPetugas" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;" placeholder="Nama petugas pemeriksa...">
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 16px;">
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Lokasi / Nama Kegiatan CKG <span style="color: #ef4444;">*</span>
             </label>
-            <input type="text" id="inputPemakaianLokasi" class="filter-control" style="width: 100%;" placeholder="Contoh: Posyandu Dahlia RW 04 Ds. Banjaran / SMPN 1 Banjaran">
+            <input type="text" id="inputPemakaianLokasi" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Contoh: Posyandu Dahlia RW 04 Ds. Banjaran / SMPN 1 Banjaran">
           </div>
 
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Jumlah Sasaran
             </label>
-            <input type="number" id="inputPemakaianSasaran" class="filter-control" style="width: 100%;" min="0" placeholder="Jml pasien...">
+            <input type="number" id="inputPemakaianSasaran" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 700;" min="0" placeholder="Jml pasien...">
           </div>
         </div>
 
         <!-- Rincian Bahan yang Terpakai -->
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <strong style="font-size: 13px; color: #0f172a;"><i class="bi bi-box2-heart-fill" style="color: #059669;"></i> Rincian Bahan Habis Pakai (BNHP) yang Digunakan:</strong>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="addPemakaianItemRow()" style="font-size: 12px; padding: 3px 10px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addPemakaianItemRow()" style="font-size: 12px; padding: 4px 10px; font-weight: 600;">
               <i class="bi bi-plus"></i> Tambah Baris
             </button>
           </div>
@@ -4740,16 +4740,16 @@
         </div>
 
         <div style="margin-bottom: 8px;">
-          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Catatan Tambahan
           </label>
-          <input type="text" id="inputPemakaianCatatan" class="filter-control" style="width: 100%;" placeholder="Keterangan strip rusak, sasaran melebihi target, dll...">
+          <input type="text" id="inputPemakaianCatatan" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Keterangan strip rusak, sasaran melebihi target, dll...">
         </div>
       </div>
 
-      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
-        <button type="button" class="btn btn-secondary" onclick="closeCatatPemakaianModal()">Batal</button>
-        <button type="button" class="btn btn-emerald" onclick="saveCatatPemakaian()" style="background: linear-gradient(135deg, #059669, #047857); color: #fff;">
+      <div class="modal-footer" style="padding: 14px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeCatatPemakaianModal()" style="border-radius: 8px; font-weight: 600;">Batal</button>
+        <button type="button" class="btn btn-emerald" onclick="saveCatatPemakaian()" style="background: linear-gradient(135deg, #059669, #047857); color: #fff; border-radius: 8px; font-weight: 700; padding: 7px 18px;">
           <i class="bi bi-check-circle-fill"></i> Simpan Catatan Pemakaian
         </button>
       </div>
@@ -4758,49 +4758,49 @@
 
   <!-- 4. MODAL PEMINJAMAN ALAT MEDIS -->
   <div id="modalPeminjamanAlat" class="modal-overlay">
-    <div class="modal-box" style="max-width: 650px;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff;">
+    <div class="modal-container" style="max-width: 650px; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; padding: 14px 20px;">
         <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
           <i class="bi bi-arrow-left-right"></i> Form Peminjaman Alat Medis Lapangan
         </div>
-        <button class="modal-close" onclick="closePeminjamanModal()" style="color: #fff;">&times;</button>
+        <button class="modal-close" onclick="closePeminjamanModal()" style="color: #fff; opacity: 0.9; font-size: 22px;">&times;</button>
       </div>
 
-      <div class="modal-body" style="padding: 20px;">
+      <div class="modal-body" style="padding: 22px; background: #ffffff;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Petugas Peminjam <span style="color: #ef4444;">*</span>
             </label>
-            <input type="text" id="inputPinjamPetugas" class="filter-control" style="width: 100%;" placeholder="Nama lengkap petugas...">
+            <input type="text" id="inputPinjamPetugas" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;" placeholder="Nama lengkap petugas...">
           </div>
 
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Nomor WhatsApp / HP
             </label>
-            <input type="text" id="inputPinjamKontak" class="filter-control" style="width: 100%;" placeholder="08xxxxxxxxxx">
+            <input type="text" id="inputPinjamKontak" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="08xxxxxxxxxx">
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Tanggal Pinjam <span style="color: #ef4444;">*</span>
             </label>
-            <input type="date" id="inputPinjamTanggal" class="filter-control" style="width: 100%;">
+            <input type="date" id="inputPinjamTanggal" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;">
           </div>
 
           <div>
-            <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+            <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Rencana Tanggal Pengembalian
             </label>
-            <input type="date" id="inputPinjamRencanaKembali" class="filter-control" style="width: 100%;">
+            <input type="date" id="inputPinjamRencanaKembali" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;">
           </div>
         </div>
 
         <!-- Checklist Alat Medis yang Dibawa -->
-        <div style="background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+        <div style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 8px; padding: 14px; margin-bottom: 14px;">
           <strong style="font-size: 13px; color: #86198f; margin-bottom: 8px; display: block;">
             <i class="bi bi-check2-square"></i> Pilih Alat Medis yang Dipinjam:
           </strong>
@@ -4810,16 +4810,16 @@
         </div>
 
         <div style="margin-bottom: 8px;">
-          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Tujuan / Lokasi Skrining
           </label>
-          <input type="text" id="inputPinjamTujuan" class="filter-control" style="width: 100%;" placeholder="Contoh: Skrining Lansia Posbindu RW 08">
+          <input type="text" id="inputPinjamTujuan" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Contoh: Skrining Lansia Posbindu RW 08">
         </div>
       </div>
 
-      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
-        <button type="button" class="btn btn-secondary" onclick="closePeminjamanModal()">Batal</button>
-        <button type="button" class="btn btn-purple" onclick="savePeminjaman()" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff;">
+      <div class="modal-footer" style="padding: 14px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closePeminjamanModal()" style="border-radius: 8px; font-weight: 600;">Batal</button>
+        <button type="button" class="btn btn-purple" onclick="savePeminjaman()" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; border-radius: 8px; font-weight: 700; padding: 7px 18px;">
           <i class="bi bi-arrow-left-right"></i> Simpan Peminjaman
         </button>
       </div>
@@ -4828,36 +4828,36 @@
 
   <!-- 5. MODAL KONFIRMASI PENGEMBALIAN ALAT -->
   <div id="modalPengembalianAlat" class="modal-overlay">
-    <div class="modal-box" style="max-width: 520px;">
-      <div class="modal-header" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;">
+    <div class="modal-container" style="max-width: 520px; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.35);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff; padding: 14px 20px;">
         <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 700;">
           <i class="bi bi-box-arrow-in-down-left"></i> Konfirmasi Pengembalian Alat
         </div>
-        <button class="modal-close" onclick="closePengembalianModal()" style="color: #fff;">&times;</button>
+        <button class="modal-close" onclick="closePengembalianModal()" style="color: #fff; opacity: 0.9; font-size: 22px;">&times;</button>
       </div>
 
-      <div class="modal-body" style="padding: 20px;">
+      <div class="modal-body" style="padding: 22px; background: #ffffff;">
         <input type="hidden" id="returnPeminjamanId" value="">
 
-        <div style="background: #f0fdfa; padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #0d9488;">
+        <div style="background: #f0fdfa; padding: 14px 16px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #0d9488;">
           <div style="font-size: 12px; color: #64748b; font-weight: 600;">Peminjam:</div>
-          <div id="returnNamaPeminjam" style="font-size: 14px; font-weight: 800; color: #0f172a;">-</div>
-          <div style="font-size: 12px; color: #0f766e; font-weight: 600; margin-top: 4px;">Alat yang dibawa:</div>
-          <div id="returnDaftarAlat" style="font-size: 13px; color: #1e293b; margin-top: 2px;">-</div>
+          <div id="returnNamaPeminjam" style="font-size: 15px; font-weight: 800; color: #0f172a;">-</div>
+          <div style="font-size: 12.5px; color: #0f766e; font-weight: 700; margin-top: 4px;">Alat yang dibawa:</div>
+          <div id="returnDaftarAlat" style="font-size: 13.5px; color: #1e293b; margin-top: 2px;">-</div>
         </div>
 
         <div style="margin-bottom: 14px;">
-          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Tanggal Pengembalian Riil <span style="color: #ef4444;">*</span>
           </label>
-          <input type="date" id="inputReturnTanggal" class="filter-control" style="width: 100%;">
+          <input type="date" id="inputReturnTanggal" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;">
         </div>
 
         <div style="margin-bottom: 14px;">
-          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Kondisi Fisik Alat Saat Kembali <span style="color: #ef4444;">*</span>
           </label>
-          <select id="inputReturnKondisi" class="filter-control" style="width: 100%;">
+          <select id="inputReturnKondisi" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;">
             <option value="Lengkap & Berfungsi Baik">Lengkap & Berfungsi Baik</option>
             <option value="Baterai Habis">Baterai Habis (Perlu Ganti)</option>
             <option value="Rusak Ringan">Rusak Ringan</option>
@@ -4867,16 +4867,16 @@
         </div>
 
         <div style="margin-bottom: 8px;">
-          <label style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 4px; display: block;">
+          <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Catatan Petugas Penerima
           </label>
-          <input type="text" id="inputReturnCatatan" class="filter-control" style="width: 100%;" placeholder="Pengecekan kelengkapan manset, kabel, dll...">
+          <input type="text" id="inputReturnCatatan" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Pengecekan kelengkapan manset, kabel, dll...">
         </div>
       </div>
 
-      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
-        <button type="button" class="btn btn-secondary" onclick="closePengembalianModal()">Batal</button>
-        <button type="button" class="btn btn-teal" onclick="prosesPengembalianAlat()" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff;">
+      <div class="modal-footer" style="padding: 14px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closePengembalianModal()" style="border-radius: 8px; font-weight: 600;">Batal</button>
+        <button type="button" class="btn btn-teal" onclick="prosesPengembalianAlat()" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: #fff; border-radius: 8px; font-weight: 700; padding: 7px 18px;">
           <i class="bi bi-check2-all"></i> Konfirmasi Kembali
         </button>
       </div>

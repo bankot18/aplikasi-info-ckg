@@ -6700,5 +6700,71 @@ body.dark-mode .pemakaian-item-row:hover {
   background-color: #334155 !important;
 }
 
+/* Modal Container Solid Backgrounds & High Contrast Styling */
+#modalItemLogistik .modal-container,
+#modalQuickRestock .modal-container,
+#modalCatatPemakaian .modal-container,
+#modalPeminjamanAlat .modal-container,
+#modalPengembalianAlat .modal-container,
+#modalItemLogistik .modal-box,
+#modalQuickRestock .modal-box,
+#modalCatatPemakaian .modal-box,
+#modalPeminjamanAlat .modal-box,
+#modalPengembalianAlat .modal-box {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-radius: 14px !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.45) !important;
+  opacity: 1 !important;
+}
 
+#modalItemLogistik .modal-body,
+#modalQuickRestock .modal-body,
+#modalCatatPemakaian .modal-body,
+#modalPeminjamanAlat .modal-body,
+#modalPengembalianAlat .modal-body {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
 
+#modalItemLogistik label,
+#modalQuickRestock label,
+#modalCatatPemakaian label,
+#modalPeminjamanAlat label,
+#modalPengembalianAlat label {
+  color: #1e293b !important;
+  font-weight: 700 !important;
+}
+
+/* Dark Mode Overrides for Alat & BNHP Modals */
+body.dark-mode #modalItemLogistik .modal-container,
+body.dark-mode #modalQuickRestock .modal-container,
+body.dark-mode #modalCatatPemakaian .modal-container,
+body.dark-mode #modalPeminjamanAlat .modal-container,
+body.dark-mode #modalPengembalianAlat .modal-container,
+body.dark-mode #modalItemLogistik .modal-body,
+body.dark-mode #modalQuickRestock .modal-body,
+body.dark-mode #modalCatatPemakaian .modal-body,
+body.dark-mode #modalPeminjamanAlat .modal-body,
+body.dark-mode #modalPengembalianAlat .modal-body {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode #modalItemLogistik label,
+body.dark-mode #modalQuickRestock label,
+body.dark-mode #modalCatatPemakaian label,
+body.dark-mode #modalPeminjamanAlat label,
+body.dark-mode #modalPengembalianAlat label {
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode #modalItemLogistik .filter-control,
+body.dark-mode #modalQuickRestock .filter-control,
+body.dark-mode #modalCatatPemakaian .filter-control,
+body.dark-mode #modalPeminjamanAlat .filter-control,
+body.dark-mode #modalPengembalianAlat .filter-control {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
