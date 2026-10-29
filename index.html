@@ -1305,7 +1305,7 @@
               </p>
             </div>
             <div class="action-buttons-group">
-              <button class="btn btn-purple" onclick="openTambahSiswaModal()">
+              <button class="btn btn-purple" onclick="openTambahSiswaModal()" id="btnTambahSiswaSekolah">
                 <i class="bi bi-person-plus-fill"></i> Tambah Siswa
               </button>
               <button class="btn btn-amber" onclick="openImportSekolahModal()">
@@ -3552,7 +3552,7 @@
           <i class="bi bi-ui-checks-grid"></i> Pemeriksaan Kesehatan Siswa (CKG Sekolah)
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <button type="button" class="btn btn-sm" onclick="cetakHasilSiswaIndividu(document.getElementById('periksaSiswaId').value)" title="Cetak Lembar Hasil Pemeriksaan Siswa Ini"
+          <button type="button" class="btn btn-sm btn-print-siswa" onclick="cetakHasilSiswaIndividu(document.getElementById('periksaSiswaId').value)" title="Cetak Lembar Hasil Pemeriksaan Siswa Ini"
             style="background: rgba(255, 255, 255, 0.22); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; font-weight: 700; font-size: 11.5px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px;">
             <i class="bi bi-printer-fill"></i> Cetak Hasil
           </button>

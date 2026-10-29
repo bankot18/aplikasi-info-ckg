@@ -861,7 +861,7 @@ function setupUserSessionUI() {
       }
     }
 
-    // If sekolah: lock filter to this school
+    // If sekolah: lock filter to this school & restrict toolbar
     if (portalType === 'sekolah') {
       const filterSelectSekolah = document.getElementById('filterSelectSekolah');
       if (filterSelectSekolah) {
@@ -869,6 +869,19 @@ function setupUserSessionUI() {
         filterSelectSekolah.disabled = true;
         if (typeof applySekolahFilter === 'function') applySekolahFilter();
       }
+
+      // Khusus Akun Sekolah: Hanya tombol Tambah Siswa yang tampil di toolbar CKG Sekolah
+      const sekolahActionBtns = document.querySelectorAll('#view-sekolah .action-buttons-group > button');
+      sekolahActionBtns.forEach(btn => {
+        if (btn.id === 'btnTambahSiswaSekolah' || btn.textContent.includes('Tambah Siswa')) {
+          btn.style.display = 'inline-flex';
+        } else {
+          btn.style.display = 'none';
+        }
+      });
+
+      const btnKelolaQuick = document.querySelector('.btn-kelola-sekolah-quick');
+      if (btnKelolaQuick) btnKelolaQuick.style.display = 'none';
     }
   } else {
     // Regular Puskesmas User: restore default role visibility
@@ -888,6 +901,25 @@ function setupUserSessionUI() {
         b.style.display = 'inline-flex';
       }
     });
+
+    // Restore toolbar buttons for regular Puskesmas users
+    const sekolahActionBtns = document.querySelectorAll('#view-sekolah .action-buttons-group > button');
+    sekolahActionBtns.forEach(btn => {
+      const isAdmOnly = btn.classList.contains('admin-only');
+      const isAdmKoorOnly = btn.classList.contains('admin-koordinator-only');
+      if (isAdmOnly && !roleLower.includes('admin')) {
+        btn.style.display = 'none';
+      } else if (isAdmKoorOnly && !roleLower.includes('admin') && !roleLower.includes('koordinator')) {
+        btn.style.display = 'none';
+      } else {
+        btn.style.display = 'inline-flex';
+      }
+    });
+
+    const btnKelolaQuick = document.querySelector('.btn-kelola-sekolah-quick');
+    if (btnKelolaQuick) {
+      btnKelolaQuick.style.display = roleLower.includes('admin') ? 'inline-flex' : 'none';
+    }
 
     const filterSelectSekolah = document.getElementById('filterSelectSekolah');
     if (filterSelectSekolah && filterSelectSekolah.disabled) {
@@ -12118,6 +12150,10 @@ function renderSekolahView() {
     return;
   }
 
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
+  const isSekolahUser = (portalType === 'sekolah' || role === 'sekolah');
+
   tbody.innerHTML = dataset.map((r, idx) => {
     const stations = getSekolahRecordExamStations(r);
     const { hasAntro, hasVital, hasLab, isLabTidakDiperiksa, hasOrgan, isComplete, isPartial, isBelum, completedCount } = stations;
@@ -12376,9 +12412,11 @@ function renderSekolahView() {
             <button type="button" class="btn btn-primary btn-sm" onclick="openPemeriksaanModal('${safeId}')" title="Periksa / Edit Siswa" style="padding: 5px 10px; font-size: 11.5px; border-radius: 8px;">
               <i class="bi bi-heart-pulse"></i> Periksa
             </button>
-            <button type="button" class="btn btn-sm" onclick="cetakHasilSiswaIndividu('${safeId}')" title="Cetak Surat / Lembar Hasil Pemeriksaan Siswa Ini" style="padding: 5px 8px; font-size: 11px; border-radius: 8px; background: #0d9488; color: #fff;">
+            ${!isSekolahUser ? `
+            <button type="button" class="btn btn-sm btn-print-siswa" onclick="cetakHasilSiswaIndividu('${safeId}')" title="Cetak Surat / Lembar Hasil Pemeriksaan Siswa Ini" style="padding: 5px 8px; font-size: 11px; border-radius: 8px; background: #0d9488; color: #fff;">
               <i class="bi bi-printer-fill"></i>
             </button>
+            ` : ''}
             <button type="button" class="btn btn-danger btn-sm" onclick="deleteSiswaSekolah('${safeId}')" title="Hapus Siswa" style="padding: 5px 8px; font-size: 11px; border-radius: 8px;">
               <i class="bi bi-trash-fill"></i>
             </button>

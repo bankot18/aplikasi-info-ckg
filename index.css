@@ -1713,11 +1713,34 @@ body.dark-mode .metric-card-solid.clickable-card.active-filter {
 
 /* Role Visibility Control */
 body.role-petugas .admin-only,
-body.role-petugas .admin-koordinator-only {
+body.role-petugas .admin-koordinator-only,
+body.role-sekolah .admin-only,
+body.role-sekolah .admin-koordinator-only,
+body.role-posyandu .admin-only,
+body.role-posyandu .admin-koordinator-only {
   display: none !important;
 }
 
 body.role-koordinator .admin-only {
+  display: none !important;
+}
+
+/* ==========================================================================
+   🏫 RESTRIKSI KHUSUS AKUN SEKOLAH
+   ========================================================================== */
+/* Toolbar Atas: HANYA tombol Tambah Siswa yang ditampilkan */
+body.role-sekolah #view-sekolah .action-buttons-group > button:not(#btnTambahSiswaSekolah) {
+  display: none !important;
+}
+
+/* Filter Bar: Sembunyikan tombol Tambah / Edit master sekolah */
+body.role-sekolah .btn-kelola-sekolah-quick {
+  display: none !important;
+}
+
+/* Tabel Siswa: Sembunyikan tombol Cetak di sebelah tombol Periksa */
+body.role-sekolah .btn-print-siswa,
+body.role-sekolah button[onclick*="cetakHasilSiswaIndividu"] {
   display: none !important;
 }
 
