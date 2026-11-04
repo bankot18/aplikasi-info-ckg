@@ -20588,13 +20588,18 @@ function viewEncoPatientDetail(nik) {
     } catch (_) {}
   }
 
-  let detailHtml = `
+  const statusNikah = patient.status_pernikahan || rawObj?.statuspernikahan || rawObj?.status_pernikahan || rawObj?.statusnikah || rawObj?.nikah || '-';
+  const pekerjaanVal = patient.pekerjaan || rawObj?.pekerjaan || rawObj?.job || '-';
+
+  const detailHtml = `
     <div style="text-align: left; font-size: 13.5px; line-height: 1.7;">
       <table style="width: 100%; border-collapse: collapse;">
         <tr><td style="width: 140px; color: #64748b; font-weight: 600;">NIK:</td><td style="font-weight: 700; font-family: monospace;">${escapeHtml(patient.nik)}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Nama Pasien:</td><td style="font-weight: 700;">${escapeHtml(patient.nama)}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Tanggal Lahir:</td><td style="font-weight: 600;">${escapeHtml(patient.tanggal_lahir || '-')}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Jenis Kelamin:</td><td style="font-weight: 600;">${escapeHtml(patient.jenis_kelamin || '-')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Status Pernikahan:</td><td style="font-weight: 600;">${escapeHtml(statusNikah)}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Pekerjaan:</td><td style="font-weight: 600;">${escapeHtml(pekerjaanVal)}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Alamat Domisili:</td><td style="font-weight: 600;">${escapeHtml(patient.alamat || '-')}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Kelurahan / Desa:</td><td>${escapeHtml(patient.kelurahan || '-')}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Kecamatan:</td><td>${escapeHtml(patient.kecamatan || 'Banjaran')}</td></tr>
@@ -20608,18 +20613,8 @@ function viewEncoPatientDetail(nik) {
         <tr><td style="color: #64748b; font-weight: 600;">Faskes:</td><td>${escapeHtml(patient.faskes || 'Puskesmas Banjaran Kota')}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Tanggal Rekam:</td><td>${escapeHtml(patient.created_at || '-')}</td></tr>
       </table>
+    </div>
   `;
-
-  if (rawObj) {
-    detailHtml += `
-      <div style="margin-top: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
-        <div style="font-weight: 700; color: #334155; font-size: 12px; margin-bottom: 6px;">Detail Tambahan / Skrining:</div>
-        <pre style="margin: 0; font-size: 11.5px; white-space: pre-wrap; word-break: break-all; color: #475569;">${escapeHtml(JSON.stringify(rawObj, null, 2))}</pre>
-      </div>
-    `;
-  }
-
-  detailHtml += `</div>`;
 
   Swal.fire({
     title: `<i class="bi bi-person-vcard-fill" style="color: #2563eb;"></i> Detail Pasien ASIK`,
@@ -20758,26 +20753,37 @@ async function exportEncoToExcel() {
       return;
     }
 
-    const rows = data.data.map((r, idx) => ({
-      'No': idx + 1,
-      'Tanggal Entry': r.tanggal_daftar || '',
-      'NIK': String(r.nik || ''),
-      'Nama Pasien': r.nama || '',
-      'Tanggal Lahir': r.tanggal_lahir || '',
-      'Jenis Kelamin': r.jenis_kelamin || '',
-      'Alamat': r.alamat || '',
-      'Kelurahan/Desa': r.kelurahan || '',
-      'Kecamatan': r.kecamatan || 'Banjaran',
-      'Kab/Kota': r.kab_kota || 'Kab. Bandung',
-      'Provinsi': r.provinsi || 'Jawa Barat',
-      'No. Tiket ASIK': r.no_tiket || '',
-      'Kategori': r.kategori || 'Umum',
-      'Status Pendaftaran': r.status_pendaftaran || '',
-      'Status Pelayanan': r.status_pelayanan || '',
-      'Tanggal Pelayanan': r.tanggal_pelayanan || '',
-      'Petugas ENCO': r.petugas_enco || '',
-      'Faskes': r.faskes || 'Puskesmas Banjaran Kota'
-    }));
+    const rows = data.data.map((r, idx) => {
+      let rawObj = null;
+      if (r.raw_details) {
+        try { rawObj = typeof r.raw_details === 'string' ? JSON.parse(r.raw_details) : r.raw_details; } catch (_) {}
+      }
+      const statusNikah = r.status_pernikahan || rawObj?.statuspernikahan || rawObj?.status_pernikahan || rawObj?.statusnikah || rawObj?.nikah || '';
+      const pekerjaanVal = r.pekerjaan || rawObj?.pekerjaan || rawObj?.job || '';
+
+      return {
+        'No': idx + 1,
+        'Tanggal Entry': r.tanggal_daftar || '',
+        'NIK': String(r.nik || ''),
+        'Nama Pasien': r.nama || '',
+        'Tanggal Lahir': r.tanggal_lahir || '',
+        'Jenis Kelamin': r.jenis_kelamin || '',
+        'Status Pernikahan': statusNikah,
+        'Pekerjaan': pekerjaanVal,
+        'Alamat': r.alamat || '',
+        'Kelurahan/Desa': r.kelurahan || '',
+        'Kecamatan': r.kecamatan || 'Banjaran',
+        'Kab/Kota': r.kab_kota || 'Kab. Bandung',
+        'Provinsi': r.provinsi || 'Jawa Barat',
+        'No. Tiket ASIK': r.no_tiket || '',
+        'Kategori': r.kategori || 'Umum',
+        'Status Pendaftaran': r.status_pendaftaran || '',
+        'Status Pelayanan': r.status_pelayanan || '',
+        'Tanggal Pelayanan': r.tanggal_pelayanan || '',
+        'Petugas ENCO': r.petugas_enco || '',
+        'Faskes': r.faskes || 'Puskesmas Banjaran Kota'
+      };
+    });
 
     if (typeof XLSX === 'undefined') {
       throw new Error('Pustaka SheetJS (XLSX) tidak tersedia di halaman ini.');

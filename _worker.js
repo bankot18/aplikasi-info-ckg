@@ -2147,6 +2147,8 @@ Saran Medis:`;
             nama TEXT NOT NULL,
             tanggal_lahir TEXT,
             jenis_kelamin TEXT,
+            status_pernikahan TEXT DEFAULT '',
+            pekerjaan TEXT DEFAULT '',
             provinsi TEXT DEFAULT 'Jawa Barat',
             kab_kota TEXT DEFAULT 'Kab. Bandung',
             kecamatan TEXT DEFAULT 'Banjaran',
@@ -2167,6 +2169,8 @@ Saran Medis:`;
         `).run();
 
         // Migrations for existing enco_pasien table
+        try { await env.DB.prepare("ALTER TABLE enco_pasien ADD COLUMN status_pernikahan TEXT DEFAULT ''").run(); } catch (_) {}
+        try { await env.DB.prepare("ALTER TABLE enco_pasien ADD COLUMN pekerjaan TEXT DEFAULT ''").run(); } catch (_) {}
         try { await env.DB.prepare("ALTER TABLE enco_pasien ADD COLUMN provinsi TEXT DEFAULT 'Jawa Barat'").run(); } catch (_) {}
         try { await env.DB.prepare("ALTER TABLE enco_pasien ADD COLUMN kab_kota TEXT DEFAULT 'Kab. Bandung'").run(); } catch (_) {}
         try { await env.DB.prepare("ALTER TABLE enco_pasien ADD COLUMN kecamatan TEXT DEFAULT 'Banjaran'").run(); } catch (_) {}
@@ -2254,15 +2258,18 @@ Saran Medis:`;
           const stmt = env.DB.prepare(`
             INSERT INTO enco_pasien (
               id, nik, nama, tanggal_lahir, jenis_kelamin,
+              status_pernikahan, pekerjaan,
               provinsi, kab_kota, kecamatan, kelurahan, alamat,
               no_tiket, kategori, status_pendaftaran, status_pelayanan,
               tanggal_daftar, tanggal_pelayanan, petugas_enco, faskes,
               raw_details, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(nik) DO UPDATE SET
               nama = excluded.nama,
               tanggal_lahir = CASE WHEN excluded.tanggal_lahir != '' THEN excluded.tanggal_lahir ELSE enco_pasien.tanggal_lahir END,
               jenis_kelamin = CASE WHEN excluded.jenis_kelamin != '' THEN excluded.jenis_kelamin ELSE enco_pasien.jenis_kelamin END,
+              status_pernikahan = CASE WHEN excluded.status_pernikahan != '' THEN excluded.status_pernikahan ELSE enco_pasien.status_pernikahan END,
+              pekerjaan = CASE WHEN excluded.pekerjaan != '' THEN excluded.pekerjaan ELSE enco_pasien.pekerjaan END,
               provinsi = CASE WHEN excluded.provinsi != '' THEN excluded.provinsi ELSE enco_pasien.provinsi END,
               kab_kota = CASE WHEN excluded.kab_kota != '' THEN excluded.kab_kota ELSE enco_pasien.kab_kota END,
               kecamatan = CASE WHEN excluded.kecamatan != '' THEN excluded.kecamatan ELSE enco_pasien.kecamatan END,
@@ -2295,6 +2302,8 @@ Saran Medis:`;
               String(p.nama || '').trim(),
               String(p.tanggal_lahir || p.tanggallahir || p.dob || p.tgllahir || '').trim(),
               String(p.jenis_kelamin || p.jeniskelamin || p.jk || p.gender || '').trim(),
+              String(p.status_pernikahan || p.statuspernikahan || p.statusnikah || p.nikah || '').trim(),
+              String(p.pekerjaan || p.job || '').trim(),
               String(p.provinsi || p.province || 'Jawa Barat').trim(),
               String(p.kab_kota || p.kabkota || p.kota || p.kabupaten || 'Kab. Bandung').trim(),
               String(p.kecamatan || p.district || 'Banjaran').trim(),
