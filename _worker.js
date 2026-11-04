@@ -2177,6 +2177,21 @@ Saran Medis:`;
         try { await env.DB.prepare("ALTER TABLE enco_pasien ADD COLUMN kelurahan TEXT DEFAULT ''").run(); } catch (_) {}
         try { await env.DB.prepare("ALTER TABLE enco_pasien ADD COLUMN alamat TEXT DEFAULT ''").run(); } catch (_) {}
 
+        // Bersihkan data ganda yang sudah ada sebelumnya berdasarkan NIK
+        try {
+          await env.DB.prepare(`
+            DELETE FROM enco_pasien 
+            WHERE rowid NOT IN (
+              SELECT MAX(rowid) FROM enco_pasien GROUP BY TRIM(nik)
+            )
+          `).run();
+        } catch (_) {}
+
+        // Buat UNIQUE Index pada kolom NIK agar tidak pernah ada data ganda
+        try {
+          await env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_enco_pasien_nik_unique ON enco_pasien(nik)").run();
+        } catch (_) {}
+
         await env.DB.prepare(`
           CREATE TABLE IF NOT EXISTS enco_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2252,6 +2267,23 @@ Saran Medis:`;
             return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
           }
 
+          // Deduplikasi list berdasarkan NIK agar tidak ada duplikasi dalam satu batch
+          const uniqueMap = new Map();
+          for (const item of list) {
+            const cleanNik = String(item.nik || '').replace(/\D/g, '').trim() || String(item.nik || '').trim();
+            if (!cleanNik) continue;
+            if (uniqueMap.has(cleanNik)) {
+              const prev = uniqueMap.get(cleanNik);
+              uniqueMap.set(cleanNik, { ...prev, ...item, nik: cleanNik });
+            } else {
+              uniqueMap.set(cleanNik, { ...item, nik: cleanNik });
+            }
+          }
+          const uniqueList = Array.from(uniqueMap.values());
+          if (uniqueList.length === 0) {
+            return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
+          }
+
           const now = new Date().toISOString();
           const todayDate = now.split('T')[0];
 
@@ -2291,9 +2323,9 @@ Saran Medis:`;
               updated_at = excluded.updated_at
           `);
 
-          const statements = list.map((p, idx) => {
-            const rawNik = String(p.nik || '').trim();
-            const id = p.id || `enco_${rawNik}_${Date.now()}_${idx}`;
+          const statements = uniqueList.map(p => {
+            const rawNik = String(p.nik || '').replace(/\D/g, '').trim() || String(p.nik || '').trim();
+            const id = `enco_${rawNik}`;
             const details = typeof p.raw_details === 'object' ? JSON.stringify(p.raw_details) : (p.raw_details || '');
 
             return stmt.bind(
@@ -2324,7 +2356,7 @@ Saran Medis:`;
           });
 
           await env.DB.batch(statements);
-          return new Response(JSON.stringify({ success: true, count: list.length }), { headers: corsHeaders });
+          return new Response(JSON.stringify({ success: true, count: uniqueList.length }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
@@ -2393,13 +2425,14 @@ Saran Medis:`;
             params.push(tanggal, tanggal);
           }
 
-          const countRes = await env.DB.prepare(`SELECT COUNT(*) as total FROM enco_pasien ${whereClause}`).bind(...params).first();
+          const countRes = await env.DB.prepare(`SELECT COUNT(DISTINCT TRIM(nik)) as total FROM enco_pasien ${whereClause}`).bind(...params).first();
           const total = countRes ? countRes.total : 0;
 
           const dataParams = [...params, limit, offset];
           const { results } = await env.DB.prepare(`
             SELECT * FROM enco_pasien 
             ${whereClause} 
+            GROUP BY TRIM(nik)
             ORDER BY updated_at DESC, created_at DESC 
             LIMIT ? OFFSET ?
           `).bind(...dataParams).all();
@@ -2430,9 +2463,9 @@ Saran Medis:`;
       // 7. GET /api/enco/stats (Statistik Ringkasan ENCO)
       if (url.pathname === '/api/enco/stats' && request.method === 'GET') {
         try {
-          const totalPasien = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_pasien').first();
-          const terdaftar = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pendaftaran LIKE '%Terdaftar%'").first();
-          const selesaiLayanan = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pelayanan = 'Selesai Pelayanan'").first();
+          const totalPasien = await env.DB.prepare('SELECT COUNT(DISTINCT TRIM(nik)) as c FROM enco_pasien').first();
+          const terdaftar = await env.DB.prepare("SELECT COUNT(DISTINCT TRIM(nik)) as c FROM enco_pasien WHERE status_pendaftaran LIKE '%Terdaftar%'").first();
+          const selesaiLayanan = await env.DB.prepare("SELECT COUNT(DISTINCT TRIM(nik)) as c FROM enco_pasien WHERE status_pelayanan = 'Selesai Pelayanan'").first();
           const totalLogs = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_logs').first();
           const lastLog = await env.DB.prepare('SELECT petugas, created_at FROM enco_logs ORDER BY created_at DESC LIMIT 1').first();
 

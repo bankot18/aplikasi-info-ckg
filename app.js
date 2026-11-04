@@ -20486,15 +20486,26 @@ function renderEncoRecordsTable(records, offset) {
   if (!tbody) return;
 
   if (!records || records.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 32px; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 28px; display: block; margin-bottom: 8px;"></i>Belum ada data pasien ENCO yang tercatat.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 32px; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 28px; display: block; margin-bottom: 8px;"></i>Belum ada data pasien ENCO yang tercatat.</td></tr>`;
     return;
   }
+
+  // Deduplikasi sisi klien berdasarkan NIK (menghindari duplikasi tampilan)
+  const seenNiks = new Set();
+  const uniqueRecords = [];
+  records.forEach(r => {
+    const cleanNik = String(r.nik || '').replace(/\D/g, '').trim() || String(r.nik || '').trim();
+    if (!cleanNik || !seenNiks.has(cleanNik)) {
+      if (cleanNik) seenNiks.add(cleanNik);
+      uniqueRecords.push(r);
+    }
+  });
 
   const role = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
   const isAdmin = role.includes('admin') || role.includes('koordinator');
 
   let html = '';
-  records.forEach((r, idx) => {
+  uniqueRecords.forEach((r, idx) => {
     const no = offset + idx + 1;
     const isTerdaftar = (r.status_pendaftaran || '').toLowerCase().includes('terdaftar');
     const badgeDaftar = isTerdaftar 
@@ -20753,7 +20764,18 @@ async function exportEncoToExcel() {
       return;
     }
 
-    const rows = data.data.map((r, idx) => {
+    // Deduplikasi rekam pasien berdasarkan NIK sebelum ekspor ke Excel
+    const seenNiks = new Set();
+    const uniqueData = [];
+    (data.data || []).forEach(r => {
+      const cleanNik = String(r.nik || '').replace(/\D/g, '').trim() || String(r.nik || '').trim();
+      if (!cleanNik || !seenNiks.has(cleanNik)) {
+        if (cleanNik) seenNiks.add(cleanNik);
+        uniqueData.push(r);
+      }
+    });
+
+    const rows = uniqueData.map((r, idx) => {
       let rawObj = null;
       if (r.raw_details) {
         try { rawObj = typeof r.raw_details === 'string' ? JSON.parse(r.raw_details) : r.raw_details; } catch (_) {}
