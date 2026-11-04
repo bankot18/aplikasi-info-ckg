@@ -600,6 +600,11 @@
         <i class="bi bi-folder-symlink-fill"></i>
         <span>Records</span>
       </button>
+      <button class="nav-tab-btn" data-view="enco" style="position: relative;">
+        <i class="bi bi-robot"></i>
+        <span>ENCO</span>
+        <span class="badge" style="background: linear-gradient(135deg, #06b6d4, #2563eb); font-size: 9px; padding: 2px 5px; border-radius: 8px; margin-left: 4px; color: #fff; font-weight: 800;">ASIK</span>
+      </button>
       <button class="nav-tab-btn admin-koordinator-only" data-view="recycle-data">
         <i class="bi bi-trash3-fill"></i>
         <span>Recycle</span>
@@ -1104,6 +1109,199 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <!-- VIEW: ENCO AUTOMATION & ASIK DATABASE -->
+      <section id="view-enco" class="view-panel">
+        <div class="card-panel">
+          
+          <!-- Header Bar -->
+          <div class="card-header-bar" style="margin-bottom: 16px;">
+            <div>
+              <div class="card-header-title" style="font-size: 19px; display: flex; align-items: center; gap: 10px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #2563eb); color: #fff;">
+                  <i class="bi bi-robot" style="font-size: 20px;"></i>
+                </span>
+                <span>Database & Log Otomasi ENCO (ASIK Kemkes)</span>
+                <span class="badge" style="background: rgba(37,99,235,0.12); color: #2563eb; border: 1px solid rgba(37,99,235,0.25); font-size: 11px; padding: 4px 8px; border-radius: 6px;">Live Sync</span>
+              </div>
+              <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">
+                Rekam data identitas pasien yang berhasil didaftarkan / sudah terdaftar di ASIK dan hasil skrining pelayanan via bot ENCO.
+              </div>
+            </div>
+
+            <div class="action-buttons-group">
+              <button class="btn btn-primary" onclick="exportEncoToExcel()" title="Download Excel (.xlsx)">
+                <i class="bi bi-file-earmark-excel-fill"></i> Download Excel
+              </button>
+              <button class="btn btn-secondary" onclick="renderEncoView()" title="Muat ulang data">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Data
+              </button>
+              <button class="btn btn-danger admin-only" id="btnHapusSemuaEnco" onclick="confirmDeleteEncoData()" title="Khusus Admin">
+                <i class="bi bi-trash3-fill"></i> Hapus Data
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Stats Cards Bar -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
+            <div style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 14px;">
+              <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(59,130,246,0.12); color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                <i class="bi bi-people-fill"></i>
+              </div>
+              <div>
+                <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Total Pasien ENCO</div>
+                <div id="statEncoTotal" style="font-size: 20px; font-weight: 800; color: var(--text-color, #0f172a);">0</div>
+              </div>
+            </div>
+
+            <div style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 14px;">
+              <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(16,185,129,0.12); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                <i class="bi bi-person-check-fill"></i>
+              </div>
+              <div>
+                <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Terdaftar di ASIK</div>
+                <div id="statEncoTerdaftar" style="font-size: 20px; font-weight: 800; color: #059669;">0</div>
+              </div>
+            </div>
+
+            <div style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 14px;">
+              <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(14,165,233,0.12); color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                <i class="bi bi-clipboard2-pulse-fill"></i>
+              </div>
+              <div>
+                <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Selesai Pelayanan</div>
+                <div id="statEncoSelesaiPelayanan" style="font-size: 20px; font-weight: 800; color: #0284c7;">0</div>
+              </div>
+            </div>
+
+            <div style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 14px;">
+              <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(139,92,246,0.12); color: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                <i class="bi bi-clock-history"></i>
+              </div>
+              <div>
+                <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Log Aktivitas Bot</div>
+                <div id="statEncoTotalLogs" style="font-size: 20px; font-weight: 800; color: #7c3aed;">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nav Pills: Pasien Terdaftar vs Log Aktivitas -->
+          <div style="background: var(--bg-subtle, #f8fafc); padding: 10px 14px; border-radius: var(--radius-md, 10px); margin-bottom: 16px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--border-color, #e2e8f0); flex-wrap: wrap;">
+            <button id="btnEncoTabPasien" class="btn btn-sm btn-primary" onclick="switchEncoSubTab('pasien')">
+              <i class="bi bi-people-fill"></i> Rekam Data Pasien ASIK
+            </button>
+            <button id="btnEncoTabLogs" class="btn btn-sm btn-secondary" onclick="switchEncoSubTab('logs')">
+              <i class="bi bi-activity"></i> Log Riwayat Eksekusi Bot
+            </button>
+          </div>
+
+          <!-- SUB-TAB 1: DATA PASIEN ASIK -->
+          <div id="encoSubTabPasien">
+            <!-- Filter Bar -->
+            <div class="filter-bar-box" style="margin-bottom: 16px; padding: 12px 14px;">
+              <div class="filter-item" style="flex: 1; min-width: 220px;">
+                <i class="bi bi-search" style="color: var(--primary);"></i> Pencarian:
+                <input type="text" id="searchEncoPasien" class="filter-control"
+                  placeholder="Cari NIK / Nama / No Tiket..." style="width: 100%; font-weight: 600;"
+                  oninput="debounceEncoSearch()">
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-check2-circle"></i> Status Pendaftaran:
+                <select id="filterEncoStatusDaftar" class="filter-control" onchange="loadEncoRecords(0)">
+                  <option value="">-- Semua Status --</option>
+                  <option value="Sudah Terdaftar">Sudah Terdaftar</option>
+                  <option value="Berhasil Didaftarkan">Berhasil Didaftarkan</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-heart-pulse"></i> Status Pelayanan:
+                <select id="filterEncoStatusLayanan" class="filter-control" onchange="loadEncoRecords(0)">
+                  <option value="">-- Semua Pelayanan --</option>
+                  <option value="Selesai Pelayanan">Selesai Pelayanan</option>
+                  <option value="Belum Pelayanan">Belum Pelayanan</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-person-badge"></i> Petugas ENCO:
+                <select id="filterEncoPetugas" class="filter-control" onchange="loadEncoRecords(0)">
+                  <option value="">-- Semua Petugas --</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-calendar-day"></i> Tanggal:
+                <input type="date" id="filterEncoTanggal" class="filter-control" onchange="loadEncoRecords(0)">
+              </div>
+
+              <button class="btn btn-secondary btn-sm" onclick="resetEncoFilters()">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset Filter
+              </button>
+            </div>
+
+            <!-- Table of Records -->
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">NO</th>
+                    <th>TGL ENTRY</th>
+                    <th>NIK</th>
+                    <th>NAMA PASIEN</th>
+                    <th>TGL LAHIR / JK</th>
+                    <th>NO. TIKET ASIK</th>
+                    <th>KATEGORI</th>
+                    <th>STATUS DAFTAR</th>
+                    <th>STATUS PELAYANAN</th>
+                    <th>PETUGAS BOT</th>
+                    <th style="width: 80px; text-align: center;">AKSI</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBodyEncoPasien">
+                  <tr><td colspan="11" style="text-align:center; padding: 24px; color: var(--text-muted);">Memuat data ENCO...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination Bar -->
+            <div id="encoPaginationBar" style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 10px 4px; font-size: 13px; color: var(--text-muted);">
+              <span id="encoPaginationInfo">Menampilkan 0 data</span>
+              <div style="display: flex; gap: 8px;">
+                <button id="btnEncoPrevPage" class="btn btn-secondary btn-sm" onclick="prevEncoPage()"><i class="bi bi-chevron-left"></i> Sebelumnya</button>
+                <button id="btnEncoNextPage" class="btn btn-secondary btn-sm" onclick="nextEncoPage()">Selanjutnya <i class="bi bi-chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 2: LOG AKTIVITAS BOT -->
+          <div id="encoSubTabLogs" style="display: none;">
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">NO</th>
+                    <th>WAKTU & TANGGAL</th>
+                    <th>PETUGAS ENCO</th>
+                    <th>JENIS KEGIATAN</th>
+                    <th style="text-align: center;">TOTAL PASIEN</th>
+                    <th style="text-align: center;">BERHASIL</th>
+                    <th style="text-align: center;">TERDAFTAR</th>
+                    <th style="text-align: center;">GAGAL</th>
+                    <th>STATUS</th>
+                    <th>KETERANGAN</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBodyEncoLogs">
+                  <tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);">Memuat log bot...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </section>
 

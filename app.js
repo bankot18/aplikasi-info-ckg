@@ -2412,6 +2412,8 @@ function switchView(viewId) {
     renderTableRecords();
   } else if (viewId === 'recycle-data') {
     renderRecycleTable();
+  } else if (viewId === 'enco') {
+    renderEncoView();
   } else if (viewId === 'admin-panel') {
     refreshAdminKamusStats();
   }
@@ -20332,5 +20334,454 @@ async function analyzePatientHealthWithAI(patientData) {
     return 'Gagal memuat saran AI.';
   }
 }
+
+/* ==========================================================================
+   🤖 MENU ENCO (ASIK Kemkes Integration & Automation Records)
+   ========================================================================== */
+
+let encoState = {
+  activeSubTab: 'pasien',
+  currentOffset: 0,
+  limit: 50,
+  totalRecords: 0,
+  searchDebounceTimer: null,
+  cachedRecords: []
+};
+
+function renderEncoView() {
+  loadEncoStats();
+  populateEncoPetugasFilter();
+  if (encoState.activeSubTab === 'pasien') {
+    loadEncoRecords(0);
+  } else {
+    loadEncoLogs();
+  }
+}
+
+function switchEncoSubTab(tab) {
+  encoState.activeSubTab = tab;
+  const btnPasien = document.getElementById('btnEncoTabPasien');
+  const btnLogs = document.getElementById('btnEncoTabLogs');
+  const subTabPasien = document.getElementById('encoSubTabPasien');
+  const subTabLogs = document.getElementById('encoSubTabLogs');
+
+  if (tab === 'pasien') {
+    if (btnPasien) { btnPasien.className = 'btn btn-sm btn-primary'; }
+    if (btnLogs) { btnLogs.className = 'btn btn-sm btn-secondary'; }
+    if (subTabPasien) subTabPasien.style.display = 'block';
+    if (subTabLogs) subTabLogs.style.display = 'none';
+    loadEncoRecords(encoState.currentOffset);
+  } else {
+    if (btnPasien) { btnPasien.className = 'btn btn-sm btn-secondary'; }
+    if (btnLogs) { btnLogs.className = 'btn btn-sm btn-primary'; }
+    if (subTabPasien) subTabPasien.style.display = 'none';
+    if (subTabLogs) subTabLogs.style.display = 'block';
+    loadEncoLogs();
+  }
+}
+
+async function loadEncoStats() {
+  try {
+    const res = await fetch('/api/enco/stats');
+    const data = await res.json();
+    if (data.success && data.stats) {
+      const s = data.stats;
+      const elTotal = document.getElementById('statEncoTotal');
+      const elTerdaftar = document.getElementById('statEncoTerdaftar');
+      const elLayanan = document.getElementById('statEncoSelesaiPelayanan');
+      const elLogs = document.getElementById('statEncoTotalLogs');
+
+      if (elTotal) elTotal.textContent = (s.total_pasien || 0).toLocaleString('id-ID');
+      if (elTerdaftar) elTerdaftar.textContent = (s.total_terdaftar || 0).toLocaleString('id-ID');
+      if (elLayanan) elLayanan.textContent = (s.total_selesai_layanan || 0).toLocaleString('id-ID');
+      if (elLogs) elLogs.textContent = (s.total_logs || 0).toLocaleString('id-ID');
+    }
+  } catch (err) {
+    console.error('Failed to load ENCO stats:', err);
+  }
+}
+
+function populateEncoPetugasFilter() {
+  const select = document.getElementById('filterEncoPetugas');
+  if (!select) return;
+  const currentVal = select.value;
+
+  select.innerHTML = '<option value="">-- Semua Petugas --</option>';
+  if (Array.isArray(usersDb) && usersDb.length > 0) {
+    usersDb.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.nama_user;
+      opt.textContent = u.nama_user;
+      if (currentVal && u.nama_user === currentVal) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+}
+
+function debounceEncoSearch() {
+  clearTimeout(encoState.searchDebounceTimer);
+  encoState.searchDebounceTimer = setTimeout(() => {
+    loadEncoRecords(0);
+  }, 350);
+}
+
+function resetEncoFilters() {
+  const sInput = document.getElementById('searchEncoPasien');
+  const sDaftar = document.getElementById('filterEncoStatusDaftar');
+  const sLayanan = document.getElementById('filterEncoStatusLayanan');
+  const sPetugas = document.getElementById('filterEncoPetugas');
+  const sTanggal = document.getElementById('filterEncoTanggal');
+
+  if (sInput) sInput.value = '';
+  if (sDaftar) sDaftar.value = '';
+  if (sLayanan) sLayanan.value = '';
+  if (sPetugas) sPetugas.value = '';
+  if (sTanggal) sTanggal.value = '';
+
+  loadEncoRecords(0);
+}
+
+async function loadEncoRecords(offset = 0) {
+  encoState.currentOffset = offset;
+  const tbody = document.getElementById('tableBodyEncoPasien');
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 24px; color: var(--text-muted);"><i class="bi bi-arrow-repeat spin"></i> Memuat data pasien ENCO...</td></tr>`;
+  }
+
+  const sInput = (document.getElementById('searchEncoPasien')?.value || '').trim();
+  const sDaftar = document.getElementById('filterEncoStatusDaftar')?.value || '';
+  const sLayanan = document.getElementById('filterEncoStatusLayanan')?.value || '';
+  const sPetugas = document.getElementById('filterEncoPetugas')?.value || '';
+  const sTanggal = document.getElementById('filterEncoTanggal')?.value || '';
+
+  const params = new URLSearchParams({
+    limit: String(encoState.limit),
+    offset: String(offset)
+  });
+  if (sInput) params.append('search', sInput);
+  if (sDaftar) params.append('status_pendaftaran', sDaftar);
+  if (sLayanan) params.append('status_pelayanan', sLayanan);
+  if (sPetugas) params.append('petugas', sPetugas);
+  if (sTanggal) params.append('tanggal', sTanggal);
+
+  try {
+    const res = await fetch(`/api/enco/records?${params.toString()}`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Gagal mengambil data');
+
+    encoState.totalRecords = data.total || 0;
+    encoState.cachedRecords = data.data || [];
+    renderEncoRecordsTable(encoState.cachedRecords, offset);
+    updateEncoPagination(offset, data.data.length, data.total);
+  } catch (err) {
+    console.error('Failed to fetch ENCO records:', err);
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 24px; color: #dc2626;"><i class="bi bi-exclamation-triangle"></i> Gagal memuat data: ${err.message}</td></tr>`;
+    }
+  }
+}
+
+function renderEncoRecordsTable(records, offset) {
+  const tbody = document.getElementById('tableBodyEncoPasien');
+  if (!tbody) return;
+
+  if (!records || records.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 32px; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 28px; display: block; margin-bottom: 8px;"></i>Belum ada data pasien ENCO yang tercatat.</td></tr>`;
+    return;
+  }
+
+  const role = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  const isAdmin = role.includes('admin') || role.includes('koordinator');
+
+  let html = '';
+  records.forEach((r, idx) => {
+    const no = offset + idx + 1;
+    const isTerdaftar = (r.status_pendaftaran || '').toLowerCase().includes('terdaftar');
+    const badgeDaftar = isTerdaftar 
+      ? `<span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700;"><i class="bi bi-check2"></i> ${escapeHtml(r.status_pendaftaran || 'Sudah Terdaftar')}</span>`
+      : `<span class="badge" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; font-weight:700;"><i class="bi bi-person-check"></i> ${escapeHtml(r.status_pendaftaran || 'Berhasil')}</span>`;
+
+    const isSelesaiLayanan = (r.status_pelayanan || '').toLowerCase() === 'selesai pelayanan';
+    const badgeLayanan = isSelesaiLayanan
+      ? `<span class="badge" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-weight:700;"><i class="bi bi-patch-check-fill"></i> Selesai Layanan</span>`
+      : `<span class="badge" style="background:#f8fafc; color:#64748b; border:1px solid #e2e8f0;"><i class="bi bi-clock"></i> Belum Pelayanan</span>`;
+
+    const tglEntry = r.tanggal_daftar || (r.created_at ? r.created_at.split('T')[0] : '-');
+    const noTiket = r.no_tiket || '-';
+
+    html += `
+      <tr>
+        <td style="text-align: center; font-weight: 700; color: var(--text-muted);">${no}</td>
+        <td style="font-size: 12.5px; white-space: nowrap;">${escapeHtml(tglEntry)}</td>
+        <td style="font-family: monospace; font-weight: 700; color: var(--primary); font-size: 13px;">${escapeHtml(r.nik)}</td>
+        <td style="font-weight: 700; color: var(--text-color, #0f172a);">${escapeHtml(r.nama)}</td>
+        <td style="font-size: 12.5px;">${escapeHtml(r.tanggal_lahir || '-')}${r.jenis_kelamin ? ` (${escapeHtml(r.jenis_kelamin)})` : ''}</td>
+        <td>
+          <span style="font-family: monospace; font-weight: 800; background: rgba(37,99,235,0.08); padding: 3px 8px; border-radius: 6px; color: #1d4ed8; border: 1px solid rgba(37,99,235,0.2);">
+            ${escapeHtml(noTiket)}
+          </span>
+        </td>
+        <td style="font-size: 12px; font-weight: 600;">${escapeHtml(r.kategori || 'Umum')}</td>
+        <td>${badgeDaftar}</td>
+        <td>${badgeLayanan}</td>
+        <td style="font-size: 12.5px; font-weight: 600; color: #475569;">${escapeHtml(r.petugas_enco || '-')}</td>
+        <td style="text-align: center;">
+          <div style="display: flex; gap: 4px; justify-content: center;">
+            <button class="btn btn-secondary btn-sm" style="padding: 2px 7px;" onclick="viewEncoPatientDetail('${escapeHtml(r.nik)}')" title="Lihat Detail Pasien">
+              <i class="bi bi-eye"></i>
+            </button>
+            ${isAdmin ? `
+              <button class="btn btn-danger btn-sm" style="padding: 2px 7px;" onclick="deleteSingleEncoPatient('${escapeHtml(r.id)}', '${escapeHtml(r.nik)}', '${escapeHtml(r.nama)}')" title="Hapus Data">
+                <i class="bi bi-trash"></i>
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+}
+
+function updateEncoPagination(offset, fetchedCount, totalCount) {
+  const info = document.getElementById('encoPaginationInfo');
+  const btnPrev = document.getElementById('btnEncoPrevPage');
+  const btnNext = document.getElementById('btnEncoNextPage');
+
+  const start = totalCount === 0 ? 0 : offset + 1;
+  const end = offset + fetchedCount;
+
+  if (info) {
+    info.textContent = `Menampilkan ${start} - ${end} dari total ${totalCount.toLocaleString('id-ID')} pasien`;
+  }
+  if (btnPrev) {
+    btnPrev.disabled = offset <= 0;
+  }
+  if (btnNext) {
+    btnNext.disabled = end >= totalCount;
+  }
+}
+
+function prevEncoPage() {
+  const newOffset = Math.max(0, encoState.currentOffset - encoState.limit);
+  loadEncoRecords(newOffset);
+}
+
+function nextEncoPage() {
+  if (encoState.currentOffset + encoState.limit < encoState.totalRecords) {
+    loadEncoRecords(encoState.currentOffset + encoState.limit);
+  }
+}
+
+function viewEncoPatientDetail(nik) {
+  const patient = encoState.cachedRecords.find(p => p.nik === nik);
+  if (!patient) return;
+
+  let rawObj = null;
+  if (patient.raw_details) {
+    try {
+      rawObj = typeof patient.raw_details === 'string' ? JSON.parse(patient.raw_details) : patient.raw_details;
+    } catch (_) {}
+  }
+
+  let detailHtml = `
+    <div style="text-align: left; font-size: 13.5px; line-height: 1.7;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr><td style="width: 140px; color: #64748b; font-weight: 600;">NIK:</td><td style="font-weight: 700; font-family: monospace;">${escapeHtml(patient.nik)}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Nama Pasien:</td><td style="font-weight: 700;">${escapeHtml(patient.nama)}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Tanggal Lahir:</td><td>${escapeHtml(patient.tanggal_lahir || '-')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Jenis Kelamin:</td><td>${escapeHtml(patient.jenis_kelamin || '-')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Nomor Tiket ASIK:</td><td style="font-weight: 800; color: #2563eb; font-family: monospace;">${escapeHtml(patient.no_tiket || '-')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Kategori:</td><td>${escapeHtml(patient.kategori || 'Umum')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Status Pendaftaran:</td><td><strong style="color: #059669;">${escapeHtml(patient.status_pendaftaran || '-')}</strong></td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Status Pelayanan:</td><td><strong style="color: #2563eb;">${escapeHtml(patient.status_pelayanan || '-')}</strong></td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Petugas ENCO:</td><td>${escapeHtml(patient.petugas_enco || '-')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Faskes:</td><td>${escapeHtml(patient.faskes || 'Puskesmas Banjaran Kota')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Tanggal Rekam:</td><td>${escapeHtml(patient.created_at || '-')}</td></tr>
+      </table>
+  `;
+
+  if (rawObj) {
+    detailHtml += `
+      <div style="margin-top: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+        <div style="font-weight: 700; color: #334155; font-size: 12px; margin-bottom: 6px;">Detail Tambahan / Skrining:</div>
+        <pre style="margin: 0; font-size: 11.5px; white-space: pre-wrap; word-break: break-all; color: #475569;">${escapeHtml(JSON.stringify(rawObj, null, 2))}</pre>
+      </div>
+    `;
+  }
+
+  detailHtml += `</div>`;
+
+  Swal.fire({
+    title: `<i class="bi bi-person-vcard-fill" style="color: #2563eb;"></i> Detail Pasien ASIK`,
+    html: detailHtml,
+    confirmButtonText: 'Tutup',
+    confirmButtonColor: '#2563eb',
+    width: '540px'
+  });
+}
+
+async function deleteSingleEncoPatient(id, nik, nama) {
+  const result = await Swal.fire({
+    title: 'Hapus Rekam Pasien?',
+    html: `Apakah Anda yakin ingin menghapus rekam data pasien <strong>${escapeHtml(nama)}</strong> (${escapeHtml(nik)}) dari database ENCO?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch(`/api/enco/delete?type=pasien&id=${encodeURIComponent(id || nik)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Data pasien berhasil dihapus', 'success');
+      loadEncoRecords(encoState.currentOffset);
+      loadEncoStats();
+    } else {
+      throw new Error(data.error || 'Gagal menghapus');
+    }
+  } catch (err) {
+    Swal.fire('Gagal Menghapus', err.message, 'error');
+  }
+}
+
+async function confirmDeleteEncoData() {
+  const result = await Swal.fire({
+    title: 'Hapus Database ENCO?',
+    text: 'Pilih data yang ingin Anda bersihkan:',
+    icon: 'warning',
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonColor: '#dc2626',
+    denyButtonColor: '#7c3aed',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Hapus Semua Pasien',
+    denyButtonText: 'Hapus Semua Log Bot',
+    cancelButtonText: 'Batal'
+  });
+
+  let deleteType = '';
+  if (result.isConfirmed) deleteType = 'all_records';
+  else if (result.isDenied) deleteType = 'all_logs';
+  else return;
+
+  try {
+    const res = await fetch(`/api/enco/delete?type=${deleteType}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Data berhasil dibersihkan', 'success');
+      loadEncoStats();
+      if (deleteType === 'all_records') loadEncoRecords(0);
+      else loadEncoLogs();
+    } else {
+      throw new Error(data.error || 'Gagal menghapus');
+    }
+  } catch (err) {
+    Swal.fire('Error', err.message, 'error');
+  }
+}
+
+async function loadEncoLogs() {
+  const tbody = document.getElementById('tableBodyEncoLogs');
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);"><i class="bi bi-arrow-repeat spin"></i> Memuat log bot ENCO...</td></tr>`;
+  }
+
+  try {
+    const res = await fetch('/api/enco/logs?limit=50');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Gagal memuat log');
+
+    const logs = data.data || [];
+    if (logs.length === 0) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 32px; color: var(--text-muted);"><i class="bi bi-clock-history" style="font-size: 28px; display: block; margin-bottom: 8px;"></i>Belum ada log aktivitas bot yang tercatat.</td></tr>`;
+      return;
+    }
+
+    let html = '';
+    logs.forEach((l, idx) => {
+      const isSuccess = (l.status || '').toLowerCase() === 'selesai';
+      const badgeStatus = isSuccess
+        ? `<span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;"><i class="bi bi-check-circle"></i> Selesai</span>`
+        : `<span class="badge" style="background:#fef2f2; color:#dc2626; border:1px solid #fecaca;"><i class="bi bi-exclamation-circle"></i> ${escapeHtml(l.status || 'Berhenti')}</span>`;
+
+      html += `
+        <tr>
+          <td style="text-align: center; font-weight: 700; color: var(--text-muted);">${idx + 1}</td>
+          <td style="font-size: 12.5px; white-space: nowrap;">${escapeHtml(l.created_at || '-')}</td>
+          <td style="font-weight: 700; color: var(--primary);">${escapeHtml(l.petugas || '-')}</td>
+          <td><span class="badge" style="background: rgba(37,99,235,0.08); color: #2563eb; font-weight: 700;">${escapeHtml(l.jenis_kegiatan || '-')}</span></td>
+          <td style="text-align: center; font-weight: 800;">${Number(l.total_pasien || 0)}</td>
+          <td style="text-align: center; font-weight: 800; color: #16a34a;">${Number(l.jumlah_berhasil || 0)}</td>
+          <td style="text-align: center; font-weight: 800; color: #0284c7;">${Number(l.jumlah_terdaftar || 0)}</td>
+          <td style="text-align: center; font-weight: 800; color: #dc2626;">${Number(l.jumlah_gagal || 0)}</td>
+          <td>${badgeStatus}</td>
+          <td style="font-size: 12.5px; color: #475569;">${escapeHtml(l.keterangan || '-')}</td>
+        </tr>
+      `;
+    });
+
+    if (tbody) tbody.innerHTML = html;
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color: #dc2626;">Gagal memuat log: ${err.message}</td></tr>`;
+  }
+}
+
+async function exportEncoToExcel() {
+  showLoadingOverlay('Mengekspor Data ENCO...', 'Mengambil seluruh rekam pasien dari database...');
+  try {
+    const res = await fetch('/api/enco/records?limit=10000&offset=0');
+    const data = await res.json();
+    hideLoadingOverlay();
+
+    if (!data.success || !data.data || data.data.length === 0) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Tidak Ada Data',
+        text: 'Belum ada data pasien ENCO untuk diekspor.',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+
+    const rows = data.data.map((r, idx) => ({
+      'No': idx + 1,
+      'Tanggal Entry': r.tanggal_daftar || '',
+      'NIK': String(r.nik || ''),
+      'Nama Pasien': r.nama || '',
+      'Tanggal Lahir': r.tanggal_lahir || '',
+      'Jenis Kelamin': r.jenis_kelamin || '',
+      'No. Tiket ASIK': r.no_tiket || '',
+      'Kategori': r.kategori || 'Umum',
+      'Status Pendaftaran': r.status_pendaftaran || '',
+      'Status Pelayanan': r.status_pelayanan || '',
+      'Tanggal Pelayanan': r.tanggal_pelayanan || '',
+      'Petugas ENCO': r.petugas_enco || '',
+      'Faskes': r.faskes || 'Puskesmas Banjaran Kota'
+    }));
+
+    if (typeof XLSX === 'undefined') {
+      throw new Error('Pustaka SheetJS (XLSX) tidak tersedia di halaman ini.');
+    }
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rekam Data ENCO');
+
+    const today = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `Rekam_Data_ASIK_ENCO_${today}.xlsx`);
+    showToast('Data ENCO berhasil diunduh dalam format Excel (.xlsx)', 'success');
+  } catch (err) {
+    hideLoadingOverlay();
+    Swal.fire('Gagal Ekspor', err.message, 'error');
+  }
+}
+
 
 

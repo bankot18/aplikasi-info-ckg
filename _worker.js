@@ -70,6 +70,326 @@ export default {
       }
     }
 
+    // ====================================================================
+    // ROUTE: /api/enco/* (INTEGRASI EXTENSION ENCO AI & ASSETS/LOGS)
+    // ====================================================================
+    if (url.pathname.startsWith('/api/enco')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+
+      // Ensure ENCO tables exist
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_pasien (
+            id TEXT PRIMARY KEY,
+            nik TEXT NOT NULL UNIQUE,
+            nama TEXT NOT NULL,
+            tanggal_lahir TEXT,
+            jenis_kelamin TEXT,
+            no_tiket TEXT,
+            kategori TEXT DEFAULT 'Umum',
+            status_pendaftaran TEXT DEFAULT 'Sudah Terdaftar',
+            status_pelayanan TEXT DEFAULT 'Belum Pelayanan',
+            tanggal_daftar TEXT,
+            tanggal_pelayanan TEXT,
+            petugas_enco TEXT DEFAULT 'Petugas',
+            faskes TEXT DEFAULT 'Puskesmas Banjaran Kota',
+            raw_details TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            petugas TEXT NOT NULL,
+            jenis_kegiatan TEXT NOT NULL,
+            total_pasien INTEGER DEFAULT 0,
+            jumlah_berhasil INTEGER DEFAULT 0,
+            jumlah_terdaftar INTEGER DEFAULT 0,
+            jumlah_gagal INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Selesai',
+            keterangan TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (_) {}
+
+      // 1. GET /api/enco/users (List User Petugas Puskesmas untuk Dropdown Login ENCO)
+      if (url.pathname === '/api/enco/users' && request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare(`
+            SELECT nama_user, role, 
+                   CASE WHEN password IS NOT NULL AND password != '' THEN 1 ELSE 0 END as need_password
+            FROM users 
+            ORDER BY id ASC
+          `).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 2. POST /api/enco/login (Verifikasi Login Ekstensi ENCO)
+      if (url.pathname === '/api/enco/login' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nama_user = (body.nama_user || body.username || '').trim();
+          const password = (body.password || '').trim();
+
+          if (!nama_user) {
+            return new Response(JSON.stringify({ success: false, error: 'Nama Pegawai harus dipilih' }), { status: 400, headers: corsHeaders });
+          }
+
+          const user = await env.DB.prepare('SELECT nama_user, password, role FROM users WHERE LOWER(nama_user) = LOWER(?)').bind(nama_user).first();
+          if (!user) {
+            return new Response(JSON.stringify({ success: false, error: `Pegawai ${nama_user} tidak terdaftar di database` }), { status: 401, headers: corsHeaders });
+          }
+
+          const dbPassword = (user.password || '').trim();
+          if (dbPassword !== '') {
+            if (!password || password !== dbPassword) {
+              return new Response(JSON.stringify({ success: false, error: 'Kata sandi yang Anda masukkan salah' }), { status: 401, headers: corsHeaders });
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            user: {
+              nama_user: user.nama_user,
+              role: user.role || 'Petugas'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 3. POST /api/enco/sync-pasien (Kirim / Rekam Pasien ASIK dari ENCO)
+      if (url.pathname === '/api/enco/sync-pasien' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const list = Array.isArray(body) ? body : [body];
+          if (list.length === 0) {
+            return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
+          }
+
+          const now = new Date().toISOString();
+          const todayDate = now.split('T')[0];
+
+          const stmt = env.DB.prepare(`
+            INSERT INTO enco_pasien (
+              id, nik, nama, tanggal_lahir, jenis_kelamin, no_tiket, kategori,
+              status_pendaftaran, status_pelayanan, tanggal_daftar, tanggal_pelayanan,
+              petugas_enco, faskes, raw_details, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(nik) DO UPDATE SET
+              nama = excluded.nama,
+              tanggal_lahir = CASE WHEN excluded.tanggal_lahir != '' THEN excluded.tanggal_lahir ELSE enco_pasien.tanggal_lahir END,
+              jenis_kelamin = CASE WHEN excluded.jenis_kelamin != '' THEN excluded.jenis_kelamin ELSE enco_pasien.jenis_kelamin END,
+              no_tiket = CASE WHEN excluded.no_tiket != '' THEN excluded.no_tiket ELSE enco_pasien.no_tiket END,
+              kategori = CASE WHEN excluded.kategori != '' THEN excluded.kategori ELSE enco_pasien.kategori END,
+              status_pendaftaran = CASE WHEN excluded.status_pendaftaran != '' THEN excluded.status_pendaftaran ELSE enco_pasien.status_pendaftaran END,
+              status_pelayanan = CASE 
+                WHEN excluded.status_pelayanan IS NOT NULL AND excluded.status_pelayanan != '' AND excluded.status_pelayanan != 'Belum Pelayanan'
+                THEN excluded.status_pelayanan 
+                ELSE enco_pasien.status_pelayanan 
+              END,
+              tanggal_daftar = CASE WHEN excluded.tanggal_daftar != '' THEN excluded.tanggal_daftar ELSE enco_pasien.tanggal_daftar END,
+              tanggal_pelayanan = CASE WHEN excluded.tanggal_pelayanan != '' THEN excluded.tanggal_pelayanan ELSE enco_pasien.tanggal_pelayanan END,
+              petugas_enco = excluded.petugas_enco,
+              faskes = CASE WHEN excluded.faskes != '' THEN excluded.faskes ELSE enco_pasien.faskes END,
+              raw_details = CASE WHEN excluded.raw_details != '' THEN excluded.raw_details ELSE enco_pasien.raw_details END,
+              updated_at = excluded.updated_at
+          `);
+
+          const statements = list.map((p, idx) => {
+            const rawNik = String(p.nik || '').trim();
+            const id = p.id || `enco_${rawNik}_${Date.now()}_${idx}`;
+            const details = typeof p.raw_details === 'object' ? JSON.stringify(p.raw_details) : (p.raw_details || '');
+
+            return stmt.bind(
+              id,
+              rawNik,
+              String(p.nama || '').trim(),
+              String(p.tanggal_lahir || p.dob || '').trim(),
+              String(p.jenis_kelamin || p.jk || '').trim(),
+              String(p.no_tiket || p.nomor_tiket || '').trim(),
+              String(p.kategori || 'Umum').trim(),
+              String(p.status_pendaftaran || 'Sudah Terdaftar').trim(),
+              String(p.status_pelayanan || 'Belum Pelayanan').trim(),
+              String(p.tanggal_daftar || todayDate).trim(),
+              String(p.tanggal_pelayanan || (p.status_pelayanan === 'Selesai Pelayanan' ? todayDate : '')).trim(),
+              String(p.petugas_enco || p.petugas || 'Petugas').trim(),
+              String(p.faskes || 'Puskesmas Banjaran Kota').trim(),
+              details,
+              now,
+              now
+            );
+          });
+
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: list.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 4. POST /api/enco/sync-log (Kirim Log Riwayat Otomasi ENCO)
+      if (url.pathname === '/api/enco/sync-log' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const now = new Date().toISOString();
+          await env.DB.prepare(`
+            INSERT INTO enco_logs (
+              petugas, jenis_kegiatan, total_pasien, jumlah_berhasil,
+              jumlah_terdaftar, jumlah_gagal, status, keterangan, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            body.petugas || 'Petugas',
+            body.jenis_kegiatan || 'Pendaftaran',
+            Number(body.total_pasien) || 0,
+            Number(body.jumlah_berhasil) || 0,
+            Number(body.jumlah_terdaftar) || 0,
+            Number(body.jumlah_gagal) || 0,
+            body.status || 'Selesai',
+            body.keterangan || '',
+            now
+          ).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 5. GET /api/enco/records (Data Pasien ENCO untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/records' && request.method === 'GET') {
+        try {
+          const search = url.searchParams.get('search') || '';
+          const statusPendaftaran = url.searchParams.get('status_pendaftaran') || '';
+          const statusPelayanan = url.searchParams.get('status_pelayanan') || '';
+          const petugas = url.searchParams.get('petugas') || '';
+          const tanggal = url.searchParams.get('tanggal') || '';
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+          let whereClause = 'WHERE 1=1';
+          const params = [];
+
+          if (search) {
+            whereClause += ' AND (nik LIKE ? OR LOWER(nama) LIKE ? OR LOWER(no_tiket) LIKE ?)';
+            const s = `%${search.toLowerCase()}%`;
+            params.push(s, s, s);
+          }
+          if (statusPendaftaran) {
+            whereClause += ' AND status_pendaftaran = ?';
+            params.push(statusPendaftaran);
+          }
+          if (statusPelayanan) {
+            whereClause += ' AND status_pelayanan = ?';
+            params.push(statusPelayanan);
+          }
+          if (petugas) {
+            whereClause += ' AND petugas_enco = ?';
+            params.push(petugas);
+          }
+          if (tanggal) {
+            whereClause += ' AND (tanggal_daftar = ? OR tanggal_pelayanan = ?)';
+            params.push(tanggal, tanggal);
+          }
+
+          const countRes = await env.DB.prepare(`SELECT COUNT(*) as total FROM enco_pasien ${whereClause}`).bind(...params).first();
+          const total = countRes ? countRes.total : 0;
+
+          const dataParams = [...params, limit, offset];
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM enco_pasien 
+            ${whereClause} 
+            ORDER BY updated_at DESC, created_at DESC 
+            LIMIT ? OFFSET ?
+          `).bind(...dataParams).all();
+
+          return new Response(JSON.stringify({
+            success: true,
+            total,
+            limit,
+            offset,
+            data: results || []
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 6. GET /api/enco/logs (Log Riwayat Otomasi untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/logs' && request.method === 'GET') {
+        try {
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const { results } = await env.DB.prepare('SELECT * FROM enco_logs ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 7. GET /api/enco/stats (Statistik Ringkasan ENCO)
+      if (url.pathname === '/api/enco/stats' && request.method === 'GET') {
+        try {
+          const totalPasien = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_pasien').first();
+          const terdaftar = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pendaftaran LIKE '%Terdaftar%'").first();
+          const selesaiLayanan = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pelayanan = 'Selesai Pelayanan'").first();
+          const totalLogs = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_logs').first();
+          const lastLog = await env.DB.prepare('SELECT petugas, created_at FROM enco_logs ORDER BY created_at DESC LIMIT 1').first();
+
+          return new Response(JSON.stringify({
+            success: true,
+            stats: {
+              total_pasien: totalPasien?.c || 0,
+              total_terdaftar: terdaftar?.c || 0,
+              total_selesai_layanan: selesaiLayanan?.c || 0,
+              total_logs: totalLogs?.c || 0,
+              last_petugas: lastLog?.petugas || '-',
+              last_active: lastLog?.created_at || '-'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 8. DELETE /api/enco/delete (Hapus Data / Log ENCO)
+      if (url.pathname === '/api/enco/delete' && (request.method === 'DELETE' || request.method === 'POST')) {
+        try {
+          const type = url.searchParams.get('type') || 'pasien';
+          const id = url.searchParams.get('id');
+
+          if (type === 'all_records') {
+            await env.DB.prepare('DELETE FROM enco_pasien').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua rekam pasien ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (type === 'all_logs') {
+            await env.DB.prepare('DELETE FROM enco_logs').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua log aktivitas ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (id) {
+            if (type === 'log') {
+              await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(id).run();
+            } else {
+              await env.DB.prepare('DELETE FROM enco_pasien WHERE id = ? OR nik = ?').bind(id, id).run();
+            }
+            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          }
+          return new Response(JSON.stringify({ success: false, error: 'Parameter id dibutuhkan' }), { status: 400, headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
     // 2. ROUTE: /api/simpus (Split: simpus_belum_bagi & simpus_sudah_bagi)
     if (url.pathname === '/api/simpus' || url.pathname.startsWith('/api/simpus/')) {
       if (!env.DB) {
@@ -1002,6 +1322,326 @@ export default {
       }
     }
 
+    // ====================================================================
+    // ROUTE: /api/enco/* (INTEGRASI EXTENSION ENCO AI & ASSETS/LOGS)
+    // ====================================================================
+    if (url.pathname.startsWith('/api/enco')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+
+      // Ensure ENCO tables exist
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_pasien (
+            id TEXT PRIMARY KEY,
+            nik TEXT NOT NULL UNIQUE,
+            nama TEXT NOT NULL,
+            tanggal_lahir TEXT,
+            jenis_kelamin TEXT,
+            no_tiket TEXT,
+            kategori TEXT DEFAULT 'Umum',
+            status_pendaftaran TEXT DEFAULT 'Sudah Terdaftar',
+            status_pelayanan TEXT DEFAULT 'Belum Pelayanan',
+            tanggal_daftar TEXT,
+            tanggal_pelayanan TEXT,
+            petugas_enco TEXT DEFAULT 'Petugas',
+            faskes TEXT DEFAULT 'Puskesmas Banjaran Kota',
+            raw_details TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            petugas TEXT NOT NULL,
+            jenis_kegiatan TEXT NOT NULL,
+            total_pasien INTEGER DEFAULT 0,
+            jumlah_berhasil INTEGER DEFAULT 0,
+            jumlah_terdaftar INTEGER DEFAULT 0,
+            jumlah_gagal INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Selesai',
+            keterangan TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (_) {}
+
+      // 1. GET /api/enco/users (List User Petugas Puskesmas untuk Dropdown Login ENCO)
+      if (url.pathname === '/api/enco/users' && request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare(`
+            SELECT nama_user, role, 
+                   CASE WHEN password IS NOT NULL AND password != '' THEN 1 ELSE 0 END as need_password
+            FROM users 
+            ORDER BY id ASC
+          `).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 2. POST /api/enco/login (Verifikasi Login Ekstensi ENCO)
+      if (url.pathname === '/api/enco/login' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nama_user = (body.nama_user || body.username || '').trim();
+          const password = (body.password || '').trim();
+
+          if (!nama_user) {
+            return new Response(JSON.stringify({ success: false, error: 'Nama Pegawai harus dipilih' }), { status: 400, headers: corsHeaders });
+          }
+
+          const user = await env.DB.prepare('SELECT nama_user, password, role FROM users WHERE LOWER(nama_user) = LOWER(?)').bind(nama_user).first();
+          if (!user) {
+            return new Response(JSON.stringify({ success: false, error: `Pegawai ${nama_user} tidak terdaftar di database` }), { status: 401, headers: corsHeaders });
+          }
+
+          const dbPassword = (user.password || '').trim();
+          if (dbPassword !== '') {
+            if (!password || password !== dbPassword) {
+              return new Response(JSON.stringify({ success: false, error: 'Kata sandi yang Anda masukkan salah' }), { status: 401, headers: corsHeaders });
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            user: {
+              nama_user: user.nama_user,
+              role: user.role || 'Petugas'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 3. POST /api/enco/sync-pasien (Kirim / Rekam Pasien ASIK dari ENCO)
+      if (url.pathname === '/api/enco/sync-pasien' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const list = Array.isArray(body) ? body : [body];
+          if (list.length === 0) {
+            return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
+          }
+
+          const now = new Date().toISOString();
+          const todayDate = now.split('T')[0];
+
+          const stmt = env.DB.prepare(`
+            INSERT INTO enco_pasien (
+              id, nik, nama, tanggal_lahir, jenis_kelamin, no_tiket, kategori,
+              status_pendaftaran, status_pelayanan, tanggal_daftar, tanggal_pelayanan,
+              petugas_enco, faskes, raw_details, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(nik) DO UPDATE SET
+              nama = excluded.nama,
+              tanggal_lahir = CASE WHEN excluded.tanggal_lahir != '' THEN excluded.tanggal_lahir ELSE enco_pasien.tanggal_lahir END,
+              jenis_kelamin = CASE WHEN excluded.jenis_kelamin != '' THEN excluded.jenis_kelamin ELSE enco_pasien.jenis_kelamin END,
+              no_tiket = CASE WHEN excluded.no_tiket != '' THEN excluded.no_tiket ELSE enco_pasien.no_tiket END,
+              kategori = CASE WHEN excluded.kategori != '' THEN excluded.kategori ELSE enco_pasien.kategori END,
+              status_pendaftaran = CASE WHEN excluded.status_pendaftaran != '' THEN excluded.status_pendaftaran ELSE enco_pasien.status_pendaftaran END,
+              status_pelayanan = CASE 
+                WHEN excluded.status_pelayanan IS NOT NULL AND excluded.status_pelayanan != '' AND excluded.status_pelayanan != 'Belum Pelayanan'
+                THEN excluded.status_pelayanan 
+                ELSE enco_pasien.status_pelayanan 
+              END,
+              tanggal_daftar = CASE WHEN excluded.tanggal_daftar != '' THEN excluded.tanggal_daftar ELSE enco_pasien.tanggal_daftar END,
+              tanggal_pelayanan = CASE WHEN excluded.tanggal_pelayanan != '' THEN excluded.tanggal_pelayanan ELSE enco_pasien.tanggal_pelayanan END,
+              petugas_enco = excluded.petugas_enco,
+              faskes = CASE WHEN excluded.faskes != '' THEN excluded.faskes ELSE enco_pasien.faskes END,
+              raw_details = CASE WHEN excluded.raw_details != '' THEN excluded.raw_details ELSE enco_pasien.raw_details END,
+              updated_at = excluded.updated_at
+          `);
+
+          const statements = list.map((p, idx) => {
+            const rawNik = String(p.nik || '').trim();
+            const id = p.id || `enco_${rawNik}_${Date.now()}_${idx}`;
+            const details = typeof p.raw_details === 'object' ? JSON.stringify(p.raw_details) : (p.raw_details || '');
+
+            return stmt.bind(
+              id,
+              rawNik,
+              String(p.nama || '').trim(),
+              String(p.tanggal_lahir || p.dob || '').trim(),
+              String(p.jenis_kelamin || p.jk || '').trim(),
+              String(p.no_tiket || p.nomor_tiket || '').trim(),
+              String(p.kategori || 'Umum').trim(),
+              String(p.status_pendaftaran || 'Sudah Terdaftar').trim(),
+              String(p.status_pelayanan || 'Belum Pelayanan').trim(),
+              String(p.tanggal_daftar || todayDate).trim(),
+              String(p.tanggal_pelayanan || (p.status_pelayanan === 'Selesai Pelayanan' ? todayDate : '')).trim(),
+              String(p.petugas_enco || p.petugas || 'Petugas').trim(),
+              String(p.faskes || 'Puskesmas Banjaran Kota').trim(),
+              details,
+              now,
+              now
+            );
+          });
+
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: list.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 4. POST /api/enco/sync-log (Kirim Log Riwayat Otomasi ENCO)
+      if (url.pathname === '/api/enco/sync-log' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const now = new Date().toISOString();
+          await env.DB.prepare(`
+            INSERT INTO enco_logs (
+              petugas, jenis_kegiatan, total_pasien, jumlah_berhasil,
+              jumlah_terdaftar, jumlah_gagal, status, keterangan, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            body.petugas || 'Petugas',
+            body.jenis_kegiatan || 'Pendaftaran',
+            Number(body.total_pasien) || 0,
+            Number(body.jumlah_berhasil) || 0,
+            Number(body.jumlah_terdaftar) || 0,
+            Number(body.jumlah_gagal) || 0,
+            body.status || 'Selesai',
+            body.keterangan || '',
+            now
+          ).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 5. GET /api/enco/records (Data Pasien ENCO untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/records' && request.method === 'GET') {
+        try {
+          const search = url.searchParams.get('search') || '';
+          const statusPendaftaran = url.searchParams.get('status_pendaftaran') || '';
+          const statusPelayanan = url.searchParams.get('status_pelayanan') || '';
+          const petugas = url.searchParams.get('petugas') || '';
+          const tanggal = url.searchParams.get('tanggal') || '';
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+          let whereClause = 'WHERE 1=1';
+          const params = [];
+
+          if (search) {
+            whereClause += ' AND (nik LIKE ? OR LOWER(nama) LIKE ? OR LOWER(no_tiket) LIKE ?)';
+            const s = `%${search.toLowerCase()}%`;
+            params.push(s, s, s);
+          }
+          if (statusPendaftaran) {
+            whereClause += ' AND status_pendaftaran = ?';
+            params.push(statusPendaftaran);
+          }
+          if (statusPelayanan) {
+            whereClause += ' AND status_pelayanan = ?';
+            params.push(statusPelayanan);
+          }
+          if (petugas) {
+            whereClause += ' AND petugas_enco = ?';
+            params.push(petugas);
+          }
+          if (tanggal) {
+            whereClause += ' AND (tanggal_daftar = ? OR tanggal_pelayanan = ?)';
+            params.push(tanggal, tanggal);
+          }
+
+          const countRes = await env.DB.prepare(`SELECT COUNT(*) as total FROM enco_pasien ${whereClause}`).bind(...params).first();
+          const total = countRes ? countRes.total : 0;
+
+          const dataParams = [...params, limit, offset];
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM enco_pasien 
+            ${whereClause} 
+            ORDER BY updated_at DESC, created_at DESC 
+            LIMIT ? OFFSET ?
+          `).bind(...dataParams).all();
+
+          return new Response(JSON.stringify({
+            success: true,
+            total,
+            limit,
+            offset,
+            data: results || []
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 6. GET /api/enco/logs (Log Riwayat Otomasi untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/logs' && request.method === 'GET') {
+        try {
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const { results } = await env.DB.prepare('SELECT * FROM enco_logs ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 7. GET /api/enco/stats (Statistik Ringkasan ENCO)
+      if (url.pathname === '/api/enco/stats' && request.method === 'GET') {
+        try {
+          const totalPasien = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_pasien').first();
+          const terdaftar = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pendaftaran LIKE '%Terdaftar%'").first();
+          const selesaiLayanan = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pelayanan = 'Selesai Pelayanan'").first();
+          const totalLogs = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_logs').first();
+          const lastLog = await env.DB.prepare('SELECT petugas, created_at FROM enco_logs ORDER BY created_at DESC LIMIT 1').first();
+
+          return new Response(JSON.stringify({
+            success: true,
+            stats: {
+              total_pasien: totalPasien?.c || 0,
+              total_terdaftar: terdaftar?.c || 0,
+              total_selesai_layanan: selesaiLayanan?.c || 0,
+              total_logs: totalLogs?.c || 0,
+              last_petugas: lastLog?.petugas || '-',
+              last_active: lastLog?.created_at || '-'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 8. DELETE /api/enco/delete (Hapus Data / Log ENCO)
+      if (url.pathname === '/api/enco/delete' && (request.method === 'DELETE' || request.method === 'POST')) {
+        try {
+          const type = url.searchParams.get('type') || 'pasien';
+          const id = url.searchParams.get('id');
+
+          if (type === 'all_records') {
+            await env.DB.prepare('DELETE FROM enco_pasien').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua rekam pasien ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (type === 'all_logs') {
+            await env.DB.prepare('DELETE FROM enco_logs').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua log aktivitas ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (id) {
+            if (type === 'log') {
+              await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(id).run();
+            } else {
+              await env.DB.prepare('DELETE FROM enco_pasien WHERE id = ? OR nik = ?').bind(id, id).run();
+            }
+            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          }
+          return new Response(JSON.stringify({ success: false, error: 'Parameter id dibutuhkan' }), { status: 400, headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
     // 4.2 ROUTE: /api/master-posyandu (Pengelolaan Master Data Posyandu: Tambah, Edit, Hapus, Password & Akses)
     if (url.pathname === '/api/master-posyandu' || url.pathname.startsWith('/api/master-posyandu/')) {
       if (!env.DB) {
@@ -1152,6 +1792,326 @@ export default {
       }
     }
 
+    // ====================================================================
+    // ROUTE: /api/enco/* (INTEGRASI EXTENSION ENCO AI & ASSETS/LOGS)
+    // ====================================================================
+    if (url.pathname.startsWith('/api/enco')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+
+      // Ensure ENCO tables exist
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_pasien (
+            id TEXT PRIMARY KEY,
+            nik TEXT NOT NULL UNIQUE,
+            nama TEXT NOT NULL,
+            tanggal_lahir TEXT,
+            jenis_kelamin TEXT,
+            no_tiket TEXT,
+            kategori TEXT DEFAULT 'Umum',
+            status_pendaftaran TEXT DEFAULT 'Sudah Terdaftar',
+            status_pelayanan TEXT DEFAULT 'Belum Pelayanan',
+            tanggal_daftar TEXT,
+            tanggal_pelayanan TEXT,
+            petugas_enco TEXT DEFAULT 'Petugas',
+            faskes TEXT DEFAULT 'Puskesmas Banjaran Kota',
+            raw_details TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            petugas TEXT NOT NULL,
+            jenis_kegiatan TEXT NOT NULL,
+            total_pasien INTEGER DEFAULT 0,
+            jumlah_berhasil INTEGER DEFAULT 0,
+            jumlah_terdaftar INTEGER DEFAULT 0,
+            jumlah_gagal INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Selesai',
+            keterangan TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (_) {}
+
+      // 1. GET /api/enco/users (List User Petugas Puskesmas untuk Dropdown Login ENCO)
+      if (url.pathname === '/api/enco/users' && request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare(`
+            SELECT nama_user, role, 
+                   CASE WHEN password IS NOT NULL AND password != '' THEN 1 ELSE 0 END as need_password
+            FROM users 
+            ORDER BY id ASC
+          `).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 2. POST /api/enco/login (Verifikasi Login Ekstensi ENCO)
+      if (url.pathname === '/api/enco/login' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nama_user = (body.nama_user || body.username || '').trim();
+          const password = (body.password || '').trim();
+
+          if (!nama_user) {
+            return new Response(JSON.stringify({ success: false, error: 'Nama Pegawai harus dipilih' }), { status: 400, headers: corsHeaders });
+          }
+
+          const user = await env.DB.prepare('SELECT nama_user, password, role FROM users WHERE LOWER(nama_user) = LOWER(?)').bind(nama_user).first();
+          if (!user) {
+            return new Response(JSON.stringify({ success: false, error: `Pegawai ${nama_user} tidak terdaftar di database` }), { status: 401, headers: corsHeaders });
+          }
+
+          const dbPassword = (user.password || '').trim();
+          if (dbPassword !== '') {
+            if (!password || password !== dbPassword) {
+              return new Response(JSON.stringify({ success: false, error: 'Kata sandi yang Anda masukkan salah' }), { status: 401, headers: corsHeaders });
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            user: {
+              nama_user: user.nama_user,
+              role: user.role || 'Petugas'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 3. POST /api/enco/sync-pasien (Kirim / Rekam Pasien ASIK dari ENCO)
+      if (url.pathname === '/api/enco/sync-pasien' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const list = Array.isArray(body) ? body : [body];
+          if (list.length === 0) {
+            return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
+          }
+
+          const now = new Date().toISOString();
+          const todayDate = now.split('T')[0];
+
+          const stmt = env.DB.prepare(`
+            INSERT INTO enco_pasien (
+              id, nik, nama, tanggal_lahir, jenis_kelamin, no_tiket, kategori,
+              status_pendaftaran, status_pelayanan, tanggal_daftar, tanggal_pelayanan,
+              petugas_enco, faskes, raw_details, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(nik) DO UPDATE SET
+              nama = excluded.nama,
+              tanggal_lahir = CASE WHEN excluded.tanggal_lahir != '' THEN excluded.tanggal_lahir ELSE enco_pasien.tanggal_lahir END,
+              jenis_kelamin = CASE WHEN excluded.jenis_kelamin != '' THEN excluded.jenis_kelamin ELSE enco_pasien.jenis_kelamin END,
+              no_tiket = CASE WHEN excluded.no_tiket != '' THEN excluded.no_tiket ELSE enco_pasien.no_tiket END,
+              kategori = CASE WHEN excluded.kategori != '' THEN excluded.kategori ELSE enco_pasien.kategori END,
+              status_pendaftaran = CASE WHEN excluded.status_pendaftaran != '' THEN excluded.status_pendaftaran ELSE enco_pasien.status_pendaftaran END,
+              status_pelayanan = CASE 
+                WHEN excluded.status_pelayanan IS NOT NULL AND excluded.status_pelayanan != '' AND excluded.status_pelayanan != 'Belum Pelayanan'
+                THEN excluded.status_pelayanan 
+                ELSE enco_pasien.status_pelayanan 
+              END,
+              tanggal_daftar = CASE WHEN excluded.tanggal_daftar != '' THEN excluded.tanggal_daftar ELSE enco_pasien.tanggal_daftar END,
+              tanggal_pelayanan = CASE WHEN excluded.tanggal_pelayanan != '' THEN excluded.tanggal_pelayanan ELSE enco_pasien.tanggal_pelayanan END,
+              petugas_enco = excluded.petugas_enco,
+              faskes = CASE WHEN excluded.faskes != '' THEN excluded.faskes ELSE enco_pasien.faskes END,
+              raw_details = CASE WHEN excluded.raw_details != '' THEN excluded.raw_details ELSE enco_pasien.raw_details END,
+              updated_at = excluded.updated_at
+          `);
+
+          const statements = list.map((p, idx) => {
+            const rawNik = String(p.nik || '').trim();
+            const id = p.id || `enco_${rawNik}_${Date.now()}_${idx}`;
+            const details = typeof p.raw_details === 'object' ? JSON.stringify(p.raw_details) : (p.raw_details || '');
+
+            return stmt.bind(
+              id,
+              rawNik,
+              String(p.nama || '').trim(),
+              String(p.tanggal_lahir || p.dob || '').trim(),
+              String(p.jenis_kelamin || p.jk || '').trim(),
+              String(p.no_tiket || p.nomor_tiket || '').trim(),
+              String(p.kategori || 'Umum').trim(),
+              String(p.status_pendaftaran || 'Sudah Terdaftar').trim(),
+              String(p.status_pelayanan || 'Belum Pelayanan').trim(),
+              String(p.tanggal_daftar || todayDate).trim(),
+              String(p.tanggal_pelayanan || (p.status_pelayanan === 'Selesai Pelayanan' ? todayDate : '')).trim(),
+              String(p.petugas_enco || p.petugas || 'Petugas').trim(),
+              String(p.faskes || 'Puskesmas Banjaran Kota').trim(),
+              details,
+              now,
+              now
+            );
+          });
+
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: list.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 4. POST /api/enco/sync-log (Kirim Log Riwayat Otomasi ENCO)
+      if (url.pathname === '/api/enco/sync-log' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const now = new Date().toISOString();
+          await env.DB.prepare(`
+            INSERT INTO enco_logs (
+              petugas, jenis_kegiatan, total_pasien, jumlah_berhasil,
+              jumlah_terdaftar, jumlah_gagal, status, keterangan, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            body.petugas || 'Petugas',
+            body.jenis_kegiatan || 'Pendaftaran',
+            Number(body.total_pasien) || 0,
+            Number(body.jumlah_berhasil) || 0,
+            Number(body.jumlah_terdaftar) || 0,
+            Number(body.jumlah_gagal) || 0,
+            body.status || 'Selesai',
+            body.keterangan || '',
+            now
+          ).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 5. GET /api/enco/records (Data Pasien ENCO untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/records' && request.method === 'GET') {
+        try {
+          const search = url.searchParams.get('search') || '';
+          const statusPendaftaran = url.searchParams.get('status_pendaftaran') || '';
+          const statusPelayanan = url.searchParams.get('status_pelayanan') || '';
+          const petugas = url.searchParams.get('petugas') || '';
+          const tanggal = url.searchParams.get('tanggal') || '';
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+          let whereClause = 'WHERE 1=1';
+          const params = [];
+
+          if (search) {
+            whereClause += ' AND (nik LIKE ? OR LOWER(nama) LIKE ? OR LOWER(no_tiket) LIKE ?)';
+            const s = `%${search.toLowerCase()}%`;
+            params.push(s, s, s);
+          }
+          if (statusPendaftaran) {
+            whereClause += ' AND status_pendaftaran = ?';
+            params.push(statusPendaftaran);
+          }
+          if (statusPelayanan) {
+            whereClause += ' AND status_pelayanan = ?';
+            params.push(statusPelayanan);
+          }
+          if (petugas) {
+            whereClause += ' AND petugas_enco = ?';
+            params.push(petugas);
+          }
+          if (tanggal) {
+            whereClause += ' AND (tanggal_daftar = ? OR tanggal_pelayanan = ?)';
+            params.push(tanggal, tanggal);
+          }
+
+          const countRes = await env.DB.prepare(`SELECT COUNT(*) as total FROM enco_pasien ${whereClause}`).bind(...params).first();
+          const total = countRes ? countRes.total : 0;
+
+          const dataParams = [...params, limit, offset];
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM enco_pasien 
+            ${whereClause} 
+            ORDER BY updated_at DESC, created_at DESC 
+            LIMIT ? OFFSET ?
+          `).bind(...dataParams).all();
+
+          return new Response(JSON.stringify({
+            success: true,
+            total,
+            limit,
+            offset,
+            data: results || []
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 6. GET /api/enco/logs (Log Riwayat Otomasi untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/logs' && request.method === 'GET') {
+        try {
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const { results } = await env.DB.prepare('SELECT * FROM enco_logs ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 7. GET /api/enco/stats (Statistik Ringkasan ENCO)
+      if (url.pathname === '/api/enco/stats' && request.method === 'GET') {
+        try {
+          const totalPasien = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_pasien').first();
+          const terdaftar = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pendaftaran LIKE '%Terdaftar%'").first();
+          const selesaiLayanan = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pelayanan = 'Selesai Pelayanan'").first();
+          const totalLogs = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_logs').first();
+          const lastLog = await env.DB.prepare('SELECT petugas, created_at FROM enco_logs ORDER BY created_at DESC LIMIT 1').first();
+
+          return new Response(JSON.stringify({
+            success: true,
+            stats: {
+              total_pasien: totalPasien?.c || 0,
+              total_terdaftar: terdaftar?.c || 0,
+              total_selesai_layanan: selesaiLayanan?.c || 0,
+              total_logs: totalLogs?.c || 0,
+              last_petugas: lastLog?.petugas || '-',
+              last_active: lastLog?.created_at || '-'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 8. DELETE /api/enco/delete (Hapus Data / Log ENCO)
+      if (url.pathname === '/api/enco/delete' && (request.method === 'DELETE' || request.method === 'POST')) {
+        try {
+          const type = url.searchParams.get('type') || 'pasien';
+          const id = url.searchParams.get('id');
+
+          if (type === 'all_records') {
+            await env.DB.prepare('DELETE FROM enco_pasien').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua rekam pasien ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (type === 'all_logs') {
+            await env.DB.prepare('DELETE FROM enco_logs').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua log aktivitas ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (id) {
+            if (type === 'log') {
+              await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(id).run();
+            } else {
+              await env.DB.prepare('DELETE FROM enco_pasien WHERE id = ? OR nik = ?').bind(id, id).run();
+            }
+            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          }
+          return new Response(JSON.stringify({ success: false, error: 'Parameter id dibutuhkan' }), { status: 400, headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
     // 4. ROUTE: /api/recycle
     if (url.pathname === '/api/recycle' || url.pathname.startsWith('/api/recycle/')) {
       if (!env.DB) {
@@ -1246,6 +2206,326 @@ export default {
       }
     }
 
+    // ====================================================================
+    // ROUTE: /api/enco/* (INTEGRASI EXTENSION ENCO AI & ASSETS/LOGS)
+    // ====================================================================
+    if (url.pathname.startsWith('/api/enco')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+
+      // Ensure ENCO tables exist
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_pasien (
+            id TEXT PRIMARY KEY,
+            nik TEXT NOT NULL UNIQUE,
+            nama TEXT NOT NULL,
+            tanggal_lahir TEXT,
+            jenis_kelamin TEXT,
+            no_tiket TEXT,
+            kategori TEXT DEFAULT 'Umum',
+            status_pendaftaran TEXT DEFAULT 'Sudah Terdaftar',
+            status_pelayanan TEXT DEFAULT 'Belum Pelayanan',
+            tanggal_daftar TEXT,
+            tanggal_pelayanan TEXT,
+            petugas_enco TEXT DEFAULT 'Petugas',
+            faskes TEXT DEFAULT 'Puskesmas Banjaran Kota',
+            raw_details TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            petugas TEXT NOT NULL,
+            jenis_kegiatan TEXT NOT NULL,
+            total_pasien INTEGER DEFAULT 0,
+            jumlah_berhasil INTEGER DEFAULT 0,
+            jumlah_terdaftar INTEGER DEFAULT 0,
+            jumlah_gagal INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Selesai',
+            keterangan TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (_) {}
+
+      // 1. GET /api/enco/users (List User Petugas Puskesmas untuk Dropdown Login ENCO)
+      if (url.pathname === '/api/enco/users' && request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare(`
+            SELECT nama_user, role, 
+                   CASE WHEN password IS NOT NULL AND password != '' THEN 1 ELSE 0 END as need_password
+            FROM users 
+            ORDER BY id ASC
+          `).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 2. POST /api/enco/login (Verifikasi Login Ekstensi ENCO)
+      if (url.pathname === '/api/enco/login' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nama_user = (body.nama_user || body.username || '').trim();
+          const password = (body.password || '').trim();
+
+          if (!nama_user) {
+            return new Response(JSON.stringify({ success: false, error: 'Nama Pegawai harus dipilih' }), { status: 400, headers: corsHeaders });
+          }
+
+          const user = await env.DB.prepare('SELECT nama_user, password, role FROM users WHERE LOWER(nama_user) = LOWER(?)').bind(nama_user).first();
+          if (!user) {
+            return new Response(JSON.stringify({ success: false, error: `Pegawai ${nama_user} tidak terdaftar di database` }), { status: 401, headers: corsHeaders });
+          }
+
+          const dbPassword = (user.password || '').trim();
+          if (dbPassword !== '') {
+            if (!password || password !== dbPassword) {
+              return new Response(JSON.stringify({ success: false, error: 'Kata sandi yang Anda masukkan salah' }), { status: 401, headers: corsHeaders });
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            user: {
+              nama_user: user.nama_user,
+              role: user.role || 'Petugas'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 3. POST /api/enco/sync-pasien (Kirim / Rekam Pasien ASIK dari ENCO)
+      if (url.pathname === '/api/enco/sync-pasien' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const list = Array.isArray(body) ? body : [body];
+          if (list.length === 0) {
+            return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
+          }
+
+          const now = new Date().toISOString();
+          const todayDate = now.split('T')[0];
+
+          const stmt = env.DB.prepare(`
+            INSERT INTO enco_pasien (
+              id, nik, nama, tanggal_lahir, jenis_kelamin, no_tiket, kategori,
+              status_pendaftaran, status_pelayanan, tanggal_daftar, tanggal_pelayanan,
+              petugas_enco, faskes, raw_details, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(nik) DO UPDATE SET
+              nama = excluded.nama,
+              tanggal_lahir = CASE WHEN excluded.tanggal_lahir != '' THEN excluded.tanggal_lahir ELSE enco_pasien.tanggal_lahir END,
+              jenis_kelamin = CASE WHEN excluded.jenis_kelamin != '' THEN excluded.jenis_kelamin ELSE enco_pasien.jenis_kelamin END,
+              no_tiket = CASE WHEN excluded.no_tiket != '' THEN excluded.no_tiket ELSE enco_pasien.no_tiket END,
+              kategori = CASE WHEN excluded.kategori != '' THEN excluded.kategori ELSE enco_pasien.kategori END,
+              status_pendaftaran = CASE WHEN excluded.status_pendaftaran != '' THEN excluded.status_pendaftaran ELSE enco_pasien.status_pendaftaran END,
+              status_pelayanan = CASE 
+                WHEN excluded.status_pelayanan IS NOT NULL AND excluded.status_pelayanan != '' AND excluded.status_pelayanan != 'Belum Pelayanan'
+                THEN excluded.status_pelayanan 
+                ELSE enco_pasien.status_pelayanan 
+              END,
+              tanggal_daftar = CASE WHEN excluded.tanggal_daftar != '' THEN excluded.tanggal_daftar ELSE enco_pasien.tanggal_daftar END,
+              tanggal_pelayanan = CASE WHEN excluded.tanggal_pelayanan != '' THEN excluded.tanggal_pelayanan ELSE enco_pasien.tanggal_pelayanan END,
+              petugas_enco = excluded.petugas_enco,
+              faskes = CASE WHEN excluded.faskes != '' THEN excluded.faskes ELSE enco_pasien.faskes END,
+              raw_details = CASE WHEN excluded.raw_details != '' THEN excluded.raw_details ELSE enco_pasien.raw_details END,
+              updated_at = excluded.updated_at
+          `);
+
+          const statements = list.map((p, idx) => {
+            const rawNik = String(p.nik || '').trim();
+            const id = p.id || `enco_${rawNik}_${Date.now()}_${idx}`;
+            const details = typeof p.raw_details === 'object' ? JSON.stringify(p.raw_details) : (p.raw_details || '');
+
+            return stmt.bind(
+              id,
+              rawNik,
+              String(p.nama || '').trim(),
+              String(p.tanggal_lahir || p.dob || '').trim(),
+              String(p.jenis_kelamin || p.jk || '').trim(),
+              String(p.no_tiket || p.nomor_tiket || '').trim(),
+              String(p.kategori || 'Umum').trim(),
+              String(p.status_pendaftaran || 'Sudah Terdaftar').trim(),
+              String(p.status_pelayanan || 'Belum Pelayanan').trim(),
+              String(p.tanggal_daftar || todayDate).trim(),
+              String(p.tanggal_pelayanan || (p.status_pelayanan === 'Selesai Pelayanan' ? todayDate : '')).trim(),
+              String(p.petugas_enco || p.petugas || 'Petugas').trim(),
+              String(p.faskes || 'Puskesmas Banjaran Kota').trim(),
+              details,
+              now,
+              now
+            );
+          });
+
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: list.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 4. POST /api/enco/sync-log (Kirim Log Riwayat Otomasi ENCO)
+      if (url.pathname === '/api/enco/sync-log' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const now = new Date().toISOString();
+          await env.DB.prepare(`
+            INSERT INTO enco_logs (
+              petugas, jenis_kegiatan, total_pasien, jumlah_berhasil,
+              jumlah_terdaftar, jumlah_gagal, status, keterangan, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            body.petugas || 'Petugas',
+            body.jenis_kegiatan || 'Pendaftaran',
+            Number(body.total_pasien) || 0,
+            Number(body.jumlah_berhasil) || 0,
+            Number(body.jumlah_terdaftar) || 0,
+            Number(body.jumlah_gagal) || 0,
+            body.status || 'Selesai',
+            body.keterangan || '',
+            now
+          ).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 5. GET /api/enco/records (Data Pasien ENCO untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/records' && request.method === 'GET') {
+        try {
+          const search = url.searchParams.get('search') || '';
+          const statusPendaftaran = url.searchParams.get('status_pendaftaran') || '';
+          const statusPelayanan = url.searchParams.get('status_pelayanan') || '';
+          const petugas = url.searchParams.get('petugas') || '';
+          const tanggal = url.searchParams.get('tanggal') || '';
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+          let whereClause = 'WHERE 1=1';
+          const params = [];
+
+          if (search) {
+            whereClause += ' AND (nik LIKE ? OR LOWER(nama) LIKE ? OR LOWER(no_tiket) LIKE ?)';
+            const s = `%${search.toLowerCase()}%`;
+            params.push(s, s, s);
+          }
+          if (statusPendaftaran) {
+            whereClause += ' AND status_pendaftaran = ?';
+            params.push(statusPendaftaran);
+          }
+          if (statusPelayanan) {
+            whereClause += ' AND status_pelayanan = ?';
+            params.push(statusPelayanan);
+          }
+          if (petugas) {
+            whereClause += ' AND petugas_enco = ?';
+            params.push(petugas);
+          }
+          if (tanggal) {
+            whereClause += ' AND (tanggal_daftar = ? OR tanggal_pelayanan = ?)';
+            params.push(tanggal, tanggal);
+          }
+
+          const countRes = await env.DB.prepare(`SELECT COUNT(*) as total FROM enco_pasien ${whereClause}`).bind(...params).first();
+          const total = countRes ? countRes.total : 0;
+
+          const dataParams = [...params, limit, offset];
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM enco_pasien 
+            ${whereClause} 
+            ORDER BY updated_at DESC, created_at DESC 
+            LIMIT ? OFFSET ?
+          `).bind(...dataParams).all();
+
+          return new Response(JSON.stringify({
+            success: true,
+            total,
+            limit,
+            offset,
+            data: results || []
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 6. GET /api/enco/logs (Log Riwayat Otomasi untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/logs' && request.method === 'GET') {
+        try {
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const { results } = await env.DB.prepare('SELECT * FROM enco_logs ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 7. GET /api/enco/stats (Statistik Ringkasan ENCO)
+      if (url.pathname === '/api/enco/stats' && request.method === 'GET') {
+        try {
+          const totalPasien = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_pasien').first();
+          const terdaftar = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pendaftaran LIKE '%Terdaftar%'").first();
+          const selesaiLayanan = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pelayanan = 'Selesai Pelayanan'").first();
+          const totalLogs = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_logs').first();
+          const lastLog = await env.DB.prepare('SELECT petugas, created_at FROM enco_logs ORDER BY created_at DESC LIMIT 1').first();
+
+          return new Response(JSON.stringify({
+            success: true,
+            stats: {
+              total_pasien: totalPasien?.c || 0,
+              total_terdaftar: terdaftar?.c || 0,
+              total_selesai_layanan: selesaiLayanan?.c || 0,
+              total_logs: totalLogs?.c || 0,
+              last_petugas: lastLog?.petugas || '-',
+              last_active: lastLog?.created_at || '-'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 8. DELETE /api/enco/delete (Hapus Data / Log ENCO)
+      if (url.pathname === '/api/enco/delete' && (request.method === 'DELETE' || request.method === 'POST')) {
+        try {
+          const type = url.searchParams.get('type') || 'pasien';
+          const id = url.searchParams.get('id');
+
+          if (type === 'all_records') {
+            await env.DB.prepare('DELETE FROM enco_pasien').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua rekam pasien ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (type === 'all_logs') {
+            await env.DB.prepare('DELETE FROM enco_logs').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua log aktivitas ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (id) {
+            if (type === 'log') {
+              await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(id).run();
+            } else {
+              await env.DB.prepare('DELETE FROM enco_pasien WHERE id = ? OR nik = ?').bind(id, id).run();
+            }
+            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          }
+          return new Response(JSON.stringify({ success: false, error: 'Parameter id dibutuhkan' }), { status: 400, headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
     // 5. ROUTE: /api/announcement
     if (url.pathname === '/api/announcement' || url.pathname.startsWith('/api/announcement/')) {
       if (!env.DB) {
@@ -1285,6 +2565,326 @@ export default {
             body.active ? 1 : 0
           ).run();
           return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
+    // ====================================================================
+    // ROUTE: /api/enco/* (INTEGRASI EXTENSION ENCO AI & ASSETS/LOGS)
+    // ====================================================================
+    if (url.pathname.startsWith('/api/enco')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+
+      // Ensure ENCO tables exist
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_pasien (
+            id TEXT PRIMARY KEY,
+            nik TEXT NOT NULL UNIQUE,
+            nama TEXT NOT NULL,
+            tanggal_lahir TEXT,
+            jenis_kelamin TEXT,
+            no_tiket TEXT,
+            kategori TEXT DEFAULT 'Umum',
+            status_pendaftaran TEXT DEFAULT 'Sudah Terdaftar',
+            status_pelayanan TEXT DEFAULT 'Belum Pelayanan',
+            tanggal_daftar TEXT,
+            tanggal_pelayanan TEXT,
+            petugas_enco TEXT DEFAULT 'Petugas',
+            faskes TEXT DEFAULT 'Puskesmas Banjaran Kota',
+            raw_details TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            petugas TEXT NOT NULL,
+            jenis_kegiatan TEXT NOT NULL,
+            total_pasien INTEGER DEFAULT 0,
+            jumlah_berhasil INTEGER DEFAULT 0,
+            jumlah_terdaftar INTEGER DEFAULT 0,
+            jumlah_gagal INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Selesai',
+            keterangan TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (_) {}
+
+      // 1. GET /api/enco/users (List User Petugas Puskesmas untuk Dropdown Login ENCO)
+      if (url.pathname === '/api/enco/users' && request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare(`
+            SELECT nama_user, role, 
+                   CASE WHEN password IS NOT NULL AND password != '' THEN 1 ELSE 0 END as need_password
+            FROM users 
+            ORDER BY id ASC
+          `).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 2. POST /api/enco/login (Verifikasi Login Ekstensi ENCO)
+      if (url.pathname === '/api/enco/login' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nama_user = (body.nama_user || body.username || '').trim();
+          const password = (body.password || '').trim();
+
+          if (!nama_user) {
+            return new Response(JSON.stringify({ success: false, error: 'Nama Pegawai harus dipilih' }), { status: 400, headers: corsHeaders });
+          }
+
+          const user = await env.DB.prepare('SELECT nama_user, password, role FROM users WHERE LOWER(nama_user) = LOWER(?)').bind(nama_user).first();
+          if (!user) {
+            return new Response(JSON.stringify({ success: false, error: `Pegawai ${nama_user} tidak terdaftar di database` }), { status: 401, headers: corsHeaders });
+          }
+
+          const dbPassword = (user.password || '').trim();
+          if (dbPassword !== '') {
+            if (!password || password !== dbPassword) {
+              return new Response(JSON.stringify({ success: false, error: 'Kata sandi yang Anda masukkan salah' }), { status: 401, headers: corsHeaders });
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            user: {
+              nama_user: user.nama_user,
+              role: user.role || 'Petugas'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 3. POST /api/enco/sync-pasien (Kirim / Rekam Pasien ASIK dari ENCO)
+      if (url.pathname === '/api/enco/sync-pasien' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const list = Array.isArray(body) ? body : [body];
+          if (list.length === 0) {
+            return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
+          }
+
+          const now = new Date().toISOString();
+          const todayDate = now.split('T')[0];
+
+          const stmt = env.DB.prepare(`
+            INSERT INTO enco_pasien (
+              id, nik, nama, tanggal_lahir, jenis_kelamin, no_tiket, kategori,
+              status_pendaftaran, status_pelayanan, tanggal_daftar, tanggal_pelayanan,
+              petugas_enco, faskes, raw_details, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(nik) DO UPDATE SET
+              nama = excluded.nama,
+              tanggal_lahir = CASE WHEN excluded.tanggal_lahir != '' THEN excluded.tanggal_lahir ELSE enco_pasien.tanggal_lahir END,
+              jenis_kelamin = CASE WHEN excluded.jenis_kelamin != '' THEN excluded.jenis_kelamin ELSE enco_pasien.jenis_kelamin END,
+              no_tiket = CASE WHEN excluded.no_tiket != '' THEN excluded.no_tiket ELSE enco_pasien.no_tiket END,
+              kategori = CASE WHEN excluded.kategori != '' THEN excluded.kategori ELSE enco_pasien.kategori END,
+              status_pendaftaran = CASE WHEN excluded.status_pendaftaran != '' THEN excluded.status_pendaftaran ELSE enco_pasien.status_pendaftaran END,
+              status_pelayanan = CASE 
+                WHEN excluded.status_pelayanan IS NOT NULL AND excluded.status_pelayanan != '' AND excluded.status_pelayanan != 'Belum Pelayanan'
+                THEN excluded.status_pelayanan 
+                ELSE enco_pasien.status_pelayanan 
+              END,
+              tanggal_daftar = CASE WHEN excluded.tanggal_daftar != '' THEN excluded.tanggal_daftar ELSE enco_pasien.tanggal_daftar END,
+              tanggal_pelayanan = CASE WHEN excluded.tanggal_pelayanan != '' THEN excluded.tanggal_pelayanan ELSE enco_pasien.tanggal_pelayanan END,
+              petugas_enco = excluded.petugas_enco,
+              faskes = CASE WHEN excluded.faskes != '' THEN excluded.faskes ELSE enco_pasien.faskes END,
+              raw_details = CASE WHEN excluded.raw_details != '' THEN excluded.raw_details ELSE enco_pasien.raw_details END,
+              updated_at = excluded.updated_at
+          `);
+
+          const statements = list.map((p, idx) => {
+            const rawNik = String(p.nik || '').trim();
+            const id = p.id || `enco_${rawNik}_${Date.now()}_${idx}`;
+            const details = typeof p.raw_details === 'object' ? JSON.stringify(p.raw_details) : (p.raw_details || '');
+
+            return stmt.bind(
+              id,
+              rawNik,
+              String(p.nama || '').trim(),
+              String(p.tanggal_lahir || p.dob || '').trim(),
+              String(p.jenis_kelamin || p.jk || '').trim(),
+              String(p.no_tiket || p.nomor_tiket || '').trim(),
+              String(p.kategori || 'Umum').trim(),
+              String(p.status_pendaftaran || 'Sudah Terdaftar').trim(),
+              String(p.status_pelayanan || 'Belum Pelayanan').trim(),
+              String(p.tanggal_daftar || todayDate).trim(),
+              String(p.tanggal_pelayanan || (p.status_pelayanan === 'Selesai Pelayanan' ? todayDate : '')).trim(),
+              String(p.petugas_enco || p.petugas || 'Petugas').trim(),
+              String(p.faskes || 'Puskesmas Banjaran Kota').trim(),
+              details,
+              now,
+              now
+            );
+          });
+
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: list.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 4. POST /api/enco/sync-log (Kirim Log Riwayat Otomasi ENCO)
+      if (url.pathname === '/api/enco/sync-log' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const now = new Date().toISOString();
+          await env.DB.prepare(`
+            INSERT INTO enco_logs (
+              petugas, jenis_kegiatan, total_pasien, jumlah_berhasil,
+              jumlah_terdaftar, jumlah_gagal, status, keterangan, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            body.petugas || 'Petugas',
+            body.jenis_kegiatan || 'Pendaftaran',
+            Number(body.total_pasien) || 0,
+            Number(body.jumlah_berhasil) || 0,
+            Number(body.jumlah_terdaftar) || 0,
+            Number(body.jumlah_gagal) || 0,
+            body.status || 'Selesai',
+            body.keterangan || '',
+            now
+          ).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 5. GET /api/enco/records (Data Pasien ENCO untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/records' && request.method === 'GET') {
+        try {
+          const search = url.searchParams.get('search') || '';
+          const statusPendaftaran = url.searchParams.get('status_pendaftaran') || '';
+          const statusPelayanan = url.searchParams.get('status_pelayanan') || '';
+          const petugas = url.searchParams.get('petugas') || '';
+          const tanggal = url.searchParams.get('tanggal') || '';
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+          let whereClause = 'WHERE 1=1';
+          const params = [];
+
+          if (search) {
+            whereClause += ' AND (nik LIKE ? OR LOWER(nama) LIKE ? OR LOWER(no_tiket) LIKE ?)';
+            const s = `%${search.toLowerCase()}%`;
+            params.push(s, s, s);
+          }
+          if (statusPendaftaran) {
+            whereClause += ' AND status_pendaftaran = ?';
+            params.push(statusPendaftaran);
+          }
+          if (statusPelayanan) {
+            whereClause += ' AND status_pelayanan = ?';
+            params.push(statusPelayanan);
+          }
+          if (petugas) {
+            whereClause += ' AND petugas_enco = ?';
+            params.push(petugas);
+          }
+          if (tanggal) {
+            whereClause += ' AND (tanggal_daftar = ? OR tanggal_pelayanan = ?)';
+            params.push(tanggal, tanggal);
+          }
+
+          const countRes = await env.DB.prepare(`SELECT COUNT(*) as total FROM enco_pasien ${whereClause}`).bind(...params).first();
+          const total = countRes ? countRes.total : 0;
+
+          const dataParams = [...params, limit, offset];
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM enco_pasien 
+            ${whereClause} 
+            ORDER BY updated_at DESC, created_at DESC 
+            LIMIT ? OFFSET ?
+          `).bind(...dataParams).all();
+
+          return new Response(JSON.stringify({
+            success: true,
+            total,
+            limit,
+            offset,
+            data: results || []
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 6. GET /api/enco/logs (Log Riwayat Otomasi untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/logs' && request.method === 'GET') {
+        try {
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const { results } = await env.DB.prepare('SELECT * FROM enco_logs ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 7. GET /api/enco/stats (Statistik Ringkasan ENCO)
+      if (url.pathname === '/api/enco/stats' && request.method === 'GET') {
+        try {
+          const totalPasien = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_pasien').first();
+          const terdaftar = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pendaftaran LIKE '%Terdaftar%'").first();
+          const selesaiLayanan = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pelayanan = 'Selesai Pelayanan'").first();
+          const totalLogs = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_logs').first();
+          const lastLog = await env.DB.prepare('SELECT petugas, created_at FROM enco_logs ORDER BY created_at DESC LIMIT 1').first();
+
+          return new Response(JSON.stringify({
+            success: true,
+            stats: {
+              total_pasien: totalPasien?.c || 0,
+              total_terdaftar: terdaftar?.c || 0,
+              total_selesai_layanan: selesaiLayanan?.c || 0,
+              total_logs: totalLogs?.c || 0,
+              last_petugas: lastLog?.petugas || '-',
+              last_active: lastLog?.created_at || '-'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 8. DELETE /api/enco/delete (Hapus Data / Log ENCO)
+      if (url.pathname === '/api/enco/delete' && (request.method === 'DELETE' || request.method === 'POST')) {
+        try {
+          const type = url.searchParams.get('type') || 'pasien';
+          const id = url.searchParams.get('id');
+
+          if (type === 'all_records') {
+            await env.DB.prepare('DELETE FROM enco_pasien').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua rekam pasien ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (type === 'all_logs') {
+            await env.DB.prepare('DELETE FROM enco_logs').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua log aktivitas ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (id) {
+            if (type === 'log') {
+              await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(id).run();
+            } else {
+              await env.DB.prepare('DELETE FROM enco_pasien WHERE id = ? OR nik = ?').bind(id, id).run();
+            }
+            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          }
+          return new Response(JSON.stringify({ success: false, error: 'Parameter id dibutuhkan' }), { status: 400, headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
@@ -1418,6 +3018,326 @@ export default {
             await env.DB.batch(statements);
           }
           return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
+    // ====================================================================
+    // ROUTE: /api/enco/* (INTEGRASI EXTENSION ENCO AI & ASSETS/LOGS)
+    // ====================================================================
+    if (url.pathname.startsWith('/api/enco')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+
+      // Ensure ENCO tables exist
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_pasien (
+            id TEXT PRIMARY KEY,
+            nik TEXT NOT NULL UNIQUE,
+            nama TEXT NOT NULL,
+            tanggal_lahir TEXT,
+            jenis_kelamin TEXT,
+            no_tiket TEXT,
+            kategori TEXT DEFAULT 'Umum',
+            status_pendaftaran TEXT DEFAULT 'Sudah Terdaftar',
+            status_pelayanan TEXT DEFAULT 'Belum Pelayanan',
+            tanggal_daftar TEXT,
+            tanggal_pelayanan TEXT,
+            petugas_enco TEXT DEFAULT 'Petugas',
+            faskes TEXT DEFAULT 'Puskesmas Banjaran Kota',
+            raw_details TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            petugas TEXT NOT NULL,
+            jenis_kegiatan TEXT NOT NULL,
+            total_pasien INTEGER DEFAULT 0,
+            jumlah_berhasil INTEGER DEFAULT 0,
+            jumlah_terdaftar INTEGER DEFAULT 0,
+            jumlah_gagal INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Selesai',
+            keterangan TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (_) {}
+
+      // 1. GET /api/enco/users (List User Petugas Puskesmas untuk Dropdown Login ENCO)
+      if (url.pathname === '/api/enco/users' && request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare(`
+            SELECT nama_user, role, 
+                   CASE WHEN password IS NOT NULL AND password != '' THEN 1 ELSE 0 END as need_password
+            FROM users 
+            ORDER BY id ASC
+          `).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 2. POST /api/enco/login (Verifikasi Login Ekstensi ENCO)
+      if (url.pathname === '/api/enco/login' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nama_user = (body.nama_user || body.username || '').trim();
+          const password = (body.password || '').trim();
+
+          if (!nama_user) {
+            return new Response(JSON.stringify({ success: false, error: 'Nama Pegawai harus dipilih' }), { status: 400, headers: corsHeaders });
+          }
+
+          const user = await env.DB.prepare('SELECT nama_user, password, role FROM users WHERE LOWER(nama_user) = LOWER(?)').bind(nama_user).first();
+          if (!user) {
+            return new Response(JSON.stringify({ success: false, error: `Pegawai ${nama_user} tidak terdaftar di database` }), { status: 401, headers: corsHeaders });
+          }
+
+          const dbPassword = (user.password || '').trim();
+          if (dbPassword !== '') {
+            if (!password || password !== dbPassword) {
+              return new Response(JSON.stringify({ success: false, error: 'Kata sandi yang Anda masukkan salah' }), { status: 401, headers: corsHeaders });
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            user: {
+              nama_user: user.nama_user,
+              role: user.role || 'Petugas'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 3. POST /api/enco/sync-pasien (Kirim / Rekam Pasien ASIK dari ENCO)
+      if (url.pathname === '/api/enco/sync-pasien' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const list = Array.isArray(body) ? body : [body];
+          if (list.length === 0) {
+            return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
+          }
+
+          const now = new Date().toISOString();
+          const todayDate = now.split('T')[0];
+
+          const stmt = env.DB.prepare(`
+            INSERT INTO enco_pasien (
+              id, nik, nama, tanggal_lahir, jenis_kelamin, no_tiket, kategori,
+              status_pendaftaran, status_pelayanan, tanggal_daftar, tanggal_pelayanan,
+              petugas_enco, faskes, raw_details, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(nik) DO UPDATE SET
+              nama = excluded.nama,
+              tanggal_lahir = CASE WHEN excluded.tanggal_lahir != '' THEN excluded.tanggal_lahir ELSE enco_pasien.tanggal_lahir END,
+              jenis_kelamin = CASE WHEN excluded.jenis_kelamin != '' THEN excluded.jenis_kelamin ELSE enco_pasien.jenis_kelamin END,
+              no_tiket = CASE WHEN excluded.no_tiket != '' THEN excluded.no_tiket ELSE enco_pasien.no_tiket END,
+              kategori = CASE WHEN excluded.kategori != '' THEN excluded.kategori ELSE enco_pasien.kategori END,
+              status_pendaftaran = CASE WHEN excluded.status_pendaftaran != '' THEN excluded.status_pendaftaran ELSE enco_pasien.status_pendaftaran END,
+              status_pelayanan = CASE 
+                WHEN excluded.status_pelayanan IS NOT NULL AND excluded.status_pelayanan != '' AND excluded.status_pelayanan != 'Belum Pelayanan'
+                THEN excluded.status_pelayanan 
+                ELSE enco_pasien.status_pelayanan 
+              END,
+              tanggal_daftar = CASE WHEN excluded.tanggal_daftar != '' THEN excluded.tanggal_daftar ELSE enco_pasien.tanggal_daftar END,
+              tanggal_pelayanan = CASE WHEN excluded.tanggal_pelayanan != '' THEN excluded.tanggal_pelayanan ELSE enco_pasien.tanggal_pelayanan END,
+              petugas_enco = excluded.petugas_enco,
+              faskes = CASE WHEN excluded.faskes != '' THEN excluded.faskes ELSE enco_pasien.faskes END,
+              raw_details = CASE WHEN excluded.raw_details != '' THEN excluded.raw_details ELSE enco_pasien.raw_details END,
+              updated_at = excluded.updated_at
+          `);
+
+          const statements = list.map((p, idx) => {
+            const rawNik = String(p.nik || '').trim();
+            const id = p.id || `enco_${rawNik}_${Date.now()}_${idx}`;
+            const details = typeof p.raw_details === 'object' ? JSON.stringify(p.raw_details) : (p.raw_details || '');
+
+            return stmt.bind(
+              id,
+              rawNik,
+              String(p.nama || '').trim(),
+              String(p.tanggal_lahir || p.dob || '').trim(),
+              String(p.jenis_kelamin || p.jk || '').trim(),
+              String(p.no_tiket || p.nomor_tiket || '').trim(),
+              String(p.kategori || 'Umum').trim(),
+              String(p.status_pendaftaran || 'Sudah Terdaftar').trim(),
+              String(p.status_pelayanan || 'Belum Pelayanan').trim(),
+              String(p.tanggal_daftar || todayDate).trim(),
+              String(p.tanggal_pelayanan || (p.status_pelayanan === 'Selesai Pelayanan' ? todayDate : '')).trim(),
+              String(p.petugas_enco || p.petugas || 'Petugas').trim(),
+              String(p.faskes || 'Puskesmas Banjaran Kota').trim(),
+              details,
+              now,
+              now
+            );
+          });
+
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: list.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 4. POST /api/enco/sync-log (Kirim Log Riwayat Otomasi ENCO)
+      if (url.pathname === '/api/enco/sync-log' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const now = new Date().toISOString();
+          await env.DB.prepare(`
+            INSERT INTO enco_logs (
+              petugas, jenis_kegiatan, total_pasien, jumlah_berhasil,
+              jumlah_terdaftar, jumlah_gagal, status, keterangan, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            body.petugas || 'Petugas',
+            body.jenis_kegiatan || 'Pendaftaran',
+            Number(body.total_pasien) || 0,
+            Number(body.jumlah_berhasil) || 0,
+            Number(body.jumlah_terdaftar) || 0,
+            Number(body.jumlah_gagal) || 0,
+            body.status || 'Selesai',
+            body.keterangan || '',
+            now
+          ).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 5. GET /api/enco/records (Data Pasien ENCO untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/records' && request.method === 'GET') {
+        try {
+          const search = url.searchParams.get('search') || '';
+          const statusPendaftaran = url.searchParams.get('status_pendaftaran') || '';
+          const statusPelayanan = url.searchParams.get('status_pelayanan') || '';
+          const petugas = url.searchParams.get('petugas') || '';
+          const tanggal = url.searchParams.get('tanggal') || '';
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+          let whereClause = 'WHERE 1=1';
+          const params = [];
+
+          if (search) {
+            whereClause += ' AND (nik LIKE ? OR LOWER(nama) LIKE ? OR LOWER(no_tiket) LIKE ?)';
+            const s = `%${search.toLowerCase()}%`;
+            params.push(s, s, s);
+          }
+          if (statusPendaftaran) {
+            whereClause += ' AND status_pendaftaran = ?';
+            params.push(statusPendaftaran);
+          }
+          if (statusPelayanan) {
+            whereClause += ' AND status_pelayanan = ?';
+            params.push(statusPelayanan);
+          }
+          if (petugas) {
+            whereClause += ' AND petugas_enco = ?';
+            params.push(petugas);
+          }
+          if (tanggal) {
+            whereClause += ' AND (tanggal_daftar = ? OR tanggal_pelayanan = ?)';
+            params.push(tanggal, tanggal);
+          }
+
+          const countRes = await env.DB.prepare(`SELECT COUNT(*) as total FROM enco_pasien ${whereClause}`).bind(...params).first();
+          const total = countRes ? countRes.total : 0;
+
+          const dataParams = [...params, limit, offset];
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM enco_pasien 
+            ${whereClause} 
+            ORDER BY updated_at DESC, created_at DESC 
+            LIMIT ? OFFSET ?
+          `).bind(...dataParams).all();
+
+          return new Response(JSON.stringify({
+            success: true,
+            total,
+            limit,
+            offset,
+            data: results || []
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 6. GET /api/enco/logs (Log Riwayat Otomasi untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/logs' && request.method === 'GET') {
+        try {
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const { results } = await env.DB.prepare('SELECT * FROM enco_logs ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 7. GET /api/enco/stats (Statistik Ringkasan ENCO)
+      if (url.pathname === '/api/enco/stats' && request.method === 'GET') {
+        try {
+          const totalPasien = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_pasien').first();
+          const terdaftar = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pendaftaran LIKE '%Terdaftar%'").first();
+          const selesaiLayanan = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pelayanan = 'Selesai Pelayanan'").first();
+          const totalLogs = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_logs').first();
+          const lastLog = await env.DB.prepare('SELECT petugas, created_at FROM enco_logs ORDER BY created_at DESC LIMIT 1').first();
+
+          return new Response(JSON.stringify({
+            success: true,
+            stats: {
+              total_pasien: totalPasien?.c || 0,
+              total_terdaftar: terdaftar?.c || 0,
+              total_selesai_layanan: selesaiLayanan?.c || 0,
+              total_logs: totalLogs?.c || 0,
+              last_petugas: lastLog?.petugas || '-',
+              last_active: lastLog?.created_at || '-'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 8. DELETE /api/enco/delete (Hapus Data / Log ENCO)
+      if (url.pathname === '/api/enco/delete' && (request.method === 'DELETE' || request.method === 'POST')) {
+        try {
+          const type = url.searchParams.get('type') || 'pasien';
+          const id = url.searchParams.get('id');
+
+          if (type === 'all_records') {
+            await env.DB.prepare('DELETE FROM enco_pasien').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua rekam pasien ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (type === 'all_logs') {
+            await env.DB.prepare('DELETE FROM enco_logs').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua log aktivitas ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (id) {
+            if (type === 'log') {
+              await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(id).run();
+            } else {
+              await env.DB.prepare('DELETE FROM enco_pasien WHERE id = ? OR nik = ?').bind(id, id).run();
+            }
+            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          }
+          return new Response(JSON.stringify({ success: false, error: 'Parameter id dibutuhkan' }), { status: 400, headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
@@ -2113,6 +4033,647 @@ Saran Medis:`;
         }
       }
     }
+
+    // ====================================================================
+    // ROUTE: /api/enco/* (INTEGRASI EXTENSION ENCO AI & ASSETS/LOGS)
+    // ====================================================================
+    if (url.pathname.startsWith('/api/enco')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+
+      // Ensure ENCO tables exist
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_pasien (
+            id TEXT PRIMARY KEY,
+            nik TEXT NOT NULL UNIQUE,
+            nama TEXT NOT NULL,
+            tanggal_lahir TEXT,
+            jenis_kelamin TEXT,
+            no_tiket TEXT,
+            kategori TEXT DEFAULT 'Umum',
+            status_pendaftaran TEXT DEFAULT 'Sudah Terdaftar',
+            status_pelayanan TEXT DEFAULT 'Belum Pelayanan',
+            tanggal_daftar TEXT,
+            tanggal_pelayanan TEXT,
+            petugas_enco TEXT DEFAULT 'Petugas',
+            faskes TEXT DEFAULT 'Puskesmas Banjaran Kota',
+            raw_details TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            petugas TEXT NOT NULL,
+            jenis_kegiatan TEXT NOT NULL,
+            total_pasien INTEGER DEFAULT 0,
+            jumlah_berhasil INTEGER DEFAULT 0,
+            jumlah_terdaftar INTEGER DEFAULT 0,
+            jumlah_gagal INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Selesai',
+            keterangan TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (_) {}
+
+      // 1. GET /api/enco/users (List User Petugas Puskesmas untuk Dropdown Login ENCO)
+      if (url.pathname === '/api/enco/users' && request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare(`
+            SELECT nama_user, role, 
+                   CASE WHEN password IS NOT NULL AND password != '' THEN 1 ELSE 0 END as need_password
+            FROM users 
+            ORDER BY id ASC
+          `).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 2. POST /api/enco/login (Verifikasi Login Ekstensi ENCO)
+      if (url.pathname === '/api/enco/login' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nama_user = (body.nama_user || body.username || '').trim();
+          const password = (body.password || '').trim();
+
+          if (!nama_user) {
+            return new Response(JSON.stringify({ success: false, error: 'Nama Pegawai harus dipilih' }), { status: 400, headers: corsHeaders });
+          }
+
+          const user = await env.DB.prepare('SELECT nama_user, password, role FROM users WHERE LOWER(nama_user) = LOWER(?)').bind(nama_user).first();
+          if (!user) {
+            return new Response(JSON.stringify({ success: false, error: `Pegawai ${nama_user} tidak terdaftar di database` }), { status: 401, headers: corsHeaders });
+          }
+
+          const dbPassword = (user.password || '').trim();
+          if (dbPassword !== '') {
+            if (!password || password !== dbPassword) {
+              return new Response(JSON.stringify({ success: false, error: 'Kata sandi yang Anda masukkan salah' }), { status: 401, headers: corsHeaders });
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            user: {
+              nama_user: user.nama_user,
+              role: user.role || 'Petugas'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 3. POST /api/enco/sync-pasien (Kirim / Rekam Pasien ASIK dari ENCO)
+      if (url.pathname === '/api/enco/sync-pasien' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const list = Array.isArray(body) ? body : [body];
+          if (list.length === 0) {
+            return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
+          }
+
+          const now = new Date().toISOString();
+          const todayDate = now.split('T')[0];
+
+          const stmt = env.DB.prepare(`
+            INSERT INTO enco_pasien (
+              id, nik, nama, tanggal_lahir, jenis_kelamin, no_tiket, kategori,
+              status_pendaftaran, status_pelayanan, tanggal_daftar, tanggal_pelayanan,
+              petugas_enco, faskes, raw_details, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(nik) DO UPDATE SET
+              nama = excluded.nama,
+              tanggal_lahir = CASE WHEN excluded.tanggal_lahir != '' THEN excluded.tanggal_lahir ELSE enco_pasien.tanggal_lahir END,
+              jenis_kelamin = CASE WHEN excluded.jenis_kelamin != '' THEN excluded.jenis_kelamin ELSE enco_pasien.jenis_kelamin END,
+              no_tiket = CASE WHEN excluded.no_tiket != '' THEN excluded.no_tiket ELSE enco_pasien.no_tiket END,
+              kategori = CASE WHEN excluded.kategori != '' THEN excluded.kategori ELSE enco_pasien.kategori END,
+              status_pendaftaran = CASE WHEN excluded.status_pendaftaran != '' THEN excluded.status_pendaftaran ELSE enco_pasien.status_pendaftaran END,
+              status_pelayanan = CASE 
+                WHEN excluded.status_pelayanan IS NOT NULL AND excluded.status_pelayanan != '' AND excluded.status_pelayanan != 'Belum Pelayanan'
+                THEN excluded.status_pelayanan 
+                ELSE enco_pasien.status_pelayanan 
+              END,
+              tanggal_daftar = CASE WHEN excluded.tanggal_daftar != '' THEN excluded.tanggal_daftar ELSE enco_pasien.tanggal_daftar END,
+              tanggal_pelayanan = CASE WHEN excluded.tanggal_pelayanan != '' THEN excluded.tanggal_pelayanan ELSE enco_pasien.tanggal_pelayanan END,
+              petugas_enco = excluded.petugas_enco,
+              faskes = CASE WHEN excluded.faskes != '' THEN excluded.faskes ELSE enco_pasien.faskes END,
+              raw_details = CASE WHEN excluded.raw_details != '' THEN excluded.raw_details ELSE enco_pasien.raw_details END,
+              updated_at = excluded.updated_at
+          `);
+
+          const statements = list.map((p, idx) => {
+            const rawNik = String(p.nik || '').trim();
+            const id = p.id || `enco_${rawNik}_${Date.now()}_${idx}`;
+            const details = typeof p.raw_details === 'object' ? JSON.stringify(p.raw_details) : (p.raw_details || '');
+
+            return stmt.bind(
+              id,
+              rawNik,
+              String(p.nama || '').trim(),
+              String(p.tanggal_lahir || p.dob || '').trim(),
+              String(p.jenis_kelamin || p.jk || '').trim(),
+              String(p.no_tiket || p.nomor_tiket || '').trim(),
+              String(p.kategori || 'Umum').trim(),
+              String(p.status_pendaftaran || 'Sudah Terdaftar').trim(),
+              String(p.status_pelayanan || 'Belum Pelayanan').trim(),
+              String(p.tanggal_daftar || todayDate).trim(),
+              String(p.tanggal_pelayanan || (p.status_pelayanan === 'Selesai Pelayanan' ? todayDate : '')).trim(),
+              String(p.petugas_enco || p.petugas || 'Petugas').trim(),
+              String(p.faskes || 'Puskesmas Banjaran Kota').trim(),
+              details,
+              now,
+              now
+            );
+          });
+
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: list.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 4. POST /api/enco/sync-log (Kirim Log Riwayat Otomasi ENCO)
+      if (url.pathname === '/api/enco/sync-log' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const now = new Date().toISOString();
+          await env.DB.prepare(`
+            INSERT INTO enco_logs (
+              petugas, jenis_kegiatan, total_pasien, jumlah_berhasil,
+              jumlah_terdaftar, jumlah_gagal, status, keterangan, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            body.petugas || 'Petugas',
+            body.jenis_kegiatan || 'Pendaftaran',
+            Number(body.total_pasien) || 0,
+            Number(body.jumlah_berhasil) || 0,
+            Number(body.jumlah_terdaftar) || 0,
+            Number(body.jumlah_gagal) || 0,
+            body.status || 'Selesai',
+            body.keterangan || '',
+            now
+          ).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 5. GET /api/enco/records (Data Pasien ENCO untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/records' && request.method === 'GET') {
+        try {
+          const search = url.searchParams.get('search') || '';
+          const statusPendaftaran = url.searchParams.get('status_pendaftaran') || '';
+          const statusPelayanan = url.searchParams.get('status_pelayanan') || '';
+          const petugas = url.searchParams.get('petugas') || '';
+          const tanggal = url.searchParams.get('tanggal') || '';
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+          let whereClause = 'WHERE 1=1';
+          const params = [];
+
+          if (search) {
+            whereClause += ' AND (nik LIKE ? OR LOWER(nama) LIKE ? OR LOWER(no_tiket) LIKE ?)';
+            const s = `%${search.toLowerCase()}%`;
+            params.push(s, s, s);
+          }
+          if (statusPendaftaran) {
+            whereClause += ' AND status_pendaftaran = ?';
+            params.push(statusPendaftaran);
+          }
+          if (statusPelayanan) {
+            whereClause += ' AND status_pelayanan = ?';
+            params.push(statusPelayanan);
+          }
+          if (petugas) {
+            whereClause += ' AND petugas_enco = ?';
+            params.push(petugas);
+          }
+          if (tanggal) {
+            whereClause += ' AND (tanggal_daftar = ? OR tanggal_pelayanan = ?)';
+            params.push(tanggal, tanggal);
+          }
+
+          const countRes = await env.DB.prepare(`SELECT COUNT(*) as total FROM enco_pasien ${whereClause}`).bind(...params).first();
+          const total = countRes ? countRes.total : 0;
+
+          const dataParams = [...params, limit, offset];
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM enco_pasien 
+            ${whereClause} 
+            ORDER BY updated_at DESC, created_at DESC 
+            LIMIT ? OFFSET ?
+          `).bind(...dataParams).all();
+
+          return new Response(JSON.stringify({
+            success: true,
+            total,
+            limit,
+            offset,
+            data: results || []
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 6. GET /api/enco/logs (Log Riwayat Otomasi untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/logs' && request.method === 'GET') {
+        try {
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const { results } = await env.DB.prepare('SELECT * FROM enco_logs ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 7. GET /api/enco/stats (Statistik Ringkasan ENCO)
+      if (url.pathname === '/api/enco/stats' && request.method === 'GET') {
+        try {
+          const totalPasien = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_pasien').first();
+          const terdaftar = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pendaftaran LIKE '%Terdaftar%'").first();
+          const selesaiLayanan = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pelayanan = 'Selesai Pelayanan'").first();
+          const totalLogs = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_logs').first();
+          const lastLog = await env.DB.prepare('SELECT petugas, created_at FROM enco_logs ORDER BY created_at DESC LIMIT 1').first();
+
+          return new Response(JSON.stringify({
+            success: true,
+            stats: {
+              total_pasien: totalPasien?.c || 0,
+              total_terdaftar: terdaftar?.c || 0,
+              total_selesai_layanan: selesaiLayanan?.c || 0,
+              total_logs: totalLogs?.c || 0,
+              last_petugas: lastLog?.petugas || '-',
+              last_active: lastLog?.created_at || '-'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 8. DELETE /api/enco/delete (Hapus Data / Log ENCO)
+      if (url.pathname === '/api/enco/delete' && (request.method === 'DELETE' || request.method === 'POST')) {
+        try {
+          const type = url.searchParams.get('type') || 'pasien';
+          const id = url.searchParams.get('id');
+
+          if (type === 'all_records') {
+            await env.DB.prepare('DELETE FROM enco_pasien').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua rekam pasien ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (type === 'all_logs') {
+            await env.DB.prepare('DELETE FROM enco_logs').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua log aktivitas ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (id) {
+            if (type === 'log') {
+              await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(id).run();
+            } else {
+              await env.DB.prepare('DELETE FROM enco_pasien WHERE id = ? OR nik = ?').bind(id, id).run();
+            }
+            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          }
+          return new Response(JSON.stringify({ success: false, error: 'Parameter id dibutuhkan' }), { status: 400, headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
+    // ====================================================================
+    // ROUTE: /api/enco/* (INTEGRASI EXTENSION ENCO AI & ASSETS/LOGS)
+    // ====================================================================
+    if (url.pathname.startsWith('/api/enco')) {
+      if (!env.DB) {
+        return new Response(JSON.stringify({ success: false, error: 'Database D1 binding not configured' }), {
+          status: 500,
+          headers: corsHeaders
+        });
+      }
+
+      // Ensure ENCO tables exist
+      try {
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_pasien (
+            id TEXT PRIMARY KEY,
+            nik TEXT NOT NULL UNIQUE,
+            nama TEXT NOT NULL,
+            tanggal_lahir TEXT,
+            jenis_kelamin TEXT,
+            no_tiket TEXT,
+            kategori TEXT DEFAULT 'Umum',
+            status_pendaftaran TEXT DEFAULT 'Sudah Terdaftar',
+            status_pelayanan TEXT DEFAULT 'Belum Pelayanan',
+            tanggal_daftar TEXT,
+            tanggal_pelayanan TEXT,
+            petugas_enco TEXT DEFAULT 'Petugas',
+            faskes TEXT DEFAULT 'Puskesmas Banjaran Kota',
+            raw_details TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS enco_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            petugas TEXT NOT NULL,
+            jenis_kegiatan TEXT NOT NULL,
+            total_pasien INTEGER DEFAULT 0,
+            jumlah_berhasil INTEGER DEFAULT 0,
+            jumlah_terdaftar INTEGER DEFAULT 0,
+            jumlah_gagal INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'Selesai',
+            keterangan TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (_) {}
+
+      // 1. GET /api/enco/users (List User Petugas Puskesmas untuk Dropdown Login ENCO)
+      if (url.pathname === '/api/enco/users' && request.method === 'GET') {
+        try {
+          const { results } = await env.DB.prepare(`
+            SELECT nama_user, role, 
+                   CASE WHEN password IS NOT NULL AND password != '' THEN 1 ELSE 0 END as need_password
+            FROM users 
+            ORDER BY id ASC
+          `).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 2. POST /api/enco/login (Verifikasi Login Ekstensi ENCO)
+      if (url.pathname === '/api/enco/login' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const nama_user = (body.nama_user || body.username || '').trim();
+          const password = (body.password || '').trim();
+
+          if (!nama_user) {
+            return new Response(JSON.stringify({ success: false, error: 'Nama Pegawai harus dipilih' }), { status: 400, headers: corsHeaders });
+          }
+
+          const user = await env.DB.prepare('SELECT nama_user, password, role FROM users WHERE LOWER(nama_user) = LOWER(?)').bind(nama_user).first();
+          if (!user) {
+            return new Response(JSON.stringify({ success: false, error: `Pegawai ${nama_user} tidak terdaftar di database` }), { status: 401, headers: corsHeaders });
+          }
+
+          const dbPassword = (user.password || '').trim();
+          if (dbPassword !== '') {
+            if (!password || password !== dbPassword) {
+              return new Response(JSON.stringify({ success: false, error: 'Kata sandi yang Anda masukkan salah' }), { status: 401, headers: corsHeaders });
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            user: {
+              nama_user: user.nama_user,
+              role: user.role || 'Petugas'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 3. POST /api/enco/sync-pasien (Kirim / Rekam Pasien ASIK dari ENCO)
+      if (url.pathname === '/api/enco/sync-pasien' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const list = Array.isArray(body) ? body : [body];
+          if (list.length === 0) {
+            return new Response(JSON.stringify({ success: true, count: 0 }), { headers: corsHeaders });
+          }
+
+          const now = new Date().toISOString();
+          const todayDate = now.split('T')[0];
+
+          const stmt = env.DB.prepare(`
+            INSERT INTO enco_pasien (
+              id, nik, nama, tanggal_lahir, jenis_kelamin, no_tiket, kategori,
+              status_pendaftaran, status_pelayanan, tanggal_daftar, tanggal_pelayanan,
+              petugas_enco, faskes, raw_details, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(nik) DO UPDATE SET
+              nama = excluded.nama,
+              tanggal_lahir = CASE WHEN excluded.tanggal_lahir != '' THEN excluded.tanggal_lahir ELSE enco_pasien.tanggal_lahir END,
+              jenis_kelamin = CASE WHEN excluded.jenis_kelamin != '' THEN excluded.jenis_kelamin ELSE enco_pasien.jenis_kelamin END,
+              no_tiket = CASE WHEN excluded.no_tiket != '' THEN excluded.no_tiket ELSE enco_pasien.no_tiket END,
+              kategori = CASE WHEN excluded.kategori != '' THEN excluded.kategori ELSE enco_pasien.kategori END,
+              status_pendaftaran = CASE WHEN excluded.status_pendaftaran != '' THEN excluded.status_pendaftaran ELSE enco_pasien.status_pendaftaran END,
+              status_pelayanan = CASE 
+                WHEN excluded.status_pelayanan IS NOT NULL AND excluded.status_pelayanan != '' AND excluded.status_pelayanan != 'Belum Pelayanan'
+                THEN excluded.status_pelayanan 
+                ELSE enco_pasien.status_pelayanan 
+              END,
+              tanggal_daftar = CASE WHEN excluded.tanggal_daftar != '' THEN excluded.tanggal_daftar ELSE enco_pasien.tanggal_daftar END,
+              tanggal_pelayanan = CASE WHEN excluded.tanggal_pelayanan != '' THEN excluded.tanggal_pelayanan ELSE enco_pasien.tanggal_pelayanan END,
+              petugas_enco = excluded.petugas_enco,
+              faskes = CASE WHEN excluded.faskes != '' THEN excluded.faskes ELSE enco_pasien.faskes END,
+              raw_details = CASE WHEN excluded.raw_details != '' THEN excluded.raw_details ELSE enco_pasien.raw_details END,
+              updated_at = excluded.updated_at
+          `);
+
+          const statements = list.map((p, idx) => {
+            const rawNik = String(p.nik || '').trim();
+            const id = p.id || `enco_${rawNik}_${Date.now()}_${idx}`;
+            const details = typeof p.raw_details === 'object' ? JSON.stringify(p.raw_details) : (p.raw_details || '');
+
+            return stmt.bind(
+              id,
+              rawNik,
+              String(p.nama || '').trim(),
+              String(p.tanggal_lahir || p.dob || '').trim(),
+              String(p.jenis_kelamin || p.jk || '').trim(),
+              String(p.no_tiket || p.nomor_tiket || '').trim(),
+              String(p.kategori || 'Umum').trim(),
+              String(p.status_pendaftaran || 'Sudah Terdaftar').trim(),
+              String(p.status_pelayanan || 'Belum Pelayanan').trim(),
+              String(p.tanggal_daftar || todayDate).trim(),
+              String(p.tanggal_pelayanan || (p.status_pelayanan === 'Selesai Pelayanan' ? todayDate : '')).trim(),
+              String(p.petugas_enco || p.petugas || 'Petugas').trim(),
+              String(p.faskes || 'Puskesmas Banjaran Kota').trim(),
+              details,
+              now,
+              now
+            );
+          });
+
+          await env.DB.batch(statements);
+          return new Response(JSON.stringify({ success: true, count: list.length }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 4. POST /api/enco/sync-log (Kirim Log Riwayat Otomasi ENCO)
+      if (url.pathname === '/api/enco/sync-log' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const now = new Date().toISOString();
+          await env.DB.prepare(`
+            INSERT INTO enco_logs (
+              petugas, jenis_kegiatan, total_pasien, jumlah_berhasil,
+              jumlah_terdaftar, jumlah_gagal, status, keterangan, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(
+            body.petugas || 'Petugas',
+            body.jenis_kegiatan || 'Pendaftaran',
+            Number(body.total_pasien) || 0,
+            Number(body.jumlah_berhasil) || 0,
+            Number(body.jumlah_terdaftar) || 0,
+            Number(body.jumlah_gagal) || 0,
+            body.status || 'Selesai',
+            body.keterangan || '',
+            now
+          ).run();
+          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 5. GET /api/enco/records (Data Pasien ENCO untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/records' && request.method === 'GET') {
+        try {
+          const search = url.searchParams.get('search') || '';
+          const statusPendaftaran = url.searchParams.get('status_pendaftaran') || '';
+          const statusPelayanan = url.searchParams.get('status_pelayanan') || '';
+          const petugas = url.searchParams.get('petugas') || '';
+          const tanggal = url.searchParams.get('tanggal') || '';
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+          let whereClause = 'WHERE 1=1';
+          const params = [];
+
+          if (search) {
+            whereClause += ' AND (nik LIKE ? OR LOWER(nama) LIKE ? OR LOWER(no_tiket) LIKE ?)';
+            const s = `%${search.toLowerCase()}%`;
+            params.push(s, s, s);
+          }
+          if (statusPendaftaran) {
+            whereClause += ' AND status_pendaftaran = ?';
+            params.push(statusPendaftaran);
+          }
+          if (statusPelayanan) {
+            whereClause += ' AND status_pelayanan = ?';
+            params.push(statusPelayanan);
+          }
+          if (petugas) {
+            whereClause += ' AND petugas_enco = ?';
+            params.push(petugas);
+          }
+          if (tanggal) {
+            whereClause += ' AND (tanggal_daftar = ? OR tanggal_pelayanan = ?)';
+            params.push(tanggal, tanggal);
+          }
+
+          const countRes = await env.DB.prepare(`SELECT COUNT(*) as total FROM enco_pasien ${whereClause}`).bind(...params).first();
+          const total = countRes ? countRes.total : 0;
+
+          const dataParams = [...params, limit, offset];
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM enco_pasien 
+            ${whereClause} 
+            ORDER BY updated_at DESC, created_at DESC 
+            LIMIT ? OFFSET ?
+          `).bind(...dataParams).all();
+
+          return new Response(JSON.stringify({
+            success: true,
+            total,
+            limit,
+            offset,
+            data: results || []
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 6. GET /api/enco/logs (Log Riwayat Otomasi untuk Tampilan Web ckgbankot)
+      if (url.pathname === '/api/enco/logs' && request.method === 'GET') {
+        try {
+          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+          const { results } = await env.DB.prepare('SELECT * FROM enco_logs ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+          return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 7. GET /api/enco/stats (Statistik Ringkasan ENCO)
+      if (url.pathname === '/api/enco/stats' && request.method === 'GET') {
+        try {
+          const totalPasien = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_pasien').first();
+          const terdaftar = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pendaftaran LIKE '%Terdaftar%'").first();
+          const selesaiLayanan = await env.DB.prepare("SELECT COUNT(*) as c FROM enco_pasien WHERE status_pelayanan = 'Selesai Pelayanan'").first();
+          const totalLogs = await env.DB.prepare('SELECT COUNT(*) as c FROM enco_logs').first();
+          const lastLog = await env.DB.prepare('SELECT petugas, created_at FROM enco_logs ORDER BY created_at DESC LIMIT 1').first();
+
+          return new Response(JSON.stringify({
+            success: true,
+            stats: {
+              total_pasien: totalPasien?.c || 0,
+              total_terdaftar: terdaftar?.c || 0,
+              total_selesai_layanan: selesaiLayanan?.c || 0,
+              total_logs: totalLogs?.c || 0,
+              last_petugas: lastLog?.petugas || '-',
+              last_active: lastLog?.created_at || '-'
+            }
+          }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 8. DELETE /api/enco/delete (Hapus Data / Log ENCO)
+      if (url.pathname === '/api/enco/delete' && (request.method === 'DELETE' || request.method === 'POST')) {
+        try {
+          const type = url.searchParams.get('type') || 'pasien';
+          const id = url.searchParams.get('id');
+
+          if (type === 'all_records') {
+            await env.DB.prepare('DELETE FROM enco_pasien').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua rekam pasien ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (type === 'all_logs') {
+            await env.DB.prepare('DELETE FROM enco_logs').run();
+            return new Response(JSON.stringify({ success: true, message: 'Semua log aktivitas ENCO berhasil dihapus' }), { headers: corsHeaders });
+          }
+          if (id) {
+            if (type === 'log') {
+              await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(id).run();
+            } else {
+              await env.DB.prepare('DELETE FROM enco_pasien WHERE id = ? OR nik = ?').bind(id, id).run();
+            }
+            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+          }
+          return new Response(JSON.stringify({ success: false, error: 'Parameter id dibutuhkan' }), { status: 400, headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+    }
+
 
     // Serve static assets via Cloudflare Assets
     if (env.ASSETS) {
