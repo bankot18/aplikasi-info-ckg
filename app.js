@@ -2351,21 +2351,21 @@ function switchView(viewId) {
   }
 
   if (role === 'petugas') {
-    if (viewId === 'laporan' || viewId === 'recycle-data' || viewId === 'admin-panel') {
+    if (viewId === 'laporan' || viewId === 'recycle-data' || viewId === 'admin-panel' || viewId === 'enco') {
       Swal.fire({
         icon: 'warning',
         title: 'Akses Ditolak',
-        text: 'Menu ini hanya dapat diakses oleh Role Admin dan Koordinator.',
+        text: viewId === 'enco' ? 'Menu ENCO hanya dapat diakses khusus oleh Administrator.' : 'Menu ini hanya dapat diakses oleh Role Admin dan Koordinator.',
         confirmButtonColor: '#2563eb'
       });
       return;
     }
   } else if (role === 'koordinator') {
-    if (viewId === 'admin-panel') {
+    if (viewId === 'admin-panel' || viewId === 'enco') {
       Swal.fire({
         icon: 'warning',
         title: 'Akses Ditolak',
-        text: 'Admin Panel hanya dapat diakses oleh Admin.',
+        text: viewId === 'enco' ? 'Menu ENCO hanya dapat diakses khusus oleh Administrator.' : 'Admin Panel hanya dapat diakses oleh Admin.',
         confirmButtonColor: '#2563eb'
       });
       return;
@@ -20508,6 +20508,8 @@ function renderEncoRecordsTable(records, offset) {
 
     const tglEntry = r.tanggal_daftar || (r.created_at ? r.created_at.split('T')[0] : '-');
     const noTiket = r.no_tiket || '-';
+    const domisiliParts = [r.alamat, r.kelurahan, r.kecamatan, r.kab_kota].filter(Boolean);
+    const domisiliStr = domisiliParts.length > 0 ? domisiliParts.join(', ') : '-';
 
     html += `
       <tr>
@@ -20516,6 +20518,7 @@ function renderEncoRecordsTable(records, offset) {
         <td style="font-family: monospace; font-weight: 700; color: var(--primary); font-size: 13px;">${escapeHtml(r.nik)}</td>
         <td style="font-weight: 700; color: var(--text-color, #0f172a);">${escapeHtml(r.nama)}</td>
         <td style="font-size: 12.5px;">${escapeHtml(r.tanggal_lahir || '-')}${r.jenis_kelamin ? ` (${escapeHtml(r.jenis_kelamin)})` : ''}</td>
+        <td style="font-size: 12px; color: #475569; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(domisiliStr)}">${escapeHtml(domisiliStr)}</td>
         <td>
           <span style="font-family: monospace; font-weight: 800; background: rgba(37,99,235,0.08); padding: 3px 8px; border-radius: 6px; color: #1d4ed8; border: 1px solid rgba(37,99,235,0.2);">
             ${escapeHtml(noTiket)}
@@ -20590,8 +20593,13 @@ function viewEncoPatientDetail(nik) {
       <table style="width: 100%; border-collapse: collapse;">
         <tr><td style="width: 140px; color: #64748b; font-weight: 600;">NIK:</td><td style="font-weight: 700; font-family: monospace;">${escapeHtml(patient.nik)}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Nama Pasien:</td><td style="font-weight: 700;">${escapeHtml(patient.nama)}</td></tr>
-        <tr><td style="color: #64748b; font-weight: 600;">Tanggal Lahir:</td><td>${escapeHtml(patient.tanggal_lahir || '-')}</td></tr>
-        <tr><td style="color: #64748b; font-weight: 600;">Jenis Kelamin:</td><td>${escapeHtml(patient.jenis_kelamin || '-')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Tanggal Lahir:</td><td style="font-weight: 600;">${escapeHtml(patient.tanggal_lahir || '-')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Jenis Kelamin:</td><td style="font-weight: 600;">${escapeHtml(patient.jenis_kelamin || '-')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Alamat Domisili:</td><td style="font-weight: 600;">${escapeHtml(patient.alamat || '-')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Kelurahan / Desa:</td><td>${escapeHtml(patient.kelurahan || '-')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Kecamatan:</td><td>${escapeHtml(patient.kecamatan || 'Banjaran')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Kab / Kota:</td><td>${escapeHtml(patient.kab_kota || 'Kab. Bandung')}</td></tr>
+        <tr><td style="color: #64748b; font-weight: 600;">Provinsi:</td><td>${escapeHtml(patient.provinsi || 'Jawa Barat')}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Nomor Tiket ASIK:</td><td style="font-weight: 800; color: #2563eb; font-family: monospace;">${escapeHtml(patient.no_tiket || '-')}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Kategori:</td><td>${escapeHtml(patient.kategori || 'Umum')}</td></tr>
         <tr><td style="color: #64748b; font-weight: 600;">Status Pendaftaran:</td><td><strong style="color: #059669;">${escapeHtml(patient.status_pendaftaran || '-')}</strong></td></tr>
@@ -20757,6 +20765,11 @@ async function exportEncoToExcel() {
       'Nama Pasien': r.nama || '',
       'Tanggal Lahir': r.tanggal_lahir || '',
       'Jenis Kelamin': r.jenis_kelamin || '',
+      'Alamat': r.alamat || '',
+      'Kelurahan/Desa': r.kelurahan || '',
+      'Kecamatan': r.kecamatan || 'Banjaran',
+      'Kab/Kota': r.kab_kota || 'Kab. Bandung',
+      'Provinsi': r.provinsi || 'Jawa Barat',
       'No. Tiket ASIK': r.no_tiket || '',
       'Kategori': r.kategori || 'Umum',
       'Status Pendaftaran': r.status_pendaftaran || '',

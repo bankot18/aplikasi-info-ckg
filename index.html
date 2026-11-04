@@ -600,7 +600,7 @@
         <i class="bi bi-folder-symlink-fill"></i>
         <span>Records</span>
       </button>
-      <button class="nav-tab-btn" data-view="enco" style="position: relative;">
+      <button class="nav-tab-btn admin-only" data-view="enco" style="position: relative;">
         <i class="bi bi-robot"></i>
         <span>ENCO</span>
         <span class="badge" style="background: linear-gradient(135deg, #06b6d4, #2563eb); font-size: 9px; padding: 2px 5px; border-radius: 8px; margin-left: 4px; color: #fff; font-weight: 800;">ASIK</span>
@@ -1113,7 +1113,7 @@
       </section>
 
       <!-- VIEW: ENCO AUTOMATION & ASIK DATABASE -->
-      <section id="view-enco" class="view-panel">
+      <section id="view-enco" class="view-panel admin-only">
         <div class="card-panel">
           
           <!-- Header Bar -->
@@ -1253,6 +1253,7 @@
                     <th>NIK</th>
                     <th>NAMA PASIEN</th>
                     <th>TGL LAHIR / JK</th>
+                    <th>ALAMAT & WILAYAH</th>
                     <th>NO. TIKET ASIK</th>
                     <th>KATEGORI</th>
                     <th>STATUS DAFTAR</th>
@@ -1262,7 +1263,7 @@
                   </tr>
                 </thead>
                 <tbody id="tableBodyEncoPasien">
-                  <tr><td colspan="11" style="text-align:center; padding: 24px; color: var(--text-muted);">Memuat data ENCO...</td></tr>
+                  <tr><td colspan="12" style="text-align:center; padding: 24px; color: var(--text-muted);">Memuat data ENCO...</td></tr>
                 </tbody>
               </table>
             </div>
