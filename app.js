@@ -21222,7 +21222,7 @@ async function loadEncoReportSessionDetail() {
             tglInput = '-';
           }
         }
-        if (!faskes) faskes = 'BANJARAN KOTA';
+        if (!faskes) faskes = '-';
         if (!layanan) layanan = p.kategori || p.category || 'CKG Umum';
 
         return {
