@@ -21089,7 +21089,9 @@ const encoReportState = {
   activeFilter: 'all',
   currentSession: null,
   items: [],
-  filtered: []
+  filtered: [],
+  currentPage: 1,
+  pageSize: 50
 };
 
 async function loadEncoReportsWeb() {
@@ -21308,12 +21310,44 @@ function filterEncoReportRows() {
 
   encoReportState.filtered = filtered;
 
-  if (filtered.length === 0) {
+  const totalItems = filtered.length;
+  const pageSize = encoReportState.pageSize || 50;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  if (encoReportState.currentPage > totalPages) {
+    encoReportState.currentPage = totalPages;
+  }
+  if (encoReportState.currentPage < 1) {
+    encoReportState.currentPage = 1;
+  }
+
+  const startIdx = (encoReportState.currentPage - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, totalItems);
+  const pagedItems = filtered.slice(startIdx, endIdx);
+
+  // Update Pagination Controls
+  const infoEl = document.getElementById('paginationEncoReportInfo');
+  const pageNumEl = document.getElementById('paginationEncoReportPageNum');
+  const btnPrev = document.getElementById('btnPrevEncoReportPage');
+  const btnNext = document.getElementById('btnNextEncoReportPage');
+
+  if (infoEl) {
+    infoEl.textContent = totalItems === 0
+      ? 'Menampilkan 0 - 0 dari total 0 pasien'
+      : `Menampilkan ${(startIdx + 1).toLocaleString('id-ID')} - ${endIdx.toLocaleString('id-ID')} dari total ${totalItems.toLocaleString('id-ID')} pasien`;
+  }
+  if (pageNumEl) {
+    pageNumEl.textContent = `Halaman ${encoReportState.currentPage.toLocaleString('id-ID')} dari ${totalPages.toLocaleString('id-ID')}`;
+  }
+  if (btnPrev) btnPrev.disabled = encoReportState.currentPage <= 1;
+  if (btnNext) btnNext.disabled = encoReportState.currentPage >= totalPages;
+
+  if (totalItems === 0) {
     tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);">Tidak ada data laporan yang cocok dengan filter.</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = filtered.slice(0, 500).map(i => `
+  tbody.innerHTML = pagedItems.map(i => `
     <tr>
       <td style="text-align: center; font-weight: 700;">${i.index}</td>
       <td style="font-weight: 700; color: #1e293b;">${escapeHtml(i.nama)}</td>
@@ -21327,6 +21361,63 @@ function filterEncoReportRows() {
       <td style="font-size: 11.5px; max-width: 250px;">${escapeHtml(i.keterangan)}</td>
     </tr>
   `).join('');
+}
+
+function changeEncoReportPage(delta) {
+  encoReportState.currentPage = (encoReportState.currentPage || 1) + delta;
+  filterEncoReportRows();
+}
+
+async function deleteActiveEncoSessionWeb() {
+  const selectPetugas = document.getElementById('filterEncoReportPetugas');
+  const selectMenu = document.getElementById('filterEncoReportMenu');
+  const selectSession = document.getElementById('filterEncoReportSession');
+  const sessionId = selectSession?.value;
+
+  if (!sessionId) {
+    Swal.fire('Pilih Sesi', 'Silakan pilih sesi yang ingin dihapus terlebih dahulu.', 'info');
+    return;
+  }
+
+  const petugas = selectPetugas?.value || '';
+  const menu = selectMenu?.value || 'pendaftaran';
+  const sessionText = selectSession.options[selectSession.selectedIndex]?.text || sessionId;
+
+  const result = await Swal.fire({
+    title: 'Hapus Sesi Otomasi?',
+    html: `Apakah Anda yakin ingin menghapus sesi <strong>${escapeHtml(sessionText)}</strong>?<br><br><span style="color:#ef4444; font-size:12px;">Sesi ini dan seluruh detail antreannya akan dihapus permanen dari Cloud R2 dan Database D1.</span>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Hapus Permanen',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    Swal.fire({
+      title: 'Menghapus Sesi...',
+      text: 'Sedang menghapus data dari Cloud R2 dan Database...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    const res = await fetch(`/api/enco/sessions?id=${encodeURIComponent(sessionId)}&petugas=${encodeURIComponent(petugas)}&menu=${encodeURIComponent(menu)}`, {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      await Swal.fire('Berhasil Dihapus', 'Sesi otomasi telah dihapus dari Cloud R2 dan Database.', 'success');
+      await loadEncoReportsWeb();
+    } else {
+      Swal.fire('Gagal', data.error || 'Gagal menghapus sesi dari Cloud.', 'error');
+    }
+  } catch (err) {
+    Swal.fire('Error', 'Terjadi kesalahan saat menghapus sesi: ' + err.message, 'error');
+  }
 }
 
 function setEncoReportStatusFilter(filter) {
@@ -21442,6 +21533,8 @@ window.copyEncoReportWebSummary = copyEncoReportWebSummary;
 window.setEncoReportStatusFilter = setEncoReportStatusFilter;
 window.resetEncoReportFilters = resetEncoReportFilters;
 window.filterEncoReportRows = filterEncoReportRows;
+window.changeEncoReportPage = changeEncoReportPage;
+window.deleteActiveEncoSessionWeb = deleteActiveEncoSessionWeb;
 
 
 

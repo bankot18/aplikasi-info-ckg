@@ -1351,9 +1351,12 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
                   <span style="font-size: 12px; color: var(--text-muted); font-weight: 700;"><i class="bi bi-calendar-event"></i> Sesi:</span>
-                  <select id="filterEncoReportSession" class="filter-control" style="font-size: 12px; padding: 5px 8px; min-width: 180px;" onchange="loadEncoReportDetailSession()">
+                  <select id="filterEncoReportSession" class="filter-control" style="font-size: 12px; padding: 5px 8px; min-width: 180px;" onchange="loadEncoReportSessionDetail()">
                     <option value="">-- Memuat Sesi... --</option>
                   </select>
+                  <button id="btnDeleteEncoReportSession" class="btn btn-danger btn-sm" onclick="deleteActiveEncoSessionWeb()" title="Hapus sesi ini dari Cloud R2 dan Database" style="padding: 4px 8px; font-size: 11px;">
+                    <i class="bi bi-trash3-fill"></i>
+                  </button>
                 </div>
               </div>
 
@@ -1446,6 +1449,20 @@
                   <tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);">Pilih akun petugas dan sesi untuk melihat laporan status otomasi.</td></tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- Pagination Bar for Laporan Status Otomasi (Max 50 Pasien per Halaman) -->
+            <div id="paginationEncoReports" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 6px; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-color, #e2e8f0); margin-top: 8px;">
+              <div id="paginationEncoReportInfo">Menampilkan 0 - 0 dari total 0 pasien</div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button id="btnPrevEncoReportPage" class="btn btn-secondary btn-sm" onclick="changeEncoReportPage(-1)" style="font-size: 11.5px; padding: 4px 10px;">
+                  <i class="bi bi-chevron-left"></i> Sebelumnya
+                </button>
+                <span id="paginationEncoReportPageNum" style="font-weight: 700; color: var(--text-color, #1e293b); padding: 0 4px; font-size: 12px;">Halaman 1 dari 1</span>
+                <button id="btnNextEncoReportPage" class="btn btn-secondary btn-sm" onclick="changeEncoReportPage(1)" style="font-size: 11.5px; padding: 4px 10px;">
+                  Selanjutnya <i class="bi bi-chevron-right"></i>
+                </button>
+              </div>
             </div>
           </div>
 
