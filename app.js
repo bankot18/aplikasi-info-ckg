@@ -21191,14 +21191,43 @@ async function loadEncoReportSessionDetail() {
           statusBadge = '<span class="badge" style="background:#fef3c7; color:#b45309; font-weight:700;">⚠️ Pernah Input</span>';
         }
 
-        // Tanggal input, Faskes pemeriksa, dan Layanan (khususnya untuk yang pernah input)
-        let tglInput = p._screeningDate || p.screening_date || p.tanggal_pemeriksaan || p.tanggal_daftar || p.tanggal || (data.session.dateStr ? data.session.dateStr.split(',')[0].trim() : '-');
-        let faskes = p._screeningFaskes || p.screening_faskes || p.faskes || p.faskes_pemeriksa || p.puskesmas || 'BANJARAN KOTA';
-        let layanan = p._screeningLayanan || p.screening_layanan || p.layanan || p.kategori || p.category || 'CKG Umum';
+        // Tanggal pemeriksaan / input, Faskes pemeriksa, dan Layanan (khususnya untuk yang pernah input)
+        let tglInput = p._screeningDate || p.screening_date || p.screeningDate || p.tanggal_pemeriksaan || p.tanggal_skrining || p.tanggal_pelayanan || p.tanggal_daftar || p.tanggal;
+        let faskes = p._screeningFaskes || p.screening_faskes || p.screeningFaskes || p.faskes || p.faskes_pemeriksa || p.puskesmas;
+        let layanan = p._screeningLayanan || p.screening_layanan || p.screeningLayanan || p.layanan;
+
+        // Coba ekstrak dari teks error / keterangan / reason bila belum tercatat terpisah
+        const combinedText = `${p._errorMsg || ''} ${p.error || ''} ${p.message || ''} ${p.keterangan || ''} ${p.reason || ''} ${p._reason || ''} ${p.detail || ''}`;
+        if (!tglInput && combinedText) {
+          const tm = combinedText.match(/(?:tanggal(?:\s*pemeriksaan|\s*skrining|\s*layanan)?|tgl|date|pada)\s*[:\-]?\s*([0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4}|[0-9]{1,4}[\/\-][0-9]{1,2}[\/\-][0-9]{1,4})/i);
+          if (tm) tglInput = tm[1].trim();
+        }
+        if (!faskes && combinedText) {
+          const fm = combinedText.match(/(?:puskesmas|faskes|fasilitas\s*kesehatan|klinik)(?:\s*pemeriksa)?\s*[:\-]?\s*([^\r\n,\)\.]+)/i);
+          if (fm) faskes = fm[1].trim();
+        }
+        if (!layanan && combinedText) {
+          const lm = combinedText.match(/layanan\s*[:\-]?\s*([^\r\n,\)\.]+)/i);
+          if (lm) layanan = lm[1].trim();
+        }
+
+        // PENTING: Untuk status 'Pernah Input' (isAlready), JANGAN PERNAH fallback ke tanggal hari ini / session run date!
+        // Tampilkan '-' jika riwayat tanggal pemeriksaan tidak tercatat di modal Kemkes.
+        if (!tglInput) {
+          if (isAlready) {
+            tglInput = '-';
+          } else if (isDone) {
+            tglInput = p.tanggal_daftar || p.tanggal || (data.session.dateStr ? data.session.dateStr.split(',')[0].trim() : '-');
+          } else {
+            tglInput = '-';
+          }
+        }
+        if (!faskes) faskes = 'BANJARAN KOTA';
+        if (!layanan) layanan = p.kategori || p.category || 'CKG Umum';
 
         return {
           index: idx + 1,
-          nama: p.nama || p.name || p.nama_pasien || '—',
+          nama: p.nama || p.name || p.nama_pasien || p.fullname || '—',
           nik: String(p.nik || p.NIK || '—').trim(),
           kategori: p.kategori || p.category || 'UMUM',
           statusKey,
@@ -21207,7 +21236,7 @@ async function loadEncoReportSessionDetail() {
           faskesPemeriksa: faskes,
           layanan: layanan,
           waktuEksekusi: p.dateStr || p._timestamp || data.session.dateStr || '-',
-          keterangan: p._errorMsg || p.no_tiket || p.keterangan || (isDone ? 'Berhasil diproses' : isAlready ? 'Sudah menerima layanan CKG' : isError ? 'Error otomasi' : 'Menunggu')
+          keterangan: p._errorMsg || p.no_tiket || p._nomorTiket || p.keterangan || (isDone ? 'Berhasil diproses' : isAlready ? 'Sudah menerima layanan CKG' : isError ? 'Error otomasi' : 'Menunggu')
         };
       });
 
