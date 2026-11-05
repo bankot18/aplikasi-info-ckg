@@ -20362,21 +20362,25 @@ function switchEncoSubTab(tab) {
   encoState.activeSubTab = tab;
   const btnPasien = document.getElementById('btnEncoTabPasien');
   const btnLogs = document.getElementById('btnEncoTabLogs');
+  const btnReports = document.getElementById('btnEncoTabReports');
   const subTabPasien = document.getElementById('encoSubTabPasien');
   const subTabLogs = document.getElementById('encoSubTabLogs');
+  const subTabReports = document.getElementById('encoSubTabReports');
+
+  if (btnPasien) btnPasien.className = tab === 'pasien' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+  if (btnLogs) btnLogs.className = tab === 'logs' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+  if (btnReports) btnReports.className = tab === 'reports' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+
+  if (subTabPasien) subTabPasien.style.display = tab === 'pasien' ? 'block' : 'none';
+  if (subTabLogs) subTabLogs.style.display = tab === 'logs' ? 'block' : 'none';
+  if (subTabReports) subTabReports.style.display = tab === 'reports' ? 'block' : 'none';
 
   if (tab === 'pasien') {
-    if (btnPasien) { btnPasien.className = 'btn btn-sm btn-primary'; }
-    if (btnLogs) { btnLogs.className = 'btn btn-sm btn-secondary'; }
-    if (subTabPasien) subTabPasien.style.display = 'block';
-    if (subTabLogs) subTabLogs.style.display = 'none';
     loadEncoRecords(encoState.currentOffset);
-  } else {
-    if (btnPasien) { btnPasien.className = 'btn btn-sm btn-secondary'; }
-    if (btnLogs) { btnLogs.className = 'btn btn-sm btn-primary'; }
-    if (subTabPasien) subTabPasien.style.display = 'none';
-    if (subTabLogs) subTabLogs.style.display = 'block';
+  } else if (tab === 'logs') {
     loadEncoLogs();
+  } else if (tab === 'reports') {
+    loadEncoReportsWeb();
   }
 }
 
@@ -21072,6 +21076,323 @@ async function exportEncoToExcel() {
   } catch (err) {
     hideLoadingOverlay();
     Swal.fire('Gagal Ekspor', err.message, 'error');
+  }
+}
+
+// =========================================================================
+// SUB-TAB 3: LAPORAN STATUS OTOMASI ENCO (Terhubung ke Cloudflare R2 per Akun)
+// =========================================================================
+
+const encoReportState = {
+  activeFilter: 'all',
+  currentSession: null,
+  items: [],
+  filtered: []
+};
+
+async function loadEncoReportsWeb() {
+  const selectPetugas = document.getElementById('filterEncoReportPetugas');
+  const selectMenu = document.getElementById('filterEncoReportMenu');
+  const selectSession = document.getElementById('filterEncoReportSession');
+  if (!selectPetugas || !selectMenu || !selectSession) return;
+
+  // 1. Populate Petugas jika belum terisi
+  if (selectPetugas.options.length <= 1) {
+    let usersList = [];
+    try {
+      const res = await fetch('/api/users');
+      const uData = await res.json();
+      if (uData.success && Array.isArray(uData.data)) {
+        usersList = uData.data.map(u => u.nama_user).filter(Boolean);
+      }
+    } catch (_) {}
+
+    if (!usersList.length) {
+      usersList = ['Mochamad Fauzie, S.Gz', 'Petugas'];
+    }
+
+    selectPetugas.innerHTML = usersList.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
+
+    // Default ke user login
+    const curUser = (currentUser?.nama_user || '').trim();
+    if (curUser && usersList.includes(curUser)) {
+      selectPetugas.value = curUser;
+    }
+  }
+
+  const petugas = selectPetugas.value;
+  const menu = selectMenu.value || 'pendaftaran';
+
+  selectSession.innerHTML = '<option value="">Memuat sesi dari Cloud R2...</option>';
+
+  try {
+    const res = await fetch(`/api/enco/sessions?petugas=${encodeURIComponent(petugas)}&menu=${encodeURIComponent(menu)}`);
+    const data = await res.json();
+
+    if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+      selectSession.innerHTML = data.data.map((s, idx) => {
+        const timeLabel = s.dateStr || new Date(s.timestamp || Date.now()).toLocaleString('id-ID');
+        const fileLabel = s.fileName || 'Sesi Otomasi';
+        const totalInfo = s.total ? `(${s.total} Pasien)` : '';
+        return `<option value="${escapeHtml(s.id)}" data-key="${escapeHtml(s.r2_key || '')}">${idx === 0 ? '🔴 LIVE: ' : ''}${escapeHtml(fileLabel)} - ${escapeHtml(timeLabel)} ${totalInfo}</option>`;
+      }).join('');
+
+      await loadEncoReportSessionDetail();
+    } else {
+      selectSession.innerHTML = '<option value="">Belum ada sesi rekaman untuk akun ini</option>';
+      renderEncoReportEmpty('Belum ada sesi eksekusi yang tersimpan di Cloud R2 untuk akun ' + petugas);
+    }
+  } catch (err) {
+    selectSession.innerHTML = '<option value="">Gagal memuat sesi</option>';
+    renderEncoReportEmpty('Gagal memuat sesi: ' + err.message);
+  }
+}
+
+async function loadEncoReportSessionDetail() {
+  const selectPetugas = document.getElementById('filterEncoReportPetugas');
+  const selectMenu = document.getElementById('filterEncoReportMenu');
+  const selectSession = document.getElementById('filterEncoReportSession');
+  const sessionId = selectSession?.value;
+  if (!sessionId) {
+    renderEncoReportEmpty('Pilih sesi untuk melihat laporan.');
+    return;
+  }
+
+  const petugas = selectPetugas?.value || '';
+  const menu = selectMenu?.value || 'pendaftaran';
+
+  const tbody = document.getElementById('tableBodyEncoReports');
+  if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted);"><i class="bi bi-arrow-repeat spin"></i> Mengunduh detail laporan dari Cloud R2...</td></tr>`;
+
+  try {
+    const res = await fetch(`/api/enco/sessions/detail?id=${encodeURIComponent(sessionId)}&petugas=${encodeURIComponent(petugas)}&menu=${encodeURIComponent(menu)}`);
+    const data = await res.json();
+
+    if (data.success && data.session) {
+      encoReportState.currentSession = data.session;
+      const rawPatients = Array.isArray(data.session.data) ? data.session.data : [];
+
+      encoReportState.items = rawPatients.map((p, idx) => {
+        const rawStatus = (p._status || p.status || '').toLowerCase();
+        const isDone = rawStatus === 'done' || rawStatus.includes('done');
+        const isError = rawStatus === 'error' || rawStatus === 'invalid-nik' || rawStatus.includes('error');
+        const isAlready = rawStatus === 'already-screened' || rawStatus.includes('already');
+
+        let statusKey = 'idle';
+        let statusBadge = '<span class="badge" style="background:#e2e8f0; color:#475569;">Menunggu</span>';
+        if (isDone) {
+          statusKey = 'success';
+          statusBadge = '<span class="badge" style="background:#dcfce7; color:#15803d; font-weight:700;">✅ Selesai</span>';
+        } else if (isError) {
+          statusKey = 'error';
+          statusBadge = '<span class="badge" style="background:#fee2e2; color:#b91c1c; font-weight:700;">❌ Error</span>';
+        } else if (isAlready) {
+          statusKey = 'already';
+          statusBadge = '<span class="badge" style="background:#fef3c7; color:#b45309; font-weight:700;">⚠️ Pernah Input</span>';
+        }
+
+        // Tanggal input & Faskes pemeriksa (khususnya untuk yang pernah input)
+        let tglInput = p._screeningDate || p.screening_date || p.tanggal_pemeriksaan || p.tanggal_daftar || p.tanggal || (data.session.dateStr ? data.session.dateStr.split(',')[0].trim() : '-');
+        let faskes = p._screeningFaskes || p.screening_faskes || p.faskes || p.faskes_pemeriksa || p.puskesmas || 'Puskesmas Banjaran Kota';
+
+        return {
+          index: idx + 1,
+          nama: p.nama || p.name || p.nama_pasien || '—',
+          nik: String(p.nik || p.NIK || '—').trim(),
+          kategori: p.kategori || p.category || 'UMUM',
+          statusKey,
+          statusBadge,
+          tanggalInput: tglInput,
+          faskesPemeriksa: faskes,
+          waktuEksekusi: p.dateStr || p._timestamp || data.session.dateStr || '-',
+          keterangan: p._errorMsg || p.no_tiket || p.keterangan || (isDone ? 'Berhasil diproses' : isAlready ? 'Sudah menerima layanan CKG' : isError ? 'Error otomasi' : 'Menunggu')
+        };
+      });
+
+      // Update Metric Cards
+      const sess = data.session;
+      const b = Number(sess.berhasil || encoReportState.items.filter(i => i.statusKey === 'success').length);
+      const g = Number(sess.gagal || encoReportState.items.filter(i => i.statusKey === 'error').length);
+      const w = Number(sess.pernahInput || encoReportState.items.filter(i => i.statusKey === 'already').length);
+      const t = Number(sess.total || encoReportState.items.length);
+
+      const elSuccess = document.getElementById('metricEncoReportSuccess');
+      const elError = document.getElementById('metricEncoReportError');
+      const elPernah = document.getElementById('metricEncoReportPernah');
+      const elTotal = document.getElementById('metricEncoReportTotal');
+
+      if (elSuccess) elSuccess.textContent = b.toLocaleString('id-ID');
+      if (elError) elError.textContent = g.toLocaleString('id-ID');
+      if (elPernah) elPernah.textContent = w.toLocaleString('id-ID');
+      if (elTotal) elTotal.textContent = t.toLocaleString('id-ID');
+
+      filterEncoReportRows();
+    } else {
+      renderEncoReportEmpty(data.error || 'Gagal memuat detail sesi');
+    }
+  } catch (err) {
+    renderEncoReportEmpty('Error saat mengunduh data sesi: ' + err.message);
+  }
+}
+
+function filterEncoReportRows() {
+  const search = (document.getElementById('searchEncoReport')?.value || '').toLowerCase().trim();
+  const filterDate = document.getElementById('filterEncoReportDate')?.value || '';
+  const tbody = document.getElementById('tableBodyEncoReports');
+  if (!tbody) return;
+
+  let filtered = [...encoReportState.items];
+
+  // Filter chip status
+  if (encoReportState.activeFilter !== 'all') {
+    filtered = filtered.filter(i => i.statusKey === encoReportState.activeFilter);
+  }
+
+  // Filter pencarian
+  if (search) {
+    filtered = filtered.filter(i =>
+      i.nama.toLowerCase().includes(search) ||
+      i.nik.toLowerCase().includes(search) ||
+      i.faskesPemeriksa.toLowerCase().includes(search) ||
+      i.keterangan.toLowerCase().includes(search)
+    );
+  }
+
+  // Filter tanggal (YYYY-MM-DD)
+  if (filterDate) {
+    const [y, m, d] = filterDate.split('-');
+    const ddmmyyyy = `${d}/${m}/${y}`;
+    const ddmmyyyyDash = `${d}-${m}-${y}`;
+    filtered = filtered.filter(i =>
+      i.tanggalInput.includes(filterDate) ||
+      i.tanggalInput.includes(ddmmyyyy) ||
+      i.tanggalInput.includes(ddmmyyyyDash) ||
+      i.waktuEksekusi.includes(filterDate) ||
+      i.waktuEksekusi.includes(ddmmyyyy)
+    );
+  }
+
+  encoReportState.filtered = filtered;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted);">Tidak ada data laporan yang cocok dengan filter.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.slice(0, 500).map(i => `
+    <tr>
+      <td style="text-align: center; font-weight: 700;">${i.index}</td>
+      <td style="font-weight: 700; color: #1e293b;">${escapeHtml(i.nama)}</td>
+      <td style="font-family: monospace; font-weight: 600;">${escapeHtml(i.nik)}</td>
+      <td><span class="badge" style="background:#f1f5f9; color:#475569;">${escapeHtml(i.kategori)}</span></td>
+      <td>${i.statusBadge}</td>
+      <td style="background: #fefce8; font-weight: 700; color: #854d0e;">${escapeHtml(i.tanggalInput)}</td>
+      <td style="background: #fefce8; color: #854d0e; font-weight: 600;">${escapeHtml(i.faskesPemeriksa)}</td>
+      <td style="font-size: 11px; color: #64748b;">${escapeHtml(i.waktuEksekusi)}</td>
+      <td style="font-size: 11.5px; max-width: 250px;">${escapeHtml(i.keterangan)}</td>
+    </tr>
+  `).join('');
+}
+
+function setEncoReportStatusFilter(filter) {
+  encoReportState.activeFilter = filter;
+  const chipAll = document.getElementById('chipEncoReportAll');
+  const chipErr = document.getElementById('chipEncoReportError');
+  const chipSucc = document.getElementById('chipEncoReportSuccess');
+  const chipPernah = document.getElementById('chipEncoReportPernah');
+
+  if (chipAll) chipAll.className = filter === 'all' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+  if (chipErr) chipErr.className = filter === 'error' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+  if (chipSucc) chipSucc.className = filter === 'success' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+  if (chipPernah) chipPernah.className = filter === 'already' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+
+  filterEncoReportRows();
+}
+
+function resetEncoReportFilters() {
+  const inputSearch = document.getElementById('searchEncoReport');
+  const inputDate = document.getElementById('filterEncoReportDate');
+  if (inputSearch) inputSearch.value = '';
+  if (inputDate) inputDate.value = '';
+  setEncoReportStatusFilter('all');
+}
+
+function renderEncoReportEmpty(msg) {
+  const tbody = document.getElementById('tableBodyEncoReports');
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 28px; color: var(--text-muted);">${escapeHtml(msg)}</td></tr>`;
+  }
+}
+
+function exportEncoReportWebToExcel() {
+  const items = encoReportState.filtered.length ? encoReportState.filtered : encoReportState.items;
+  if (!items.length) {
+    Swal.fire('Data Kosong', 'Tidak ada data laporan untuk diekspor.', 'info');
+    return;
+  }
+  if (typeof XLSX === 'undefined') {
+    Swal.fire('Error', 'Pustaka Excel XLSX belum siap.', 'error');
+    return;
+  }
+
+  const rows = items.map(i => ({
+    'No': i.index,
+    'Nama Pasien': i.nama,
+    'NIK': i.nik,
+    'Kategori': i.kategori,
+    'Status Hasil': i.statusKey === 'success' ? 'Berhasil' : i.statusKey === 'already' ? 'Pernah Input' : i.statusKey === 'error' ? 'Error' : 'Menunggu',
+    'Tanggal Input': i.tanggalInput,
+    'Faskes Pemeriksa': i.faskesPemeriksa,
+    'Waktu Eksekusi': i.waktuEksekusi,
+    'Keterangan / Tiket': i.keterangan
+  }));
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan Status');
+  const pet = document.getElementById('filterEncoReportPetugas')?.value || 'Petugas';
+  XLSX.writeFile(wb, `Laporan_Status_ENCO_${pet.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Laporan status berhasil diekspor ke Excel', 'success');
+}
+
+async function copyEncoReportWebSummary() {
+  const sess = encoReportState.currentSession;
+  const items = encoReportState.items;
+  if (!items.length) {
+    Swal.fire('Data Kosong', 'Tidak ada laporan untuk disalin.', 'info');
+    return;
+  }
+
+  const pet = document.getElementById('filterEncoReportPetugas')?.value || 'Petugas';
+  const menu = document.getElementById('filterEncoReportMenu')?.value || 'Pendaftaran';
+  const b = items.filter(i => i.statusKey === 'success').length;
+  const g = items.filter(i => i.statusKey === 'error').length;
+  const w = items.filter(i => i.statusKey === 'already').length;
+
+  let txt = `📊 *LAPORAN STATUS OTOMASI ENCO - ${menu.toUpperCase()}*\n`;
+  txt += `👤 Petugas: ${pet}\n`;
+  txt += `📅 Waktu: ${sess?.dateStr || new Date().toLocaleString('id-ID')}\n`;
+  txt += `─────────────────────────\n`;
+  txt += `• Total Data   : ${items.length}\n`;
+  txt += `• ✅ Berhasil  : ${b}\n`;
+  txt += `• ❌ Error     : ${g}\n`;
+  txt += `• ⚠️ Pernah Input: ${w}\n`;
+  txt += `─────────────────────────\n`;
+
+  const warnings = items.filter(i => i.statusKey === 'already');
+  if (warnings.length > 0) {
+    txt += `\n⚠️ *DATA PERNAH INPUT (${warnings.length}):*\n`;
+    warnings.slice(0, 10).forEach((item, idx) => {
+      txt += `${idx + 1}. *${item.nama}* (${item.nik})\n   ↳ Tgl: ${item.tanggalInput} | Faskes: ${item.faskesPemeriksa}\n`;
+    });
+    if (warnings.length > 10) txt += `... dan ${warnings.length - 10} pasien lainnya.\n`;
+  }
+
+  try {
+    await navigator.clipboard.writeText(txt);
+    showToast('Ringkasan laporan berhasil disalin ke clipboard!', 'success');
+  } catch (_) {
+    Swal.fire('Gagal Menyalin', 'Izin clipboard ditolak oleh browser.', 'error');
   }
 }
 

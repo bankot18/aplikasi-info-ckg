@@ -162,6 +162,9 @@
               </div>
             </div>
           </div>
+
+            </div>
+          </div>
         </div>
         <div class="visual-footer-info">
           <span>Portal CKG Sekolah</span>
@@ -184,6 +187,9 @@
           <div class="auth-form-logo" style="text-align: center; margin-bottom: 16px;">
             <div style="width: 72px; height: 72px; margin: 0 auto; background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 8px 20px rgba(37,99,235,0.3);">
               <i class="bi bi-mortarboard-fill"></i>
+            </div>
+          </div>
+
             </div>
           </div>
           <div class="auth-header-text" style="text-align: center;">
@@ -247,6 +253,9 @@
               </div>
             </div>
           </div>
+
+            </div>
+          </div>
         </div>
         <div class="visual-footer-info">
           <span>Portal CKG Posyandu</span>
@@ -269,6 +278,9 @@
           <div class="auth-form-logo" style="text-align: center; margin-bottom: 16px;">
             <div style="width: 72px; height: 72px; margin: 0 auto; background: linear-gradient(135deg, #e11d48, #db2777); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 8px 20px rgba(225,29,72,0.3);">
               <i class="bi bi-heart-pulse-fill"></i>
+            </div>
+          </div>
+
             </div>
           </div>
           <div class="auth-header-text" style="text-align: center;">
@@ -329,6 +341,9 @@
               <i class="bi bi-hospital-fill"></i>
             </div>
           </div>
+
+            </div>
+          </div>
           <div class="visual-brand-title">
             <h3>Puskesmas Banjaran Kota</h3>
             <p>Sistem Informasi CKG (BNBA)</p>
@@ -375,6 +390,9 @@
               </div>
             </div>
           </div>
+
+            </div>
+          </div>
         </div>
 
         <div class="visual-footer-info">
@@ -409,6 +427,9 @@
                 title="Puskesmas Banjaran Kota">
                 <i class="bi bi-hospital-fill"></i>
               </div>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -572,6 +593,9 @@
                 style="width: 100%; justify-content: flex-start; padding: 8px 12px; font-size: 12.5px; background: #fff1f2; color: #e11d48; border-color: #fecdd3;">
                 <i class="bi bi-power"></i> Keluar
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -760,6 +784,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <div class="card-panel" style="margin-bottom: 0;">
             <div class="card-header-bar">
               <div class="card-header-title" id="monthlyTrendChartTitle">
@@ -768,6 +795,9 @@
             </div>
             <div style="height: 310px; position: relative;">
               <canvas id="proportionChart"></canvas>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -785,6 +815,9 @@
               <button id="btnRekapDalam" class="btn btn-secondary btn-sm" onclick="filterRekapitulasi('dalam')"><i
                   class="bi bi-building"></i> Dalam Gedung</button>
               <span class="badge badge-purple" style="font-size: 11px;">Min: 200 entri</span>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -831,6 +864,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- Metric Cards Summary Laporan -->
           <div class="metric-cards-grid" style="margin-bottom: 20px;">
             <div class="metric-card-solid bg-blue">
@@ -863,6 +899,9 @@
                 <span class="metric-card-value" id="metricLaporanHipertensi">0</span>
               </div>
               <div class="metric-card-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -990,6 +1029,9 @@
                 onclick="confirmDeleteAllCkgRecords()">
                 <i class="bi bi-trash3-fill"></i> Hapus Semua
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -1144,6 +1186,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- Quick Stats Cards Bar -->
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
             <div style="background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 14px;">
@@ -1187,13 +1232,19 @@
             </div>
           </div>
 
-          <!-- Nav Pills: Pasien Terdaftar vs Log Aktivitas -->
+            </div>
+          </div>
+
+          <!-- Nav Pills: Pasien Terdaftar vs Log Aktivitas vs Laporan Status -->
           <div style="background: var(--bg-subtle, #f8fafc); padding: 10px 14px; border-radius: var(--radius-md, 10px); margin-bottom: 16px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--border-color, #e2e8f0); flex-wrap: wrap;">
             <button id="btnEncoTabPasien" class="btn btn-sm btn-primary" onclick="switchEncoSubTab('pasien')">
               <i class="bi bi-people-fill"></i> Rekam Data Pasien ASIK
             </button>
             <button id="btnEncoTabLogs" class="btn btn-sm btn-secondary" onclick="switchEncoSubTab('logs')">
               <i class="bi bi-activity"></i> Log Riwayat Eksekusi Bot
+            </button>
+            <button id="btnEncoTabReports" class="btn btn-sm btn-secondary" onclick="switchEncoSubTab('reports')">
+              <i class="bi bi-file-earmark-medical-fill"></i> Laporan Status Otomasi
             </button>
           </div>
 
@@ -1278,6 +1329,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- SUB-TAB 2: LOG AKTIVITAS BOT -->
           <div id="encoSubTabLogs" style="display: none;">
             <!-- Log Toolbar & Action Bar -->
@@ -1327,6 +1381,133 @@
             </div>
           </div>
 
+          <!-- SUB-TAB 3: LAPORAN STATUS OTOMASI ENCO (R2 & Cloud Database) -->
+          <div id="encoSubTabReports" style="display: none;">
+            <!-- Filter Toolbar -->
+            <div class="filter-bar-box" style="margin-bottom: 16px; padding: 12px 14px;">
+              <div class="filter-item">
+                <i class="bi bi-person-circle" style="color: var(--primary);"></i> Akun Petugas:
+                <select id="filterEncoReportPetugas" class="filter-control" onchange="loadEncoReportsWeb()">
+                  <option value="">-- Memuat Petugas... --</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-diagram-3"></i> Menu Otomasi:
+                <select id="filterEncoReportMenu" class="filter-control" onchange="loadEncoReportsWeb()">
+                  <option value="pendaftaran">Pendaftaran</option>
+                  <option value="pasien">Pasien / Pelayanan Instan</option>
+                  <option value="pelayanan">Pelayanan CKG</option>
+                </select>
+              </div>
+
+              <div class="filter-item" style="flex: 1; min-width: 220px;">
+                <i class="bi bi-clock-history"></i> Pilih Sesi Eksekusi:
+                <select id="filterEncoReportSession" class="filter-control" onchange="loadEncoReportSessionDetail()" style="width: 100%;">
+                  <option value="">-- Memuat Sesi... --</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <i class="bi bi-calendar-event"></i> Tanggal:
+                <input type="date" id="filterEncoReportDate" class="filter-control" onchange="filterEncoReportRows()">
+              </div>
+
+              <div class="filter-item" style="flex: 1; min-width: 180px;">
+                <i class="bi bi-search"></i> Cari:
+                <input type="text" id="searchEncoReport" class="filter-control" placeholder="Cari NIK / Nama / Faskes..." oninput="filterEncoReportRows()" style="width: 100%;">
+              </div>
+
+              <button class="btn btn-secondary btn-sm" onclick="resetEncoReportFilters()">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+              </button>
+            </div>
+
+            <!-- Subbar Filter Chips & Action Buttons -->
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="encoReportFilterChips">
+                <button id="chipEncoReportAll" class="btn btn-sm btn-primary" onclick="setEncoReportStatusFilter('all')">Semua</button>
+                <button id="chipEncoReportError" class="btn btn-sm btn-secondary" onclick="setEncoReportStatusFilter('error')">Hanya Error</button>
+                <button id="chipEncoReportSuccess" class="btn btn-sm btn-secondary" onclick="setEncoReportStatusFilter('success')">Berhasil</button>
+                <button id="chipEncoReportPernah" class="btn btn-sm btn-secondary" onclick="setEncoReportStatusFilter('already')">Pernah Input</button>
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-success" onclick="exportEncoReportWebToExcel()">
+                  <i class="bi bi-file-earmark-excel-fill"></i> Download Excel (.xlsx)
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="copyEncoReportWebSummary()">
+                  <i class="bi bi-clipboard2-check-fill"></i> Salin Ringkasan WA
+                </button>
+              </div>
+            </div>
+
+            <!-- Metrics Summary Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
+              <div class="card-metric" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(22,163,74,0.12); color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                  <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: #15803d; font-weight: 700; text-transform: uppercase;">Berhasil</div>
+                  <div id="metricEncoReportSuccess" style="font-size: 22px; font-weight: 800; color: #16a34a;">0</div>
+                </div>
+              </div>
+
+              <div class="card-metric" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(220,38,38,0.12); color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                  <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: #b91c1c; font-weight: 700; text-transform: uppercase;">Error / Gagal</div>
+                  <div id="metricEncoReportError" style="font-size: 22px; font-weight: 800; color: #dc2626;">0</div>
+                </div>
+              </div>
+
+              <div class="card-metric" style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(217,119,6,0.12); color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                  <i class="bi bi-info-circle-fill"></i>
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: #b45309; font-weight: 700; text-transform: uppercase;">Pernah Input</div>
+                  <div id="metricEncoReportPernah" style="font-size: 22px; font-weight: 800; color: #d97706;">0</div>
+                </div>
+              </div>
+
+              <div class="card-metric" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(51,65,85,0.1); color: #334155; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                  <i class="bi bi-people-fill"></i>
+                </div>
+                <div>
+                  <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Pasien</div>
+                  <div id="metricEncoReportTotal" style="font-size: 22px; font-weight: 800; color: #1e293b;">0</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Table of Report Records -->
+            <div class="table-responsive">
+              <table class="custom-table" style="font-size: 12px;">
+                <thead>
+                  <tr style="background: #f1f5f9;">
+                    <th style="width: 35px; text-align: center;">NO</th>
+                    <th>NAMA PASIEN</th>
+                    <th>NIK</th>
+                    <th>KATEGORI</th>
+                    <th>STATUS HASIL</th>
+                    <th style="background: #fefce8; color: #854d0e;">TANGGAL INPUT</th>
+                    <th style="background: #fefce8; color: #854d0e;">FASKES PEMERIKSA</th>
+                    <th>WAKTU EKSEKUSI</th>
+                    <th>KETERANGAN / TIKET</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBodyEncoReports">
+                  <tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted);">Pilih akun petugas dan sesi untuk melihat laporan status otomasi.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -1368,6 +1549,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- Status Data SIMPUS Nav Pills (Data Belum Di-Bagi vs Data Sudah Di-Bagi) -->
           <div class="simpus-status-bar"
             style="background: var(--bg-subtle); padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 16px; display: flex; align-items: center; gap: 16px; border: 1px solid var(--border-color);">
@@ -1386,6 +1570,9 @@
                 <i class="bi bi-person-check-fill"></i> Data Sudah Di-Bagi <span id="countSudahBagi"
                   class="badge-count emerald-count">0</span>
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -1507,6 +1694,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- SIMPUS Cards List View (Khusus Data Sudah Di-Bagi) -->
           <div id="simpusSudahBagiCardsView" class="simpus-cards-list"
             style="display: none; margin-top: 14px; max-height: 680px; overflow-y: auto; padding-right: 4px;">
@@ -1571,6 +1761,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- Metric Cards Summary CKG Sekolah (Clickable Filters) -->
           <div class="metric-cards-grid" style="margin-bottom: 16px;">
             <div class="metric-card-solid bg-purple clickable-card active-filter" id="cardFilterTotal" onclick="setSekolahStatusFilter('all')" role="button" tabindex="0" title="Klik untuk filter: Tampilkan Semua Siswa">
@@ -1603,6 +1796,9 @@
                 <span class="metric-card-value" id="metricSekolahSebagian">0</span>
               </div>
               <div class="metric-card-icon"><i class="bi bi-pie-chart-fill"></i></div>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -1778,6 +1974,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- CKG Sekolah Table View (Click Nama Siswa -> Buka Pop-up Identitas & Pemeriksaan) -->
           <div class="simpus-table-wrapper">
             <table class="simpus-registration-table" id="sekolahDataTable"
@@ -1832,6 +2031,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- Metric Cards Summary Alat & BNHP (Clickable Filters) -->
           <div class="metric-cards-grid" style="margin-bottom: 16px;">
             <div class="metric-card-solid bg-cyan clickable-card active-filter" id="cardFilterAlatBnhpAll" onclick="setAlatBnhpQuickFilter('all')" role="button" tabindex="0" title="Klik untuk tampilkan semua item">
@@ -1867,6 +2069,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- Sub-Tab Pills Navigation Bar -->
           <div class="simpus-status-bar" style="margin-bottom: 16px;">
             <span class="simpus-status-label" style="color: #0369a1;">
@@ -1889,6 +2094,9 @@
               <button id="btnTabAlatBnhpRekap" class="simpus-pill-btn" onclick="switchAlatBnhpTab('rekap')">
                 <i class="bi bi-file-earmark-spreadsheet-fill"></i> Rekap Mutasi & Laporan
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -1951,6 +2159,9 @@
             <!-- Summary Bar -->
             <div id="infoAlatBnhpStok" style="margin-top: 12px; font-size: 12.5px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
               <span id="textAlatBnhpSummary">Menampilkan 0 item</span>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -2019,6 +2230,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- SUB-VIEW 3: PEMINJAMAN ALAT MEDIS -->
           <div id="subviewAlatBnhpPeminjaman" class="alatbnhp-subview" style="display: none;">
             <!-- Filter Bar Peminjaman -->
@@ -2065,6 +2279,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- SUB-VIEW 4: REKAPITULASI MUTASI & LAPORAN -->
           <div id="subviewAlatBnhpRekap" class="alatbnhp-subview" style="display: none;">
             <div class="card-header-bar" style="margin-bottom: 12px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
@@ -2103,6 +2320,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -2130,6 +2350,9 @@
               <button class="btn btn-danger" onclick="emptyRecycleBin()">
                 <i class="bi bi-trash-fill"></i> Kosongkan Tempat Sampah
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -2207,6 +2430,9 @@
                 style="height: 42px; border-radius: 10px; padding: 0 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
                 <i class="bi bi-arrow-counterclockwise"></i> Reset
               </button>
+
+            </div>
+          </div>
 
             </div>
           </div>
@@ -2296,6 +2522,9 @@
               </table>
             </div>
           </div>
+
+            </div>
+          </div>
         </div>
 
         <!-- SUBSECTION 2: AKUN & HAK AKSES SEKOLAH (Mengambil dari database master_sekolah) -->
@@ -2339,6 +2568,9 @@
                   <!-- Rendered dynamically via JS -->
                 </tbody>
               </table>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -2385,6 +2617,9 @@
                   <!-- Rendered dynamically via JS -->
                 </tbody>
               </table>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -2456,6 +2691,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <div
             style="padding: 16px; background: #f8fafc; border-radius: var(--radius-md); margin-top: 14px; border: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
             <div>
@@ -2515,6 +2753,9 @@
               </table>
             </div>
           </div>
+
+            </div>
+          </div>
         </div>
 
         <!-- MAINTENANCE MODE PANEL -->
@@ -2533,6 +2774,9 @@
                 title="Refresh status maintenance">
                 <i class="bi bi-arrow-clockwise"></i> Refresh Status
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -2623,6 +2867,9 @@
                 onclick="saveMenuMaintenanceSettings()">
                 <i class="bi bi-shield-lock-fill"></i> Simpan Pengaturan Kunci Menu
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -2969,6 +3216,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- STEP 2: Data Demografi Pasien -->
           <div class="wizard-step-content" id="wizardStep2">
             <div class="form-section-title">
@@ -3078,6 +3328,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- STEP 3: Antropometri & Skrining Klinis -->
           <div class="wizard-step-content" id="wizardStep3">
             <div class="form-section-title">
@@ -3136,6 +3389,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- STEP 4: Pemeriksaan Fisik -->
           <div class="wizard-step-content" id="wizardStep4">
             <div class="form-section-title">
@@ -3183,6 +3439,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- Dynamic Wizard Modal Footer -->
           <div class="modal-footer"
             style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border-color);">
@@ -3203,6 +3462,9 @@
               <button type="submit" id="btnWizardSubmit" class="btn btn-emerald" style="display: none;">
                 <i class="bi bi-check-circle-fill"></i> Simpan Data CKG
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -3272,6 +3534,9 @@
             </div>
             <div class="import-dropzone-hint">
               Format yang didukung: .xlsx, .xls (Maks. 10MB)
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -3379,6 +3644,9 @@
                 style="text-transform: uppercase;">
             </div>
           </div>
+
+            </div>
+          </div>
           <button type="submit" class="btn btn-primary"
             style="width: 100%; justify-content: center; font-weight: 700; padding: 10px;">
             <i class="bi bi-search"></i> Verifikasi Data ke Dukcapil
@@ -3465,6 +3733,9 @@
                 style="font-weight: 800; background: #f1f5f9; cursor: not-allowed;">
               <span id="accountSettingRole" class="badge badge-emerald"
                 style="padding: 8px 12px; font-size: 11px;">ADMIN</span>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -3814,6 +4085,9 @@
               </div>
             </div>
           </div>
+
+            </div>
+          </div>
           <div style="text-align: right;">
             <span id="badgeStatusSkrining" class="badge"
               style="font-size: 11px; padding: 5px 14px; border-radius: 20px; font-weight: 800; background: #ecfdf5; border: 1.5px solid #6ee7b7; color: #047857;">BELUM
@@ -3946,6 +4220,9 @@
               <div id="formPosSubInfo" style="font-size: 11.5px; color: #047857; font-weight: 600;">SMP PASUNDAN • KELAS 8 • Perempuan</div>
             </div>
           </div>
+
+            </div>
+          </div>
           <button type="button" class="btn btn-sm btn-sekolah-secondary" onclick="closeFormPosPopup()"
             style="background: #ffffff; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11.5px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 5px;">
             <i class="bi bi-grid-fill"></i> Pilihan Bagian
@@ -3991,6 +4268,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <div class="sekolah-grid-2"
             style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
@@ -4007,6 +4287,9 @@
               <select id="periksaKelas" class="form-control" required style="font-weight: 700;">
                 <!-- Populated dynamically -->
               </select>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -4033,6 +4316,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 1 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
@@ -4049,6 +4335,9 @@
                 style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Antropometri &rarr;
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -4073,6 +4362,9 @@
                 style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
                 <i class="bi bi-grid-fill"></i> Pilihan Bagian
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -4105,6 +4397,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 2 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
@@ -4121,6 +4416,9 @@
                 style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Tanda Vital &rarr;
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -4148,6 +4446,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <div class="sekolah-grid-3"
             style="display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
@@ -4170,6 +4471,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 3 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
@@ -4186,6 +4490,9 @@
                 style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Laboratorium &rarr;
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -4210,6 +4517,9 @@
                 style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 11px; padding: 3px 8px;">
                 <i class="bi bi-grid-fill"></i> Pilihan Bagian
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -4254,6 +4564,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <div class="sekolah-grid-2"
             style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
             <div class="form-group">
@@ -4269,6 +4582,9 @@
               <input type="text" id="periksaKategoriHb" class="form-control" readonly placeholder="Otomatis"
                 style="font-weight: 800; background: #f0fdf4; border-color: #a7f3d0; color: #065f46;"
                 title="Hasil kategori hemoglobin terhitung otomatis">
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -4288,6 +4604,9 @@
                 style="padding: 9px 16px; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1.5px solid #a7f3d0; border-radius: 10px;">
                 Lanjut: Organ Indera &rarr;
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -4371,6 +4690,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <div class="sekolah-grid-3"
             style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
             <!-- 4. KEBUGARAN -->
@@ -4421,6 +4743,9 @@
                 <option value="Aktif">Aktif</option>
                 <option value="Pasif">Pasif</option>
               </select>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -4478,6 +4803,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 5 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #d1fae5; padding-top: 14px;">
@@ -4494,6 +4822,9 @@
                 style="padding: 9px 16px; font-weight: 700; background: #fffbeb; color: #92400e; border: 1.5px solid #fde68a; border-radius: 10px;">
                 Lanjut: Kesimpulan &rarr;
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -4539,6 +4870,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- TOMBOL SIMPAN KHUSUS FORMAT 6 -->
           <div class="panel-action-footer"
             style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #fef3c7; padding-top: 14px;">
@@ -4551,6 +4885,9 @@
                 style="padding: 9px 20px; font-weight: 800; background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; border: none; border-radius: 10px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);">
                 <i class="bi bi-floppy-fill"></i> Simpan Kesimpulan & Rujukan
               </button>
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -4614,6 +4951,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <div class="sekolah-grid-2"
             style="display: grid; grid-template-columns: 1.8fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
@@ -4633,6 +4973,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <div class="sekolah-grid-3"
             style="display: grid; grid-template-columns: 1.2fr 0.9fr 1.4fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
@@ -4647,6 +4990,9 @@
             <div class="form-group">
               <label class="form-label" for="tambahSiswaWa">No. WhatsApp</label>
               <input type="tel" id="tambahSiswaWa" class="form-control" inputmode="tel" placeholder="08xxxxxxxxxx">
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -4838,6 +5184,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- 3. Status Skrining (Opsional) -->
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" style="font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
@@ -4862,6 +5211,9 @@
             </div>
             <div id="hapusSekolahPreviewDetails" style="font-size: 12.5px; color: #475569; line-height: 1.7; background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid #fed7aa;">
               Silakan pilih sekolah target untuk melihat ringkasan data.
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -4941,6 +5293,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- Opsi Khusus Mode Manual -->
           <div id="containerNaikKelasManual" style="display: none; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
             <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center;">
@@ -4959,6 +5314,9 @@
                   <option value="">-- Pilih Kelas Tujuan --</option>
                 </select>
               </div>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -4983,6 +5341,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- Preview Siswa Terdampak -->
           <div id="naikKelasPreviewContainer" style="border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; background: #ffffff;">
             <div style="font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
@@ -4991,6 +5352,9 @@
             </div>
             <div id="naikKelasPreviewList" style="font-size: 12.5px; color: #64748b; line-height: 1.6;">
               Pilih sekolah terlebih dahulu untuk melihat ringkasan.
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -5048,6 +5412,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <!-- Pilihan Siswa: Seluruhnya atau Pilih Tertentu -->
           <div class="form-group" style="margin-bottom: 16px;">
             <label class="form-label" style="font-weight: 700; color: #1e293b;">Siswa yang Dipindahkan</label>
@@ -5076,6 +5443,9 @@
             </div>
           </div>
 
+            </div>
+          </div>
+
           <div style="border-top: 1.5px dashed #cbd5e1; margin: 18px 0;"></div>
 
           <!-- Sekolah Tujuan & Kelas Tujuan -->
@@ -5091,6 +5461,9 @@
               <select id="migrasiKelasTujuan" class="form-control" style="border-radius: 10px; border-color: #0d9488;">
                 <option value="keep">-- Pertahankan Kelas Saat Ini --</option>
               </select>
+            </div>
+          </div>
+
             </div>
           </div>
 
@@ -5641,10 +6014,16 @@
               <i class="bi bi-info-circle"></i> Memilih sekolah terdaftar akan otomatis mengisi jumlah sasaran siswa (tetap bisa diedit jika perlu).
             </div>
           </div>
+
+            </div>
+          </div>
           <div id="wrapperPemakaianManual" style="display: none;">
             <input type="text" id="inputPemakaianLokasiManual" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Contoh: Posyandu Dahlia RW 04 Ds. Banjaran / Balai Desa">
             <div style="font-size: 11px; margin-top: 4px; color: #64748b;">
               <i class="bi bi-pencil"></i> Masukkan lokasi atau nama kegiatan secara manual.
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
@@ -5760,10 +6139,16 @@
               <i class="bi bi-building"></i> Pilih nama sekolah terdaftar tempat alat medis akan digunakan.
             </div>
           </div>
+
+            </div>
+          </div>
           <div id="wrapperPinjamManual" style="display: none;">
             <input type="text" id="inputPinjamLokasiManual" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" placeholder="Contoh: Posyandu Dahlia RW 04 Ds. Banjaran / Balai Desa">
             <div style="font-size: 11px; margin-top: 4px; color: #64748b;">
               <i class="bi bi-pencil"></i> Masukkan lokasi atau posyandu secara manual.
+            </div>
+          </div>
+
             </div>
           </div>
         </div>
