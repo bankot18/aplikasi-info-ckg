@@ -21429,5 +21429,17 @@ async function copyEncoReportWebSummary() {
   }
 }
 
+// Window Global Bindings untuk Laporan Status Web
+window.loadEncoReportsWeb = loadEncoReportsWeb;
+window.loadEncoReportSessionDetail = loadEncoReportSessionDetail;
+window.loadEncoReportDetailSession = loadEncoReportSessionDetail;
+window.exportEncoReportsExcel = exportEncoReportWebToExcel;
+window.exportEncoReportWebToExcel = exportEncoReportWebToExcel;
+window.copyEncoReportWebSummary = copyEncoReportWebSummary;
+window.setEncoReportStatusFilter = setEncoReportStatusFilter;
+window.resetEncoReportFilters = resetEncoReportFilters;
+window.filterEncoReportRows = filterEncoReportRows;
+
+
 
 
