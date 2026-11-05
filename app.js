@@ -20353,6 +20353,8 @@ function renderEncoView() {
   populateEncoPetugasFilter();
   if (encoState.activeSubTab === 'pasien') {
     loadEncoRecords(0);
+  } else if (encoState.activeSubTab === 'reports') {
+    loadEncoReportsWeb();
   } else {
     loadEncoLogs();
   }
@@ -21096,36 +21098,36 @@ async function loadEncoReportsWeb() {
   const selectSession = document.getElementById('filterEncoReportSession');
   if (!selectPetugas || !selectMenu || !selectSession) return;
 
-  // 1. Populate Petugas jika belum terisi
-  if (selectPetugas.options.length <= 1) {
-    let usersList = [];
-    try {
-      const res = await fetch('/api/users');
-      const uData = await res.json();
-      if (uData.success && Array.isArray(uData.data)) {
-        usersList = uData.data.map(u => u.nama_user).filter(Boolean);
-      }
-    } catch (_) {}
-
-    if (!usersList.length) {
-      usersList = ['Mochamad Fauzie, S.Gz', 'Petugas'];
-    }
-
-    selectPetugas.innerHTML = usersList.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
-
-    // Default ke user login
-    const curUser = (currentUser?.nama_user || '').trim();
-    if (curUser && usersList.includes(curUser)) {
-      selectPetugas.value = curUser;
-    }
-  }
-
-  const petugas = selectPetugas.value;
-  const menu = selectMenu.value || 'pendaftaran';
-
-  selectSession.innerHTML = '<option value="">Memuat sesi dari Cloud R2...</option>';
-
   try {
+    // 1. Populate Petugas jika belum terisi
+    if (selectPetugas.options.length <= 1) {
+      let usersList = [];
+      try {
+        const res = await fetch('/api/users');
+        const uData = await res.json();
+        if (uData.success && Array.isArray(uData.data)) {
+          usersList = uData.data.map(u => u.nama_user).filter(Boolean);
+        }
+      } catch (_) {}
+
+      if (!usersList.length) {
+        usersList = ['Mochamad Fauzie, S.Gz', 'Petugas'];
+      }
+
+      selectPetugas.innerHTML = usersList.map(u => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
+
+      // Default ke user login
+      const curUser = (typeof currentUser !== 'undefined' ? (currentUser?.nama_user || '') : '') || sessionStorage.getItem('ckg_user_name') || '';
+      if (curUser && usersList.includes(curUser.trim())) {
+        selectPetugas.value = curUser.trim();
+      }
+    }
+
+    const petugas = selectPetugas.value || 'Mochamad Fauzie, S.Gz';
+    const menu = selectMenu.value || 'pendaftaran';
+
+    selectSession.innerHTML = '<option value="">Memuat sesi dari Cloud R2...</option>';
+
     const res = await fetch(`/api/enco/sessions?petugas=${encodeURIComponent(petugas)}&menu=${encodeURIComponent(menu)}`);
     const data = await res.json();
 
@@ -21143,8 +21145,9 @@ async function loadEncoReportsWeb() {
       renderEncoReportEmpty('Belum ada sesi eksekusi yang tersimpan di Cloud R2 untuk akun ' + petugas);
     }
   } catch (err) {
+    console.error('[loadEncoReportsWeb] error:', err);
     selectSession.innerHTML = '<option value="">Gagal memuat sesi</option>';
-    renderEncoReportEmpty('Gagal memuat sesi: ' + err.message);
+    renderEncoReportEmpty('Gagal memuat sesi: ' + (err.message || err));
   }
 }
 
@@ -21162,7 +21165,7 @@ async function loadEncoReportSessionDetail() {
   const menu = selectMenu?.value || 'pendaftaran';
 
   const tbody = document.getElementById('tableBodyEncoReports');
-  if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted);"><i class="bi bi-arrow-repeat spin"></i> Mengunduh detail laporan dari Cloud R2...</td></tr>`;
+  if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);"><i class="bi bi-arrow-repeat spin"></i> Mengunduh detail laporan dari Cloud R2...</td></tr>`;
 
   try {
     const res = await fetch(`/api/enco/sessions/detail?id=${encodeURIComponent(sessionId)}&petugas=${encodeURIComponent(petugas)}&menu=${encodeURIComponent(menu)}`);
@@ -21352,7 +21355,7 @@ function resetEncoReportFilters() {
 function renderEncoReportEmpty(msg) {
   const tbody = document.getElementById('tableBodyEncoReports');
   if (tbody) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 28px; color: var(--text-muted);">${escapeHtml(msg)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 28px; color: var(--text-muted);">${escapeHtml(msg)}</td></tr>`;
   }
 }
 
