@@ -2488,8 +2488,12 @@ Saran Medis:`;
       // 8. DELETE /api/enco/delete (Hapus Data / Log ENCO)
       if (url.pathname === '/api/enco/delete' && (request.method === 'DELETE' || request.method === 'POST')) {
         try {
-          const type = url.searchParams.get('type') || 'pasien';
-          const id = url.searchParams.get('id');
+          let body = {};
+          if (request.method === 'POST') {
+            try { body = await request.json(); } catch (_) {}
+          }
+          const type = url.searchParams.get('type') || body.type || 'pasien';
+          const id = url.searchParams.get('id') || body.id;
 
           if (type === 'all_records') {
             await env.DB.prepare('DELETE FROM enco_pasien').run();
@@ -2501,11 +2505,16 @@ Saran Medis:`;
           }
           if (id) {
             if (type === 'log') {
-              await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(id).run();
+              const logId = parseInt(id, 10);
+              if (!isNaN(logId)) {
+                await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(logId).run();
+              } else {
+                await env.DB.prepare('DELETE FROM enco_logs WHERE id = ?').bind(id).run();
+              }
             } else {
               await env.DB.prepare('DELETE FROM enco_pasien WHERE id = ? OR nik = ?').bind(id, id).run();
             }
-            return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+            return new Response(JSON.stringify({ success: true, message: 'Data berhasil dihapus' }), { headers: corsHeaders });
           }
           return new Response(JSON.stringify({ success: false, error: 'Parameter id dibutuhkan' }), { status: 400, headers: corsHeaders });
         } catch (err) {

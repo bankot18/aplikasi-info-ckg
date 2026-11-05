@@ -20666,6 +20666,19 @@ async function deleteSingleEncoPatient(id, nik, nama) {
 }
 
 async function confirmDeleteEncoData() {
+  const role = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  const isAdmin = role === 'admin' || role.includes('admin');
+
+  if (!isAdmin) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Akses Ditolak',
+      text: 'Hanya Administrator yang memiliki hak akses untuk menghapus data ENCO.',
+      confirmButtonColor: '#2563eb'
+    });
+    return;
+  }
+
   const result = await Swal.fire({
     title: 'Hapus Database ENCO?',
     text: 'Pilih data yang ingin Anda bersihkan:',
@@ -20701,11 +20714,98 @@ async function confirmDeleteEncoData() {
   }
 }
 
+async function deleteSingleEncoLog(id) {
+  const role = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  const isAdmin = role === 'admin' || role.includes('admin');
+
+  if (!isAdmin) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Akses Ditolak',
+      text: 'Hanya Administrator yang memiliki hak akses untuk menghapus log aktivitas bot ENCO.',
+      confirmButtonColor: '#2563eb'
+    });
+    return;
+  }
+
+  const result = await Swal.fire({
+    title: 'Hapus Log Bot?',
+    text: 'Apakah Anda yakin ingin menghapus catatan log aktivitas bot ini?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch(`/api/enco/delete?type=log&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Log bot berhasil dihapus', 'success');
+      loadEncoLogs();
+      loadEncoStats();
+    } else {
+      throw new Error(data.error || 'Gagal menghapus log');
+    }
+  } catch (err) {
+    Swal.fire('Gagal Menghapus', err.message, 'error');
+  }
+}
+
+async function confirmDeleteEncoLogs() {
+  const role = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  const isAdmin = role === 'admin' || role.includes('admin');
+
+  if (!isAdmin) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Akses Ditolak',
+      text: 'Hanya Administrator yang memiliki hak akses untuk menghapus log aktivitas bot ENCO.',
+      confirmButtonColor: '#2563eb'
+    });
+    return;
+  }
+
+  const result = await Swal.fire({
+    title: 'Hapus Semua Log Bot?',
+    text: 'Apakah Anda yakin ingin membersihkan seluruh riwayat log aktivitas bot ENCO? Tindakan ini tidak dapat dibatalkan.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Bersihkan Semua Log',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await fetch('/api/enco/delete?type=all_logs', { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'Semua log bot ENCO berhasil dibersihkan', 'success');
+      loadEncoLogs();
+      loadEncoStats();
+    } else {
+      throw new Error(data.error || 'Gagal menghapus log');
+    }
+  } catch (err) {
+    Swal.fire('Gagal Menghapus', err.message, 'error');
+  }
+}
+
 async function loadEncoLogs() {
   const tbody = document.getElementById('tableBodyEncoLogs');
   if (tbody) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);"><i class="bi bi-arrow-repeat spin"></i> Memuat log bot ENCO...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 24px; color: var(--text-muted);"><i class="bi bi-arrow-repeat spin"></i> Memuat log bot ENCO...</td></tr>`;
   }
+
+  const role = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
+  const isAdmin = role === 'admin' || role.includes('admin');
 
   try {
     const res = await fetch('/api/enco/logs?limit=50');
@@ -20714,7 +20814,7 @@ async function loadEncoLogs() {
 
     const logs = data.data || [];
     if (logs.length === 0) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 32px; color: var(--text-muted);"><i class="bi bi-clock-history" style="font-size: 28px; display: block; margin-bottom: 8px;"></i>Belum ada log aktivitas bot yang tercatat.</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 32px; color: var(--text-muted);"><i class="bi bi-clock-history" style="font-size: 28px; display: block; margin-bottom: 8px;"></i>Belum ada log aktivitas bot yang tercatat.</td></tr>`;
       return;
     }
 
@@ -20737,13 +20837,20 @@ async function loadEncoLogs() {
           <td style="text-align: center; font-weight: 800; color: #dc2626;">${Number(l.jumlah_gagal || 0)}</td>
           <td>${badgeStatus}</td>
           <td style="font-size: 12.5px; color: #475569;">${escapeHtml(l.keterangan || '-')}</td>
+          <td style="text-align: center;" class="admin-only">
+            ${isAdmin ? `
+              <button class="btn btn-danger btn-sm" style="padding: 2px 7px;" onclick="deleteSingleEncoLog(${Number(l.id)})" title="Hapus Log Ini">
+                <i class="bi bi-trash"></i>
+              </button>
+            ` : '-'}
+          </td>
         </tr>
       `;
     });
 
     if (tbody) tbody.innerHTML = html;
   } catch (err) {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color: #dc2626;">Gagal memuat log: ${err.message}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 24px; color: #dc2626;">Gagal memuat log: ${err.message}</td></tr>`;
   }
 }
 
