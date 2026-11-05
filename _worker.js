@@ -2203,9 +2203,14 @@ Saran Medis:`;
             jumlah_gagal INTEGER DEFAULT 0,
             status TEXT DEFAULT 'Selesai',
             keterangan TEXT,
+            r2_key TEXT DEFAULT '',
+            session_id TEXT DEFAULT '',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )
         `).run();
+
+        try { await env.DB.prepare("ALTER TABLE enco_logs ADD COLUMN r2_key TEXT DEFAULT ''").run(); } catch (_) {}
+        try { await env.DB.prepare("ALTER TABLE enco_logs ADD COLUMN session_id TEXT DEFAULT ''").run(); } catch (_) {}
       } catch (_) {}
 
       // 1. GET /api/enco/users (List User Petugas Puskesmas untuk Dropdown Login ENCO)
@@ -2452,8 +2457,19 @@ Saran Medis:`;
       // 6. GET /api/enco/logs (Log Riwayat Otomasi untuk Tampilan Web ckgbankot)
       if (url.pathname === '/api/enco/logs' && request.method === 'GET') {
         try {
-          const limit = parseInt(url.searchParams.get('limit') || '50', 10);
-          const { results } = await env.DB.prepare('SELECT * FROM enco_logs ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+          const limit = parseInt(url.searchParams.get('limit') || '100', 10);
+          const petugas = (url.searchParams.get('petugas') || '').trim();
+
+          let query = 'SELECT * FROM enco_logs';
+          const params = [];
+          if (petugas) {
+            query += ' WHERE LOWER(petugas) = LOWER(?)';
+            params.push(petugas);
+          }
+          query += ' ORDER BY created_at DESC LIMIT ?';
+          params.push(limit);
+
+          const { results } = await env.DB.prepare(query).bind(...params).all();
           return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
@@ -2517,6 +2533,252 @@ Saran Medis:`;
             return new Response(JSON.stringify({ success: true, message: 'Data berhasil dihapus' }), { headers: corsHeaders });
           }
           return new Response(JSON.stringify({ success: false, error: 'Parameter id dibutuhkan' }), { status: 400, headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // ====================================================================
+      // 9. CLOUDFLARE R2 ENGINE: SESI LOG RIWAYAT PER AKUN PETUGAS (enco-storage)
+      // ====================================================================
+
+      function getR2UserSlug(namaUser) {
+        return String(namaUser || 'petugas')
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]/g, '_')
+          .replace(/_+/g, '_');
+      }
+
+      // 9A. POST /api/enco/sessions (Simpan / Sinkronisasi Sesi Log ke R2 per Akun)
+      if (url.pathname === '/api/enco/sessions' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          const petugas = (body.petugas || 'Petugas').trim();
+          const menu = (body.menu || 'pendaftaran').toLowerCase();
+          const session = body.session;
+
+          if (!session || !session.id) {
+            return new Response(JSON.stringify({ success: false, error: 'Data sesi (id) dibutuhkan' }), { status: 400, headers: corsHeaders });
+          }
+
+          const userSlug = getR2UserSlug(petugas);
+          const detailKey = `logs/${userSlug}/${menu}_${session.id}.json`;
+          const indexKey = `logs/${userSlug}/${menu}_sessions.json`;
+
+          // 1. Simpan detail sesi lengkap (snapshot ribuan pasien) ke Cloudflare R2
+          if (env.Enco) {
+            await env.Enco.put(detailKey, JSON.stringify(session), {
+              httpMetadata: { contentType: 'application/json' },
+              customMetadata: {
+                petugas,
+                menu,
+                sessionId: session.id,
+                fileName: session.fileName || '',
+                total: String(session.total || 0),
+                berhasil: String(session.berhasil || 0),
+                gagal: String(session.gagal || 0),
+                pernahInput: String(session.pernahInput || 0),
+                updatedAt: new Date().toISOString()
+              }
+            });
+
+            // 2. Perbarui index daftar sesi untuk menu ini di R2 (agar ringan diambil)
+            let sessionList = [];
+            try {
+              const existingIndex = await env.Enco.get(indexKey);
+              if (existingIndex) {
+                sessionList = JSON.parse(await existingIndex.text()) || [];
+              }
+            } catch (_) {}
+
+            const summaryItem = {
+              id: session.id,
+              menu,
+              timestamp: session.timestamp || Date.now(),
+              dateStr: session.dateStr || '',
+              fileName: session.fileName || 'Input Manual',
+              category: session.category || 'UMUM',
+              total: Number(session.total || 0),
+              berhasil: Number(session.berhasil || 0),
+              gagal: Number(session.gagal || 0),
+              sebagian: Number(session.sebagian || 0),
+              pernahInput: Number(session.pernahInput || 0),
+              status: session.status || 'idle',
+              r2_key: detailKey,
+              updatedAt: new Date().toISOString()
+            };
+
+            const existingIdx = sessionList.findIndex(s => s.id === session.id);
+            if (existingIdx !== -1) {
+              sessionList[existingIdx] = summaryItem;
+            } else {
+              sessionList.unshift(summaryItem);
+            }
+            if (sessionList.length > 50) sessionList = sessionList.slice(0, 50);
+
+            await env.Enco.put(indexKey, JSON.stringify(sessionList), {
+              httpMetadata: { contentType: 'application/json' }
+            });
+          }
+
+          // 3. Rekam / Perbarui ringkasan log ke D1 (enco_logs) agar terlihat di tabel log web
+          if (env.DB) {
+            try {
+              const now = new Date().toISOString();
+              const existingLog = await env.DB.prepare('SELECT id FROM enco_logs WHERE session_id = ?').bind(session.id).first();
+              if (existingLog) {
+                await env.DB.prepare(`
+                  UPDATE enco_logs SET
+                    total_pasien = ?,
+                    jumlah_berhasil = ?,
+                    jumlah_terdaftar = ?,
+                    jumlah_gagal = ?,
+                    status = ?,
+                    keterangan = ?,
+                    r2_key = ?
+                  WHERE session_id = ?
+                `).bind(
+                  Number(session.total || 0),
+                  Number(session.berhasil || 0),
+                  Number(session.pernahInput || 0),
+                  Number(session.gagal || 0),
+                  session.status === 'completed' ? 'Selesai' : (session.status === 'has-error' ? 'Selesai Sebagian' : 'Sedang Berjalan'),
+                  `Sesi ${session.fileName || 'Data'}: ${session.berhasil || 0} berhasil, ${session.pernahInput || 0} sudah terdaftar, ${session.gagal || 0} error.`,
+                  detailKey,
+                  session.id
+                ).run();
+              } else {
+                await env.DB.prepare(`
+                  INSERT INTO enco_logs (
+                    petugas, jenis_kegiatan, total_pasien, jumlah_berhasil,
+                    jumlah_terdaftar, jumlah_gagal, status, keterangan, r2_key, session_id, created_at
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `).bind(
+                  petugas,
+                  `Pendaftaran ${session.category || 'UMUM'}`,
+                  Number(session.total || 0),
+                  Number(session.berhasil || 0),
+                  Number(session.pernahInput || 0),
+                  Number(session.gagal || 0),
+                  session.status === 'completed' ? 'Selesai' : 'Sedang Berjalan',
+                  `Sesi ${session.fileName || 'Data'}: ${session.berhasil || 0} berhasil, ${session.pernahInput || 0} sudah terdaftar, ${session.gagal || 0} error.`,
+                  detailKey,
+                  session.id,
+                  now
+                ).run();
+              }
+            } catch (d1Err) {
+              console.warn('[ENCO Sessions] D1 log sync warning:', d1Err);
+            }
+          }
+
+          return new Response(JSON.stringify({ success: true, key: detailKey }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 9B. GET /api/enco/sessions (Ambil Daftar Sesi Akun dari R2)
+      if (url.pathname === '/api/enco/sessions' && request.method === 'GET') {
+        try {
+          const petugas = (url.searchParams.get('petugas') || '').trim();
+          const menu = (url.searchParams.get('menu') || 'pendaftaran').toLowerCase();
+          if (!petugas) {
+            return new Response(JSON.stringify({ success: false, error: 'Parameter petugas dibutuhkan' }), { status: 400, headers: corsHeaders });
+          }
+
+          if (env.Enco) {
+            const userSlug = getR2UserSlug(petugas);
+            const indexKey = `logs/${userSlug}/${menu}_sessions.json`;
+            const obj = await env.Enco.get(indexKey);
+            if (obj) {
+              const list = JSON.parse(await obj.text()) || [];
+              return new Response(JSON.stringify({ success: true, data: list, source: 'r2' }), { headers: corsHeaders });
+            }
+          }
+
+          return new Response(JSON.stringify({ success: true, data: [], source: 'empty' }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 9C. GET /api/enco/sessions/detail (Ambil Snapshot Detail Pasien Sesi dari R2)
+      if (url.pathname === '/api/enco/sessions/detail' && request.method === 'GET') {
+        try {
+          const key = url.searchParams.get('key');
+          const petugas = url.searchParams.get('petugas');
+          const sessionId = url.searchParams.get('id');
+          const menu = url.searchParams.get('menu') || 'pendaftaran';
+
+          let r2Key = key;
+          if (!r2Key && petugas && sessionId) {
+            const userSlug = getR2UserSlug(petugas);
+            r2Key = `logs/${userSlug}/${menu}_${sessionId}.json`;
+          }
+
+          if (!r2Key) {
+            return new Response(JSON.stringify({ success: false, error: 'Key atau id sesi dibutuhkan' }), { status: 400, headers: corsHeaders });
+          }
+
+          if (!env.Enco) {
+            return new Response(JSON.stringify({ success: false, error: 'R2 Bucket Enco belum terhubung di Cloudflare' }), { status: 500, headers: corsHeaders });
+          }
+
+          const obj = await env.Enco.get(r2Key);
+          if (!obj) {
+            return new Response(JSON.stringify({ success: false, error: 'File sesi tidak ditemukan di R2' }), { status: 404, headers: corsHeaders });
+          }
+
+          const text = await obj.text();
+          const sessionData = JSON.parse(text);
+          return new Response(JSON.stringify({ success: true, session: sessionData }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // 9D. DELETE /api/enco/sessions (Hapus Sesi Log dari R2)
+      if (url.pathname === '/api/enco/sessions' && (request.method === 'DELETE' || request.method === 'POST')) {
+        try {
+          let body = {};
+          if (request.method === 'POST') {
+            try { body = await request.json(); } catch (_) {}
+          }
+          const key = url.searchParams.get('key') || body.key;
+          const petugas = url.searchParams.get('petugas') || body.petugas;
+          const sessionId = url.searchParams.get('id') || body.id;
+          const menu = url.searchParams.get('menu') || body.menu || 'pendaftaran';
+
+          if (env.Enco) {
+            if (key) {
+              await env.Enco.delete(key);
+            }
+            if (petugas && sessionId) {
+              const userSlug = getR2UserSlug(petugas);
+              const detailKey = `logs/${userSlug}/${menu}_${sessionId}.json`;
+              await env.Enco.delete(detailKey);
+
+              const indexKey = `logs/${userSlug}/${menu}_sessions.json`;
+              try {
+                const existing = await env.Enco.get(indexKey);
+                if (existing) {
+                  let list = JSON.parse(await existing.text()) || [];
+                  list = list.filter(s => s.id !== sessionId);
+                  await env.Enco.put(indexKey, JSON.stringify(list), { httpMetadata: { contentType: 'application/json' } });
+                }
+              } catch (_) {}
+            }
+          }
+
+          if (env.DB && sessionId) {
+            try {
+              await env.DB.prepare('DELETE FROM enco_logs WHERE session_id = ?').bind(sessionId).run();
+            } catch (_) {}
+          }
+
+          return new Response(JSON.stringify({ success: true, message: 'Sesi log berhasil dihapus dari R2' }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }

@@ -1282,8 +1282,16 @@
           <div id="encoSubTabLogs" style="display: none;">
             <!-- Log Toolbar & Action Bar -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-              <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">
-                <i class="bi bi-clock-history" style="color: #7c3aed;"></i> Riwayat Sesi & Aktivitas Bot Ekstensi ENCO
+              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div style="font-size: 13px; color: var(--text-muted); font-weight: 600;">
+                  <i class="bi bi-clock-history" style="color: #7c3aed;"></i> Riwayat Sesi & Aktivitas Bot ENCO (Cloud R2)
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 12px; color: var(--text-muted);"><i class="bi bi-person-badge"></i> Akun Petugas:</span>
+                  <select id="filterEncoLogPetugas" class="filter-control" style="font-size: 12px; padding: 4px 8px; min-width: 170px;" onchange="loadEncoLogs()">
+                    <option value="">-- Semua Akun Petugas --</option>
+                  </select>
+                </div>
               </div>
               <div style="display: flex; gap: 8px; align-items: center;">
                 <button class="btn btn-secondary btn-sm" onclick="loadEncoLogs()" title="Muat ulang log">
@@ -1309,7 +1317,7 @@
                     <th style="text-align: center;">GAGAL</th>
                     <th>STATUS</th>
                     <th>KETERANGAN</th>
-                    <th style="width: 70px; text-align: center;" class="admin-only">AKSI</th>
+                    <th style="width: 100px; text-align: center;">AKSI</th>
                   </tr>
                 </thead>
                 <tbody id="tableBodyEncoLogs">

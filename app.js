@@ -20714,7 +20714,7 @@ async function confirmDeleteEncoData() {
   }
 }
 
-async function deleteSingleEncoLog(id) {
+async function deleteSingleEncoLog(id, r2Key, sessionId, petugas) {
   const role = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
   const isAdmin = role === 'admin' || role.includes('admin');
 
@@ -20730,7 +20730,7 @@ async function deleteSingleEncoLog(id) {
 
   const result = await Swal.fire({
     title: 'Hapus Log Bot?',
-    text: 'Apakah Anda yakin ingin menghapus catatan log aktivitas bot ini?',
+    text: 'Apakah Anda yakin ingin menghapus catatan log aktivitas bot ini dari database dan Cloud R2?',
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
@@ -20744,8 +20744,15 @@ async function deleteSingleEncoLog(id) {
   try {
     const res = await fetch(`/api/enco/delete?type=log&id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     const data = await res.json();
+
+    if (sessionId || r2Key) {
+      try {
+        await fetch(`/api/enco/sessions?id=${encodeURIComponent(sessionId || '')}&petugas=${encodeURIComponent(petugas || '')}&key=${encodeURIComponent(r2Key || '')}`, { method: 'DELETE' });
+      } catch (_) {}
+    }
+
     if (data.success) {
-      showToast('Log bot berhasil dihapus', 'success');
+      showToast('Log bot berhasil dihapus dari cloud', 'success');
       loadEncoLogs();
       loadEncoStats();
     } else {
@@ -20798,6 +20805,115 @@ async function confirmDeleteEncoLogs() {
   }
 }
 
+async function viewEncoSessionDetail(sessionId, petugas, fileName) {
+  showLoadingOverlay('Memuat Detail Sesi Cloud...', 'Mengunduh snapshot rincian pasien dari Cloudflare R2...');
+  try {
+    const res = await fetch(`/api/enco/sessions/detail?id=${encodeURIComponent(sessionId || '')}&petugas=${encodeURIComponent(petugas || '')}`);
+    const data = await res.json();
+    hideLoadingOverlay();
+
+    if (!data.success || !data.session) {
+      throw new Error(data.error || 'Detail sesi tidak ditemukan di Cloud R2');
+    }
+
+    const sess = data.session;
+    const patients = Array.isArray(sess.data) ? sess.data : [];
+
+    const total = Number(sess.total || patients.length || 0);
+    const berhasil = Number(sess.berhasil || 0);
+    const gagal = Number(sess.gagal || 0);
+    const terdaftar = Number(sess.pernahInput || 0);
+
+    let modalHtml = `
+      <div style="text-align: left; font-size: 13px;">
+        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div style="font-weight: 800; font-size: 15px; color: #1e293b;">${escapeHtml(sess.fileName || fileName || 'Sesi Otomasi')}</div>
+            <div style="font-size: 12px; color: #64748b;">Petugas: <strong>${escapeHtml(petugas || '-')}</strong> • ${escapeHtml(sess.dateStr || '-')}</div>
+          </div>
+          <span class="badge" style="background: rgba(37,99,235,0.1); color: #2563eb; font-weight: 700; border: 1px solid rgba(37,99,235,0.25);">Cloud R2 Storage</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; text-align: center;">
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px;">
+            <div style="font-size: 18px; font-weight: 800; color: #16a34a;">${berhasil}</div>
+            <div style="font-size: 10.5px; font-weight: 700; color: #15803d; text-transform: uppercase;">Berhasil</div>
+          </div>
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px;">
+            <div style="font-size: 18px; font-weight: 800; color: #dc2626;">${gagal}</div>
+            <div style="font-size: 10.5px; font-weight: 700; color: #b91c1c; text-transform: uppercase;">Error</div>
+          </div>
+          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px;">
+            <div style="font-size: 18px; font-weight: 800; color: #d97706;">${terdaftar}</div>
+            <div style="font-size: 10.5px; font-weight: 700; color: #b45309; text-transform: uppercase;">Pernah Input</div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+            <div style="font-size: 18px; font-weight: 800; color: #334155;">${total}</div>
+            <div style="font-size: 10.5px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total</div>
+          </div>
+        </div>
+
+        <div style="font-weight: 700; color: #475569; margin-bottom: 6px; font-size: 12.5px;">Daftar Rincian Pasien (${patients.length} Pasien):</div>
+        <div style="max-height: 280px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <thead>
+              <tr style="background: #f1f5f9; text-align: left; position: sticky; top: 0; z-index: 1;">
+                <th style="padding: 6px 8px; width: 35px; text-align: center;">No</th>
+                <th style="padding: 6px 8px;">Nama Pasien</th>
+                <th style="padding: 6px 8px;">NIK</th>
+                <th style="padding: 6px 8px;">Status / Hasil</th>
+              </tr>
+            </thead>
+            <tbody>
+    `;
+
+    if (patients.length === 0) {
+      modalHtml += `<tr><td colspan="4" style="text-align: center; padding: 18px; color: #94a3b8;">Tidak ada data pasien yang tersimpan dalam snapshot sesi ini.</td></tr>`;
+    } else {
+      patients.slice(0, 500).forEach((p, idx) => {
+        const isDone = p._status === 'done' || (p.status || '').includes('DONE');
+        const isError = p._status === 'error' || p._status === 'invalid-nik';
+        const isAlready = p._status === 'already-screened' || (p.status || '').includes('ALREADY');
+
+        let badge = '<span style="color:#64748b;">Menunggu</span>';
+        if (isDone) badge = '<span style="color:#16a34a; font-weight:700;">✅ Berhasil</span>';
+        else if (isError) badge = `<span style="color:#dc2626; font-weight:700;" title="${escapeHtml(p._errorMsg || 'Error')}">❌ Error</span>`;
+        else if (isAlready) badge = '<span style="color:#d97706; font-weight:700;">⚠️ Pernah Input</span>';
+
+        modalHtml += `
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 5px 8px; text-align: center; color: #94a3b8;">${idx + 1}</td>
+            <td style="padding: 5px 8px; font-weight: 600; color: #1e293b;">${escapeHtml(p.nama || p.Nama || '-')}</td>
+            <td style="padding: 5px 8px; font-family: monospace; color: #2563eb;">${escapeHtml(p.nik || p.NIK || '-')}</td>
+            <td style="padding: 5px 8px;">${badge}</td>
+          </tr>
+        `;
+      });
+      if (patients.length > 500) {
+        modalHtml += `<tr><td colspan="4" style="text-align: center; padding: 8px; color: #64748b; font-style: italic;">Menampilkan 500 dari ${patients.length} total pasien...</td></tr>`;
+      }
+    }
+
+    modalHtml += `
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    Swal.fire({
+      title: '<i class="bi bi-file-earmark-medical-fill" style="color: #7c3aed;"></i> Laporan Status Sesi (Cloud R2)',
+      html: modalHtml,
+      width: '640px',
+      confirmButtonText: 'Tutup',
+      confirmButtonColor: '#7c3aed'
+    });
+  } catch (err) {
+    hideLoadingOverlay();
+    Swal.fire('Gagal Memuat Detail', err.message, 'error');
+  }
+}
+
 async function loadEncoLogs() {
   const tbody = document.getElementById('tableBodyEncoLogs');
   if (tbody) {
@@ -20806,13 +20922,32 @@ async function loadEncoLogs() {
 
   const role = (sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas')).toLowerCase();
   const isAdmin = role === 'admin' || role.includes('admin');
+  const selPetugas = (document.getElementById('filterEncoLogPetugas')?.value || '').trim();
 
   try {
-    const res = await fetch('/api/enco/logs?limit=50');
+    let url = `/api/enco/logs?limit=100`;
+    if (selPetugas) url += `&petugas=${encodeURIComponent(selPetugas)}`;
+
+    const res = await fetch(url);
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Gagal memuat log');
 
     const logs = data.data || [];
+
+    // Isi opsi dropdown akun petugas jika belum
+    const selectEl = document.getElementById('filterEncoLogPetugas');
+    if (selectEl && selectEl.options.length <= 1) {
+      const userList = await fetch('/api/enco/users').then(r => r.json()).catch(() => ({}));
+      if (userList?.success && Array.isArray(userList.data)) {
+        userList.data.forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u.nama_user;
+          opt.textContent = `${u.nama_user} (${u.role || 'Petugas'})`;
+          selectEl.appendChild(opt);
+        });
+      }
+    }
+
     if (logs.length === 0) {
       if (tbody) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 32px; color: var(--text-muted);"><i class="bi bi-clock-history" style="font-size: 28px; display: block; margin-bottom: 8px;"></i>Belum ada log aktivitas bot yang tercatat.</td></tr>`;
       return;
@@ -20824,6 +20959,8 @@ async function loadEncoLogs() {
       const badgeStatus = isSuccess
         ? `<span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;"><i class="bi bi-check-circle"></i> Selesai</span>`
         : `<span class="badge" style="background:#fef2f2; color:#dc2626; border:1px solid #fecaca;"><i class="bi bi-exclamation-circle"></i> ${escapeHtml(l.status || 'Berhenti')}</span>`;
+
+      const hasR2Session = !!(l.session_id || l.r2_key);
 
       html += `
         <tr>
@@ -20837,12 +20974,19 @@ async function loadEncoLogs() {
           <td style="text-align: center; font-weight: 800; color: #dc2626;">${Number(l.jumlah_gagal || 0)}</td>
           <td>${badgeStatus}</td>
           <td style="font-size: 12.5px; color: #475569;">${escapeHtml(l.keterangan || '-')}</td>
-          <td style="text-align: center;" class="admin-only">
-            ${isAdmin ? `
-              <button class="btn btn-danger btn-sm" style="padding: 2px 7px;" onclick="deleteSingleEncoLog(${Number(l.id)})" title="Hapus Log Ini">
-                <i class="bi bi-trash"></i>
-              </button>
-            ` : '-'}
+          <td style="text-align: center;">
+            <div style="display: flex; gap: 4px; justify-content: center;">
+              ${hasR2Session ? `
+                <button class="btn btn-secondary btn-sm" style="padding: 2px 7px;" onclick="viewEncoSessionDetail('${escapeHtml(l.session_id || '')}', '${escapeHtml(l.petugas || '')}', '${escapeHtml(l.keterangan || '')}')" title="Lihat Laporan Sesi R2">
+                  <i class="bi bi-file-earmark-medical"></i>
+                </button>
+              ` : ''}
+              ${isAdmin ? `
+                <button class="btn btn-danger btn-sm" style="padding: 2px 7px;" onclick="deleteSingleEncoLog(${Number(l.id)}, '${escapeHtml(l.r2_key || '')}', '${escapeHtml(l.session_id || '')}', '${escapeHtml(l.petugas || '')}')" title="Hapus Log Ini">
+                  <i class="bi bi-trash"></i>
+                </button>
+              ` : ''}
+            </div>
           </td>
         </tr>
       `;
