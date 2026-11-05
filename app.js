@@ -21191,9 +21191,10 @@ async function loadEncoReportSessionDetail() {
           statusBadge = '<span class="badge" style="background:#fef3c7; color:#b45309; font-weight:700;">⚠️ Pernah Input</span>';
         }
 
-        // Tanggal input & Faskes pemeriksa (khususnya untuk yang pernah input)
+        // Tanggal input, Faskes pemeriksa, dan Layanan (khususnya untuk yang pernah input)
         let tglInput = p._screeningDate || p.screening_date || p.tanggal_pemeriksaan || p.tanggal_daftar || p.tanggal || (data.session.dateStr ? data.session.dateStr.split(',')[0].trim() : '-');
-        let faskes = p._screeningFaskes || p.screening_faskes || p.faskes || p.faskes_pemeriksa || p.puskesmas || 'Puskesmas Banjaran Kota';
+        let faskes = p._screeningFaskes || p.screening_faskes || p.faskes || p.faskes_pemeriksa || p.puskesmas || 'BANJARAN KOTA';
+        let layanan = p._screeningLayanan || p.screening_layanan || p.layanan || p.kategori || p.category || 'CKG Umum';
 
         return {
           index: idx + 1,
@@ -21204,6 +21205,7 @@ async function loadEncoReportSessionDetail() {
           statusBadge,
           tanggalInput: tglInput,
           faskesPemeriksa: faskes,
+          layanan: layanan,
           waktuEksekusi: p.dateStr || p._timestamp || data.session.dateStr || '-',
           keterangan: p._errorMsg || p.no_tiket || p.keterangan || (isDone ? 'Berhasil diproses' : isAlready ? 'Sudah menerima layanan CKG' : isError ? 'Error otomasi' : 'Menunggu')
         };
@@ -21275,7 +21277,7 @@ function filterEncoReportRows() {
   encoReportState.filtered = filtered;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted);">Tidak ada data laporan yang cocok dengan filter.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);">Tidak ada data laporan yang cocok dengan filter.</td></tr>`;
     return;
   }
 
@@ -21288,6 +21290,7 @@ function filterEncoReportRows() {
       <td>${i.statusBadge}</td>
       <td style="background: #fefce8; font-weight: 700; color: #854d0e;">${escapeHtml(i.tanggalInput)}</td>
       <td style="background: #fefce8; color: #854d0e; font-weight: 600;">${escapeHtml(i.faskesPemeriksa)}</td>
+      <td><span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:600;">${escapeHtml(i.layanan)}</span></td>
       <td style="font-size: 11px; color: #64748b;">${escapeHtml(i.waktuEksekusi)}</td>
       <td style="font-size: 11.5px; max-width: 250px;">${escapeHtml(i.keterangan)}</td>
     </tr>
@@ -21341,8 +21344,9 @@ function exportEncoReportWebToExcel() {
     'NIK': i.nik,
     'Kategori': i.kategori,
     'Status Hasil': i.statusKey === 'success' ? 'Berhasil' : i.statusKey === 'already' ? 'Pernah Input' : i.statusKey === 'error' ? 'Error' : 'Menunggu',
-    'Tanggal Input': i.tanggalInput,
-    'Faskes Pemeriksa': i.faskesPemeriksa,
+    'Puskesmas Pemeriksa': i.faskesPemeriksa,
+    'Tanggal Pemeriksaan': i.tanggalInput,
+    'Layanan': i.layanan,
     'Waktu Eksekusi': i.waktuEksekusi,
     'Keterangan / Tiket': i.keterangan
   }));
