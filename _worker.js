@@ -279,23 +279,81 @@ export default {
       // DELETE
       if (request.method === 'DELETE') {
         try {
-          const id = url.searchParams.get('id');
-          if (tab === 'belum_bagi') {
-            if (id) { await env.DB.prepare('DELETE FROM simpus_belum_bagi WHERE id = ?').bind(id).run(); }
-            else { await env.DB.prepare('DELETE FROM simpus_belum_bagi').run(); }
-          } else if (tab === 'sudah_bagi') {
-            if (id) { await env.DB.prepare('DELETE FROM simpus_sudah_bagi WHERE id = ?').bind(id).run(); }
-            else { await env.DB.prepare('DELETE FROM simpus_sudah_bagi').run(); }
-          } else {
-            if (id) {
+          let body = null;
+          try {
+            if (request.headers.get('content-type')?.includes('application/json')) {
+              body = await request.json();
+            }
+          } catch (_) {}
+
+          const id = url.searchParams.get('id') || body?.id;
+          const filter = url.searchParams.get('filter') || body?.filter;
+
+          if (id) {
+            if (tab === 'belum_bagi') {
+              await env.DB.prepare('DELETE FROM simpus_belum_bagi WHERE id = ?').bind(id).run();
+            } else if (tab === 'sudah_bagi') {
+              await env.DB.prepare('DELETE FROM simpus_sudah_bagi WHERE id = ?').bind(id).run();
+            } else {
               await env.DB.prepare('DELETE FROM simpus_belum_bagi WHERE id = ?').bind(id).run();
               await env.DB.prepare('DELETE FROM simpus_sudah_bagi WHERE id = ?').bind(id).run();
+            }
+            return new Response(JSON.stringify({ success: true, deleted: 'single' }), { headers: corsHeaders });
+          } else if (body && Array.isArray(body.ids) && body.ids.length > 0) {
+            const batchSize = 50;
+            let totalDeleted = 0;
+            for (let i = 0; i < body.ids.length; i += batchSize) {
+              const chunk = body.ids.slice(i, i + batchSize);
+              const placeholders = chunk.map(() => '?').join(',');
+              if (tab === 'belum_bagi') {
+                await env.DB.prepare(`DELETE FROM simpus_belum_bagi WHERE id IN (${placeholders})`).bind(...chunk).run();
+              } else if (tab === 'sudah_bagi') {
+                await env.DB.prepare(`DELETE FROM simpus_sudah_bagi WHERE id IN (${placeholders})`).bind(...chunk).run();
+              } else {
+                await env.DB.prepare(`DELETE FROM simpus_belum_bagi WHERE id IN (${placeholders})`).bind(...chunk).run();
+                await env.DB.prepare(`DELETE FROM simpus_sudah_bagi WHERE id IN (${placeholders})`).bind(...chunk).run();
+              }
+              totalDeleted += chunk.length;
+            }
+            return new Response(JSON.stringify({ success: true, deleted: 'batch', count: totalDeleted }), { headers: corsHeaders });
+          } else if (filter === 'non_16_digit') {
+            const condition = `WHERE nik IS NULL OR TRIM(nik) = '' OR LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(nik, ' ', ''), '-', ''), '.', ''), '\'', '')) != 16`;
+            if (tab === 'belum_bagi') {
+              await env.DB.prepare(`DELETE FROM simpus_belum_bagi ${condition}`).run();
+            } else if (tab === 'sudah_bagi') {
+              await env.DB.prepare(`DELETE FROM simpus_sudah_bagi ${condition}`).run();
+            } else {
+              await env.DB.prepare(`DELETE FROM simpus_belum_bagi ${condition}`).run();
+              await env.DB.prepare(`DELETE FROM simpus_sudah_bagi ${condition}`).run();
+            }
+
+            if (body && Array.isArray(body.ids) && body.ids.length > 0) {
+              const batchSize = 50;
+              for (let i = 0; i < body.ids.length; i += batchSize) {
+                const chunk = body.ids.slice(i, i + batchSize);
+                const placeholders = chunk.map(() => '?').join(',');
+                if (tab === 'belum_bagi') {
+                  await env.DB.prepare(`DELETE FROM simpus_belum_bagi WHERE id IN (${placeholders})`).bind(...chunk).run();
+                } else if (tab === 'sudah_bagi') {
+                  await env.DB.prepare(`DELETE FROM simpus_sudah_bagi WHERE id IN (${placeholders})`).bind(...chunk).run();
+                } else {
+                  await env.DB.prepare(`DELETE FROM simpus_belum_bagi WHERE id IN (${placeholders})`).bind(...chunk).run();
+                  await env.DB.prepare(`DELETE FROM simpus_sudah_bagi WHERE id IN (${placeholders})`).bind(...chunk).run();
+                }
+              }
+            }
+            return new Response(JSON.stringify({ success: true, deleted: 'non_16_digit' }), { headers: corsHeaders });
+          } else {
+            if (tab === 'belum_bagi') {
+              await env.DB.prepare('DELETE FROM simpus_belum_bagi').run();
+            } else if (tab === 'sudah_bagi') {
+              await env.DB.prepare('DELETE FROM simpus_sudah_bagi').run();
             } else {
               await env.DB.prepare('DELETE FROM simpus_belum_bagi').run();
               await env.DB.prepare('DELETE FROM simpus_sudah_bagi').run();
             }
+            return new Response(JSON.stringify({ success: true, deleted: 'all' }), { headers: corsHeaders });
           }
-          return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
@@ -411,16 +469,63 @@ export default {
 
       if (request.method === 'DELETE') {
         try {
-          const id = url.searchParams.get('id');
+          let body = null;
+          try {
+            if (request.headers.get('content-type')?.includes('application/json')) {
+              body = await request.json();
+            }
+          } catch (_) {}
+
+          const id = url.searchParams.get('id') || body?.id;
+          const filter = url.searchParams.get('filter') || body?.filter;
+
           if (id) {
             await env.DB.prepare('DELETE FROM ckg_full_records WHERE id = ?').bind(id).run();
             try { await env.DB.prepare('DELETE FROM ckg_records WHERE id = ?').bind(id).run(); } catch (_) {}
+            return new Response(JSON.stringify({ success: true, deleted: 'single' }), { headers: corsHeaders });
+          } else if (body && Array.isArray(body.ids) && body.ids.length > 0) {
+            const batchSize = 50;
+            let totalDeleted = 0;
+            for (let i = 0; i < body.ids.length; i += batchSize) {
+              const chunk = body.ids.slice(i, i + batchSize);
+              const placeholders = chunk.map(() => '?').join(',');
+              await env.DB.prepare(`DELETE FROM ckg_full_records WHERE id IN (${placeholders})`).bind(...chunk).run();
+              try { await env.DB.prepare(`DELETE FROM ckg_records WHERE id IN (${placeholders})`).bind(...chunk).run(); } catch (_) {}
+              totalDeleted += chunk.length;
+            }
+            return new Response(JSON.stringify({ success: true, deleted: 'batch', count: totalDeleted }), { headers: corsHeaders });
+          } else if (filter === 'non_16_digit') {
+            const delRes = await env.DB.prepare(`
+              DELETE FROM ckg_full_records 
+              WHERE nik IS NULL 
+                 OR TRIM(nik) = '' 
+                 OR LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(nik, ' ', ''), '-', ''), '.', ''), '\'', '')) != 16
+            `).run();
+            try {
+              await env.DB.prepare(`
+                DELETE FROM ckg_records 
+                WHERE nik IS NULL 
+                   OR TRIM(nik) = '' 
+                   OR LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(nik, ' ', ''), '-', ''), '.', ''), '\'', '')) != 16
+              `).run();
+            } catch (_) {}
+
+            if (body && Array.isArray(body.ids) && body.ids.length > 0) {
+              const batchSize = 50;
+              for (let i = 0; i < body.ids.length; i += batchSize) {
+                const chunk = body.ids.slice(i, i + batchSize);
+                const placeholders = chunk.map(() => '?').join(',');
+                await env.DB.prepare(`DELETE FROM ckg_full_records WHERE id IN (${placeholders})`).bind(...chunk).run();
+                try { await env.DB.prepare(`DELETE FROM ckg_records WHERE id IN (${placeholders})`).bind(...chunk).run(); } catch (_) {}
+              }
+            }
+            return new Response(JSON.stringify({ success: true, deleted: 'non_16_digit', changes: delRes?.meta?.changes }), { headers: corsHeaders });
           } else {
             await env.DB.prepare('DELETE FROM ckg_full_records').run();
             // Also clear legacy ckg_records table to prevent data resurrection
             try { await env.DB.prepare('DELETE FROM ckg_records').run(); } catch (_) {}
+            return new Response(JSON.stringify({ success: true, deleted: 'all' }), { headers: corsHeaders });
           }
-          return new Response(JSON.stringify({ success: true, deleted: id ? 'single' : 'all' }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }
@@ -775,10 +880,15 @@ export default {
           const kelas = url.searchParams.get('kelas') || body?.kelas;
           const tahun = url.searchParams.get('tahun') || body?.tahun;
           const status = url.searchParams.get('status') || body?.status;
+          const filter = url.searchParams.get('filter') || body?.filter;
 
           let query = 'DELETE FROM ckg_sekolah_records';
           const conditions = [];
           const params = [];
+
+          if (filter === 'non_16_digit') {
+            conditions.push(`(nik IS NULL OR TRIM(nik) = '' OR LENGTH(REPLACE(REPLACE(REPLACE(REPLACE(nik, ' ', ''), '-', ''), '.', ''), '\'', '')) != 16)`);
+          }
 
           if (sekolah && sekolah !== 'all' && sekolah !== 'ALL') {
             conditions.push('UPPER(TRIM(sekolah)) = UPPER(TRIM(?))');

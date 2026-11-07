@@ -5026,7 +5026,7 @@
           </div>
 
           <!-- 3. Status Skrining (Opsional) -->
-          <div class="form-group" style="margin-bottom: 16px;">
+          <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label" style="font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
               <i class="bi bi-ui-checks"></i> 4. Status Pemeriksaan Siswa (Opsional):
             </label>
@@ -5036,6 +5036,18 @@
               <option value="belum">Hanya Siswa yang BELUM Diperiksa (Data Kosong / Baru Import)</option>
               <option value="sudah">Hanya Siswa yang SUDAH Diperiksa</option>
               <option value="sebagian">Hanya Siswa yang Diperiksa Sebagian</option>
+            </select>
+          </div>
+
+          <!-- 4. Filter Validitas NIK Siswa (Opsional) -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+              <i class="bi bi-person-badge"></i> 5. Validitas NIK Siswa (Opsional):
+            </label>
+            <select id="hapusSekolahPilihNikValid" class="form-control" onchange="updateHapusSekolahPreview()"
+              style="border-radius: 10px; font-weight: 600; border-color: #cbd5e1; height: 38px;">
+              <option value="all">Semua Data Siswa</option>
+              <option value="non_16_digit">Hanya Siswa dengan NIK Bukan 16 Digit (Kurang / Lebih / Rusak)</option>
             </select>
           </div>
 
