@@ -3096,7 +3096,7 @@
       <div class="wizard-stepper-bar">
         <div class="stepper-item active" data-step="1" onclick="goToStep(1)">
           <div class="stepper-circle">1</div>
-          <span class="stepper-label">Simpen BNBA di?</span>
+          <span class="stepper-label">Kategori Usia</span>
         </div>
         <div class="stepper-line"></div>
         <div class="stepper-item" data-step="2" onclick="goToStep(2)">
@@ -3118,31 +3118,87 @@
       <div class="modal-body" style="padding-top: 10px;">
         <form id="ckgForm" novalidate>
 
-          <!-- STEP 1: Simpen BNBA di? -->
+          <!-- STEP 1: Kategori Usia Sasaran Skrining -->
           <div class="wizard-step-content active" id="wizardStep1">
             <div class="form-section-title">
-              <i class="bi bi-geo-fill"></i> Step 1 dari 4: Simpen BNBA di?
+              <i class="bi bi-people-fill"></i> Step 1 dari 4: Pilih Kategori Usia Sasaran Skrining
             </div>
 
+            <!-- Compatibility Radio Buttons for Legacy Backend Compatibility -->
+            <input type="radio" id="kegiatan_dalam" name="jenis_kegiatan" value="Dalam Gedung" style="display:none;">
+            <input type="radio" id="kegiatan_luar" name="jenis_kegiatan" value="Luar Gedung" checked style="display:none;">
+
             <div class="form-group full-width" style="margin-bottom: 20px;">
-              <label class="form-label" style="font-size: 13px; font-weight: 800;">Pilih Kategori Lokasi Pelayanan
-                Skrining <span class="required">*</span></label>
-              <div class="pill-group pill-card-group">
-                <div class="pill-option">
-                  <input type="radio" id="kegiatan_dalam" name="jenis_kegiatan" value="Dalam Gedung">
-                  <label for="kegiatan_dalam" class="pill-card-label">
-                    <i class="bi bi-building-fill pill-card-icon"></i>
-                    <span class="pill-card-text">Dalam Gedung</span>
-                    <span class="pill-card-subtext">Puskesmas Banjaran Kota</span>
+              <label class="form-label" style="font-size: 13.5px; font-weight: 800; margin-bottom: 12px; display: block;">
+                Pilih Kategori Usia / Kelompok Sasaran (Siklus Hidup ILP) <span class="required">*</span>
+              </label>
+
+              <div class="kategori-usia-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;">
+                <!-- 1. Bayi dan Balita -->
+                <div class="pill-option" style="width: 100%;">
+                  <input type="radio" id="kat_bayi_balita" name="kategori_sasaran" value="bayi_balita">
+                  <label for="kat_bayi_balita" class="pill-card-label" style="position: relative; padding: 20px 14px; min-height: 125px; border-radius: 12px; text-align: center; cursor: pointer;">
+                    <span class="badge" style="position: absolute; top: 8px; right: 8px; background: #fee2e2; color: #dc2626; font-size: 10px; font-weight: 800; border-radius: 6px; padding: 3px 7px;">
+                      <i class="bi bi-person-vcard-fill"></i> Wajib Wali
+                    </span>
+                    <i class="bi bi-balloon-heart-fill pill-card-icon" style="font-size: 32px; color: #ec4899; margin-bottom: 8px;"></i>
+                    <span class="pill-card-text" style="font-size: 15px; font-weight: 800; display: block;">Bayi & Balita</span>
+                    <span class="pill-card-subtext" style="font-size: 12px; color: #64748b; font-weight: 600; margin-top: 4px; display: block;">0 – 59 Bulan (0 – 5 Th)</span>
                   </label>
                 </div>
-                <div class="pill-option">
-                  <input type="radio" id="kegiatan_luar" name="jenis_kegiatan" value="Luar Gedung" checked>
-                  <label for="kegiatan_luar" class="pill-card-label">
-                    <i class="bi bi-geo-alt-fill pill-card-icon"></i>
-                    <span class="pill-card-text">Luar Gedung</span>
-                    <span class="pill-card-subtext">Posyandu / Kegiatan Lapangan</span>
+
+                <!-- 2. Anak Prasekolah -->
+                <div class="pill-option" style="width: 100%;">
+                  <input type="radio" id="kat_prasekolah" name="kategori_sasaran" value="prasekolah">
+                  <label for="kat_prasekolah" class="pill-card-label" style="position: relative; padding: 20px 14px; min-height: 125px; border-radius: 12px; text-align: center; cursor: pointer;">
+                    <span class="badge" style="position: absolute; top: 8px; right: 8px; background: #fee2e2; color: #dc2626; font-size: 10px; font-weight: 800; border-radius: 6px; padding: 3px 7px;">
+                      <i class="bi bi-person-vcard-fill"></i> Wajib Wali
+                    </span>
+                    <i class="bi bi-backpack4-fill pill-card-icon" style="font-size: 32px; color: #f59e0b; margin-bottom: 8px;"></i>
+                    <span class="pill-card-text" style="font-size: 15px; font-weight: 800; display: block;">Anak Prasekolah</span>
+                    <span class="pill-card-subtext" style="font-size: 12px; color: #64748b; font-weight: 600; margin-top: 4px; display: block;">60 – 72 Bulan (5 – 6 Th)</span>
                   </label>
+                </div>
+
+                <!-- 3. Usia Sekolah dan Remaja -->
+                <div class="pill-option" style="width: 100%;">
+                  <input type="radio" id="kat_sekolah_remaja" name="kategori_sasaran" value="sekolah_remaja">
+                  <label for="kat_sekolah_remaja" class="pill-card-label" style="padding: 20px 14px; min-height: 125px; border-radius: 12px; text-align: center; cursor: pointer;">
+                    <i class="bi bi-book-half pill-card-icon" style="font-size: 32px; color: #3b82f6; margin-bottom: 8px;"></i>
+                    <span class="pill-card-text" style="font-size: 15px; font-weight: 800; display: block;">Sekolah & Remaja</span>
+                    <span class="pill-card-subtext" style="font-size: 12px; color: #64748b; font-weight: 600; margin-top: 4px; display: block;">6 – 18 Tahun</span>
+                  </label>
+                </div>
+
+                <!-- 4. Dewasa -->
+                <div class="pill-option" style="width: 100%;">
+                  <input type="radio" id="kat_dewasa" name="kategori_sasaran" value="dewasa" checked>
+                  <label for="kat_dewasa" class="pill-card-label" style="padding: 20px 14px; min-height: 125px; border-radius: 12px; text-align: center; cursor: pointer;">
+                    <i class="bi bi-person-badge-fill pill-card-icon" style="font-size: 32px; color: #10b981; margin-bottom: 8px;"></i>
+                    <span class="pill-card-text" style="font-size: 15px; font-weight: 800; display: block;">Dewasa</span>
+                    <span class="pill-card-subtext" style="font-size: 12px; color: #64748b; font-weight: 600; margin-top: 4px; display: block;">18 – 59 Tahun</span>
+                  </label>
+                </div>
+
+                <!-- 5. Lanjut Usia (Lansia) -->
+                <div class="pill-option" style="width: 100%;">
+                  <input type="radio" id="kat_lansia" name="kategori_sasaran" value="lansia">
+                  <label for="kat_lansia" class="pill-card-label" style="position: relative; padding: 20px 14px; min-height: 125px; border-radius: 12px; text-align: center; cursor: pointer;">
+                    <span class="badge" style="position: absolute; top: 8px; right: 8px; background: #fef3c7; color: #b45309; font-size: 10px; font-weight: 700; border-radius: 6px; padding: 3px 7px;">
+                      <i class="bi bi-info-circle"></i> Dianjurkan
+                    </span>
+                    <i class="bi bi-heart-pulse-fill pill-card-icon" style="font-size: 32px; color: #8b5cf6; margin-bottom: 8px;"></i>
+                    <span class="pill-card-text" style="font-size: 15px; font-weight: 800; display: block;">Lanjut Usia (Lansia)</span>
+                    <span class="pill-card-subtext" style="font-size: 12px; color: #64748b; font-weight: 600; margin-top: 4px; display: block;">≥ 60 Tahun</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Petunjuk Informasi Siklus Hidup ILP -->
+              <div style="margin-top: 14px; padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #1e40af; line-height: 1.5;">
+                <i class="bi bi-info-circle-fill" style="font-size: 16px; margin-top: 2px; flex-shrink: 0; color: #2563eb;"></i>
+                <div>
+                  <strong>Integrasi Layanan Primer (ILP):</strong> Pilih kategori usia sasaran skrining. Apabila memilih kategori <strong>Bayi & Balita</strong> atau <strong>Anak Prasekolah</strong>, sistem secara otomatis mewajibkan pengisian <strong>Data Wali</strong> pada langkah berikutnya.
                 </div>
               </div>
             </div>
@@ -3252,6 +3308,79 @@
                     <input type="radio" id="rokok_ya" name="merokok" value="Ya">
                     <label for="rokok_ya" class="pill-label">Ya</label>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- KARTU DATA WALI (Wajib untuk Balita & Prasekolah - Standar Gambar 2) -->
+            <div id="sectionDataWali" style="margin-top: 18px; border: 1.5px solid #fca5a5; border-radius: 14px; padding: 18px 20px; background: #fffbfb; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.05); transition: all 0.3s ease;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                  <i class="bi bi-person-vcard-fill" style="color: #2563eb; font-size: 19px;"></i> Isi Data Wali
+                </h4>
+                <span id="badgeWaliWajib" class="badge" style="background: #fee2e2; color: #dc2626; font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 8px; border: 1px solid #fca5a5;">
+                  <i class="bi bi-exclamation-circle-fill"></i> Wajib bagi Balita & Prasekolah
+                </span>
+              </div>
+              <p style="font-size: 12.5px; color: #64748b; margin: 0 0 16px 0; line-height: 1.5;">
+                Pengisian data wali wajib bagi peserta balita dan yang tidak memiliki NIK, serta dianjurkan bagi peserta lansia.
+              </p>
+
+              <div class="form-grid">
+                <!-- NIK Wali -->
+                <div class="form-group">
+                  <label class="form-label" for="nik_wali">
+                    NIK <span class="required" id="reqNikWali" style="color: #dc2626;">*</span>
+                  </label>
+                  <input type="text" id="nik_wali" name="nik_wali" class="form-control" maxlength="16" inputmode="numeric" placeholder="Masukkan NIK Wali" style="font-family: monospace; letter-spacing: 1px;">
+                  <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+                    <span style="font-size: 11px; color: #94a3b8; font-family: monospace;"><span id="nikWaliCounter" style="font-weight: 700; color: #64748b;">0</span>/16</span>
+                  </div>
+                </div>
+
+                <!-- Nama Lengkap Wali -->
+                <div class="form-group">
+                  <label class="form-label" for="nama_wali">
+                    Nama Lengkap <span class="required" id="reqNamaWali" style="color: #dc2626;">*</span>
+                  </label>
+                  <input type="text" id="nama_wali" name="nama_wali" class="form-control" placeholder="Masukkan Nama Lengkap">
+                </div>
+
+                <!-- Tanggal Lahir Wali -->
+                <div class="form-group">
+                  <label class="form-label" for="tanggal_lahir_wali">
+                    Tanggal Lahir <span class="required" id="reqDobWali" style="color: #dc2626;">*</span>
+                  </label>
+                  <input type="date" id="tanggal_lahir_wali" name="tanggal_lahir_wali" class="form-control" placeholder="Pilih Tanggal Lahir">
+                </div>
+
+                <!-- Jenis Kelamin Wali -->
+                <div class="form-group">
+                  <label class="form-label" for="jenis_kelamin_wali">
+                    Jenis Kelamin <span class="required" id="reqJkWali" style="color: #dc2626;">*</span>
+                  </label>
+                  <select id="jenis_kelamin_wali" name="jenis_kelamin_wali" class="form-control">
+                    <option value="" disabled selected>Pilih Jenis Kelamin</option>
+                    <option value="L">Laki-laki</option>
+                    <option value="P">Perempuan</option>
+                  </select>
+                </div>
+
+                <!-- No Whatsapp Wali -->
+                <div class="form-group full-width">
+                  <label class="form-label" for="no_whatsapp_wali">
+                    No. Whatsapp Wali <span class="required" id="reqWaWali" style="color: #dc2626;">*</span>
+                  </label>
+                  <div style="display: flex; align-items: stretch;">
+                    <span style="display: inline-flex; align-items: center; padding: 0 14px; background: #f1f5f9; border: 1px solid var(--border-color); border-right: none; border-radius: var(--radius-sm) 0 0 var(--radius-sm); font-size: 13.5px; font-weight: 700; color: #475569;">
+                      +62
+                    </span>
+                    <input type="tel" id="no_whatsapp_wali" name="no_whatsapp_wali" class="form-control" placeholder="Masukkan nomor whatsapp" inputmode="tel" style="border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+                  </div>
+                  <label style="display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; cursor: pointer; font-size: 13px; color: #475569;">
+                    <input type="checkbox" id="wali_nomor_sama" style="width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer;">
+                    <span>Nomor sama dengan peserta</span>
+                  </label>
                 </div>
               </div>
             </div>
@@ -6127,7 +6256,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=3.4"></script>
+  <script src="app.js?v=3.5"></script>
   <script src="alat-bnhp.js"></script>
 </body>
 
