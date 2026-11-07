@@ -3427,6 +3427,10 @@
           <p style="font-size: 12.5px; color: #1e40af; margin-bottom: 10px;">
             Gunakan template agar data yang di-upload sesuai format dan dapat diproses otomatis.
           </p>
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #991b1b; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-shield-lock-fill" style="color: #dc2626; font-size: 15px;"></i>
+            <span><strong>Wajib NIK 16 Digit:</strong> Data dengan NIK kurang atau lebih dari 16 digit otomatis ditolak / tidak masuk.</span>
+          </div>
           <button class="btn btn-primary btn-sm" onclick="downloadTemplateSimpusXlsx()" style="font-size: 13px;">
             <i class="bi bi-download"></i> Download Template XLSX
           </button>
@@ -3707,6 +3711,7 @@
               lengkap).</li>
             <li>Kolom utama: NIK, Nama Pasien, Jenis Kegiatan, Tanggal Lahir, Antropometri & Skrining Fisik.</li>
             <li>Sistem akan otomatis menghitung <strong>IMT, Kategori Usia, dan Status Validasi</strong>.</li>
+            <li><strong style="color: #dc2626;"><i class="bi bi-shield-lock-fill"></i> WAJIB NIK 16 DIGIT:</strong> Baris data dengan NIK kurang atau lebih dari 16 digit otomatis ditolak / tidak masuk.</li>
           </ul>
 
           <button class="btn btn-emerald btn-sm" onclick="downloadXLSXTemplate()"
@@ -3815,6 +3820,7 @@
             <li>Data otomatis terdistribusi & ter-assign ke masing-masing petugas sesuai nama di file Excel.</li>
             <li>Anda dapat melihat <strong>Preview Rekap Per-Petugas & Detail Pasien</strong> sebelum disimpan ke Cloud
               D1.</li>
+            <li><strong style="color: #dc2626;"><i class="bi bi-shield-lock-fill"></i> WAJIB NIK 16 DIGIT:</strong> Baris data dengan NIK kurang atau lebih dari 16 digit otomatis ditolak / tidak masuk.</li>
           </ul>
 
           <button class="btn btn-purple btn-sm" onclick="downloadAdminXLSXTemplate()"
@@ -3900,6 +3906,7 @@
               petugas di Excel.</li>
             <li>Data tersimpan & tersinkronisasi otomatis ke <strong>Cloudflare D1 Database (`simpus_records`)</strong>.
             </li>
+            <li><strong style="color: #dc2626;"><i class="bi bi-shield-lock-fill"></i> WAJIB NIK 16 DIGIT:</strong> Baris data dengan NIK kurang atau lebih dari 16 digit otomatis ditolak / tidak masuk.</li>
           </ul>
 
           <button class="btn btn-purple btn-sm" onclick="downloadSimpusAdminXLSXTemplate()"
@@ -4879,6 +4886,7 @@
                 KECAMATAN, KELURAHAN, ALAMAT, BB, TB, LP, TD SISTOLIK, TD DIASTOLIK, GULA DARAH, HB, KARIES, KEBUGARAN,
                 MENSTRUASI, KACAMATA</strong>.</li>
             <li>Data yang diimport terpisah sepenuhnya dan langsung disinkronkan ke Cloudflare D1.</li>
+            <li><strong style="color: #dc2626;"><i class="bi bi-shield-lock-fill"></i> WAJIB NIK 16 DIGIT:</strong> Siswa dengan NIK kurang atau lebih dari 16 digit otomatis ditolak / tidak masuk.</li>
           </ul>
 
           <button class="btn btn-sekolah-primary btn-sm" onclick="downloadSekolahXLSXTemplate()"
