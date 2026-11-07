@@ -9367,6 +9367,331 @@ function exportToCSV() {
   exportToXLSX();
 }
 
+/**
+ * Export Data CKG to Excel (.XLSX) in the format matching Bot ENCO (CKG Umum)
+ * Compatible with Bot ENCO Pendaftaran & Pelayanan tabs.
+ */
+function exportToBotEncoXLSX() {
+  if (records.length === 0) {
+    showToast('Tidak ada data untuk diekspor!', 'error');
+    return;
+  }
+
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const isPrivileged = (role === 'admin' || role === 'koordinator');
+  const loggedUser = sessionStorage.getItem('ckg_user_name') || '';
+
+  // Build Officers Dropdown Options
+  let petugasOptionsHtml = '';
+  if (isPrivileged) {
+    petugasOptionsHtml = `<option value="">-- Semua Petugas --</option>`;
+    if (Array.isArray(usersDb) && usersDb.length > 0) {
+      usersDb.forEach(u => {
+        petugasOptionsHtml += `<option value="${escapeAttr(u.nama_user)}">${u.nama_user}</option>`;
+      });
+    }
+  } else {
+    petugasOptionsHtml = `<option value="${escapeAttr(loggedUser)}" selected>${loggedUser}</option>`;
+  }
+
+  const disabledPetugasAttr = isPrivileged ? '' : 'disabled="disabled"';
+  const petugasLockNote = isPrivileged 
+    ? '' 
+    : `<div style="font-size: 11.5px; color: #0284c7; margin-top: 4px; font-weight: 600;"><i class="bi bi-lock-fill"></i> Terkunci: Petugas hanya dapat mengunduh data miliknya sendiri.</div>`;
+
+  let exportYearOptionsHtml = '<option value="">-- Semua Tahun --</option>';
+  const curY = new Date().getFullYear();
+  for (let y = 2045; y >= 2000; y--) {
+    exportYearOptionsHtml += `<option value="${y}" ${y === curY ? 'selected' : ''}>${y}</option>`;
+  }
+
+  Swal.fire({
+    title: '<div style="font-size: 17px; font-weight: 800; color: #065f46; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-robot" style="color: #10b981; font-size: 24px;"></i> Download Data CKG (Format Bot ENCO)</div>',
+    html: `
+      <div style="text-align: left; font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif; padding: 4px 6px;">
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; color: #065f46; font-size: 12.5px; line-height: 1.5;">
+          <strong>Format Kompatibel Bot ENCO:</strong> File Excel (.xlsx) yang diunduh langsung dapat di-upload ke menu <strong>Pendaftaran</strong> dan <strong>Pelayanan (CKG Umum)</strong> pada ekstensi Bot ENCO.
+        </div>
+        
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-people-fill" style="color: #059669;"></i> Kategori Sasaran:</label>
+          <select id="swalEncoKategori" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
+            <option value="umum" selected>CKG Umum (Dewasa & Lansia) [Rekomendasi]</option>
+            <option value="dewasa">Usia Dewasa Saja (18 - 59 tahun)</option>
+            <option value="lansia">Lansia Saja (≥ 60 tahun)</option>
+            <option value="semua">Semua Kategori (Tanpa Filter Kategori)</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-calendar3" style="color: #059669;"></i> Pilih Bulan:</label>
+          <select id="swalEncoBulan" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
+            <option value="">-- Semua Bulan --</option>
+            <option value="01">Januari</option>
+            <option value="02">Februari</option>
+            <option value="03">Maret</option>
+            <option value="04">April</option>
+            <option value="05">Mei</option>
+            <option value="06">Juni</option>
+            <option value="07">Juli</option>
+            <option value="08">Agustus</option>
+            <option value="09">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-calendar-event" style="color: #059669;"></i> Pilih Tahun:</label>
+          <select id="swalEncoTahun" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
+            ${exportYearOptionsHtml}
+          </select>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px;"><i class="bi bi-person-badge" style="color: #059669;"></i> Nama Petugas Entry:</label>
+          <select id="swalEncoPetugas" class="swal2-input" ${disabledPetugasAttr} style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 700; ${!isPrivileged ? 'background-color: #f1f5f9; cursor: not-allowed;' : ''}">
+            ${petugasOptionsHtml}
+          </select>
+          ${petugasLockNote}
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-download"></i> Unduh Format Bot ENCO (.xlsx)',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#059669',
+    cancelButtonColor: '#64748b',
+    preConfirm: () => {
+      const kategoriVal = document.getElementById('swalEncoKategori')?.value || 'umum';
+      const bulanVal = document.getElementById('swalEncoBulan')?.value || '';
+      const tahunVal = document.getElementById('swalEncoTahun')?.value || '';
+      const petugasVal = isPrivileged 
+        ? (document.getElementById('swalEncoPetugas')?.value || '') 
+        : loggedUser;
+
+      return { kategoriVal, bulanVal, tahunVal, petugasVal };
+    }
+  }).then((result) => {
+    if (result.isConfirmed && result.value) {
+      const { kategoriVal, bulanVal, tahunVal, petugasVal } = result.value;
+      processExportBotEncoXLSX(kategoriVal, bulanVal, tahunVal, petugasVal);
+    }
+  });
+}
+
+function processExportBotEncoXLSX(kategoriVal, bulanVal, tahunVal, petugasVal) {
+  let targetRecords = getVisibleRecords(records);
+
+  // Filter Kategori
+  if (kategoriVal === 'umum') {
+    targetRecords = targetRecords.filter(r => {
+      const kat = String(r.kategori_sasaran || '').toLowerCase();
+      if (kat === 'dewasa' || kat === 'lansia' || kat.includes('dewasa') || kat.includes('lansia')) return true;
+      const usiaNum = parseInt(r.usia);
+      if (!isNaN(usiaNum) && usiaNum >= 18) return true;
+      return false;
+    });
+  } else if (kategoriVal === 'dewasa') {
+    targetRecords = targetRecords.filter(r => {
+      const kat = String(r.kategori_sasaran || '').toLowerCase();
+      return kat === 'dewasa' || kat.includes('dewasa');
+    });
+  } else if (kategoriVal === 'lansia') {
+    targetRecords = targetRecords.filter(r => {
+      const kat = String(r.kategori_sasaran || '').toLowerCase();
+      return kat === 'lansia' || kat.includes('lansia');
+    });
+  }
+
+  // Filter Bulan
+  if (bulanVal) {
+    targetRecords = targetRecords.filter(r => {
+      const d = getRecordEntryDate(r);
+      return d ? d.month === bulanVal : false;
+    });
+  }
+
+  // Filter Tahun
+  if (tahunVal) {
+    targetRecords = targetRecords.filter(r => {
+      const d = getRecordEntryDate(r);
+      return d ? d.year === tahunVal : false;
+    });
+  }
+
+  // Filter Petugas
+  if (petugasVal) {
+    targetRecords = targetRecords.filter(r => r.created_by === petugasVal || r.petugas_entry === petugasVal);
+  }
+
+  if (targetRecords.length === 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Data Tidak Ditemukan',
+      text: 'Tidak ada data rekam medis CKG yang cocok dengan kriteria filter yang Anda pilih.',
+      confirmButtonColor: '#059669'
+    });
+    return;
+  }
+
+  showLoadingOverlay('Mengekspor Data Bot ENCO...', `Menyusun ${targetRecords.length} Data Excel Template Bot ENCO (.XLSX)`);
+
+  setTimeout(() => {
+    try {
+      // Headers matching TEMPLATE BOT CKG.xlsx (first 23 columns) + KOLESTEROL & HB
+      const headers = [
+        "NIK", "NAMA", "TANGGAL LAHIR", "JENIS KELAMIN", "NO WHATSAPP",
+        "STATUS PERNIKAHAN", "PROVINSI", "KAB/KOTA", "KECAMATAN", "KELURAHAN",
+        "ALAMAT", "PEKERJAAN", "MEROKOK", "BB", "TB", "LP",
+        "TD SISTOLIK", "TD DIASTOLIK", "GULA DARAH", "TELINGA", "MATA", "GIGI", "KATARAK",
+        "KOLESTEROL", "HB"
+      ];
+
+      // Sanitizers
+      const sanitizeNikStr = (val) => {
+        let s = String(val || '').trim().replace(/\D/g, '');
+        return s;
+      };
+
+      const formatGenderBot = (val) => {
+        const s = String(val || '').trim().toUpperCase();
+        if (s.startsWith('L') || s.includes('LAKI')) return 'L';
+        if (s.startsWith('P') || s.includes('PEREMPUAN')) return 'P';
+        return 'L';
+      };
+
+      const formatWaBot = (val) => {
+        let s = String(val || '').trim().replace(/\D/g, '');
+        if (!s) return '081234567890';
+        if (s.startsWith('62')) s = '0' + s.slice(2);
+        if (!s.startsWith('0')) s = '0' + s;
+        return s;
+      };
+
+      const formatNikahBot = (val) => {
+        const s = String(val || '').trim().toLowerCase();
+        if (s.includes('belum')) return 'BELUM MENIKAH';
+        if (s.includes('mati')) return 'CERAI MATI';
+        if (s.includes('hidup') || s.includes('cerai')) return 'CERAI HIDUP';
+        if (s.includes('kawin') || s.includes('menikah') || s.includes('nikah')) return 'MENIKAH';
+        return 'BELUM MENIKAH';
+      };
+
+      const formatMerokokBot = (val) => {
+        const s = String(val || '').trim().toLowerCase();
+        return (s === 'ya' || s.includes('ya') || s === 'true' || s === '1' || s.includes('iya')) ? 'Ya' : 'Tidak';
+      };
+
+      const formatNum = (val) => {
+        if (val === null || val === undefined || val === '') return '';
+        const n = Number(String(val).replace(',', '.'));
+        return isNaN(n) ? '' : n;
+      };
+
+      const rows = targetRecords.map(r => {
+        const cleanNik = sanitizeNikStr(r.nik || r.nik_pasien || '');
+        const cleanNama = String(r.nama || r.nama_pasien || '').trim();
+        const tglLahir = formatDateToYYYYMMDD(r.tanggal_lahir);
+        const jk = formatGenderBot(r.jenis_kelamin);
+        const wa = formatWaBot(r.no_whatsapp);
+        const statusNikah = formatNikahBot(r.status_pernikahan);
+        const prov = String(r.provinsi || 'JAWA BARAT').trim().toUpperCase();
+        const kab = String(r.kab_kota || 'KAB. BANDUNG').trim().toUpperCase();
+        const kec = String(r.kecamatan || 'BANJARAN').trim().toUpperCase();
+        const kel = String(r.kelurahan || 'BANJARAN KOTA').trim().toUpperCase();
+        const alamat = String(r.alamat || 'BANJARAN').trim();
+        const pekerjaan = String(r.pekerjaan || 'Lainnya').trim();
+        const merokok = formatMerokokBot(r.merokok);
+
+        const bb = formatNum(r.bb);
+        const tb = formatNum(r.tb);
+        const lp = formatNum(r.lp);
+        const tdSis = formatNum(r.td_sistolik);
+        const tdDia = formatNum(r.td_diastolik);
+        const gula = formatNum(r.gula_darah);
+        const telinga = r.telinga || 'Normal';
+        const mata = r.mata || 'Normal';
+        const gigi = r.gigi || 'Baik';
+        const katarak = (String(r.katarak || '').toLowerCase().includes('ya')) ? 'Katarak' : 'Normal';
+        const kol = formatNum(r.kolesterol);
+        const hb = formatNum(r.hb);
+
+        return [
+          cleanNik,
+          cleanNama,
+          tglLahir,
+          jk,
+          wa,
+          statusNikah,
+          prov,
+          kab,
+          kec,
+          kel,
+          alamat,
+          pekerjaan,
+          merokok,
+          bb,
+          tb,
+          lp,
+          tdSis,
+          tdDia,
+          gula,
+          telinga,
+          mata,
+          gigi,
+          katarak,
+          kol,
+          hb
+        ];
+      });
+
+      const wsData = [headers, ...rows];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      // Explicitly lock NIK and WhatsApp cell types as String ('s') to prevent scientific notation in Excel
+      if (ws['!ref']) {
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+          // Col 0: NIK
+          const nikCellRef = XLSX.utils.encode_cell({ r: R, c: 0 });
+          if (ws[nikCellRef]) {
+            ws[nikCellRef].t = 's';
+            ws[nikCellRef].z = '@';
+          }
+          // Col 4: NO WHATSAPP
+          const waCellRef = XLSX.utils.encode_cell({ r: R, c: 4 });
+          if (ws[waCellRef]) {
+            ws[waCellRef].t = 's';
+            ws[waCellRef].z = '@';
+          }
+        }
+      }
+
+      // Auto width for columns
+      const colWidths = headers.map(h => ({ wch: Math.max(h.length + 4, 15) }));
+      ws['!cols'] = colWidths;
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+
+      const fileDateStr = new Date().toISOString().substring(0, 10);
+      const safePetugasLabel = petugasVal ? petugasVal.replace(/\s+/g, '_') : 'SemuaPetugas';
+      const safeKatLabel = kategoriVal ? kategoriVal.toUpperCase() : 'UMUM';
+      const filename = `DATA_BOT_ENCO_CKG_${safeKatLabel}_${safePetugasLabel}_${tahunVal || 'All'}-${bulanVal || 'All'}_${fileDateStr}.xlsx`;
+      XLSX.writeFile(wb, filename);
+
+      hideLoadingOverlay();
+      showToast(`✓ Berhasil Mengunduh ${targetRecords.length} Data CKG Format Bot ENCO!`, 'success');
+    } catch (err) {
+      hideLoadingOverlay();
+      console.error('Export Bot ENCO XLSX error:', err);
+      showToast('Gagal mengekspor data ke Excel Bot ENCO: ' + err.message, 'error');
+    }
+  }, 400);
+}
+
 let selectedImportFile = null;
 
 function openImportModal() {
