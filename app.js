@@ -2315,12 +2315,12 @@ function setupEventListeners() {
   const entryForm = document.getElementById('ckgForm');
   if (entryForm) entryForm.addEventListener('submit', handleFormSubmit);
 
-  ['filterKegiatan', 'filterBulan', 'filterTahun', 'filterTanggal', 'filterPetugas', 'filterUmur'].forEach(id => {
+  ['filterKegiatan', 'filterBulan', 'filterTahun', 'filterTanggal', 'filterPetugas', 'filterUmur', 'filterNik'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', renderTableRecords);
   });
 
-  ['filterSimpusPetugas', 'filterSimpusUmur', 'filterSimpusLimit'].forEach(id => {
+  ['filterSimpusPetugas', 'filterSimpusUmur', 'filterSimpusNik', 'filterSimpusLimit'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', renderSimpusTableRecords);
   });
@@ -3602,6 +3602,105 @@ function calculateAgeFromDOB() {
   ageInput.value = years >= 0 ? years : 0;
 }
 
+// ==========================================================================
+// 👶 AGE CATEGORY ENGINE (STANDAR INTEGRASI LAYANAN PRIMER / KEMENKES RI)
+// ==========================================================================
+
+function getRecordAgeMonths(r) {
+  if (!r) return null;
+  const rawDob = r.tanggal_lahir || r.dob || '';
+  if (!rawDob) return null;
+  const dobIso = (typeof formatDateToYYYYMMDD === 'function') ? formatDateToYYYYMMDD(rawDob) : rawDob;
+  if (!dobIso) return null;
+  const d = new Date(dobIso);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let m = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+  if (now.getDate() < d.getDate()) m--;
+  return m >= 0 ? m : 0;
+}
+
+function getKategoriUmur(usia, dob) {
+  let age = parseInt(usia);
+  if (isNaN(age)) age = 0;
+
+  let months = null;
+  if (dob) {
+    const dobIso = (typeof formatDateToYYYYMMDD === 'function') ? formatDateToYYYYMMDD(dob) : dob;
+    if (dobIso) {
+      const d = new Date(dobIso);
+      if (!isNaN(d.getTime())) {
+        const now = new Date();
+        months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+        if (now.getDate() < d.getDate()) months--;
+        if (months < 0) months = 0;
+      }
+    }
+  }
+
+  // Standar Siklus Hidup ILP Kemenkes:
+  // 1. Bayi dan Balita (0–59 bulan / 0–5 tahun)
+  // 2. Anak Prasekolah (60–72 bulan / 5–6 tahun)
+  // 3. Usia Sekolah dan Remaja (6–18 tahun / > 72 bulan s/d < 18 tahun)
+  // 4. Dewasa (18–59 tahun)
+  // 5. Lanjut Usia (Lansia) (≥ 60 tahun)
+  if (months !== null) {
+    if (months <= 59) return 'Bayi dan Balita';
+    if (months <= 72) return 'Anak Prasekolah';
+    if (age < 18) return 'Usia Sekolah dan Remaja';
+  } else {
+    if (age < 5) return 'Bayi dan Balita';
+    if (age === 5 || age === 6) return 'Anak Prasekolah';
+    if (age >= 7 && age < 18) return 'Usia Sekolah dan Remaja';
+  }
+
+  if (age >= 60) return 'Lansia';
+  return 'Dewasa';
+}
+
+function isRecordInAgeCategory(r, categoryKey) {
+  if (!categoryKey) return true;
+  const age = parseInt(r.usia) || 0;
+  const months = getRecordAgeMonths(r);
+  const key = String(categoryKey).toLowerCase().trim();
+
+  // 1. Bayi dan Balita (0–59 bulan / 0–5 tahun)
+  if (key === 'bayi_balita' || key === 'bayi dan balita' || key === 'balita') {
+    return months !== null ? (months <= 59) : (age < 5);
+  }
+  // 2. Anak Prasekolah (60–72 bulan / 5–6 tahun)
+  if (key === 'prasekolah' || key === 'anak prasekolah') {
+    return months !== null ? (months >= 60 && months <= 72) : (age >= 5 && age <= 6);
+  }
+  // 3. Usia Sekolah dan Remaja (6–18 tahun)
+  if (key === 'sekolah_remaja' || key === 'usia sekolah dan remaja' || key === 'remaja') {
+    return months !== null ? (months > 72 && age < 18) : (age >= 6 && age < 18);
+  }
+  // 4. Dewasa (18–59 tahun)
+  if (key === 'dewasa') {
+    return age >= 18 && age < 60;
+  }
+  // 5. Lanjut Usia (Lansia) (≥ 60 tahun / 60 tahun ke atas)
+  if (key === 'lansia' || key === 'lanjut usia' || key === 'lanjut usia (lansia)') {
+    return age >= 60;
+  }
+  // Fallback compatibility
+  if (key === 'anak') {
+    return age < 18;
+  }
+  return true;
+}
+
+// ==========================================================================
+// 🆔 NIK 16 DIGIT VALIDATION ENGINE
+// ==========================================================================
+
+function isNik16Digit(nik) {
+  if (nik === null || nik === undefined) return false;
+  const clean = String(nik).trim().replace(/\D/g, '');
+  return clean.length === 16;
+}
+
 function calculateIMT() {
   const bb = parseFloat(document.getElementById('bb').value) || 0;
   const tbCm = parseFloat(document.getElementById('tb').value) || 0;
@@ -4044,6 +4143,7 @@ function renderSimpusTableRecords() {
 
   const petugasVal = document.getElementById('filterSimpusPetugas')?.value || '';
   const umurVal = document.getElementById('filterSimpusUmur')?.value || '';
+  const nikVal = document.getElementById('filterSimpusNik')?.value || '';
   const limitVal = document.getElementById('filterSimpusLimit')?.value || '10';
 
   // Tab 1: Data Belum Di-Bagi (is_divided === false)
@@ -4065,7 +4165,16 @@ function renderSimpusTableRecords() {
   }
 
   if (umurVal) {
-    dataset = dataset.filter(r => r.keterangan === umurVal);
+    dataset = dataset.filter(r => {
+      if (r.keterangan && r.keterangan.toLowerCase() === umurVal.toLowerCase()) return true;
+      return isRecordInAgeCategory(r, umurVal);
+    });
+  }
+
+  if (nikVal === '16_digit') {
+    dataset = dataset.filter(r => isNik16Digit(r.nik));
+  } else if (nikVal === 'non_16_digit') {
+    dataset = dataset.filter(r => !isNik16Digit(r.nik));
   }
 
   const searchQuery = document.getElementById('searchSimpusRecords')?.value.trim().toLowerCase() || '';
@@ -4207,13 +4316,16 @@ function renderSimpusTableRecords() {
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 5px;">
-              <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 11.5px; font-family: monospace; font-weight: 700; color: #1e293b; width: fit-content; cursor: pointer;" onclick="copyToClipboard('${safeNik}', 'NIK Pasien')" title="Salin NIK Pasien">
-                <i class="bi bi-card-text" style="color: #0284c7;"></i> NIK: ${r.nik} <i class="bi bi-copy" style="font-size: 10px; color: #0284c7; margin-left: 2px;"></i>
+              <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 11.5px; font-family: monospace; font-weight: 700; color: #1e293b; width: fit-content; cursor: pointer;" onclick="copyToClipboard('${safeNik}', 'NIK Pasien')" title="Salin NIK Pasien">
+                  <i class="bi bi-card-text" style="color: #0284c7;"></i> NIK: ${r.nik} <i class="bi bi-copy" style="font-size: 10px; color: #0284c7; margin-left: 2px;"></i>
+                </div>
+                ${!isNik16Digit(r.nik) ? `<span class="badge badge-rose" style="font-size: 9.5px; padding: 2px 6px;" title="NIK bukan 16 digit"><i class="bi bi-exclamation-triangle-fill"></i> ${String(r.nik || '').replace(/\D/g, '').length ? String(r.nik || '').replace(/\D/g, '').length + ' Digit' : 'NIK Kosong'}</span>` : ''}
               </div>
 
               <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
                 <span class="badge badge-amber" style="padding: 3px 8px; font-size: 11px; font-weight: 700;">
-                  <i class="bi bi-person-badge"></i> ${r.usia} Th (${r.keterangan || 'Dewasa'})
+                  <i class="bi bi-person-badge"></i> ${r.usia} Th (${r.keterangan || getKategoriUmur(r.usia, r.dob)})
                 </span>
                 <span class="badge badge-cyan" style="padding: 3px 8px; font-size: 11px; font-weight: 700;">
                   ${statusPernikahan}
@@ -4358,7 +4470,7 @@ Nama Pasien: ${item.nama}
 NIK Pasien: ${item.nik}
 Tanggal Skrining: ${item.tanggal}
 Tanggal Lahir: ${formatDateToYYYYMMDD(item.dob) || '-'}
-Usia / Kategori: ${item.usia} Tahun (${item.keterangan})
+Usia / Kategori: ${item.usia} Tahun (${item.keterangan || getKategoriUmur(item.usia, item.dob)})
 Alamat Lengkap: ${item.alamat}
 Faskes / Lokasi: Puskesmas Banjaran Kota
 Berat Badan (BB): ${item.bb} kg
@@ -4471,7 +4583,7 @@ function openSimpusDetailModal(id) {
           <div class="copyable-field" onclick="copyToClipboard('${item.usia}', 'Usia Pasien')">
             <div>
               <div class="simpus-info-label">Usia & Kategori</div>
-              <div class="simpus-info-val">${item.usia} Tahun (${item.keterangan || 'Dewasa'})</div>
+              <div class="simpus-info-val">${item.usia} Tahun (${item.keterangan || getKategoriUmur(item.usia, item.dob)})</div>
             </div>
             <i class="bi bi-copy copy-icon"></i>
           </div>
@@ -4973,10 +5085,12 @@ function resetSimpusFilters() {
   const s = document.getElementById('searchSimpusRecords');
   const p = document.getElementById('filterSimpusPetugas');
   const u = document.getElementById('filterSimpusUmur');
+  const n = document.getElementById('filterSimpusNik');
   const l = document.getElementById('filterSimpusLimit');
   if (s) s.value = '';
   if (p) p.value = '';
   if (u) u.value = '';
+  if (n) n.value = '';
   if (l) l.value = '10';
   applyPetugasFilterLock();
   renderSimpusTableRecords();
@@ -5409,11 +5523,10 @@ function processImportFromModal() {
         const bb = parseFloat(getVal('BB (kg)', 'BB', 'BERAT BADAN', 'Berat Badan')) || 0;
         const tb = parseFloat(getVal('TB (cm)', 'TB', 'TINGGI BADAN', 'Tinggi Badan')) || 0;
         const imt = (bb > 0 && tb > 0) ? parseFloat((bb / ((tb / 100) ** 2)).toFixed(1)) : 0;
+        const rawDob = getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB', 'Tanggal_Lahir');
+        const dobIso = formatDateToYYYYMMDD(rawDob) || '1990-01-01';
         const usia = parseInt(getVal('USIA', 'Usia', 'Umur')) || 30;
-
-        let keterangan = 'Dewasa';
-        if (usia < 18) keterangan = 'Anak';
-        else if (usia >= 60) keterangan = 'Lansia';
+        const keterangan = getKategoriUmur(usia, dobIso);
 
         const record = {
           id: newId,
@@ -5422,7 +5535,7 @@ function processImportFromModal() {
           nama: nama,
           nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
           tanggal: new Date().toISOString().substring(0, 10),
-          dob: formatDateToYYYYMMDD(getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB', 'Tanggal_Lahir')) || '1990-01-01',
+          dob: dobIso,
           usia: usia,
           status_pernikahan: getVal('Status Pernikahan', 'Status', 'Pernikahan') || 'MENIKAH',
           provinsi: getVal('Provinsi', 'Prov') || 'Jawa Barat',
@@ -6294,7 +6407,7 @@ function resetFilters() {
   const s = document.getElementById('searchDataRecords');
   if (s) s.value = '';
 
-  ['filterKegiatan', 'filterBulan', 'filterTahun', 'filterTanggal', 'filterPetugas', 'filterUmur'].forEach(id => {
+  ['filterKegiatan', 'filterBulan', 'filterTahun', 'filterTanggal', 'filterPetugas', 'filterUmur', 'filterNik'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       if (id === 'filterPetugas' && !isPrivileged && loggedUser) {
@@ -6399,7 +6512,20 @@ function getOfficerPerformanceData(monthFilter = null, yearFilter = null) {
     }
   }
 
-  const filteredRecords = records.filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
+  let filteredRecords = records.filter(r => isRecordInMonthYear(r, selectedMonth, selectedYear));
+
+  const dashUmurVal = document.getElementById('dashUmur')?.value || '';
+  if (dashUmurVal) {
+    filteredRecords = filteredRecords.filter(r => isRecordInAgeCategory(r, dashUmurVal));
+  }
+
+  const dashKatVal = document.getElementById('dashKategori')?.value || '';
+  if (dashKatVal) {
+    filteredRecords = filteredRecords.filter(r => {
+      const pel = String(r.jenis_pelayanan || r.pelayanan || r.jenis_kegiatan || '').toLowerCase();
+      return dashKatVal === 'Luar Gedung' ? pel.includes('luar') : pel.includes('dalam');
+    });
+  }
 
   return usersDb.map(u => {
     const officerRecords = filteredRecords.filter(r => isRecordCreatedByOfficer(r, u));
@@ -7041,6 +7167,7 @@ function renderTableRecords() {
   const filterTanggalVal = document.getElementById('filterTanggal')?.value || '';
   const filterPetugasVal = document.getElementById('filterPetugas')?.value || '';
   const filterUmurVal = document.getElementById('filterUmur')?.value || '';
+  const filterNikVal = document.getElementById('filterNik')?.value || '';
 
   // Apply Row-Level Data Visibility (Petugas only sees own records; Admin & Koordinator see all)
   let filtered = getVisibleRecords(records);
@@ -7074,12 +7201,14 @@ function renderTableRecords() {
     filtered = filtered.filter(r => r.created_by === filterPetugasVal || r.petugas_entry === filterPetugasVal);
   }
 
-  if (filterUmurVal === 'anak') {
-    filtered = filtered.filter(r => r.usia < 18);
-  } else if (filterUmurVal === 'dewasa') {
-    filtered = filtered.filter(r => r.usia >= 18 && r.usia < 60);
-  } else if (filterUmurVal === 'lansia') {
-    filtered = filtered.filter(r => r.usia >= 60);
+  if (filterUmurVal) {
+    filtered = filtered.filter(r => isRecordInAgeCategory(r, filterUmurVal));
+  }
+
+  if (filterNikVal === '16_digit') {
+    filtered = filtered.filter(r => isNik16Digit(r.nik));
+  } else if (filterNikVal === 'non_16_digit') {
+    filtered = filtered.filter(r => !isNik16Digit(r.nik));
   }
 
   const searchQuery = document.getElementById('searchDataRecords')?.value.trim().toLowerCase() || '';
@@ -7209,7 +7338,10 @@ function buildTableRowsHtml(data) {
         <td>${kegiatanBadge}</td>
         <td>
           <strong>${r.nama}</strong><br>
-          <span style="font-size: 11px; color: var(--text-muted);">${r.nik}</span>
+          ${isNik16Digit(r.nik)
+            ? `<span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${r.nik}</span>`
+            : `<span style="font-size: 11px; color: #dc2626; font-weight: 700; font-family: monospace;">${r.nik || '-'} <span class="badge badge-rose" style="font-size: 9px; padding: 1px 5px;" title="NIK bukan 16 digit"><i class="bi bi-exclamation-triangle-fill"></i> ${String(r.nik || '').replace(/\D/g, '').length ? String(r.nik || '').replace(/\D/g, '').length + ' Digit' : 'NIK Kosong'}</span></span>`
+          }
         </td>
         <td>${formatDateToYYYYMMDD(r.tanggal_lahir)}<br><span style="font-size: 11px; color: var(--text-muted);">${r.usia} th (${r.jenis_kelamin})</span></td>
         <td>${r.alamat}<br><span style="font-size: 11px; color: var(--text-muted);">${r.kelurahan}, ${r.kecamatan}</span></td>
@@ -8194,7 +8326,7 @@ function viewDetailModal(id) {
       <div><strong>Kegiatan:</strong> ${r.jenis_kegiatan}</div>
       <div><strong>NIK:</strong> ${r.nik}</div>
       <div><strong>Nama Lengkap:</strong> ${r.nama}</div>
-      <div><strong>Tanggal Lahir / Usia:</strong> ${formatDateToYYYYMMDD(r.tanggal_lahir)} (${r.usia} Tahun)</div>
+      <div><strong>Tanggal Lahir / Usia:</strong> ${formatDateToYYYYMMDD(r.tanggal_lahir)} (${r.usia} Tahun - ${getKategoriUmur(r.usia, r.tanggal_lahir)})</div>
       <div><strong>Jenis Kelamin:</strong> ${r.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</div>
       <div><strong>Alamat:</strong> ${r.alamat}, Kel. ${r.kelurahan}, Kec. ${r.kecamatan}</div>
       <div><strong>BB / TB / LP:</strong> ${r.bb} kg / ${r.tb} cm / ${r.lp || '-'} cm</div>
@@ -9194,14 +9326,13 @@ function handleSimpusAdminImportFileSelect(event) {
         let petugasName = getVal('Petugas Entry', 'Petugas', 'Assigned To', 'Petugas Skrining', 'Created By', 'Nama Petugas');
         if (!petugasName) petugasName = loggedAdmin;
 
+        const rawDob = getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB');
+        const dobIso = formatDateToYYYYMMDD(rawDob) || '1990-01-01';
         const usia = parseInt(getVal('USIA', 'Usia', 'Umur')) || 30;
         const bb = parseFloat(getVal('BB (kg)', 'BB', 'BERAT BADAN')) || 0;
         const tb = parseFloat(getVal('TB (cm)', 'TB', 'TINGGI BADAN')) || 0;
         const imtVal = (bb > 0 && tb > 0) ? parseFloat((bb / ((tb / 100) ** 2)).toFixed(1)) : 0;
-
-        let keterangan = 'Dewasa';
-        if (usia < 18) keterangan = 'Anak';
-        else if (usia >= 60) keterangan = 'Lansia';
+        const keterangan = getKategoriUmur(usia, dobIso);
 
         const recId = `S-${maxNo + idx + 1}-${Date.now()}`;
         const record = {
@@ -9211,7 +9342,7 @@ function handleSimpusAdminImportFileSelect(event) {
           nama: nama,
           nik: nik || '3204' + Math.floor(100000000000 + Math.random() * 900000000000),
           tanggal: getVal('TANGGAL', 'Tanggal', 'Tanggal Entry') || new Date().toISOString().substring(0, 10),
-          dob: formatDateToYYYYMMDD(getVal('TANGGAL LAHIR', 'Tgl Lahir', 'DOB')) || '1990-01-01',
+          dob: dobIso,
           usia: usia,
           status_pernikahan: getVal('Status Pernikahan', 'Status') || 'MENIKAH',
           provinsi: getVal('Provinsi', 'Prov') || 'Jawa Barat',
@@ -12093,6 +12224,13 @@ function renderSekolahView() {
     });
   }
 
+  const filterSekolahNikVal = document.getElementById('filterSekolahNik')?.value || '';
+  if (filterSekolahNikVal === '16_digit') {
+    dataset = dataset.filter(r => isNik16Digit(r.nik));
+  } else if (filterSekolahNikVal === 'non_16_digit') {
+    dataset = dataset.filter(r => !isNik16Digit(r.nik));
+  }
+
   // Update KPI Summary Metrics (Calculated BEFORE status filtering so total counts stay accurate)
   const totalStudents = dataset.length;
   const sudahPeriksa = dataset.filter(r => isSekolahRecordExamined(r)).length;
@@ -12367,8 +12505,8 @@ function renderSekolahView() {
             <span>${safeNama}</span>
             <i class="bi bi-box-arrow-up-right" style="font-size: 11px; color: #94a3b8; margin-left: 2px;"></i>
           </div>
-          <div style="font-size: 11.5px; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap;">
-            <span><strong style="color: #475569;">NIK:</strong> ${safeNik || '-'}</span>
+          <div style="font-size: 11.5px; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <span><strong style="color: #475569;">NIK:</strong> ${safeNik || '-'} ${!isNik16Digit(r.nik) ? `<span class="badge badge-rose" style="font-size: 9px; padding: 1px 4px;" title="NIK bukan 16 digit">${String(r.nik || '').replace(/\D/g, '').length ? String(r.nik || '').replace(/\D/g, '').length + ' Digit' : 'Bukan 16 Digit'}</span>` : ''}</span>
             <span>&bull;</span>
             <span style="color: ${jkColor}; font-weight: 700;">${safeJk}</span>
             ${(() => {

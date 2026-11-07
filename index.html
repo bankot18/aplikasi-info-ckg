@@ -698,6 +698,11 @@
               <i class="bi bi-person"></i> Umur:
               <select id="dashUmur" class="filter-control">
                 <option value="">Semua Umur</option>
+                <option value="bayi_balita">Bayi dan Balita (0–59 bulan / 0–5 tahun)</option>
+                <option value="prasekolah">Anak Prasekolah (60–72 bulan / 5–6 tahun)</option>
+                <option value="sekolah_remaja">Usia Sekolah dan Remaja (6–18 tahun)</option>
+                <option value="dewasa">Dewasa (18–59 tahun)</option>
+                <option value="lansia">Lanjut Usia (Lansia) (≥ 60 tahun)</option>
               </select>
             </div>
 
@@ -1057,9 +1062,20 @@
               <i class="bi bi-pie-chart"></i> Kategori Umur:
               <select id="filterUmur" class="filter-control">
                 <option value="">-- Semua Kategori Umur --</option>
-                <option value="anak">Anak (< 18 th)</option>
-                <option value="dewasa">Dewasa (18-59 th)</option>
-                <option value="lansia">Lansia (â‰¥ 60 th)</option>
+                <option value="bayi_balita">Bayi dan Balita (0–59 bulan / 0–5 tahun)</option>
+                <option value="prasekolah">Anak Prasekolah (60–72 bulan / 5–6 tahun)</option>
+                <option value="sekolah_remaja">Usia Sekolah dan Remaja (6–18 tahun)</option>
+                <option value="dewasa">Dewasa (18–59 tahun)</option>
+                <option value="lansia">Lanjut Usia (Lansia) (≥ 60 tahun)</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-card-checklist"></i> Filter NIK:
+              <select id="filterNik" class="filter-control" style="font-weight: 700;">
+                <option value="">-- Semua NIK --</option>
+                <option value="16_digit">NIK 16 Digit (Valid)</option>
+                <option value="non_16_digit">Bukan 16 Digit / Tidak Valid</option>
               </select>
             </div>
 
@@ -1549,9 +1565,20 @@
               <i class="bi bi-person-fill"></i> Kategori Umur:
               <select id="filterSimpusUmur" class="filter-control">
                 <option value="">-- Semua Kategori Umur --</option>
-                <option value="Dewasa">Dewasa (18-59 th)</option>
-                <option value="Lansia">Lansia (â‰¥ 60 th)</option>
-                <option value="Anak">Anak (< 18 th)</option>
+                <option value="Bayi dan Balita">Bayi dan Balita (0–59 bulan / 0–5 tahun)</option>
+                <option value="Anak Prasekolah">Anak Prasekolah (60–72 bulan / 5–6 tahun)</option>
+                <option value="Usia Sekolah dan Remaja">Usia Sekolah dan Remaja (6–18 tahun)</option>
+                <option value="Dewasa">Dewasa (18–59 tahun)</option>
+                <option value="Lansia">Lanjut Usia (Lansia) (≥ 60 tahun)</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-card-checklist"></i> Filter NIK:
+              <select id="filterSimpusNik" class="filter-control" style="font-weight: 700;">
+                <option value="">-- Semua NIK --</option>
+                <option value="16_digit">NIK 16 Digit (Valid)</option>
+                <option value="non_16_digit">Bukan 16 Digit / Tidak Valid</option>
               </select>
             </div>
 
@@ -1891,6 +1918,19 @@
                   <option value="sudah">✅ Sudah Diperiksa</option>
                   <option value="belum">⏳ Belum Diperiksa</option>
                   <option value="sebagian">🟡 Periksa Sebagian</option>
+                </select>
+              </div>
+
+              <!-- Filter NIK 16 Digit -->
+              <div class="filter-group-col filter-col-status">
+                <label class="filter-label" for="filterSekolahNik">
+                  <i class="bi bi-card-checklist"></i> Filter NIK:
+                </label>
+                <select id="filterSekolahNik" class="form-control filter-input-control"
+                  onchange="renderSekolahView()">
+                  <option value="">Semua NIK</option>
+                  <option value="16_digit">NIK 16 Digit (Valid)</option>
+                  <option value="non_16_digit">Bukan 16 Digit / Tidak Valid</option>
                 </select>
               </div>
 
