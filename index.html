@@ -3082,41 +3082,41 @@
 
   <!-- INPUT DATA CKG MULTI-STEP WIZARD MODAL -->
   <div id="inputModalOverlay" class="modal-overlay">
-    <div class="modal-container" style="max-width: 680px;">
+    <div class="modal-container" style="max-width: 780px; width: 92%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--radius-lg); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+      <form id="ckgForm" novalidate style="display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; margin: 0;">
 
-      <!-- Wizard Header -->
-      <div class="modal-header">
-        <div class="modal-title" id="inputModalTitle">
-          <i class="bi bi-file-earmark-medical-fill" style="color: var(--primary);"></i> Form Input Data CKG Pasien
+        <!-- Wizard Header -->
+        <div class="modal-header" style="flex-shrink: 0; padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: #ffffff;">
+          <div class="modal-title" id="inputModalTitle" style="font-size: 16px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-file-earmark-medical-fill" style="color: var(--primary);"></i> Form Input Data CKG Pasien
+          </div>
+          <button type="button" class="modal-close" onclick="closeInputModal()">&times;</button>
         </div>
-        <button class="modal-close" onclick="closeInputModal()">&times;</button>
-      </div>
 
-      <!-- Step Progress Bar -->
-      <div class="wizard-stepper-bar">
-        <div class="stepper-item active" data-step="1" onclick="goToStep(1)">
-          <div class="stepper-circle">1</div>
-          <span class="stepper-label">Kategori Usia</span>
+        <!-- Step Progress Bar -->
+        <div class="wizard-stepper-bar" style="flex-shrink: 0; padding: 12px 24px; background: #f8fafc; border-bottom: 1px solid var(--border-color);">
+          <div class="stepper-item active" data-step="1" onclick="goToStep(1)">
+            <div class="stepper-circle">1</div>
+            <span class="stepper-label">Kategori Usia</span>
+          </div>
+          <div class="stepper-line"></div>
+          <div class="stepper-item" data-step="2" onclick="goToStep(2)">
+            <div class="stepper-circle">2</div>
+            <span class="stepper-label">Data Pasien</span>
+          </div>
+          <div class="stepper-line"></div>
+          <div class="stepper-item" data-step="3" onclick="goToStep(3)">
+            <div class="stepper-circle">3</div>
+            <span class="stepper-label">Antropometri & Klinis</span>
+          </div>
+          <div class="stepper-line"></div>
+          <div class="stepper-item" data-step="4" onclick="goToStep(4)">
+            <div class="stepper-circle">4</div>
+            <span class="stepper-label">Pemeriksaan Fisik</span>
+          </div>
         </div>
-        <div class="stepper-line"></div>
-        <div class="stepper-item" data-step="2" onclick="goToStep(2)">
-          <div class="stepper-circle">2</div>
-          <span class="stepper-label">Data Pasien</span>
-        </div>
-        <div class="stepper-line"></div>
-        <div class="stepper-item" data-step="3" onclick="goToStep(3)">
-          <div class="stepper-circle">3</div>
-          <span class="stepper-label">Antropometri & Klinis</span>
-        </div>
-        <div class="stepper-line"></div>
-        <div class="stepper-item" data-step="4" onclick="goToStep(4)">
-          <div class="stepper-circle">4</div>
-          <span class="stepper-label">Pemeriksaan Fisik</span>
-        </div>
-      </div>
 
-      <div class="modal-body" style="padding-top: 10px;">
-        <form id="ckgForm" novalidate>
+        <div class="modal-body" style="flex: 1 1 auto; overflow-y: auto; min-height: 0; padding: 18px 24px;">
 
           <!-- STEP 1: Kategori Usia Sasaran Skrining -->
           <div class="wizard-step-content active" id="wizardStep1">
@@ -3271,66 +3271,78 @@
                 <input type="text" id="pekerjaan" class="form-control">
               </div>
 
-              <div class="form-group full-width">
+              <!-- Alamat Lengkap (Full Width) -->
+              <div class="form-group full-width" style="grid-column: 1 / -1;">
                 <label class="form-label" for="alamat">Alamat Lengkap <span class="required">*</span></label>
-                <textarea id="alamat" class="form-control" rows="4" placeholder="Jalan, RT/RW" required
-                  style="resize: none;"></textarea>
+                <textarea id="alamat" class="form-control" rows="2" placeholder="Jalan, RT/RW, Dusun / Lingkungan" required
+                  style="width: 100%; box-sizing: border-box; resize: vertical; min-height: 52px; font-size: 13px;"></textarea>
+              </div>
+
+              <!-- Wilayah: Urutan Hierarki Benar (Provinsi -> Kab/Kota -> Kecamatan -> Kelurahan) -->
+              <div class="form-group">
+                <label class="form-label" for="provinsi">Provinsi <span class="required">*</span></label>
+                <select id="provinsi" class="form-control" style="width: 100%;"></select>
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="kab_kota">Kabupaten / Kota</label>
-                <select id="kab_kota" class="form-control"></select>
+                <label class="form-label" for="kab_kota">Kabupaten / Kota <span class="required">*</span></label>
+                <select id="kab_kota" class="form-control" style="width: 100%;"></select>
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="provinsi">Provinsi</label>
-                <select id="provinsi" class="form-control"></select>
+                <label class="form-label" for="kecamatan">Kecamatan <span class="required">*</span></label>
+                <select id="kecamatan" class="form-control" style="width: 100%;"></select>
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="kelurahan">Kelurahan</label>
-                <select id="kelurahan" class="form-control"></select>
+                <label class="form-label" for="kelurahan">Kelurahan / Desa <span class="required">*</span></label>
+                <select id="kelurahan" class="form-control" style="width: 100%;"></select>
               </div>
 
-              <div class="form-group">
-                <label class="form-label" for="kecamatan">Kecamatan</label>
-                <select id="kecamatan" class="form-control"></select>
-              </div>
-
-              <div class="form-group">
+              <!-- Riwayat Merokok (Full Width) -->
+              <div class="form-group full-width" style="grid-column: 1 / -1; margin-top: 4px;">
                 <label class="form-label">Riwayat Merokok</label>
-                <div class="pill-group">
-                  <div class="pill-option">
+                <div class="pill-group" style="display: flex; gap: 10px; max-width: 280px;">
+                  <div class="pill-option" style="flex: 1;">
                     <input type="radio" id="rokok_tidak" name="merokok" value="Tidak" checked>
-                    <label for="rokok_tidak" class="pill-label">Tidak</label>
+                    <label for="rokok_tidak" class="pill-label" style="text-align: center; width: 100%; padding: 8px 16px;">Tidak</label>
                   </div>
-                  <div class="pill-option">
+                  <div class="pill-option" style="flex: 1;">
                     <input type="radio" id="rokok_ya" name="merokok" value="Ya">
-                    <label for="rokok_ya" class="pill-label">Ya</label>
+                    <label for="rokok_ya" class="pill-label" style="text-align: center; width: 100%; padding: 8px 16px;">Ya</label>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- KARTU DATA WALI (Wajib untuk Balita & Prasekolah - Standar Gambar 2) -->
-            <div id="sectionDataWali" style="margin-top: 18px; border: 1.5px solid #fca5a5; border-radius: 14px; padding: 18px 20px; background: #fffbfb; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.05); transition: all 0.3s ease;">
+            <div id="sectionDataWali" style="margin-top: 20px; border: 1.5px solid #fca5a5; border-radius: 14px; padding: 18px 20px; background: #fffbfb; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.05); transition: all 0.3s ease;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
-                <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                <h4 style="margin: 0; font-size: 15.5px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px;">
                   <i class="bi bi-person-vcard-fill" style="color: #2563eb; font-size: 19px;"></i> Isi Data Wali
                 </h4>
                 <span id="badgeWaliWajib" class="badge" style="background: #fee2e2; color: #dc2626; font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 8px; border: 1px solid #fca5a5;">
                   <i class="bi bi-exclamation-circle-fill"></i> Wajib bagi Balita & Prasekolah
                 </span>
               </div>
-              <p style="font-size: 12.5px; color: #64748b; margin: 0 0 16px 0; line-height: 1.5;">
+              <p style="font-size: 12.5px; color: #64748b; margin: 0 0 14px 0; line-height: 1.5;">
                 Pengisian data wali wajib bagi peserta balita dan yang tidak memiliki NIK, serta dianjurkan bagi peserta lansia.
               </p>
 
-              <div class="form-grid">
+              <!-- Checkbox Daftarkan Tanpa Data Wali (Standar ASIK) -->
+              <div id="wrapperTanpaWali" style="margin-bottom: 14px; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="daftarkan_tanpa_wali" onchange="toggleTanpaWaliInputs(this.checked)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);">
+                <label for="daftarkan_tanpa_wali" style="margin: 0; cursor: pointer; display: flex; flex-direction: column;">
+                  <span style="font-size: 13.5px; font-weight: 700; color: #1e293b;">Daftarkan tanpa data wali</span>
+                  <span style="font-size: 11.5px; color: #64748b;">Lakukan pendaftaran peserta tanpa mengisi data wali</span>
+                </label>
+              </div>
+
+              <div class="form-grid" id="waliFormGrid">
                 <!-- NIK Wali -->
                 <div class="form-group">
                   <label class="form-label" for="nik_wali">
-                    NIK <span class="required" id="reqNikWali" style="color: #dc2626;">*</span>
+                    NIK Wali <span class="required" id="reqNikWali" style="color: #dc2626;">*</span>
                   </label>
                   <input type="text" id="nik_wali" name="nik_wali" class="form-control" maxlength="16" inputmode="numeric" placeholder="Masukkan NIK Wali" style="font-family: monospace; letter-spacing: 1px;">
                   <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
@@ -3341,23 +3353,23 @@
                 <!-- Nama Lengkap Wali -->
                 <div class="form-group">
                   <label class="form-label" for="nama_wali">
-                    Nama Lengkap <span class="required" id="reqNamaWali" style="color: #dc2626;">*</span>
+                    Nama Lengkap Wali <span class="required" id="reqNamaWali" style="color: #dc2626;">*</span>
                   </label>
-                  <input type="text" id="nama_wali" name="nama_wali" class="form-control" placeholder="Masukkan Nama Lengkap">
+                  <input type="text" id="nama_wali" name="nama_wali" class="form-control" placeholder="Masukkan Nama Lengkap Wali">
                 </div>
 
                 <!-- Tanggal Lahir Wali -->
                 <div class="form-group">
                   <label class="form-label" for="tanggal_lahir_wali">
-                    Tanggal Lahir <span class="required" id="reqDobWali" style="color: #dc2626;">*</span>
+                    Tanggal Lahir Wali <span class="required" id="reqDobWali" style="color: #dc2626;">*</span>
                   </label>
-                  <input type="date" id="tanggal_lahir_wali" name="tanggal_lahir_wali" class="form-control" placeholder="Pilih Tanggal Lahir">
+                  <input type="date" id="tanggal_lahir_wali" name="tanggal_lahir_wali" class="form-control">
                 </div>
 
                 <!-- Jenis Kelamin Wali -->
                 <div class="form-group">
                   <label class="form-label" for="jenis_kelamin_wali">
-                    Jenis Kelamin <span class="required" id="reqJkWali" style="color: #dc2626;">*</span>
+                    Jenis Kelamin Wali <span class="required" id="reqJkWali" style="color: #dc2626;">*</span>
                   </label>
                   <select id="jenis_kelamin_wali" name="jenis_kelamin_wali" class="form-control">
                     <option value="" disabled selected>Pilih Jenis Kelamin</option>
@@ -3367,15 +3379,15 @@
                 </div>
 
                 <!-- No Whatsapp Wali -->
-                <div class="form-group full-width">
+                <div class="form-group full-width" style="grid-column: 1 / -1;">
                   <label class="form-label" for="no_whatsapp_wali">
                     No. Whatsapp Wali <span class="required" id="reqWaWali" style="color: #dc2626;">*</span>
                   </label>
-                  <div style="display: flex; align-items: stretch;">
+                  <div style="display: flex; align-items: stretch; max-width: 360px;">
                     <span style="display: inline-flex; align-items: center; padding: 0 14px; background: #f1f5f9; border: 1px solid var(--border-color); border-right: none; border-radius: var(--radius-sm) 0 0 var(--radius-sm); font-size: 13.5px; font-weight: 700; color: #475569;">
                       +62
                     </span>
-                    <input type="tel" id="no_whatsapp_wali" name="no_whatsapp_wali" class="form-control" placeholder="Masukkan nomor whatsapp" inputmode="tel" style="border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
+                    <input type="tel" id="no_whatsapp_wali" name="no_whatsapp_wali" class="form-control" placeholder="8xxxxxxxxxx" inputmode="tel" style="border-radius: 0 var(--radius-sm) var(--radius-sm) 0;">
                   </div>
                   <label style="display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; cursor: pointer; font-size: 13px; color: #475569;">
                     <input type="checkbox" id="wali_nomor_sama" style="width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer;">
@@ -3491,32 +3503,35 @@
             </div>
           </div>
 
-          <!-- Dynamic Wizard Modal Footer -->
-          <div class="modal-footer"
-            style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border-color);">
-            <div>
-              <button type="button" id="btnWizardPrev" class="btn btn-secondary" onclick="prevWizardStep()"
-                style="display: none;">
-                <i class="bi bi-arrow-left"></i> Kembali
-              </button>
-              <button type="button" id="btnWizardCancel" class="btn btn-secondary" onclick="closeInputModal()">
-                Batal
-              </button>
-            </div>
+        </div><!-- /modal-body -->
 
-            <div>
-              <button type="button" id="btnWizardNext" class="btn btn-primary" onclick="nextWizardStep()">
-                Selanjutnya <i class="bi bi-arrow-right"></i>
-              </button>
-              <button type="submit" id="btnWizardSubmit" class="btn btn-emerald" style="display: none;">
-                <i class="bi bi-check-circle-fill"></i> Simpan Data CKG
-              </button>
-            </div>
+        <!-- Dynamic Wizard Modal Footer (Fixed at Bottom) -->
+        <div class="modal-footer"
+          style="flex-shrink: 0; padding: 14px 24px; background: #f8fafc; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <button type="button" id="btnWizardPrev" class="btn btn-secondary" onclick="prevWizardStep()"
+              style="display: none; padding: 9px 18px; font-weight: 700; border-radius: 8px;">
+              <i class="bi bi-arrow-left"></i> Kembali
+            </button>
+            <button type="button" id="btnWizardCancel" class="btn btn-secondary" onclick="closeInputModal()"
+              style="padding: 9px 18px; font-weight: 700; border-radius: 8px;">
+              Batal
+            </button>
           </div>
 
-        </form>
-      </div>
+          <div>
+            <button type="button" id="btnWizardNext" class="btn btn-primary" onclick="nextWizardStep()"
+              style="padding: 9px 22px; font-weight: 700; border-radius: 8px; box-shadow: 0 2px 8px rgba(37,99,235,0.25);">
+              Selanjutnya <i class="bi bi-arrow-right"></i>
+            </button>
+            <button type="submit" id="btnWizardSubmit" class="btn btn-emerald"
+              style="display: none; padding: 9px 24px; font-weight: 700; border-radius: 8px; box-shadow: 0 2px 8px rgba(16,185,129,0.25);">
+              <i class="bi bi-check-circle-fill"></i> Simpan Data CKG
+            </button>
+          </div>
+        </div>
 
+      </form>
     </div>
   </div>
 

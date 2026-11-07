@@ -3635,6 +3635,7 @@ function updateDataWaliVisibility() {
 
   const isWajib = (kat === 'bayi_balita' || kat === 'prasekolah');
   const isLansia = (kat === 'lansia');
+  const tanpaWaliCb = document.getElementById('daftarkan_tanpa_wali');
 
   if (isWajib) {
     section.style.display = 'block';
@@ -3649,9 +3650,10 @@ function updateDataWaliVisibility() {
       badge.style.borderColor = '#fca5a5';
       badge.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i> Wajib bagi Balita & Prasekolah';
     }
+    const isTanpa = tanpaWaliCb?.checked || false;
     ['reqNikWali', 'reqNamaWali', 'reqDobWali', 'reqJkWali', 'reqWaWali'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.style.display = 'inline';
+      if (el) el.style.display = isTanpa ? 'none' : 'inline';
     });
   } else if (isLansia) {
     section.style.display = 'block';
@@ -3674,6 +3676,36 @@ function updateDataWaliVisibility() {
     // Hidden for Dewasa & Sekolah / Remaja
     section.style.display = 'none';
   }
+}
+
+function toggleTanpaWaliInputs(checked) {
+  const fields = ['nik_wali', 'nama_wali', 'tanggal_lahir_wali', 'jenis_kelamin_wali', 'no_whatsapp_wali', 'wali_nomor_sama'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = checked;
+    if (checked) {
+      if (el.type === 'checkbox') el.checked = false;
+      else el.value = '';
+      el.style.backgroundColor = '#f1f5f9';
+      el.style.cursor = 'not-allowed';
+    } else {
+      el.style.backgroundColor = '#ffffff';
+      el.style.cursor = '';
+    }
+  });
+  const counter = document.getElementById('nikWaliCounter');
+  if (counter && checked) {
+    counter.textContent = '0';
+    counter.style.color = '#64748b';
+  }
+
+  const kat = typeof getSelectedKategoriSasaran === 'function' ? getSelectedKategoriSasaran() : '';
+  const isWajib = (kat === 'bayi_balita' || kat === 'prasekolah');
+  ['reqNikWali', 'reqNamaWali', 'reqDobWali', 'reqJkWali', 'reqWaWali'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (isWajib && !checked) ? 'inline' : 'none';
+  });
 }
 
 function calculateAgeFromDOB() {
@@ -6329,6 +6361,12 @@ function updateWizardUI() {
     if (btnNext) btnNext.style.display = 'inline-flex';
     if (btnSubmit) btnSubmit.style.display = 'none';
   }
+
+  // Selalu reset scroll ke paling atas agar header & input atas selalu terlihat
+  const modalBody = document.querySelector('#inputModalOverlay .modal-body');
+  if (modalBody) {
+    modalBody.scrollTop = 0;
+  }
 }
 
 function validateCurrentStep(step) {
@@ -6375,8 +6413,9 @@ function validateCurrentStep(step) {
     // Validasi Wajib Data Wali untuk Balita & Prasekolah
     const kat = getSelectedKategoriSasaran();
     const isWajibWali = (kat === 'bayi_balita' || kat === 'prasekolah');
+    const isTanpaWali = document.getElementById('daftarkan_tanpa_wali')?.checked || false;
 
-    if (isWajibWali) {
+    if (isWajibWali && !isTanpaWali) {
       const nikWali = (document.getElementById('nik_wali')?.value || '').replace(/\D/g, '').trim();
       const namaWali = (document.getElementById('nama_wali')?.value || '').trim();
       const dobWali = document.getElementById('tanggal_lahir_wali')?.value;
@@ -6386,7 +6425,7 @@ function validateCurrentStep(step) {
       const waPasien = (document.getElementById('no_whatsapp')?.value || '').trim();
 
       if (!nikWali || nikWali.length !== 16) {
-        showToast('Kategori ' + (kat === 'bayi_balita' ? 'Bayi & Balita' : 'Anak Prasekolah') + ' WAJIB mengisi NIK Wali 16 digit angka!', 'error');
+        showToast('Kategori ' + (kat === 'bayi_balita' ? 'Bayi & Balita' : 'Anak Prasekolah') + ' WAJIB mengisi NIK Wali 16 digit angka (atau centang Daftarkan tanpa data wali)!', 'error');
         document.getElementById('nik_wali')?.focus();
         return false;
       }
@@ -6410,7 +6449,7 @@ function validateCurrentStep(step) {
         document.getElementById('no_whatsapp_wali')?.focus();
         return false;
       }
-    } else {
+    } else if (!isTanpaWali) {
       // Jika kategori lain tapi NIK Wali diisi, harus 16 digit
       const nikWali = (document.getElementById('nik_wali')?.value || '').replace(/\D/g, '').trim();
       if (nikWali && nikWali.length !== 16) {
@@ -6480,6 +6519,11 @@ function openInputModal(kategori = 'Luar Gedung', isEdit = false) {
     if (countEl) { countEl.textContent = '0'; countEl.style.color = '#64748b'; }
     const defRadio = document.getElementById('kat_dewasa');
     if (defRadio) defRadio.checked = true;
+    const tanpaWaliCb = document.getElementById('daftarkan_tanpa_wali');
+    if (tanpaWaliCb) {
+      tanpaWaliCb.checked = false;
+      toggleTanpaWaliInputs(false);
+    }
     updateDataWaliVisibility();
   }
   
@@ -6699,11 +6743,13 @@ async function handleFormSubmit(e) {
     waWali = waPasien;
   }
 
-  if (isWajibWali) {
+  const isTanpaWali = document.getElementById('daftarkan_tanpa_wali')?.checked || false;
+
+  if (isWajibWali && !isTanpaWali) {
     if (!nikWali || nikWali.length !== 16) {
       currentWizardStep = 2;
       updateWizardUI();
-      showToast('Kategori ' + (katSasaran === 'bayi_balita' ? 'Bayi & Balita' : 'Anak Prasekolah') + ' WAJIB mengisi NIK Wali 16 digit angka!', 'error');
+      showToast('Kategori ' + (katSasaran === 'bayi_balita' ? 'Bayi & Balita' : 'Anak Prasekolah') + ' WAJIB mengisi NIK Wali 16 digit angka (atau centang Daftarkan tanpa data wali)!', 'error');
       setTimeout(() => document.getElementById('nik_wali')?.focus(), 100);
       return;
     }
@@ -6735,7 +6781,7 @@ async function handleFormSubmit(e) {
       setTimeout(() => document.getElementById('no_whatsapp_wali')?.focus(), 100);
       return;
     }
-  } else if (nikWali && nikWali.length !== 16) {
+  } else if (!isTanpaWali && nikWali && nikWali.length !== 16) {
     currentWizardStep = 2;
     updateWizardUI();
     showToast('NIK Wali harus 16 digit angka jika diisi!', 'error');
@@ -6765,10 +6811,11 @@ async function handleFormSubmit(e) {
     id: currentEditingId || `CKG-2026-${String(records.length + 1).padStart(3, '0')}`,
     kategori_sasaran: katSasaran,
     kategori_umur: getKategoriUmur(parseInt(document.getElementById('usia')?.value) || 0, tanggalLahir),
-    nik_wali: nikWali,
-    nama_wali: namaWali,
-    tanggal_lahir_wali: dobWali,
-    jenis_kelamin_wali: jkWali,
+    tanpa_wali: isTanpaWali ? 1 : 0,
+    nik_wali: isTanpaWali ? '' : nikWali,
+    nama_wali: isTanpaWali ? '' : namaWali,
+    tanggal_lahir_wali: isTanpaWali ? '' : dobWali,
+    jenis_kelamin_wali: isTanpaWali ? '' : jkWali,
     no_whatsapp_wali: waWali,
     wali_nomor_sama: isNomorSama ? 1 : 0,
     jenis_kegiatan: document.querySelector('input[name="jenis_kegiatan"]:checked')?.value || 'Luar Gedung',
