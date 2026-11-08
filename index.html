@@ -3407,6 +3407,9 @@
               <div class="form-group">
                 <label class="form-label" for="tanggal_lahir">Tanggal Lahir <span class="required">*</span></label>
                 <input type="date" id="tanggal_lahir" class="form-control" required>
+                <div id="dobKategoriWarning" style="display: none; margin-top: 6px; padding: 6px 10px; font-size: 11.5px; font-weight: 700; color: #991b1b; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; line-height: 1.4;">
+                  <i class="bi bi-exclamation-triangle-fill" style="color: #dc2626;"></i> <span id="dobKategoriWarningText"></span>
+                </div>
               </div>
 
               <div class="form-group">
@@ -3685,9 +3688,18 @@
             </button>
           </div>
 
-          <div>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end;">
+            <!-- Peringatan Kategori Tidak Sesuai Usia Dekat Tombol Selanjutnya -->
+            <div id="alertKategoriMismatch" style="display: none; background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 6px 12px; font-size: 12px; color: #991b1b; font-weight: 700; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(220,38,38,0.1);">
+              <i class="bi bi-exclamation-triangle-fill" style="color: #dc2626; font-size: 15px;"></i>
+              <span id="textKategoriMismatch">Usia tidak sesuai kategori!</span>
+              <button type="button" id="btnAutoSwitchKategori" onclick="switchKategoriToCorrect()" style="padding: 4px 10px; font-size: 11px; font-weight: 800; background: #dc2626; color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">
+                <i class="bi bi-arrow-repeat"></i> Beralih Kategori
+              </button>
+            </div>
+
             <button type="button" id="btnWizardNext" class="btn btn-primary" onclick="nextWizardStep()"
-              style="padding: 9px 22px; font-weight: 700; border-radius: 8px; box-shadow: 0 2px 8px rgba(37,99,235,0.25);">
+              style="padding: 9px 22px; font-weight: 700; border-radius: 8px; box-shadow: 0 2px 8px rgba(37,99,235,0.25); transition: all 0.2s;">
               Selanjutnya <i class="bi bi-arrow-right"></i>
             </button>
             <button type="submit" id="btnWizardSubmit" class="btn btn-emerald"

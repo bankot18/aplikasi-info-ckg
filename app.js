@@ -2418,7 +2418,10 @@ function setupEventListeners() {
   }
 
   const dobInput = document.getElementById('tanggal_lahir');
-  if (dobInput) dobInput.addEventListener('change', calculateAgeFromDOB);
+  if (dobInput) {
+    dobInput.addEventListener('change', () => calculateAgeFromDOB(false));
+    dobInput.addEventListener('input', () => calculateAgeFromDOB(false));
+  }
 
   // Sync address dictionary from Cloudflare D1 Server on startup
   syncKamusFromCloudServer();
@@ -2473,7 +2476,10 @@ function setupEventListeners() {
 
   // Event listener untuk Kategori Sasaran & Data Wali
   document.querySelectorAll('input[name="kategori_sasaran"]').forEach(radio => {
-    radio.addEventListener('change', updateDataWaliVisibility);
+    radio.addEventListener('change', () => {
+      updateDataWaliVisibility();
+      checkDobKategoriCompatibility(false);
+    });
   });
 
   const nikWaliInput = document.getElementById('nik_wali');
@@ -4005,7 +4011,206 @@ function toggleTanpaWaliInputs(checked) {
   });
 }
 
-function calculateAgeFromDOB() {
+function getKategoriLabel(key) {
+  switch (key) {
+    case 'bayi_balita': return 'Bayi & Balita (0 – 59 Bulan / 0 – 5 Th)';
+    case 'prasekolah': return 'Anak Prasekolah (60 – 72 Bulan / 5 – 6 Th)';
+    case 'sekolah_remaja': return 'Sekolah & Remaja (6 – 18 Tahun)';
+    case 'dewasa': return 'Dewasa (18 – 59 Tahun)';
+    case 'lansia': return 'Lanjut Usia (Lansia) (≥ 60 Tahun)';
+    default: return key || 'Umum';
+  }
+}
+
+function determineKategoriSasaran(dob, age) {
+  let finalAge = parseInt(age);
+  let months = null;
+
+  if (dob) {
+    const dobIso = (typeof formatDateToYYYYMMDD === 'function') ? formatDateToYYYYMMDD(dob) : dob;
+    if (dobIso) {
+      const d = new Date(dobIso);
+      if (!isNaN(d.getTime())) {
+        const now = new Date();
+        let y = now.getFullYear() - d.getFullYear();
+        let m = now.getMonth() - d.getMonth();
+        if (m < 0 || (m === 0 && now.getDate() < d.getDate())) y--;
+        finalAge = y >= 0 ? y : 0;
+
+        months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+        if (now.getDate() < d.getDate()) months--;
+        if (months < 0) months = 0;
+      }
+    }
+  }
+
+  if (isNaN(finalAge)) finalAge = 0;
+
+  let key = 'dewasa';
+  let label = 'Dewasa (18 – 59 Tahun)';
+  let shortLabel = 'Dewasa';
+  let radioId = 'kat_dewasa';
+
+  if (months !== null) {
+    if (months <= 59) {
+      key = 'bayi_balita';
+      label = 'Bayi & Balita (0 – 59 Bulan / 0 – 5 Th)';
+      shortLabel = 'Bayi & Balita';
+      radioId = 'kat_bayi_balita';
+    } else if (months <= 72 || finalAge <= 6) {
+      key = 'prasekolah';
+      label = 'Anak Prasekolah (60 – 72 Bulan / 5 – 6 Th)';
+      shortLabel = 'Anak Prasekolah';
+      radioId = 'kat_prasekolah';
+    } else if (finalAge < 18) {
+      key = 'sekolah_remaja';
+      label = 'Sekolah & Remaja (6 – 18 Tahun)';
+      shortLabel = 'Sekolah & Remaja';
+      radioId = 'kat_sekolah_remaja';
+    } else if (finalAge >= 60) {
+      key = 'lansia';
+      label = 'Lanjut Usia (Lansia) (≥ 60 Tahun)';
+      shortLabel = 'Lansia';
+      radioId = 'kat_lansia';
+    } else {
+      key = 'dewasa';
+      label = 'Dewasa (18 – 59 Tahun)';
+      shortLabel = 'Dewasa';
+      radioId = 'kat_dewasa';
+    }
+  } else {
+    if (finalAge < 5) {
+      key = 'bayi_balita';
+      label = 'Bayi & Balita (0 – 5 Tahun)';
+      shortLabel = 'Bayi & Balita';
+      radioId = 'kat_bayi_balita';
+    } else if (finalAge >= 5 && finalAge <= 6) {
+      key = 'prasekolah';
+      label = 'Anak Prasekolah (5 – 6 Tahun)';
+      shortLabel = 'Anak Prasekolah';
+      radioId = 'kat_prasekolah';
+    } else if (finalAge >= 7 && finalAge < 18) {
+      key = 'sekolah_remaja';
+      label = 'Sekolah & Remaja (6 – 18 Tahun)';
+      shortLabel = 'Sekolah & Remaja';
+      radioId = 'kat_sekolah_remaja';
+    } else if (finalAge >= 60) {
+      key = 'lansia';
+      label = 'Lanjut Usia (Lansia) (≥ 60 Tahun)';
+      shortLabel = 'Lansia';
+      radioId = 'kat_lansia';
+    } else {
+      key = 'dewasa';
+      label = 'Dewasa (18 – 59 Tahun)';
+      shortLabel = 'Dewasa';
+      radioId = 'kat_dewasa';
+    }
+  }
+
+  return { key, label, shortLabel, radioId, age: finalAge, months };
+}
+
+function checkDobKategoriCompatibility(isManual = false) {
+  const dobVal = document.getElementById('tanggal_lahir')?.value;
+  const alertFooter = document.getElementById('alertKategoriMismatch');
+  const textFooter = document.getElementById('textKategoriMismatch');
+  const btnAutoSwitch = document.getElementById('btnAutoSwitchKategori');
+  const dobWarning = document.getElementById('dobKategoriWarning');
+  const dobWarningText = document.getElementById('dobKategoriWarningText');
+  const btnNext = document.getElementById('btnWizardNext');
+
+  if (!dobVal) {
+    if (alertFooter) alertFooter.style.display = 'none';
+    if (dobWarning) dobWarning.style.display = 'none';
+    if (btnNext) {
+      btnNext.disabled = false;
+      btnNext.style.opacity = '1';
+      btnNext.style.cursor = 'pointer';
+      btnNext.removeAttribute('title');
+    }
+    return true;
+  }
+
+  const ageInput = document.getElementById('usia');
+  const currentAge = parseInt(ageInput?.value) || 0;
+  const correct = determineKategoriSasaran(dobVal, currentAge);
+  const currentKey = getSelectedKategoriSasaran();
+
+  if (currentKey !== correct.key) {
+    // Kategori TIDAK SESUAI dengan umur
+    const currentLabel = getKategoriLabel(currentKey);
+    const ageDesc = (correct.months !== null && correct.months < 72)
+      ? `${correct.months} Bulan (${correct.age} Thn)`
+      : `${correct.age} Tahun`;
+
+    const warningMsg = `Usia (${ageDesc}) tidak sesuai dengan kategori yang dipilih di awal (${currentLabel})!`;
+
+    if (dobWarning && dobWarningText) {
+      dobWarning.style.display = 'block';
+      dobWarningText.innerHTML = `<i class="bi bi-exclamation-triangle-fill"></i> ${warningMsg} Harap beralih ke kategori <strong>${correct.label}</strong>.`;
+    }
+
+    if (alertFooter && textFooter) {
+      alertFooter.style.display = 'inline-flex';
+      textFooter.innerHTML = `<span style="color:#b91c1c;">${warningMsg}</span> Harap beralih ke <strong>${correct.shortLabel}</strong>`;
+    }
+
+    if (btnAutoSwitch) {
+      btnAutoSwitch.setAttribute('data-target-radio', correct.radioId);
+      btnAutoSwitch.innerHTML = `<i class="bi bi-arrow-repeat"></i> Beralih ke ${correct.shortLabel}`;
+    }
+
+    // KUNCI TOMBOL SELANJUTNYA
+    if (btnNext) {
+      btnNext.disabled = true;
+      btnNext.style.opacity = '0.45';
+      btnNext.style.cursor = 'not-allowed';
+      btnNext.title = `Tombol Selanjutnya terkunci! Usia (${ageDesc}) tidak sesuai kategori "${currentLabel}". Silakan beralih ke kategori "${correct.label}".`;
+    }
+
+    if (isManual) {
+      showToast(`Peringatan: Usia (${ageDesc}) tidak sesuai kategori ${currentLabel}! Tombol Selanjutnya terkunci sampai kategori disesuaikan.`, 'warning');
+    }
+
+    return false;
+  } else {
+    // Sesuai / Compatible
+    if (alertFooter) alertFooter.style.display = 'none';
+    if (dobWarning) dobWarning.style.display = 'none';
+    if (btnNext) {
+      btnNext.disabled = false;
+      btnNext.style.opacity = '1';
+      btnNext.style.cursor = 'pointer';
+      btnNext.removeAttribute('title');
+    }
+    return true;
+  }
+}
+
+function switchKategoriToCorrect() {
+  const btnAutoSwitch = document.getElementById('btnAutoSwitchKategori');
+  let targetRadioId = btnAutoSwitch?.getAttribute('data-target-radio');
+  
+  if (!targetRadioId) {
+    const dobVal = document.getElementById('tanggal_lahir')?.value;
+    if (dobVal) {
+      const correct = determineKategoriSasaran(dobVal);
+      targetRadioId = correct.radioId;
+    }
+  }
+
+  if (targetRadioId) {
+    const radio = document.getElementById(targetRadioId);
+    if (radio) {
+      radio.checked = true;
+      updateDataWaliVisibility();
+      checkDobKategoriCompatibility(false);
+      showToast('Kategori sasaran berhasil disesuaikan! Tombol Selanjutnya telah aktif.', 'success');
+    }
+  }
+}
+
+function calculateAgeFromDOB(isFromCekNik = false) {
   const dobVal = document.getElementById('tanggal_lahir').value;
   const ageInput = document.getElementById('usia');
   if (!dobVal || !ageInput) return;
@@ -4020,29 +4225,26 @@ function calculateAgeFromDOB() {
   const finalAge = years >= 0 ? years : 0;
   ageInput.value = finalAge;
 
-  // Auto-sync kategori sasaran di Step 1 berdasarkan standar ILP
-  let totalMonths = (now.getFullYear() - dob.getFullYear()) * 12 + (now.getMonth() - dob.getMonth());
-  if (now.getDate() < dob.getDate()) totalMonths--;
-  if (totalMonths < 0) totalMonths = 0;
+  const correct = determineKategoriSasaran(dobVal, finalAge);
+  const currentKey = getSelectedKategoriSasaran();
 
-  let targetRadioId = 'kat_dewasa';
-  if (totalMonths <= 59) {
-    targetRadioId = 'kat_bayi_balita';
-  } else if (totalMonths <= 72 || finalAge <= 6) {
-    targetRadioId = 'kat_prasekolah';
-  } else if (finalAge < 18) {
-    targetRadioId = 'kat_sekolah_remaja';
-  } else if (finalAge < 60) {
-    targetRadioId = 'kat_dewasa';
+  if (isFromCekNik) {
+    // Skenario 1: Cek NIK -> langsung otomatis pindah ke kategori umur yang sesuai
+    if (currentKey !== correct.key) {
+      const radio = document.getElementById(correct.radioId);
+      if (radio) {
+        radio.checked = true;
+      }
+      updateDataWaliVisibility();
+      checkDobKategoriCompatibility(false);
+      showToast(`Kategori usia otomatis disesuaikan menjadi: ${correct.label} (${correct.age} Thn)`, 'info');
+    } else {
+      checkDobKategoriCompatibility(false);
+    }
   } else {
-    targetRadioId = 'kat_lansia';
+    // Skenario 2: Isi Manual -> jangan ganti radio diam-diam, lakukan validasi & kunci tombol jika mismatch
+    checkDobKategoriCompatibility(true);
   }
-
-  const radio = document.getElementById(targetRadioId);
-  if (radio) {
-    radio.checked = true;
-  }
-  updateDataWaliVisibility();
 }
 
 // ==========================================================================
@@ -6659,6 +6861,16 @@ function updateWizardUI() {
     if (btnSubmit) btnSubmit.style.display = 'none';
   }
 
+  // Update visibilitas alert mismatch kategori
+  const alertFooter = document.getElementById('alertKategoriMismatch');
+  if (currentWizardStep === 1) {
+    if (alertFooter) alertFooter.style.display = 'none';
+  } else if (currentWizardStep === 2) {
+    if (typeof checkDobKategoriCompatibility === 'function') {
+      checkDobKategoriCompatibility(false);
+    }
+  }
+
   // Selalu reset scroll ke paling atas agar header & input atas selalu terlihat
   const modalBody = document.querySelector('#inputModalOverlay .modal-body');
   if (modalBody) {
@@ -6708,6 +6920,17 @@ function validateCurrentStep(step) {
       showToast('Tanggal Lahir Pasien wajib diisi!', 'error');
       document.getElementById('tanggal_lahir').focus();
       return false;
+    }
+
+    // Validasi Kesesuaian Kategori Usia vs Tanggal Lahir Pasien
+    if (dob && typeof checkDobKategoriCompatibility === 'function') {
+      const isCompat = checkDobKategoriCompatibility(true);
+      if (!isCompat) {
+        const correct = determineKategoriSasaran(dob);
+        const curKat = getSelectedKategoriSasaran();
+        showToast(`Tombol Selanjutnya terkunci! Usia terhitung (${correct.age} Thn) tidak sesuai kategori "${getKategoriLabel(curKat)}". Harap sesuaikan kategori terlebih dahulu!`, 'error');
+        return false;
+      }
     }
     if (!alamat) {
       showToast('Alamat Lengkap Pasien wajib diisi!', 'error');
@@ -6860,6 +7083,19 @@ function openInputModal(kategori = 'Luar Gedung', isEdit = false, target = 'reco
   } else {
     // Mode edit -> buka semua kuncian kolom agar bisa diedit
     setDemographicLock('all', false);
+  }
+
+  // Reset peringatan mismatch kategori
+  const alertFooter = document.getElementById('alertKategoriMismatch');
+  if (alertFooter) alertFooter.style.display = 'none';
+  const dobWarning = document.getElementById('dobKategoriWarning');
+  if (dobWarning) dobWarning.style.display = 'none';
+  const btnNext = document.getElementById('btnWizardNext');
+  if (btnNext) {
+    btnNext.disabled = false;
+    btnNext.style.opacity = '1';
+    btnNext.style.cursor = 'pointer';
+    btnNext.removeAttribute('title');
   }
   
   if (kategori === 'Dalam Gedung') {
@@ -12389,7 +12625,7 @@ async function triggerCekNikEnco(target = 'pasien') {
         <div style="text-align: left; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-top: 10px; font-size: 13px;">
           <div style="font-weight: 800; color: #1e293b; font-size: 13.5px; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
             <i class="bi bi-person-check-fill" style="color: #10b981; font-size: 18px;"></i>
-            <span>Identitas Bank Data Rekam Pasien ASIK</span>
+            <span>Detail Identitas</span>
           </div>
           <table style="width: 100%; border-collapse: collapse; line-height: 1.6;">
             <tr>
@@ -12472,7 +12708,7 @@ async function triggerCekNikEnco(target = 'pasien') {
         if (elNama) elNama.value = rawNama;
         if (elDob && rawDob) {
           elDob.value = (typeof formatDateToYYYYMMDD === 'function') ? formatDateToYYYYMMDD(rawDob) : rawDob;
-          calculateAgeFromDOB();
+          calculateAgeFromDOB(true);
         }
         if (elJk) {
           elJk.value = (rawJk === 'P' || String(rawJk).toLowerCase().startsWith('p')) ? 'P' : 'L';
