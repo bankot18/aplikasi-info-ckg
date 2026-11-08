@@ -615,9 +615,9 @@ export default {
               item.from_bank_data == 1 ||
               item.is_bank_data == 1 ||
               (item.status_pendaftaran && (item.status_pendaftaran === 'Sudah Terdaftar' || item.status_pendaftaran === 'berhasil')) ||
-              (item.status_pelayanan && (item.status_pelayanan === 'Selesai Pelayanan' || item.status_pelayanan === 'selesai')) ||
+              (item.status_pelayanan && (item.status_pelayanan === 'Selesai Pelayanan' || item.status_pelayanan === 'selesai' || item.status_pelayanan === 'Pernah Input')) ||
               (r.enco_status_pendaftaran && (r.enco_status_pendaftaran === 'Sudah Terdaftar' || r.enco_status_pendaftaran === 'berhasil')) ||
-              (r.enco_status_pelayanan && (r.enco_status_pelayanan === 'Selesai Pelayanan' || r.enco_status_pelayanan === 'selesai'))
+              (r.enco_status_pelayanan && (r.enco_status_pelayanan === 'Selesai Pelayanan' || r.enco_status_pelayanan === 'selesai' || r.enco_status_pelayanan === 'Pernah Input'))
             ) ? 1 : 0;
 
             return {
@@ -3191,13 +3191,13 @@ Saran Medis:`;
           }
 
           if (status === 'antre') {
-            conditions.push("(status_pendaftaran = 'antre' OR status_pelayanan = 'antre')");
+            conditions.push("((status_pendaftaran = 'antre' OR status_pelayanan = 'antre') AND status_pelayanan NOT IN ('selesai', 'Selesai Pelayanan', 'Pernah Input', 'already-screened'))");
           } else if (status === 'selesai') {
-            conditions.push("(status_pendaftaran IN ('berhasil', 'Sudah Terdaftar') AND status_pelayanan IN ('selesai', 'Selesai Pelayanan'))");
+            conditions.push("(status_pelayanan IN ('selesai', 'Selesai Pelayanan', 'Pernah Input', 'already-screened'))");
           } else if (status === 'pendaftaran') {
             conditions.push("status_pendaftaran = 'antre'");
           } else if (status === 'pelayanan') {
-            conditions.push("status_pelayanan = 'antre'");
+            conditions.push("status_pelayanan = 'antre' AND status_pelayanan NOT IN ('selesai', 'Selesai Pelayanan', 'Pernah Input', 'already-screened')");
           }
 
           if (search) {
@@ -3220,11 +3220,12 @@ Saran Medis:`;
               COUNT(*) as total,
               SUM(CASE WHEN jenis = 'UMUM' THEN 1 ELSE 0 END) as total_umum,
               SUM(CASE WHEN jenis = 'SEKOLAH' THEN 1 ELSE 0 END) as total_sekolah,
-              SUM(CASE WHEN (status_pendaftaran = 'antre' OR status_pelayanan = 'antre') THEN 1 ELSE 0 END) as antre,
+              SUM(CASE WHEN (status_pendaftaran = 'antre' OR status_pelayanan = 'antre') AND status_pelayanan NOT IN ('selesai', 'Selesai Pelayanan', 'Pernah Input', 'already-screened') THEN 1 ELSE 0 END) as antre,
               SUM(CASE WHEN status_pendaftaran = 'antre' THEN 1 ELSE 0 END) as antre_pendaftaran,
-              SUM(CASE WHEN status_pelayanan = 'antre' THEN 1 ELSE 0 END) as antre_pelayanan,
+              SUM(CASE WHEN status_pelayanan = 'antre' AND status_pelayanan NOT IN ('selesai', 'Selesai Pelayanan', 'Pernah Input', 'already-screened') THEN 1 ELSE 0 END) as antre_pelayanan,
               SUM(CASE WHEN status_pendaftaran = 'berhasil' OR status_pendaftaran LIKE '%Terdaftar%' THEN 1 ELSE 0 END) as terdaftar,
               SUM(CASE WHEN status_pelayanan = 'selesai' OR status_pelayanan = 'Selesai Pelayanan' THEN 1 ELSE 0 END) as selesai,
+              SUM(CASE WHEN status_pelayanan = 'Pernah Input' OR status_pelayanan = 'already-screened' OR keterangan LIKE '%Pernah%' THEN 1 ELSE 0 END) as pernah_input,
               SUM(CASE WHEN status_pendaftaran = 'gagal' THEN 1 ELSE 0 END) as gagal
             FROM enco_bot_queue
           `;
@@ -3405,7 +3406,7 @@ Saran Medis:`;
           let deletedCount = 0;
 
           if (clearCompleted) {
-            let sql = "DELETE FROM enco_bot_queue WHERE (status_pendaftaran IN ('berhasil', 'Sudah Terdaftar') AND status_pelayanan IN ('selesai', 'Selesai Pelayanan'))";
+            let sql = "DELETE FROM enco_bot_queue WHERE (status_pelayanan IN ('selesai', 'Selesai Pelayanan', 'Pernah Input', 'already-screened') OR (status_pendaftaran IN ('berhasil', 'Sudah Terdaftar') AND status_pelayanan IN ('selesai', 'Selesai Pelayanan', 'Pernah Input', 'already-screened')))";
             const delParams = [];
             if (jenis) {
               sql += " AND jenis = ?";
@@ -3506,7 +3507,7 @@ Saran Medis:`;
               if (statusReg) parsedG.status_pendaftaran = (statusReg === 'berhasil' ? 'Sudah Terdaftar' : statusReg);
               if (statusPel) parsedG.status_pelayanan = (statusPel === 'selesai' ? 'Selesai Pelayanan' : statusPel);
               if (noTiket) parsedG.no_tiket = noTiket;
-              if (statusReg === 'berhasil' || statusReg === 'Sudah Terdaftar' || statusPel === 'selesai' || statusPel === 'Selesai Pelayanan') {
+              if (statusReg === 'berhasil' || statusReg === 'Sudah Terdaftar' || statusPel === 'selesai' || statusPel === 'Selesai Pelayanan' || statusPel === 'Pernah Input' || statusPel === 'already-screened') {
                 parsedG.is_bank_data = 1;
                 parsedG.from_bank_data = 1;
               }

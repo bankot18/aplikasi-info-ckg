@@ -89,9 +89,9 @@ export async function onRequestGet(context) {
         item.from_bank_data == 1 ||
         item.is_bank_data == 1 ||
         (item.status_pendaftaran && (item.status_pendaftaran === 'Sudah Terdaftar' || item.status_pendaftaran === 'berhasil')) ||
-        (item.status_pelayanan && (item.status_pelayanan === 'Selesai Pelayanan' || item.status_pelayanan === 'selesai')) ||
+        (item.status_pelayanan && (item.status_pelayanan === 'Selesai Pelayanan' || item.status_pelayanan === 'selesai' || item.status_pelayanan === 'Pernah Input')) ||
         (r.enco_status_pendaftaran && (r.enco_status_pendaftaran === 'Sudah Terdaftar' || r.enco_status_pendaftaran === 'berhasil')) ||
-        (r.enco_status_pelayanan && (r.enco_status_pelayanan === 'Selesai Pelayanan' || r.enco_status_pelayanan === 'selesai'))
+        (r.enco_status_pelayanan && (r.enco_status_pelayanan === 'Selesai Pelayanan' || r.enco_status_pelayanan === 'selesai' || r.enco_status_pelayanan === 'Pernah Input'))
       ) ? 1 : 0;
 
       return {

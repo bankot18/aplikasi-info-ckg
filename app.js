@@ -8485,12 +8485,14 @@ function buildTableRowsHtml(data) {
 
     const cleanRecNik = String(r.nik || '').replace(/\D/g, '');
     const isInEncoCacheRec = typeof encoState !== 'undefined' && Array.isArray(encoState.cachedRecords) && encoState.cachedRecords.some(ep => cleanRecNik && String(ep.nik || '').replace(/\D/g, '') === cleanRecNik);
+    const isPernahRec = r.status_pelayanan === 'Pernah Input' || (r.enco_status_pelayanan && r.enco_status_pelayanan.toLowerCase().includes('pernah'));
     const isBankDataOrAsikRec = !!(
       r.is_bank_data == 1 ||
       r.from_bank_data == 1 ||
       r.enco_pasien_id ||
       isInEncoCacheRec ||
-      (r.status_pelayanan && (r.status_pelayanan.toLowerCase().includes('selesai'))) ||
+      isPernahRec ||
+      (r.status_pelayanan && (r.status_pelayanan.toLowerCase().includes('selesai') || r.status_pelayanan.toLowerCase().includes('pernah'))) ||
       (r.status_pendaftaran && (r.status_pendaftaran.toLowerCase().includes('terdaftar') || r.status_pendaftaran.toLowerCase().includes('berhasil')))
     );
 
@@ -8517,9 +8519,10 @@ function buildTableRowsHtml(data) {
         </td>
         <td>${kegiatanBadge}</td>
         <td>
-          <div style="display: inline-flex; align-items: center; gap: 5px;">
+          <div style="display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap;">
             <strong>${r.nama}</strong>
             ${isBankDataOrAsikRec ? `<i class="bi bi-check-circle-fill" style="color: #10b981; font-size: 13.5px; line-height: 1; flex-shrink: 0;" title="Terdaftar di Bank Data ASIK"></i>` : ''}
+            ${isPernahRec ? `<span class="badge" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px;"><i class="bi bi-clock-history"></i> Pernah Input</span>` : ''}
           </div><br>
           ${isNik16Digit(r.nik)
             ? `<span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${r.nik}</span>`
@@ -8823,9 +8826,17 @@ async function openBotQueueModal(jenis = 'UMUM') {
         ? `<span class="badge" style="background: #fee2e2; color: #dc2626; font-weight: 700; font-size: 10.5px;"><i class="bi bi-x-circle-fill"></i> Gagal</span>`
         : `<span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 10.5px;"><i class="bi bi-hourglass-split"></i> Antre</span>`;
 
-    const pelBadge = (q.status_pelayanan === 'selesai' || q.status_pelayanan === 'Selesai Pelayanan')
-      ? `<span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 10.5px;"><i class="bi bi-check-circle-fill"></i> Selesai</span>`
-      : `<span class="badge" style="background: #f1f5f9; color: #64748b; font-weight: 700; font-size: 10.5px;"><i class="bi bi-hourglass"></i> Belum</span>`;
+    const isPernah = q.status_pelayanan === 'Pernah Input' || 
+                     q.status_pelayanan === 'already-screened' || 
+                     (q.keterangan && q.keterangan.toLowerCase().includes('pernah'));
+
+    const isSelesai = q.status_pelayanan === 'selesai' || q.status_pelayanan === 'Selesai Pelayanan';
+
+    const pelBadge = isPernah
+      ? `<span class="badge" style="background: #f3e8ff; color: #7e22ce; border: 1.5px solid #d8b4fe; font-weight: 800; font-size: 10.5px; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Sudah pernah di-input skrining sebelumnya di ASIK"><i class="bi bi-clock-history"></i> Pernah Input</span>`
+      : isSelesai
+        ? `<span class="badge" style="background: #ecfdf5; color: #059669; border: 1.5px solid #a7f3d0; font-weight: 700; font-size: 10.5px; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill"></i> Selesai</span>`
+        : `<span class="badge" style="background: #f1f5f9; color: #64748b; font-weight: 700; font-size: 10.5px; padding: 3px 8px; border-radius: 6px;"><i class="bi bi-hourglass"></i> Belum</span>`;
 
     const tiketStr = q.no_tiket ? `<span style="font-family: monospace; font-size: 11px; color: #0284c7; font-weight: 700;">${escapeHtml(q.no_tiket)}</span>` : '-';
     const detailExtra = !isUmum && q.data ? `<div style="font-size: 11px; color: #64748b;">${escapeHtml(q.data.sekolah || '')} ${q.data.kelas ? '(' + escapeHtml(q.data.kelas) + ')' : ''}</div>` : '';
@@ -8834,7 +8845,10 @@ async function openBotQueueModal(jenis = 'UMUM') {
       <tr>
         <td style="text-align: center; font-weight: 700; color: #64748b; vertical-align: middle;">${idx + 1}</td>
         <td style="vertical-align: middle;">
-          <div style="font-weight: 800; font-size: 13px; color: #1e293b;">${escapeHtml(q.nama)}</div>
+          <div style="font-weight: 800; font-size: 13px; color: #1e293b; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span>${escapeHtml(q.nama)}</span>
+            ${isPernah ? `<span class="badge" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; font-size: 9.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px;"><i class="bi bi-clock-history"></i> Pernah Input</span>` : ''}
+          </div>
           <div style="font-family: monospace; font-size: 11px; color: #475569;">${escapeHtml(q.nik)}</div>
           ${detailExtra}
         </td>
@@ -8870,23 +8884,27 @@ async function openBotQueueModal(jenis = 'UMUM') {
     width: '850px',
     html: `
       <div style="text-align: left; font-family: 'Plus Jakarta Sans', sans-serif;">
-        <!-- KPI Metrics Header -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px;">
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; text-align: center;">
-            <div style="font-size: 11px; color: #64748b; font-weight: 700;">TOTAL ANTREAN</div>
+        <!-- KPI Metrics Header (5 Kategori Lengkap) -->
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 10px; color: #64748b; font-weight: 700;">TOTAL ANTREAN</div>
             <div style="font-size: 18px; font-weight: 800; color: #0f172a;">${queueList.length}</div>
           </div>
-          <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 8px 12px; text-align: center;">
-            <div style="font-size: 11px; color: #854d0e; font-weight: 700;">SIAP / ANTRE</div>
-            <div style="font-size: 18px; font-weight: 800; color: #ca8a04;">${queueList.filter(q => q.status_pendaftaran === 'antre' || q.status_pelayanan === 'antre').length}</div>
+          <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 10px; color: #854d0e; font-weight: 700;">SIAP / ANTRE</div>
+            <div style="font-size: 18px; font-weight: 800; color: #ca8a04;">${queueList.filter(q => (q.status_pendaftaran === 'antre' || q.status_pelayanan === 'antre') && q.status_pelayanan !== 'Pernah Input' && q.status_pelayanan !== 'already-screened' && q.status_pelayanan !== 'selesai' && q.status_pelayanan !== 'Selesai Pelayanan').length}</div>
           </div>
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 12px; text-align: center;">
-            <div style="font-size: 11px; color: #166534; font-weight: 700;">TERDAFTAR</div>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 10px; color: #166534; font-weight: 700;">TERDAFTAR</div>
             <div style="font-size: 18px; font-weight: 800; color: #16a34a;">${queueList.filter(q => q.status_pendaftaran === 'berhasil' || q.status_pendaftaran === 'Sudah Terdaftar').length}</div>
           </div>
-          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; text-align: center;">
-            <div style="font-size: 11px; color: #1e40af; font-weight: 700;">SELESAI LAYANAN</div>
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 10px; color: #1e40af; font-weight: 700;">SELESAI LAYANAN</div>
             <div style="font-size: 18px; font-weight: 800; color: #2563eb;">${queueList.filter(q => q.status_pelayanan === 'selesai' || q.status_pelayanan === 'Selesai Pelayanan').length}</div>
+          </div>
+          <div style="background: #f3e8ff; border: 1px solid #d8b4fe; border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 10px; color: #7e22ce; font-weight: 700;">PERNAH INPUT</div>
+            <div style="font-size: 18px; font-weight: 800; color: #9333ea;">${queueList.filter(q => q.status_pelayanan === 'Pernah Input' || q.status_pelayanan === 'already-screened' || (q.keterangan && q.keterangan.toLowerCase().includes('pernah'))).length}</div>
           </div>
         </div>
 
@@ -9176,16 +9194,24 @@ function buildCkgGratisRowsHtml(list) {
     const isGulaTinggi = r.gula_darah > 200;
     const isAnemia = r.hb > 0 && r.hb < 11.0;
 
+    const isBotPernahInput = !!(
+      r.status_pelayanan === 'Pernah Input' ||
+      r.status_pelayanan === 'already-screened' ||
+      (r.enco_status_pelayanan && (r.enco_status_pelayanan.toLowerCase().includes('pernah') || r.enco_status_pelayanan === 'already-screened')) ||
+      (r.keterangan && String(r.keterangan).toLowerCase().includes('pernah'))
+    );
     const isBotSelesai = (r.status_pelayanan === 'Selesai Pelayanan' || r.status_pelayanan === 'selesai');
     const isBotTerdaftar = (r.status_pendaftaran === 'Sudah Terdaftar' || r.status_pendaftaran === 'berhasil');
     const isBotAntre = !!(r.in_bot_queue || r.bot_queue_date);
-    const botStatusBadge = isBotSelesai
-      ? `<div style="margin-top: 3px;"><span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 800; font-size: 10px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-robot"></i> Selesai Bot</span></div>`
-      : isBotTerdaftar
-        ? `<div style="margin-top: 3px;"><span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 800; font-size: 10px; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-robot"></i> Terdaftar Bot</span></div>`
-        : isBotAntre
-          ? `<div style="margin-top: 3px;"><span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 10px; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-hourglass-split"></i> Antre Bot</span></div>`
-          : '';
+    const botStatusBadge = isBotPernahInput
+      ? `<div style="margin-top: 3px;"><span class="badge" style="background: #f3e8ff; color: #7e22ce; font-weight: 800; font-size: 10px; border: 1.5px solid #d8b4fe; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-clock-history"></i> Pernah Input</span></div>`
+      : isBotSelesai
+        ? `<div style="margin-top: 3px;"><span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 800; font-size: 10px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-robot"></i> Selesai Bot</span></div>`
+        : isBotTerdaftar
+          ? `<div style="margin-top: 3px;"><span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 800; font-size: 10px; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-robot"></i> Terdaftar Bot</span></div>`
+          : isBotAntre
+            ? `<div style="margin-top: 3px;"><span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 10px; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-hourglass-split"></i> Antre Bot</span></div>`
+            : '';
 
     const isInEncoCache = typeof encoState !== 'undefined' && Array.isArray(encoState.cachedRecords) && encoState.cachedRecords.some(ep => cleanNik && String(ep.nik || '').replace(/\D/g, '') === cleanNik);
     const isFromBankData = !!(
@@ -9197,10 +9223,11 @@ function buildCkgGratisRowsHtml(list) {
     const isEntriBotAsik = !!(
       isBotSelesai ||
       isBotTerdaftar ||
-      (r.status_pelayanan && (r.status_pelayanan.toLowerCase().includes('selesai'))) ||
+      isBotPernahInput ||
+      (r.status_pelayanan && (r.status_pelayanan.toLowerCase().includes('selesai') || r.status_pelayanan.toLowerCase().includes('pernah'))) ||
       (r.status_pendaftaran && (r.status_pendaftaran.toLowerCase().includes('terdaftar') || r.status_pendaftaran.toLowerCase().includes('berhasil'))) ||
       (r.enco_status_pendaftaran && (r.enco_status_pendaftaran.toLowerCase().includes('terdaftar') || r.enco_status_pendaftaran.toLowerCase().includes('berhasil'))) ||
-      (r.enco_status_pelayanan && (r.enco_status_pelayanan.toLowerCase().includes('selesai')))
+      (r.enco_status_pelayanan && (r.enco_status_pelayanan.toLowerCase().includes('selesai') || r.enco_status_pelayanan.toLowerCase().includes('pernah')))
     );
     const showCentangHijau = isFromBankData || isEntriBotAsik;
 
@@ -9211,9 +9238,10 @@ function buildCkgGratisRowsHtml(list) {
         
         <!-- KOLOM 2: NAMA PASIEN & IDENTITAS -->
         <td style="vertical-align: middle;">
-          <div style="font-weight: 800; font-size: 13.5px; color: #1e293b; margin-bottom: 3px; display: inline-flex; align-items: center; gap: 6px;">
+          <div style="font-weight: 800; font-size: 13.5px; color: #1e293b; margin-bottom: 3px; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
             <span>${r.nama || '-'}</span>
             ${showCentangHijau ? `<i class="bi bi-check-circle-fill" style="color: #10b981; font-size: 14px; line-height: 1; flex-shrink: 0;" title="Terdaftar di Bank Data ASIK / Selesai Entri Bot"></i>` : ''}
+            ${isBotPernahInput ? `<span class="badge" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; font-size: 10px; font-weight: 800; padding: 1.5px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-clock-history"></i> Pernah Input</span>` : ''}
           </div>
           <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 4px;">
             ${is16
