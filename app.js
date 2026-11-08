@@ -8551,10 +8551,12 @@ let botQueueData = {
   summary: {}
 };
 
-// Ambil jumlah antrean untuk badge di header view
+// Ambil jumlah antrean untuk badge di header view (sesuai akun yang sedang login)
 async function fetchBotQueueCounts() {
   try {
-    const res = await fetch('/api/enco/queue');
+    const petugas = sessionStorage.getItem('ckg_user_name') || '';
+    const url = petugas ? `/api/enco/queue?petugas=${encodeURIComponent(petugas)}` : '/api/enco/queue';
+    const res = await fetch(url);
     if (!res.ok) return;
     const json = await res.json();
     if (json.success && json.summary) {
@@ -8786,14 +8788,18 @@ async function sendSingleSekolahToBotQueue(id) {
   }
 }
 
-// Buka Modal Kelola Antrean Bot (Popup Lengkap)
+// Buka Modal Kelola Antrean Bot (Popup Lengkap - Khusus Akun Petugas yang Login)
 async function openBotQueueModal(jenis = 'UMUM') {
   showLoadingOverlay('Memuat Antrean Bot...', 'Mengambil data antrean dari Cloud Database...');
   let queueList = [];
   let summary = {};
+  const petugas = sessionStorage.getItem('ckg_user_name') || '';
 
   try {
-    const res = await fetch(`/api/enco/queue?jenis=${jenis}`);
+    const url = petugas 
+      ? `/api/enco/queue?jenis=${jenis}&petugas=${encodeURIComponent(petugas)}` 
+      : `/api/enco/queue?jenis=${jenis}`;
+    const res = await fetch(url);
     const json = await res.json();
     hideLoadingOverlay();
     if (json.success) {
@@ -8847,13 +8853,20 @@ async function openBotQueueModal(jenis = 'UMUM') {
       <td colspan="6" style="text-align: center; padding: 36px 16px; color: #94a3b8;">
         <i class="bi bi-robot" style="font-size: 32px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
         <div style="font-weight: 700; font-size: 13.5px; color: #64748b;">Antrean Kosong</div>
-        <div style="font-size: 12px; margin-top: 4px;">Belum ada data ${isUmum ? 'CKG Umum' : 'CKG Sekolah'} yang dimasukkan ke antrean Bot.</div>
+        <div style="font-size: 12px; margin-top: 4px;">Belum ada data ${isUmum ? 'CKG Umum' : 'CKG Sekolah'} milik akun "${escapeHtml(petugas || 'Anda')}" di antrean Bot.</div>
       </td>
     </tr>
   `;
 
   Swal.fire({
-    title: `<div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 800; color: ${themeColor};"><i class="bi bi-robot" style="font-size: 24px;"></i> ${titleText}</div>`,
+    title: `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 800; color: ${themeColor};">
+        <i class="bi bi-robot" style="font-size: 24px;"></i> ${titleText}
+      </div>
+      <div style="font-size: 11.5px; font-weight: 700; color: #0369a1; background: #e0f2fe; border: 1px solid #bae6fd; padding: 2px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px;">
+        <i class="bi bi-person-circle"></i> Akun: ${escapeHtml(petugas || 'Semua Akun')}
+      </div>
+    </div>`,
     width: '850px',
     html: `
       <div style="text-align: left; font-family: 'Plus Jakarta Sans', sans-serif;">
@@ -8879,8 +8892,8 @@ async function openBotQueueModal(jenis = 'UMUM') {
 
         <!-- Toolbar Aksi Antrean -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-          <div style="font-size: 12.5px; color: #475569; font-weight: 600;">
-            <i class="bi bi-info-circle-fill" style="color: ${themeColor};"></i> Data siap ditarik langsung melalui Bot ENCO.
+          <div style="font-size: 12px; color: #475569; font-weight: 600;">
+            <i class="bi bi-shield-check" style="color: #059669;"></i> Antrean khusus akun <strong>${escapeHtml(petugas || 'Anda')}</strong>. Hanya dapat diambil oleh akun ini di Bot ENCO.
           </div>
           <div style="display: flex; gap: 6px;">
             <button type="button" class="btn btn-sm btn-secondary" onclick="clearCompletedBotQueue('${jenis}')" style="font-size: 11px; padding: 5px 9px;">
@@ -8937,13 +8950,14 @@ async function removeBotQueueItem(id, jenis) {
   }
 }
 
-// Bersihkan antrean yang statusnya sudah selesai
+// Bersihkan antrean yang statusnya sudah selesai (khusus akun aktif)
 async function clearCompletedBotQueue(jenis) {
   try {
+    const petugas = sessionStorage.getItem('ckg_user_name') || '';
     const res = await fetch(`/api/enco/queue/remove`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clear_completed: true, jenis: jenis })
+      body: JSON.stringify({ clear_completed: true, jenis: jenis, petugas: petugas })
     });
     const json = await res.json();
     if (json.success) {
@@ -8956,15 +8970,16 @@ async function clearCompletedBotQueue(jenis) {
   }
 }
 
-// Kosongkan seluruh antrean untuk jenis tertentu
+// Kosongkan seluruh antrean untuk jenis tertentu (khusus akun aktif)
 async function clearAllBotQueue(jenis) {
   const isUmum = (jenis === 'UMUM');
+  const petugas = sessionStorage.getItem('ckg_user_name') || '';
   const confirmRes = await Swal.fire({
-    title: 'Kosongkan Seluruh Antrean?',
-    text: `Seluruh data antrean ${isUmum ? 'CKG Umum' : 'CKG Sekolah'} akan dihapus dari antrean Bot ENCO. Data asli di rekam medis tetap tersimpan aman.`,
+    title: 'Kosongkan Seluruh Antrean Akun Ini?',
+    text: `Seluruh data antrean ${isUmum ? 'CKG Umum' : 'CKG Sekolah'} milik akun "${petugas || 'Anda'}" akan dihapus dari antrean Bot ENCO. Data asli di rekam medis tetap tersimpan aman.`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'Ya, Kosongkan Semua',
+    confirmButtonText: 'Ya, Kosongkan',
     cancelButtonText: 'Batal',
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#64748b'
@@ -8976,7 +8991,7 @@ async function clearAllBotQueue(jenis) {
     const res = await fetch(`/api/enco/queue/remove`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clear_all: true, jenis: jenis })
+      body: JSON.stringify({ clear_all: true, jenis: jenis, petugas: petugas })
     });
     const json = await res.json();
     if (json.success) {

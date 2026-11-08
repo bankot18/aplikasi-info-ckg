@@ -3167,13 +3167,14 @@ Saran Medis:`;
       // 10. BOT QUEUE API (ANTREAN OTOMASI BOT ENCO - CKG UMUM & SEKOLAH)
       // ====================================================================
 
-      // 10A. GET /api/enco/queue (Ambil Antrean untuk Bot ENCO & Tampilan Web)
+      // 10A. GET /api/enco/queue (Ambil Antrean untuk Bot ENCO & Tampilan Web - Difilter Per Akun Petugas)
       if (url.pathname === '/api/enco/queue' && request.method === 'GET') {
         try {
           const jenis = (url.searchParams.get('jenis') || '').trim().toUpperCase();
           const status = (url.searchParams.get('status') || '').trim().toLowerCase();
           const search = (url.searchParams.get('search') || '').trim().toLowerCase();
           const limit = parseInt(url.searchParams.get('limit') || '1000', 10);
+          const petugas = (url.searchParams.get('petugas') || '').trim();
 
           let query = 'SELECT * FROM enco_bot_queue';
           const conditions = [];
@@ -3182,6 +3183,11 @@ Saran Medis:`;
           if (jenis && (jenis === 'UMUM' || jenis === 'SEKOLAH')) {
             conditions.push('jenis = ?');
             params.push(jenis);
+          }
+
+          if (petugas) {
+            conditions.push('(LOWER(TRIM(petugas_antrean)) = LOWER(TRIM(?)) OR (petugas_antrean IN ("", "Petugas") AND LOWER(?) LIKE "%fauzie%"))');
+            params.push(petugas, petugas);
           }
 
           if (status === 'antre') {
@@ -3208,7 +3214,7 @@ Saran Medis:`;
 
           const { results } = await env.DB.prepare(query).bind(...params).all();
 
-          // Summary counts
+          // Summary counts (juga difilter per akun petugas jika parameter petugas diberikan)
           let countQuery = `
             SELECT 
               COUNT(*) as total,
@@ -3222,7 +3228,14 @@ Saran Medis:`;
               SUM(CASE WHEN status_pendaftaran = 'gagal' THEN 1 ELSE 0 END) as gagal
             FROM enco_bot_queue
           `;
-          const summaryRes = await env.DB.prepare(countQuery).first();
+          const countParams = [];
+          if (petugas) {
+            countQuery += ' WHERE (LOWER(TRIM(petugas_antrean)) = LOWER(TRIM(?)) OR (petugas_antrean IN ("", "Petugas") AND LOWER(?) LIKE "%fauzie%"))';
+            countParams.push(petugas, petugas);
+          }
+          const summaryRes = countParams.length > 0
+            ? await env.DB.prepare(countQuery).bind(...countParams).first()
+            : await env.DB.prepare(countQuery).first();
 
           const formattedList = (results || []).map(r => {
             let parsedData = {};
@@ -3278,7 +3291,8 @@ Saran Medis:`;
             if (!rawNik && !rawNama) continue;
 
             const recordId = String(item.id || item.record_id || ('REC-' + Date.now() + '-' + Math.floor(Math.random()*1000)));
-            const queueId = 'Q-' + jenis + '-' + (rawNik || recordId);
+            const cleanPetugasSlug = (petugas || 'Petugas').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
+            const queueId = 'Q-' + jenis + '-' + cleanPetugasSlug + '-' + (rawNik || recordId);
 
             // Standarisasi field JSON yang kompatibel dengan semua pembacaan di Bot ENCO
             const cleanData = {
@@ -3386,21 +3400,33 @@ Saran Medis:`;
           const clearCompleted = url.searchParams.get('clear_completed') === 'true' || body.clear_completed === true;
           const clearAll = url.searchParams.get('clear_all') === 'true' || body.clear_all === true;
           const jenis = (url.searchParams.get('jenis') || body.jenis || '').trim().toUpperCase();
+          const petugas = (url.searchParams.get('petugas') || body.petugas || '').trim();
 
           let deletedCount = 0;
 
           if (clearCompleted) {
             let sql = "DELETE FROM enco_bot_queue WHERE (status_pendaftaran IN ('berhasil', 'Sudah Terdaftar') AND status_pelayanan IN ('selesai', 'Selesai Pelayanan'))";
+            const delParams = [];
             if (jenis) {
               sql += " AND jenis = ?";
-              const delRes = await env.DB.prepare(sql).bind(jenis).run();
-              deletedCount = delRes.meta?.changes || 0;
-            } else {
-              const delRes = await env.DB.prepare(sql).run();
-              deletedCount = delRes.meta?.changes || 0;
+              delParams.push(jenis);
             }
+            if (petugas) {
+              sql += " AND (LOWER(TRIM(petugas_antrean)) = LOWER(TRIM(?)) OR (petugas_antrean IN ('', 'Petugas') AND LOWER(?) LIKE '%fauzie%'))";
+              delParams.push(petugas, petugas);
+            }
+            const delRes = delParams.length > 0
+              ? await env.DB.prepare(sql).bind(...delParams).run()
+              : await env.DB.prepare(sql).run();
+            deletedCount = delRes.meta?.changes || 0;
           } else if (clearAll && jenis) {
-            const delRes = await env.DB.prepare('DELETE FROM enco_bot_queue WHERE jenis = ?').bind(jenis).run();
+            let sql = 'DELETE FROM enco_bot_queue WHERE jenis = ?';
+            const delParams = [jenis];
+            if (petugas) {
+              sql += " AND (LOWER(TRIM(petugas_antrean)) = LOWER(TRIM(?)) OR (petugas_antrean IN ('', 'Petugas') AND LOWER(?) LIKE '%fauzie%'))";
+              delParams.push(petugas, petugas);
+            }
+            const delRes = await env.DB.prepare(sql).bind(...delParams).run();
             deletedCount = delRes.meta?.changes || 0;
           } else if (ids.length > 0) {
             for (const itemI of ids) {
@@ -3428,6 +3454,8 @@ Saran Medis:`;
             return new Response(JSON.stringify({ success: false, error: 'NIK dibutuhkan' }), { status: 400, headers: corsHeaders });
           }
 
+          const queueId = (body.queue_id || body.id || '').trim();
+          const petugas = (body.petugas || '').trim();
           const statusReg = body.status_pendaftaran || null;
           const statusPel = body.status_pelayanan || null;
           const noTiket = (body.no_tiket || '').trim();
@@ -3456,12 +3484,19 @@ Saran Medis:`;
             setParams.push(keterangan);
           }
 
-          setParams.push(cleanNik);
-          await env.DB.prepare(`
-            UPDATE enco_bot_queue 
-            SET ${setClauses.join(', ')} 
-            WHERE nik = ?
-          `).bind(...setParams).run();
+          let updateSql = 'UPDATE enco_bot_queue SET ' + setClauses.join(', ');
+          if (queueId) {
+            updateSql += ' WHERE id = ?';
+            setParams.push(queueId);
+          } else {
+            updateSql += ' WHERE nik = ?';
+            setParams.push(cleanNik);
+            if (petugas && petugas !== 'Petugas ENCO') {
+              updateSql += ' AND (LOWER(TRIM(petugas_antrean)) = LOWER(TRIM(?)) OR petugas_antrean IN ("", "Petugas"))';
+              setParams.push(petugas);
+            }
+          }
+          await env.DB.prepare(updateSql).bind(...setParams).run();
 
           // 2. Refleksikan update ke ckg_gratis_records jika ada
           try {
