@@ -8317,10 +8317,14 @@ function buildCkgGratisRowsHtml(list) {
   if (!list || list.length === 0) {
     return `
       <tr>
-        <td colspan="29" style="text-align: center; padding: 40px 10px; color: #64748b;">
-          <div style="font-size: 36px; margin-bottom: 8px; color: #cbd5e1;"><i class="bi bi-inbox"></i></div>
-          <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">Tidak ada data Cek Kesehatan Gratis</div>
-          <div style="font-size: 12.5px;">Gunakan tombol "Input Data CKG" atau "Import Data" untuk menambahkan data.</div>
+        <td colspan="6" style="text-align: center; padding: 50px 20px; color: #64748b;">
+          <div style="width: 60px; height: 60px; margin: 0 auto 14px auto; background: linear-gradient(135deg, #ecfdf5, #d1fae5); color: #059669; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 4px 14px rgba(5,150,105,0.12);">
+            <i class="bi bi-inbox"></i>
+          </div>
+          <div style="font-weight: 800; font-size: 15px; color: #064e3b; margin-bottom: 4px;">Tidak Ada Data Cek Kesehatan Gratis</div>
+          <div style="font-size: 13px; color: #64748b; max-width: 480px; margin: 0 auto 14px auto;">
+            Gunakan tombol <strong>"+ Input Data CKG"</strong> untuk menginput data pasien baru atau <strong>"Import Data"</strong> untuk mengunggah file Excel.
+          </div>
         </td>
       </tr>
     `;
@@ -8371,54 +8375,103 @@ function buildCkgGratisRowsHtml(list) {
 
     return `
       <tr>
-        <td style="text-align: center; font-weight: 700; color: #64748b;">${i + 1}</td>
-        <td style="text-align: center;">
-          <div style="display: flex; gap: 4px; justify-content: center;">
-            <button class="btn btn-secondary btn-sm" onclick="viewDetailModal('${r.id}', 'ckg-gratis')" title="Detail Pasien">
+        <td style="text-align: center; font-weight: 700; color: #64748b; vertical-align: middle;">${i + 1}</td>
+        
+        <!-- KOLOM 2: NAMA PASIEN & IDENTITAS -->
+        <td style="vertical-align: middle;">
+          <div style="font-weight: 800; font-size: 13.5px; color: #1e293b; margin-bottom: 3px;">
+            ${r.nama || '-'}
+          </div>
+          <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 4px;">
+            ${is16
+              ? `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-family: monospace; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-card-text"></i> ${cleanNik}</span>`
+              : isBelumPunyaNik
+                ? `<span class="badge" style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-person-slash"></i> Belum Ada NIK</span>`
+                : `<span class="badge" style="background: #fee2e2; color: #dc2626; font-family: monospace; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-exclamation-triangle"></i> ${cleanNik || '-'}</span>`
+            }
+            <span class="badge ${jk === 'P' ? 'badge-rose' : 'badge-cyan'}" style="font-weight: 800; font-size: 10.5px; padding: 2px 7px;">${jk === 'P' ? '♀ P' : '♂ L'}</span>
+            <span class="badge badge-slate" style="font-weight: 700; font-size: 10.5px; padding: 2px 7px;">${r.usia || 0} th</span>
+          </div>
+          <div style="font-size: 11.5px; color: #64748b;">
+            <i class="bi bi-calendar3"></i> Lahir: <strong>${formatDateToYYYYMMDD(r.tanggal_lahir)}</strong>
+            ${(r.nama_wali || r.nik_wali) ? `<span style="color: #b45309; margin-left: 5px;">• Wali: <strong>${r.nama_wali || r.nik_wali}</strong></span>` : ''}
+          </div>
+        </td>
+
+        <!-- KOLOM 3: ALAMAT & KONTAK -->
+        <td style="vertical-align: middle;">
+          <div style="font-size: 12.5px; font-weight: 700; color: #1e293b; line-height: 1.3; margin-bottom: 2px;">
+            <i class="bi bi-geo-alt-fill" style="color: #ef4444; font-size: 11.5px;"></i> ${alamat}
+          </div>
+          <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">
+            ${kel}, Kec. ${kec}
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            ${wa && wa !== '-'
+              ? `<span style="font-family: monospace; font-size: 11px; color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-whatsapp"></i> ${wa}</span>`
+              : `<span style="font-size: 11px; color: #94a3b8;">-</span>`
+            }
+            <span class="badge badge-slate" style="font-size: 10px; padding: 1px 6px;">${statusNikah}</span>
+            ${pekerjaan && pekerjaan !== 'Lainnya' ? `<span class="badge badge-slate" style="font-size: 10px; padding: 1px 6px;">${pekerjaan}</span>` : ''}
+          </div>
+        </td>
+
+        <!-- KOLOM 4: HASIL PEMERIKSAAN MEDIS -->
+        <td style="vertical-align: middle;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 5px;">
+            <span class="badge" style="background: #f8fafc; color: #334155; font-size: 11px; font-weight: 700; border: 1px solid #e2e8f0; padding: 3px 8px;">
+              <i class="bi bi-speedometer2" style="color: #64748b;"></i> ${r.bb ? r.bb + ' kg' : '-'} / ${r.tb ? r.tb + ' cm' : '-'} / LP ${r.lp ? r.lp + ' cm' : '-'}
+            </span>
+            <span class="badge ${isHipertensi ? 'cell-hipertensi' : 'badge-slate'}" style="font-size: 11px; font-weight: 700; padding: 3px 8px;">
+              <i class="bi bi-heart-pulse-fill" style="color: ${isHipertensi ? '#dc2626' : '#64748b'};"></i> TD: ${r.td_sistolik || '-'}/${r.td_diastolik || '-'}
+            </span>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <span class="badge ${isGulaTinggi ? 'cell-gula-tinggi' : 'badge-emerald'}" style="font-size: 10.5px; font-weight: 700; padding: 2px 7px;">
+              GDS: ${r.gula_darah || '-'}
+            </span>
+            <span class="badge badge-slate" style="font-size: 10.5px; font-weight: 700; padding: 2px 7px;">
+              Koles: ${r.kolesterol || '-'}
+            </span>
+            <span class="badge ${isAnemia ? 'cell-anemia' : 'badge-slate'}" style="font-size: 10.5px; font-weight: 700; padding: 2px 7px;">
+              HB: ${r.hb || '-'}
+            </span>
+            ${String(r.katarak || '').toLowerCase().includes('ya')
+              ? `<span class="badge badge-rose" style="font-size: 10px; font-weight: 800; padding: 2px 7px;"><i class="bi bi-eye"></i> Katarak</span>`
+              : `<span class="badge badge-slate" style="font-size: 10px; padding: 2px 6px;"><i class="bi bi-eye"></i> Mata Normal</span>`
+            }
+          </div>
+        </td>
+
+        <!-- KOLOM 5: PETUGAS & TGL ENTRY -->
+        <td style="vertical-align: middle;">
+          <div style="font-weight: 700; font-size: 12px; color: #1e293b; display: flex; align-items: center; gap: 5px; margin-bottom: 2px;">
+            <i class="bi bi-person-badge-fill" style="color: #0284c7;"></i> ${r.petugas_entry || r.created_by || '-'}
+          </div>
+          <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">
+            <i class="bi bi-clock"></i> ${formatDateToYYYYMMDD(r.tanggal_entry || r.created_at)}
+          </div>
+          <div>
+            <span class="badge badge-emerald" style="font-size: 10px; font-weight: 700; padding: 2px 7px;">
+              <i class="bi bi-check-circle-fill"></i> ${r.status_validasi || 'Terverifikasi'}
+            </span>
+          </div>
+        </td>
+
+        <!-- KOLOM 6: AKSI -->
+        <td style="text-align: center; vertical-align: middle;">
+          <div style="display: flex; gap: 5px; justify-content: center;">
+            <button class="btn btn-secondary btn-sm" onclick="viewDetailModal('${r.id}', 'ckg-gratis')" title="Detail Pasien" style="padding: 5px 9px;">
               <i class="bi bi-eye"></i>
             </button>
-            <button class="btn btn-cyan btn-sm" onclick="editCkgGratisRecord('${r.id}')" title="Edit Data Pasien">
+            <button class="btn btn-cyan btn-sm" onclick="editCkgGratisRecord('${r.id}')" title="Edit Data Pasien" style="padding: 5px 9px;">
               <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn btn-danger btn-sm" onclick="deleteCkgGratisRecord('${r.id}')" title="Hapus Data">
+            <button class="btn btn-danger btn-sm" onclick="deleteCkgGratisRecord('${r.id}')" title="Hapus Data" style="padding: 5px 9px;">
               <i class="bi bi-trash"></i>
             </button>
           </div>
         </td>
-        <td>
-          ${is16
-            ? `<span style="font-family: monospace; font-weight: 700; color: #0284c7; letter-spacing: 0.5px;">${cleanNik}</span>`
-            : isBelumPunyaNik
-              ? `<span class="badge" style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-size: 10.5px; font-weight: 800; padding: 2px 7px;"><i class="bi bi-person-slash"></i> Belum Ada NIK</span>`
-              : `<span style="font-family: monospace; font-weight: 700; color: #dc2626;">${cleanNik || '-'} <span class="badge badge-rose" style="font-size: 9px; padding: 1px 4px;">Bukan 16 digit</span></span>`
-          }
-        </td>
-        <td><strong>${r.nama || '-'}</strong></td>
-        <td>${formatDateToYYYYMMDD(r.tanggal_lahir)}</td>
-        <td><span class="badge badge-slate" style="font-weight: 700;">${r.usia || 0} th</span></td>
-        <td style="text-align: center;"><span class="badge ${jk === 'P' ? 'badge-rose' : 'badge-cyan'}" style="font-weight: 800;">${jk}</span></td>
-        <td><span style="font-family: monospace; font-size: 11.5px;">${wa}</span></td>
-        <td><span class="badge badge-slate" style="font-size: 11px;">${statusNikah}</span></td>
-        <td>${prov}</td>
-        <td>${kab}</td>
-        <td>${kec}</td>
-        <td>${kel}</td>
-        <td>${alamat}</td>
-        <td>${pekerjaan}</td>
-        <td>${isMerokok ? '<span class="badge badge-amber">Ya</span>' : '<span class="badge badge-emerald">Tidak</span>'}</td>
-        <td style="text-align: right;">${r.bb ? r.bb : '-'}</td>
-        <td style="text-align: right;">${r.tb ? r.tb : '-'}</td>
-        <td style="text-align: right;">${r.lp ? r.lp : '-'}</td>
-        <td style="text-align: right;"><span class="${isHipertensi ? 'cell-hipertensi' : ''}" style="font-weight: 700;">${r.td_sistolik || '-'}</span></td>
-        <td style="text-align: right;"><span class="${isHipertensi ? 'cell-hipertensi' : ''}" style="font-weight: 700;">${r.td_diastolik || '-'}</span></td>
-        <td style="text-align: right;"><span class="${isGulaTinggi ? 'cell-gula-tinggi' : ''}" style="font-weight: 700;">${r.gula_darah || '-'}</span></td>
-        <td>${r.telinga || 'Normal'}</td>
-        <td>${r.mata || 'Normal'}</td>
-        <td>${r.gigi || 'Baik'}</td>
-        <td>${String(r.katarak || '').toLowerCase().includes('ya') ? '<span class="badge badge-rose">Katarak</span>' : '<span class="badge badge-emerald">Normal</span>'}</td>
-        <td style="text-align: right;">${r.kolesterol || '-'}</td>
-        <td style="text-align: right;"><span class="${isAnemia ? 'cell-anemia' : ''}">${r.hb || '-'}</span></td>
-        <td><span style="font-size: 11.5px; color: #475569;">${r.petugas_entry || r.created_by || '-'}</span></td>
       </tr>
     `;
   }).join('');

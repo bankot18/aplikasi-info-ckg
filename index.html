@@ -1255,50 +1255,27 @@
           <!-- Total Info Badge & Header Description -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 4px 6px;">
             <div style="font-size: 13px; color: #475569; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-              <span class="badge" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700; padding: 4px 8px; border-radius: 6px;">
-                <i class="bi bi-robot"></i> Template Bot ENCO
+              <span class="badge" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="bi bi-robot"></i> Format Bot ENCO
               </span>
-              <span>Menampilkan data skrining CKG dengan urutan kolom persis template Bot ENCO</span>
+              <span>Tampilan tabel ringkas & modern. Hasil unduhan Excel (.xlsx) tetap 100% lengkap sesuai template Bot ENCO.</span>
             </div>
             <div id="badgeTotalCkgGratis" class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 12.5px; padding: 6px 14px; border-radius: 20px; font-weight: 700;">
               Total: 0 Pasien
             </div>
           </div>
 
-          <!-- Table formatted exactly like Bot ENCO Template -->
+          <!-- Ringkasan Tabel CKG Gratis (Tampilan Modern Seperti CKG Sekolah) -->
           <div class="table-responsive" style="max-height: 650px; overflow-y: auto;">
-            <table class="custom-table" style="white-space: nowrap; font-size: 12.5px;">
+            <table class="custom-table" style="font-size: 12.5px; width: 100%;">
               <thead>
                 <tr style="position: sticky; top: 0; background: #f8fafc; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
-                  <th style="width: 50px; text-align: center;">NO</th>
-                  <th style="width: 100px; text-align: center;">AKSI</th>
-                  <th>NIK</th>
-                  <th>NAMA</th>
-                  <th>TANGGAL LAHIR</th>
-                  <th>USIA</th>
-                  <th>JENIS KELAMIN</th>
-                  <th>NO WHATSAPP</th>
-                  <th>STATUS PERNIKAHAN</th>
-                  <th>PROVINSI</th>
-                  <th>KAB/KOTA</th>
-                  <th>KECAMATAN</th>
-                  <th>KELURAHAN</th>
-                  <th>ALAMAT</th>
-                  <th>PEKERJAAN</th>
-                  <th>MEROKOK</th>
-                  <th>BB</th>
-                  <th>TB</th>
-                  <th>LP</th>
-                  <th>TD SISTOLIK</th>
-                  <th>TD DIASTOLIK</th>
-                  <th>GULA DARAH</th>
-                  <th>TELINGA</th>
-                  <th>MATA</th>
-                  <th>GIGI</th>
-                  <th>KATARAK</th>
-                  <th>KOLESTEROL</th>
-                  <th>HB</th>
-                  <th>PETUGAS ENTRY</th>
+                  <th style="width: 45px; text-align: center;">NO</th>
+                  <th style="min-width: 220px;">NAMA PASIEN & IDENTITAS</th>
+                  <th style="min-width: 200px;">ALAMAT & KONTAK</th>
+                  <th style="min-width: 320px;">HASIL PEMERIKSAAN MEDIS</th>
+                  <th style="min-width: 140px;">PETUGAS & TGL ENTRY</th>
+                  <th style="width: 110px; text-align: center;">AKSI</th>
                 </tr>
               </thead>
               <tbody id="tableBodyCkgGratis">
