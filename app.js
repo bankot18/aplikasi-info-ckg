@@ -366,7 +366,7 @@ function populateUserDropdowns() {
     });
   }
 
-  ['filterPetugas', 'filterSimpusPetugas', 'filterLaporanPetugas', 'filterSekolahPetugas', 'filterRecyclePetugas'].forEach(selectId => {
+  ['filterPetugas', 'filterSimpusPetugas', 'filterLaporanPetugas', 'filterSekolahPetugas', 'filterRecyclePetugas', 'filterCkgGratisPetugas'].forEach(selectId => {
     const sel = document.getElementById(selectId);
     if (sel) {
       const prev = sel.value;
@@ -405,7 +405,7 @@ function applyPetugasFilterLock() {
   const isPrivileged = (role === 'admin' || role === 'koordinator');
   const loggedUser = sessionStorage.getItem('ckg_user_name') || '';
 
-  ['filterPetugas', 'filterSimpusPetugas', 'filterLaporanPetugas', 'filterSekolahPetugas', 'filterRecyclePetugas'].forEach(id => {
+  ['filterPetugas', 'filterSimpusPetugas', 'filterLaporanPetugas', 'filterSekolahPetugas', 'filterRecyclePetugas', 'filterCkgGratisPetugas'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       if (!isPrivileged && loggedUser) {
@@ -2289,16 +2289,39 @@ function setupEventListeners() {
   // Sync address dictionary from Cloudflare D1 Server on startup
   syncKamusFromCloudServer();
 
-  // Auto-trigger Dukcapil lookup when NIK reaches 16 digits
+  // Auto-trigger Dukcapil lookup when NIK reaches 16 digits and update live counter
   const nikInput = document.getElementById('nik');
   if (nikInput) {
     nikInput.addEventListener('input', () => {
-      const val = nikInput.value.replace(/\D/g, '');
-      nikInput.value = val; // strip non-digits
+      const val = nikInput.value.replace(/\D/g, '').slice(0, 16);
+      nikInput.value = val; // strip non-digits and cap at exactly 16
+      
+      const countSpan = document.getElementById('nikCharCount');
+      const helpText = document.getElementById('nikHelpText');
+      const badge = document.getElementById('nikCounterBadge');
+      if (countSpan) countSpan.textContent = val.length;
+
       if (val.length === 16) {
+        if (helpText) {
+          helpText.style.color = '#059669';
+          helpText.innerHTML = '<i class="bi bi-check-circle-fill"></i> NIK 16 digit lengkap & valid';
+        }
+        if (badge) {
+          badge.style.background = '#ecfdf5';
+          badge.style.color = '#059669';
+          badge.style.borderColor = '#a7f3d0';
+        }
         triggerNikDukcapilLookup();
       } else {
-        // Reset status when NIK is incomplete
+        if (helpText) {
+          helpText.style.color = '#dc2626';
+          helpText.innerHTML = `<i class="bi bi-exclamation-circle-fill"></i> NIK wajib 16 digit angka (kurang ${16 - val.length} digit)`;
+        }
+        if (badge) {
+          badge.style.background = '#fef2f2';
+          badge.style.color = '#dc2626';
+          badge.style.borderColor = '#fecaca';
+        }
         const statusEl = document.getElementById('nikDukcapilStatus');
         if (statusEl) statusEl.style.display = 'none';
       }
@@ -2358,6 +2381,11 @@ function setupEventListeners() {
   ['filterSimpusPetugas', 'filterSimpusUmur', 'filterSimpusNik', 'filterSimpusLimit'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', renderSimpusTableRecords);
+  });
+
+  ['filterCkgGratisUsia', 'filterCkgGratisJk', 'filterCkgGratisBulan', 'filterCkgGratisTahun', 'filterCkgGratisPetugas', 'filterCkgGratisLimit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', renderCkgGratisTable);
   });
 }
 
@@ -2445,6 +2473,8 @@ function switchView(viewId) {
     if (typeof initAlatBnhpView === 'function') initAlatBnhpView();
   } else if (viewId === 'data-records') {
     renderTableRecords();
+  } else if (viewId === 'ckg-gratis') {
+    renderCkgGratisTable();
   } else if (viewId === 'recycle-data') {
     renderRecycleTable();
   } else if (viewId === 'enco') {
@@ -6380,18 +6410,18 @@ function validateCurrentStep(step) {
     return true;
   }
   if (step === 2) {
-    const nik = document.getElementById('nik').value.trim();
-    const nama = document.getElementById('nama').value.trim();
-    const dob = document.getElementById('tanggal_lahir').value;
-    const prov = document.getElementById('provinsi').value;
-    const kab = document.getElementById('kab_kota').value;
-    const kec = document.getElementById('kecamatan').value;
-    const kel = document.getElementById('kelurahan').value;
-    const alamat = document.getElementById('alamat').value.trim();
+    const nik = (document.getElementById('nik')?.value || '').replace(/\D/g, '').trim();
+    const nama = document.getElementById('nama')?.value.trim();
+    const dob = document.getElementById('tanggal_lahir')?.value;
+    const prov = document.getElementById('provinsi')?.value;
+    const kab = document.getElementById('kab_kota')?.value;
+    const kec = document.getElementById('kecamatan')?.value;
+    const kel = document.getElementById('kelurahan')?.value;
+    const alamat = document.getElementById('alamat')?.value.trim();
 
     if (!nik || nik.length !== 16) {
-      showToast('NIK Pasien wajib diisi 16 digit angka!', 'error');
-      document.getElementById('nik').focus();
+      showToast('NIK Pasien WAJIB tepat 16 digit angka! (Saat ini: ' + nik.length + ' digit)', 'error');
+      document.getElementById('nik')?.focus();
       return false;
     }
     if (!nama) {
@@ -6517,6 +6547,19 @@ function openInputModal(kategori = 'Luar Gedung', isEdit = false) {
     if (form) form.reset();
     const countEl = document.getElementById('nikWaliCounter');
     if (countEl) { countEl.textContent = '0'; countEl.style.color = '#64748b'; }
+    const nikCountSpan = document.getElementById('nikCharCount');
+    const nikHelpText = document.getElementById('nikHelpText');
+    const nikBadge = document.getElementById('nikCounterBadge');
+    if (nikCountSpan) nikCountSpan.textContent = '0';
+    if (nikHelpText) {
+      nikHelpText.style.color = '#dc2626';
+      nikHelpText.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i> NIK wajib tepat 16 digit angka';
+    }
+    if (nikBadge) {
+      nikBadge.style.background = '#fef2f2';
+      nikBadge.style.color = '#dc2626';
+      nikBadge.style.borderColor = '#fecaca';
+    }
     const defRadio = document.getElementById('kat_dewasa');
     if (defRadio) defRadio.checked = true;
     const tanpaWaliCb = document.getElementById('daftarkan_tanpa_wali');
@@ -6687,7 +6730,7 @@ function deleteUser(namaUser) {
 async function handleFormSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
 
-  const nik = (document.getElementById('nik')?.value || '').trim();
+  const nik = (document.getElementById('nik')?.value || '').replace(/\D/g, '').trim();
   const nama = (document.getElementById('nama')?.value || '').trim();
   const tanggalLahir = (document.getElementById('tanggal_lahir')?.value || '').trim();
   const alamat = (document.getElementById('alamat')?.value || '').trim();
@@ -6698,7 +6741,7 @@ async function handleFormSubmit(e) {
   if (!nik || nik.length !== 16) {
     currentWizardStep = 2;
     updateWizardUI();
-    showToast('NIK Pasien wajib 16 digit angka!', 'error');
+    showToast('NIK Pasien WAJIB tepat 16 digit angka! (Saat ini: ' + nik.length + ' digit)', 'error');
     setTimeout(() => document.getElementById('nik')?.focus(), 100);
     return;
   }
@@ -7114,6 +7157,7 @@ function renderApp() {
   renderDashboardMetrics(officersData);
   renderOfficerPerformanceTable(officersData);
   renderTableRecords();
+  if (typeof renderCkgGratisTable === 'function') renderCkgGratisTable();
   renderSimpusView();
   renderUserDatabaseTable();
   renderRecycleTable();
@@ -7768,6 +7812,12 @@ function renderTableRecords() {
   if (totalBulanBadge) {
     totalBulanBadge.textContent = `Total Entry Bulan Ini: ${filtered.length}`;
   }
+
+  // Auto-sync Cek Kesehatan Gratis view if present
+  const ckgGratisPanel = document.getElementById('view-ckg-gratis');
+  if (ckgGratisPanel && ckgGratisPanel.classList.contains('active')) {
+    renderCkgGratisTable();
+  }
 }
 
 function formatDisplayDate(val) {
@@ -7887,6 +7937,251 @@ function buildTableRowsHtml(data) {
       </tr>
     `;
   }).join('');
+}
+
+/* ==========================================================================
+   🏥 VIEW: CEK KESEHATAN GRATIS (FORMAT TEMPLATE BOT ENCO)
+   ========================================================================== */
+
+function renderCkgGratisTable() {
+  const tbody = document.getElementById('tableBodyCkgGratis');
+  if (!tbody) return;
+
+  applyPetugasFilterLock();
+
+  const filterUsiaVal = document.getElementById('filterCkgGratisUsia')?.value || '';
+  const filterMinAgeVal = document.getElementById('filterCkgGratisMinAge')?.value;
+  const filterMaxAgeVal = document.getElementById('filterCkgGratisMaxAge')?.value;
+  const filterMinAge = filterMinAgeVal !== '' ? parseInt(filterMinAgeVal) : NaN;
+  const filterMaxAge = filterMaxAgeVal !== '' ? parseInt(filterMaxAgeVal) : NaN;
+
+  const filterJkVal = document.getElementById('filterCkgGratisJk')?.value || '';
+  const filterBulanVal = document.getElementById('filterCkgGratisBulan')?.value || '';
+  const filterTahunVal = document.getElementById('filterCkgGratisTahun')?.value || '';
+  const filterPetugasVal = document.getElementById('filterCkgGratisPetugas')?.value || '';
+  const searchQuery = (document.getElementById('searchCkgGratis')?.value || '').trim().toLowerCase();
+
+  let filtered = getVisibleRecords(records);
+
+  // 1. Filter Usia (Kategori)
+  if (filterUsiaVal) {
+    if (filterUsiaVal === 'umum') {
+      filtered = filtered.filter(r => {
+        const age = parseInt(r.usia);
+        if (!isNaN(age) && age >= 18) return true;
+        const kat = String(r.kategori_sasaran || '').toLowerCase();
+        return kat.includes('dewasa') || kat.includes('lansia');
+      });
+    } else {
+      filtered = filtered.filter(r => isRecordInAgeCategory(r, filterUsiaVal));
+    }
+  }
+
+  // 2. Filter Rentang Usia Cepat (Min - Max)
+  if (!isNaN(filterMinAge)) {
+    filtered = filtered.filter(r => {
+      const age = parseInt(r.usia) || 0;
+      return age >= filterMinAge;
+    });
+  }
+  if (!isNaN(filterMaxAge)) {
+    filtered = filtered.filter(r => {
+      const age = parseInt(r.usia) || 0;
+      return age <= filterMaxAge;
+    });
+  }
+
+  // 3. Filter Jenis Kelamin (L / P)
+  if (filterJkVal) {
+    filtered = filtered.filter(r => {
+      const jk = String(r.jenis_kelamin || '').toUpperCase();
+      return jk.startsWith(filterJkVal);
+    });
+  }
+
+  // 4. Filter Bulan
+  if (filterBulanVal) {
+    filtered = filtered.filter(r => {
+      const recDate = getRecordEntryDate(r);
+      return recDate ? recDate.month === filterBulanVal : false;
+    });
+  }
+
+  // 5. Filter Tahun
+  if (filterTahunVal) {
+    filtered = filtered.filter(r => {
+      const recDate = getRecordEntryDate(r);
+      return recDate ? recDate.year === filterTahunVal : false;
+    });
+  }
+
+  // 6. Filter Petugas
+  if (filterPetugasVal) {
+    filtered = filtered.filter(r => r.created_by === filterPetugasVal || r.petugas_entry === filterPetugasVal);
+  }
+
+  // 7. Search Query
+  if (searchQuery) {
+    filtered = filtered.filter(r => {
+      const nama = (r.nama || '').toLowerCase();
+      const nik = String(r.nik || '').toLowerCase();
+      const alamat = (r.alamat || '').toLowerCase();
+      const petugas = (r.petugas_entry || r.created_by || '').toLowerCase();
+      const peker = (r.pekerjaan || '').toLowerCase();
+      const kel = (r.kelurahan || '').toLowerCase();
+      const kec = (r.kecamatan || '').toLowerCase();
+      return nama.includes(searchQuery) || nik.includes(searchQuery) || alamat.includes(searchQuery) || petugas.includes(searchQuery) || peker.includes(searchQuery) || kel.includes(searchQuery) || kec.includes(searchQuery);
+    });
+  }
+
+  // Update total badge
+  const totalBadge = document.getElementById('badgeTotalCkgGratis');
+  if (totalBadge) {
+    totalBadge.textContent = `Total: ${filtered.length} Pasien`;
+  }
+
+  // Apply Limit
+  const limitVal = document.getElementById('filterCkgGratisLimit')?.value || '10';
+  let displayFiltered = filtered;
+  if (limitVal !== 'semua') {
+    const limitNum = parseInt(limitVal) || 10;
+    displayFiltered = filtered.slice(0, limitNum);
+  }
+
+  tbody.innerHTML = buildCkgGratisRowsHtml(displayFiltered);
+}
+
+function buildCkgGratisRowsHtml(list) {
+  if (!list || list.length === 0) {
+    return `
+      <tr>
+        <td colspan="29" style="text-align: center; padding: 40px 10px; color: #64748b;">
+          <div style="font-size: 36px; margin-bottom: 8px; color: #cbd5e1;"><i class="bi bi-inbox"></i></div>
+          <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">Tidak ada data Cek Kesehatan Gratis</div>
+          <div style="font-size: 12.5px;">Coba ubah kriteria filter usia, bulan, atau kata kunci pencarian.</div>
+        </td>
+      </tr>
+    `;
+  }
+
+  const formatGenderBot = (val) => {
+    const s = String(val || '').trim().toUpperCase();
+    if (s.startsWith('L') || s.includes('LAKI')) return 'L';
+    if (s.startsWith('P') || s.includes('PEREMPUAN')) return 'P';
+    return 'L';
+  };
+
+  const formatNikahBot = (val) => {
+    const s = String(val || '').trim().toLowerCase();
+    if (s.includes('belum')) return 'BELUM MENIKAH';
+    if (s.includes('mati')) return 'CERAI MATI';
+    if (s.includes('hidup') || s.includes('cerai')) return 'CERAI HIDUP';
+    if (s.includes('kawin') || s.includes('menikah') || s.includes('nikah')) return 'MENIKAH';
+    return 'BELUM MENIKAH';
+  };
+
+  const formatWaBot = (val) => {
+    let s = String(val || '').trim().replace(/\D/g, '');
+    if (!s) return '-';
+    if (s.startsWith('62')) s = '0' + s.slice(2);
+    if (!s.startsWith('0')) s = '0' + s;
+    return s;
+  };
+
+  return list.map((r, i) => {
+    const cleanNik = String(r.nik || r.nik_pasien || '').replace(/\D/g, '');
+    const is16 = cleanNik.length === 16;
+    const jk = formatGenderBot(r.jenis_kelamin);
+    const wa = formatWaBot(r.no_whatsapp);
+    const statusNikah = formatNikahBot(r.status_pernikahan);
+    const prov = String(r.provinsi || 'JAWA BARAT').trim().toUpperCase();
+    const kab = String(r.kab_kota || 'KAB. BANDUNG').trim().toUpperCase();
+    const kec = String(r.kecamatan || 'BANJARAN').trim().toUpperCase();
+    const kel = String(r.kelurahan || 'BANJARAN KOTA').trim().toUpperCase();
+    const alamat = String(r.alamat || 'BANJARAN').trim();
+    const pekerjaan = String(r.pekerjaan || 'Lainnya').trim();
+    const isMerokok = String(r.merokok || '').toLowerCase().includes('ya');
+
+    const isHipertensi = r.td_sistolik > 140 || r.td_diastolik > 90;
+    const isGulaTinggi = r.gula_darah > 200;
+    const isAnemia = r.hb > 0 && r.hb < 11.0;
+
+    return `
+      <tr>
+        <td style="text-align: center; font-weight: 700; color: #64748b;">${i + 1}</td>
+        <td style="text-align: center;">
+          <div style="display: flex; gap: 4px; justify-content: center;">
+            <button class="btn btn-secondary btn-sm" onclick="viewDetailModal('${r.id}')" title="Detail Pasien">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-cyan btn-sm" onclick="editRecord('${r.id}')" title="Edit Data Pasien">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')" title="Hapus ke Tempat Sampah">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </td>
+        <td>
+          ${is16
+            ? `<span style="font-family: monospace; font-weight: 700; color: #0284c7; letter-spacing: 0.5px;">${cleanNik}</span>`
+            : `<span style="font-family: monospace; font-weight: 700; color: #dc2626;">${cleanNik || '-'} <span class="badge badge-rose" style="font-size: 9px; padding: 1px 4px;">Bukan 16 digit</span></span>`
+          }
+        </td>
+        <td><strong>${r.nama || '-'}</strong></td>
+        <td>${formatDateToYYYYMMDD(r.tanggal_lahir)}</td>
+        <td><span class="badge badge-slate" style="font-weight: 700;">${r.usia || 0} th</span></td>
+        <td style="text-align: center;"><span class="badge ${jk === 'P' ? 'badge-rose' : 'badge-cyan'}" style="font-weight: 800;">${jk}</span></td>
+        <td><span style="font-family: monospace; font-size: 11.5px;">${wa}</span></td>
+        <td><span class="badge badge-slate" style="font-size: 11px;">${statusNikah}</span></td>
+        <td>${prov}</td>
+        <td>${kab}</td>
+        <td>${kec}</td>
+        <td>${kel}</td>
+        <td>${alamat}</td>
+        <td>${pekerjaan}</td>
+        <td>${isMerokok ? '<span class="badge badge-amber">Ya</span>' : '<span class="badge badge-emerald">Tidak</span>'}</td>
+        <td style="text-align: right;">${r.bb ? r.bb : '-'}</td>
+        <td style="text-align: right;">${r.tb ? r.tb : '-'}</td>
+        <td style="text-align: right;">${r.lp ? r.lp : '-'}</td>
+        <td style="text-align: right;"><span class="${isHipertensi ? 'cell-hipertensi' : ''}" style="font-weight: 700;">${r.td_sistolik || '-'}</span></td>
+        <td style="text-align: right;"><span class="${isHipertensi ? 'cell-hipertensi' : ''}" style="font-weight: 700;">${r.td_diastolik || '-'}</span></td>
+        <td style="text-align: right;"><span class="${isGulaTinggi ? 'cell-gula-tinggi' : ''}" style="font-weight: 700;">${r.gula_darah || '-'}</span></td>
+        <td>${r.telinga || 'Normal'}</td>
+        <td>${r.mata || 'Normal'}</td>
+        <td>${r.gigi || 'Baik'}</td>
+        <td>${String(r.katarak || '').toLowerCase().includes('ya') ? '<span class="badge badge-rose">Katarak</span>' : '<span class="badge badge-emerald">Normal</span>'}</td>
+        <td style="text-align: right;">${r.kolesterol || '-'}</td>
+        <td style="text-align: right;"><span class="${isAnemia ? 'cell-anemia' : ''}">${r.hb || '-'}</span></td>
+        <td><span style="font-size: 11.5px; color: #475569;">${r.petugas_entry || r.created_by || '-'}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function resetCkgGratisFilters() {
+  const s = document.getElementById('searchCkgGratis');
+  if (s) s.value = '';
+  const u = document.getElementById('filterCkgGratisUsia');
+  if (u) u.value = '';
+  const min = document.getElementById('filterCkgGratisMinAge');
+  if (min) min.value = '';
+  const max = document.getElementById('filterCkgGratisMaxAge');
+  if (max) max.value = '';
+  const jk = document.getElementById('filterCkgGratisJk');
+  if (jk) jk.value = '';
+  const b = document.getElementById('filterCkgGratisBulan');
+  if (b) b.value = '';
+  const t = document.getElementById('filterCkgGratisTahun');
+  if (t) t.value = '';
+  const p = document.getElementById('filterCkgGratisPetugas');
+  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
+  const isPrivileged = (role === 'admin' || role === 'koordinator');
+  if (p && isPrivileged) p.value = '';
+  const l = document.getElementById('filterCkgGratisLimit');
+  if (l) l.value = '10';
+
+  renderCkgGratisTable();
 }
 
 /* ==========================================================================
@@ -9054,6 +9349,32 @@ function editRecord(id) {
 
   setVal('pos_lokasi', r.pos_lokasi);
   setVal('nik', r.nik);
+  const cleanNikVal = String(r.nik || '').replace(/\D/g, '').slice(0, 16);
+  const nikCountSpan = document.getElementById('nikCharCount');
+  const nikHelpText = document.getElementById('nikHelpText');
+  const nikBadge = document.getElementById('nikCounterBadge');
+  if (nikCountSpan) nikCountSpan.textContent = cleanNikVal.length;
+  if (cleanNikVal.length === 16) {
+    if (nikHelpText) {
+      nikHelpText.style.color = '#059669';
+      nikHelpText.innerHTML = '<i class="bi bi-check-circle-fill"></i> NIK 16 digit lengkap & valid';
+    }
+    if (nikBadge) {
+      nikBadge.style.background = '#ecfdf5';
+      nikBadge.style.color = '#059669';
+      nikBadge.style.borderColor = '#a7f3d0';
+    }
+  } else {
+    if (nikHelpText) {
+      nikHelpText.style.color = '#dc2626';
+      nikHelpText.innerHTML = `<i class="bi bi-exclamation-circle-fill"></i> NIK wajib 16 digit angka (kurang ${16 - cleanNikVal.length} digit)`;
+    }
+    if (nikBadge) {
+      nikBadge.style.background = '#fef2f2';
+      nikBadge.style.color = '#dc2626';
+      nikBadge.style.borderColor = '#fecaca';
+    }
+  }
   setVal('nama', r.nama);
   setVal('tanggal_lahir', formatDateToYYYYMMDD(r.tanggal_lahir));
   setVal('usia', r.usia);

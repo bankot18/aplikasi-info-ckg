@@ -600,6 +600,10 @@
         <i class="bi bi-folder-symlink-fill"></i>
         <span>Records</span>
       </button>
+      <button class="nav-tab-btn" data-view="ckg-gratis">
+        <i class="bi bi-heart-pulse-fill" style="color: #10b981;"></i>
+        <span>Cek Kesehatan Gratis</span>
+      </button>
       <button class="nav-tab-btn admin-only" data-view="enco" style="position: relative;">
         <i class="bi bi-robot"></i>
         <span>ENCO</span>
@@ -1131,7 +1135,179 @@
         </div>
       </section>
 
-      <!-- VIEW: ENCO AUTOMATION & ASIK DATABASE -->
+      <!-- VIEW: CEK KESEHATAN GRATIS (FORMAT BOT ENCO) -->
+      <section id="view-ckg-gratis" class="view-panel">
+        <div class="card-panel">
+          <div class="card-header-bar">
+            <div class="card-header-title">
+              <i class="bi bi-heart-pulse-fill" style="color: #10b981;"></i> Data Cek Kesehatan Gratis (Format Bot ENCO)
+            </div>
+            <div class="action-buttons-group">
+              <button class="btn btn-primary" onclick="openInputModal('Luar Gedung')">
+                <i class="bi bi-plus-lg"></i> Input Data CKG
+              </button>
+              <button class="btn btn-secondary" onclick="exportToBotEncoXLSX()" title="Download Excel Format Bot ENCO untuk CKG Umum" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-weight: 700; border: none; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
+                <i class="bi bi-robot"></i> Download Format Bot ENCO
+              </button>
+              <button class="btn btn-secondary" onclick="openImportModal()">
+                <i class="bi bi-file-earmark-arrow-up"></i> Import Data
+              </button>
+              <button class="btn btn-secondary" onclick="renderCkgGratisTable()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter Bar with Age (Usia) Filter -->
+          <div class="filter-bar-box">
+            <div class="filter-item" style="flex: 1; min-width: 220px;">
+              <i class="bi bi-search" style="color: var(--primary);"></i> Pencarian:
+              <input type="text" id="searchCkgGratis" class="filter-control"
+                placeholder="Cari Nama Pasien / NIK / Alamat / Petugas..." style="width: 100%; font-weight: 600;"
+                oninput="renderCkgGratisTable()">
+            </div>
+
+            <!-- FILTER USIA (Sesuai Permintaan User) -->
+            <div class="filter-item">
+              <i class="bi bi-people-fill" style="color: #059669;"></i> Filter Usia:
+              <select id="filterCkgGratisUsia" class="filter-control" style="font-weight: 700; color: #059669;" onchange="renderCkgGratisTable()">
+                <option value="" selected>-- Semua Usia --</option>
+                <option value="dewasa">Usia Dewasa (18 - 59 tahun)</option>
+                <option value="lansia">Lansia (≥ 60 tahun)</option>
+                <option value="umum">Dewasa & Lansia (≥ 18 tahun)</option>
+                <option value="sekolah_remaja">Usia Sekolah & Remaja (6 - 17 tahun)</option>
+                <option value="prasekolah">Anak Prasekolah (5 - 6 tahun)</option>
+                <option value="bayi_balita">Bayi & Balita (0 - 5 tahun)</option>
+              </select>
+            </div>
+
+            <!-- Rentang Usia Cepat (Min - Max) -->
+            <div class="filter-item" style="display: flex; align-items: center; gap: 4px;">
+              <i class="bi bi-hourglass-split"></i> Rentang Usia:
+              <input type="number" id="filterCkgGratisMinAge" class="filter-control" placeholder="Min" min="0" max="120" style="width: 60px; padding: 4px 6px;" oninput="renderCkgGratisTable()">
+              <span>-</span>
+              <input type="number" id="filterCkgGratisMaxAge" class="filter-control" placeholder="Max" min="0" max="120" style="width: 60px; padding: 4px 6px;" oninput="renderCkgGratisTable()">
+              <span>thn</span>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-gender-ambiguous"></i> Jenis Kelamin:
+              <select id="filterCkgGratisJk" class="filter-control" onchange="renderCkgGratisTable()">
+                <option value="">-- Semua JK --</option>
+                <option value="L">Laki-laki (L)</option>
+                <option value="P">Perempuan (P)</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-calendar3"></i> Bulan:
+              <select id="filterCkgGratisBulan" class="filter-control" onchange="renderCkgGratisTable()">
+                <option value="">-- Semua Bulan --</option>
+                <option value="01">Januari</option>
+                <option value="02">Februari</option>
+                <option value="03">Maret</option>
+                <option value="04">April</option>
+                <option value="05">Mei</option>
+                <option value="06">Juni</option>
+                <option value="07">Juli</option>
+                <option value="08">Agustus</option>
+                <option value="09">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-calendar-event"></i> Tahun:
+              <select id="filterCkgGratisTahun" class="filter-control" onchange="renderCkgGratisTable()">
+                <option value="">-- Semua Tahun --</option>
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-person-badge"></i> Petugas Entry:
+              <select id="filterCkgGratisPetugas" class="filter-control" onchange="renderCkgGratisTable()">
+                <option value="">-- Semua Petugas --</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <i class="bi bi-list-ol"></i> Tampilkan:
+              <select id="filterCkgGratisLimit" class="filter-control" style="font-weight: 700; color: var(--primary);"
+                onchange="renderCkgGratisTable()">
+                <option value="10" selected>10 Data</option>
+                <option value="25">25 Data</option>
+                <option value="50">50 Data</option>
+                <option value="100">100 Data</option>
+                <option value="semua">Semua Data</option>
+              </select>
+            </div>
+
+            <button class="btn btn-secondary btn-sm" onclick="resetCkgGratisFilters()">
+              <i class="bi bi-arrow-counterclockwise"></i> Reset Filter
+            </button>
+          </div>
+
+          <!-- Total Info Badge & Header Description -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 4px 6px;">
+            <div style="font-size: 13px; color: #475569; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+              <span class="badge" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700; padding: 4px 8px; border-radius: 6px;">
+                <i class="bi bi-robot"></i> Template Bot ENCO
+              </span>
+              <span>Menampilkan data skrining CKG dengan urutan kolom persis template Bot ENCO</span>
+            </div>
+            <div id="badgeTotalCkgGratis" class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 12.5px; padding: 6px 14px; border-radius: 20px; font-weight: 700;">
+              Total: 0 Pasien
+            </div>
+          </div>
+
+          <!-- Table formatted exactly like Bot ENCO Template -->
+          <div class="table-responsive" style="max-height: 650px; overflow-y: auto;">
+            <table class="custom-table" style="white-space: nowrap; font-size: 12.5px;">
+              <thead>
+                <tr style="position: sticky; top: 0; background: #f8fafc; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                  <th style="width: 50px; text-align: center;">NO</th>
+                  <th style="width: 100px; text-align: center;">AKSI</th>
+                  <th>NIK</th>
+                  <th>NAMA</th>
+                  <th>TANGGAL LAHIR</th>
+                  <th>USIA</th>
+                  <th>JENIS KELAMIN</th>
+                  <th>NO WHATSAPP</th>
+                  <th>STATUS PERNIKAHAN</th>
+                  <th>PROVINSI</th>
+                  <th>KAB/KOTA</th>
+                  <th>KECAMATAN</th>
+                  <th>KELURAHAN</th>
+                  <th>ALAMAT</th>
+                  <th>PEKERJAAN</th>
+                  <th>MEROKOK</th>
+                  <th>BB</th>
+                  <th>TB</th>
+                  <th>LP</th>
+                  <th>TD SISTOLIK</th>
+                  <th>TD DIASTOLIK</th>
+                  <th>GULA DARAH</th>
+                  <th>TELINGA</th>
+                  <th>MATA</th>
+                  <th>GIGI</th>
+                  <th>KATARAK</th>
+                  <th>KOLESTEROL</th>
+                  <th>HB</th>
+                  <th>PETUGAS ENTRY</th>
+                </tr>
+              </thead>
+              <tbody id="tableBodyCkgGratis">
+                <!-- Rendered dynamically via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
       <section id="view-enco" class="view-panel admin-only">
         <div class="card-panel">
           
@@ -3215,7 +3391,7 @@
 
             <div class="form-grid">
               <div class="form-group">
-                <label class="form-label" for="nik">NIK Pasien (16 Digit) <span class="required">*</span></label>
+                <label class="form-label" for="nik">NIK Pasien (Wajib 16 Digit) <span class="required">*</span></label>
                 <div style="display: flex; gap: 6px; align-items: stretch;">
                   <input type="text" id="nik" class="form-control" maxlength="16" inputmode="numeric"
                     placeholder="Masukkan 16 Digit NIK" required
@@ -3226,8 +3402,16 @@
                     <i class="bi bi-search"></i> Cek Dukcapil
                   </button>
                 </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                  <small id="nikHelpText" style="font-size: 11.5px; font-weight: 700; color: #dc2626; display: flex; align-items: center; gap: 4px;">
+                    <i class="bi bi-exclamation-circle-fill"></i> NIK wajib tepat 16 digit angka
+                  </small>
+                  <small id="nikCounterBadge" class="badge" style="background: #fef2f2; color: #dc2626; font-weight: 800; font-family: monospace; padding: 2px 8px; border-radius: 6px; border: 1px solid #fecaca;">
+                    <span id="nikCharCount">0</span> / 16
+                  </small>
+                </div>
                 <div id="nikDukcapilStatus"
-                  style="display: none; margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; display: none;">
+                  style="display: none; margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600;">
                 </div>
               </div>
 
