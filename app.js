@@ -2438,14 +2438,13 @@ function setupEventListeners() {
       if (val.length === 16) {
         if (helpText) {
           helpText.style.color = '#059669';
-          helpText.innerHTML = '<i class="bi bi-check-circle-fill"></i> NIK 16 digit lengkap & valid';
+          helpText.innerHTML = '<i class="bi bi-info-circle-fill"></i> NIK 16 digit lengkap. Silakan klik tombol "Cek NIK" untuk verifikasi.';
         }
         if (badge) {
           badge.style.background = '#ecfdf5';
           badge.style.color = '#059669';
           badge.style.borderColor = '#a7f3d0';
         }
-        triggerNikDukcapilLookup();
       } else {
         if (helpText) {
           helpText.style.color = '#dc2626';
@@ -2458,6 +2457,16 @@ function setupEventListeners() {
         }
         const statusEl = document.getElementById('nikDukcapilStatus');
         if (statusEl) statusEl.style.display = 'none';
+        if (!currentEditingId) {
+          setDemographicLock('pasien', true);
+        }
+      }
+    });
+
+    nikInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        triggerCekNikEnco('pasien');
       }
     });
   }
@@ -2470,12 +2479,34 @@ function setupEventListeners() {
   const nikWaliInput = document.getElementById('nik_wali');
   if (nikWaliInput) {
     nikWaliInput.addEventListener('input', () => {
-      const val = nikWaliInput.value.replace(/\D/g, '');
-      nikWaliInput.value = val; // strip non-digits
+      const val = nikWaliInput.value.replace(/\D/g, '').slice(0, 16);
+      nikWaliInput.value = val; // strip non-digits and cap at 16
       const counter = document.getElementById('nikWaliCounter');
+      const helpWali = document.getElementById('nikWaliHelpText');
       if (counter) {
         counter.textContent = val.length;
         counter.style.color = val.length === 16 ? '#16a34a' : '#64748b';
+      }
+      if (val.length === 16) {
+        if (helpWali) {
+          helpWali.style.color = '#059669';
+          helpWali.innerHTML = '<i class="bi bi-info-circle-fill"></i> NIK wali 16 digit lengkap. Silakan klik tombol "Cek NIK" Wali.';
+        }
+      } else {
+        if (!currentEditingId) {
+          setDemographicLock('wali', true);
+        }
+        if (helpWali) {
+          helpWali.style.color = '#dc2626';
+          helpWali.innerHTML = `<i class="bi bi-exclamation-circle-fill"></i> NIK wali wajib 16 digit angka (kurang ${16 - val.length} digit)`;
+        }
+      }
+    });
+
+    nikWaliInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        triggerCekNikEnco('wali');
       }
     });
   }
@@ -3831,10 +3862,20 @@ function updateDataWaliVisibility() {
       badge.style.borderColor = '#fca5a5';
       badge.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i> Wajib bagi Balita & Prasekolah';
     }
-    const isTanpa = tanpaWaliCb?.checked || false;
+
+    // Centangan "Daftarkan tanpa data wali" DIHILANGKAN untuk Bayi, Balita & Prasekolah
+    const wrapperTanpaWali = document.getElementById('wrapperTanpaWali');
+    if (wrapperTanpaWali) {
+      wrapperTanpaWali.style.display = 'none';
+    }
+    if (tanpaWaliCb) {
+      tanpaWaliCb.checked = false;
+      toggleTanpaWaliInputs(false);
+    }
+
     ['reqNikWali', 'reqNamaWali', 'reqDobWali', 'reqJkWali', 'reqWaWali'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.style.display = isTanpa ? 'none' : 'inline';
+      if (el) el.style.display = 'inline';
     });
   } else if (isLansia) {
     section.style.display = 'block';
@@ -3849,6 +3890,14 @@ function updateDataWaliVisibility() {
       badge.style.borderColor = '#fde047';
       badge.innerHTML = '<i class="bi bi-info-circle"></i> Dianjurkan (Opsional)';
     }
+
+    // Tampilkan untuk Lansia
+    const wrapperTanpaWali = document.getElementById('wrapperTanpaWali');
+    if (wrapperTanpaWali) {
+      wrapperTanpaWali.style.display = 'flex';
+    }
+
+    const isTanpa = tanpaWaliCb?.checked || false;
     ['reqNikWali', 'reqNamaWali', 'reqDobWali', 'reqJkWali', 'reqWaWali'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
@@ -3863,7 +3912,7 @@ function toggleBelumPunyaNik(isChecked) {
   const nikInput = document.getElementById('nik');
   const nikHelpText = document.getElementById('nikHelpText');
   const nikBadge = document.getElementById('nikCounterBadge');
-  const btnCekNik = document.getElementById('btnCekNikDukcapil');
+  const btnCekNik = document.getElementById('btnCekNikPasien') || document.getElementById('btnCekNikDukcapil');
   const tanpaWaliCb = document.getElementById('daftarkan_tanpa_wali');
 
   if (isChecked) {
@@ -3891,6 +3940,12 @@ function toggleBelumPunyaNik(isChecked) {
       tanpaWaliCb.disabled = true;
       toggleTanpaWaliInputs(false);
     }
+    // Karena bayi belum punya NIK, buka kolom identitas pasien agar bisa diisi manual
+    setDemographicLock('pasien', false);
+    // Kolom wali tetap terkunci sampai klik "Cek NIK" Wali
+    if (!currentEditingId) {
+      setDemographicLock('wali', true);
+    }
   } else {
     if (nikInput) {
       nikInput.disabled = false;
@@ -3912,6 +3967,10 @@ function toggleBelumPunyaNik(isChecked) {
       nikBadge.style.borderColor = '#fecaca';
       const countEl = document.getElementById('nikCharCount');
       if (countEl) countEl.textContent = (nikInput?.value || '').length;
+    }
+    // Jika tidak punya NIK tidak dicentang, kunci kembali kolom pasien sampai klik "Cek NIK"
+    if (!currentEditingId) {
+      setDemographicLock('pasien', true);
     }
   }
 }
@@ -6634,6 +6693,11 @@ function validateCurrentStep(step) {
         document.getElementById('nik')?.focus();
         return false;
       }
+      const namaEl = document.getElementById('nama');
+      if (namaEl && namaEl.disabled) {
+        showToast('Harap klik tombol "Cek NIK" terlebih dahulu untuk memverifikasi atau mengisi identitas pasien!', 'warning');
+        return false;
+      }
     }
     if (!nama) {
       showToast('Nama Lengkap Pasien wajib diisi!', 'error');
@@ -6654,16 +6718,12 @@ function validateCurrentStep(step) {
     // Validasi Wajib Data Wali untuk Balita & Prasekolah
     const kat = getSelectedKategoriSasaran();
     const isWajibWali = (kat === 'bayi_balita' || kat === 'prasekolah');
-    const isTanpaWali = document.getElementById('daftarkan_tanpa_wali')?.checked || false;
+    const isTanpaWali = isWajibWali ? false : (document.getElementById('daftarkan_tanpa_wali')?.checked || false);
 
-    if (belumPunyaNik && isTanpaWali) {
-      showToast('Pasien yang belum memiliki NIK WAJIB mengisi data wali!', 'error');
-      return false;
-    }
-
-    if ((isWajibWali || belumPunyaNik) && !isTanpaWali) {
+    if (isWajibWali || belumPunyaNik) {
       const nikWali = (document.getElementById('nik_wali')?.value || '').replace(/\D/g, '').trim();
-      const namaWali = (document.getElementById('nama_wali')?.value || '').trim();
+      const namaWaliEl = document.getElementById('nama_wali');
+      const namaWali = (namaWaliEl?.value || '').trim();
       const dobWali = document.getElementById('tanggal_lahir_wali')?.value;
       const jkWali = document.getElementById('jenis_kelamin_wali')?.value;
       const waWali = (document.getElementById('no_whatsapp_wali')?.value || '').trim();
@@ -6671,8 +6731,12 @@ function validateCurrentStep(step) {
       const waPasien = (document.getElementById('no_whatsapp')?.value || '').trim();
 
       if (!nikWali || nikWali.length !== 16) {
-        showToast('NIK Wali WAJIB 16 digit angka' + (belumPunyaNik ? ' (karena pasien belum punya NIK)!' : '!'), 'error');
+        showToast('Kategori ' + (kat === 'bayi_balita' ? 'Bayi & Balita' : (kat === 'prasekolah' ? 'Anak Prasekolah' : 'Pasien')) + ' WAJIB mengisi NIK Wali 16 digit angka!', 'error');
         document.getElementById('nik_wali')?.focus();
+        return false;
+      }
+      if (namaWaliEl && namaWaliEl.disabled) {
+        showToast('Harap klik tombol "Cek NIK" Wali terlebih dahulu untuk memverifikasi atau mengisi identitas wali!', 'warning');
         return false;
       }
       if (!namaWali) {
@@ -6791,6 +6855,11 @@ function openInputModal(kategori = 'Luar Gedung', isEdit = false, target = 'reco
       toggleBelumPunyaNik(false);
     }
     updateDataWaliVisibility();
+    // Kunci kolom demografi pasien dan wali saat input baru sampai klik "Cek NIK"
+    setDemographicLock('all', true);
+  } else {
+    // Mode edit -> buka semua kuncian kolom agar bisa diedit
+    setDemographicLock('all', false);
   }
   
   if (kategori === 'Dalam Gedung') {
@@ -7016,20 +7085,13 @@ async function handleFormSubmit(e) {
     waWali = waPasien;
   }
 
-  const isTanpaWali = document.getElementById('daftarkan_tanpa_wali')?.checked || false;
+  const isTanpaWali = isWajibWali ? false : (document.getElementById('daftarkan_tanpa_wali')?.checked || false);
 
-  if (belumPunyaNik && isTanpaWali) {
-    currentWizardStep = 2;
-    updateWizardUI();
-    showToast('Pasien yang belum memiliki NIK WAJIB mengisi data wali!', 'error');
-    return;
-  }
-
-  if ((isWajibWali || belumPunyaNik) && !isTanpaWali) {
+  if (isWajibWali || belumPunyaNik) {
     if (!nikWali || nikWali.length !== 16) {
       currentWizardStep = 2;
       updateWizardUI();
-      showToast('Kategori ' + (katSasaran === 'bayi_balita' ? 'Bayi & Balita' : 'Anak Prasekolah') + ' WAJIB mengisi NIK Wali 16 digit angka' + (belumPunyaNik ? ' (karena pasien belum punya NIK)!' : '!'), 'error');
+      showToast('Kategori ' + (katSasaran === 'bayi_balita' ? 'Bayi & Balita' : (katSasaran === 'prasekolah' ? 'Anak Prasekolah' : 'Pasien')) + ' WAJIB mengisi NIK Wali 16 digit angka!', 'error');
       setTimeout(() => document.getElementById('nik_wali')?.focus(), 100);
       return;
     }
@@ -12140,205 +12202,354 @@ function renderDukcapilResultCard(data, isOfficial = false, isValid = true) {
 }
 
 /* ==========================================================================
-   ðŸ” DUKCAPIL AUTO-FILL FOR CKG INPUT FORM
-   Triggers when user enters 16-digit NIK or clicks "Cek Dukcapil" button
+   PENGECEKAN NIK BANK DATA ASIK (MENU ENCO) & AUTO-FILL / LOCK SISTEM
    ========================================================================== */
 
-let _nikLookupDebounce = null;
+function setDemographicLock(target, isLocked) {
+  if (target === 'pasien' || target === 'all') {
+    const pasienFields = [
+      'nama', 'tanggal_lahir', 'jenis_kelamin', 'no_whatsapp',
+      'status_pernikahan', 'pekerjaan', 'alamat', 'provinsi',
+      'kab_kota', 'kecamatan', 'kelurahan'
+    ];
+    pasienFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.disabled = isLocked;
+        if (isLocked) {
+          el.style.backgroundColor = '#f1f5f9';
+          el.style.cursor = 'not-allowed';
+          el.title = 'Kolom terkunci. Silakan klik tombol "Cek NIK" terlebih dahulu.';
+        } else {
+          el.style.backgroundColor = '';
+          el.style.cursor = '';
+          el.removeAttribute('title');
+        }
+      }
+    });
+  }
 
-async function triggerNikDukcapilLookup() {
-  const nikInput = document.getElementById('nik');
-  const statusEl = document.getElementById('nikDukcapilStatus');
-  const btn = document.getElementById('btnCekNikDukcapil');
+  if (target === 'wali' || target === 'all') {
+    const waliFields = [
+      'nama_wali', 'tanggal_lahir_wali', 'jenis_kelamin_wali',
+      'no_whatsapp_wali', 'wali_nomor_sama'
+    ];
+    waliFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.disabled = isLocked;
+        if (isLocked) {
+          el.style.backgroundColor = '#f1f5f9';
+          el.style.cursor = 'not-allowed';
+          el.title = 'Kolom terkunci. Silakan klik tombol "Cek NIK" wali terlebih dahulu.';
+        } else {
+          el.style.backgroundColor = '';
+          el.style.cursor = '';
+          el.removeAttribute('title');
+        }
+      }
+    });
+  }
+}
+
+// Alias untuk kompatibilitas jika dipanggil modul lama
+window.triggerNikDukcapilLookup = () => triggerCekNikEnco('pasien');
+
+async function triggerCekNikEnco(target = 'pasien') {
+  const isWali = (target === 'wali');
+  const nikInput = document.getElementById(isWali ? 'nik_wali' : 'nik');
+  const btn = document.getElementById(isWali ? 'btnCekNikWali' : 'btnCekNikPasien') || document.getElementById('btnCekNikDukcapil');
   if (!nikInput) return;
 
-  const nik = nikInput.value.trim();
+  const cleanNik = (nikInput.value || '').replace(/\D/g, '').trim();
 
-  if (!nik || nik.length !== 16 || isNaN(nik)) {
-    if (statusEl) {
-      statusEl.style.display = 'block';
-      statusEl.style.background = '#fef2f2';
-      statusEl.style.border = '1px solid #fca5a5';
-      statusEl.style.color = '#991b1b';
-      statusEl.innerHTML = '<i class="bi bi-x-circle-fill"></i> NIK harus 16 digit angka';
-      setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
-    }
+  if (!cleanNik || cleanNik.length !== 16) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'NIK Tidak Lengkap',
+      html: `
+        <div style="font-size: 13.5px; color: #475569; text-align: left; line-height: 1.5;">
+          NIK ${isWali ? 'Wali' : 'Pasien'} harus terdiri dari <strong>tepat 16 digit angka</strong>.<br>
+          Saat ini: <span style="font-family: monospace; font-weight: 700; color: #dc2626;">${cleanNik.length} digit</span>.
+        </div>
+      `,
+      confirmButtonColor: '#2563eb',
+      confirmButtonText: 'Mengerti',
+      customClass: { popup: 'rounded-2xl shadow-2xl' }
+    });
+    nikInput.focus();
     return;
   }
 
-  // Show loading state
-  if (statusEl) {
-    statusEl.style.display = 'block';
-    statusEl.style.background = '#eff6ff';
-    statusEl.style.border = '1px solid #bfdbfe';
-    statusEl.style.color = '#1e40af';
-    statusEl.innerHTML = '<i class="bi bi-hourglass-split"></i> Memverifikasi NIK ke Dukcapil...';
-  }
+  // Visual loading button state
+  let origBtnHtml = '';
   if (btn) {
+    origBtnHtml = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> ...';
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Memeriksa...';
   }
+
+  // Tampilkan loading dialog
+  Swal.fire({
+    title: 'Mengecek Bank Data ASIK...',
+    html: `
+      <div style="font-size: 13.5px; color: #475569; margin-top: 8px;">
+        Sedang mencari NIK <strong>${cleanNik}</strong> di bank data rekam pasien ASIK (Menu ENCO)...
+      </div>
+    `,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  let foundData = null;
 
   try {
-    // Try the server API first
-    const resp = await fetch(`${DUKCAPIL_API_BASE}/verify-nik`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nik: nik, namaLengkap: '' })
-    });
-
-    if (resp.ok) {
-      const result = await resp.json();
-      if (result.valid && result.data) {
-        await autoFillFormFromDukcapil(result.data);
-
-        if (statusEl) {
-          statusEl.style.display = 'block';
-          statusEl.style.background = '#f0fdf4';
-          statusEl.style.border = '1px solid #86efac';
-          statusEl.style.color = '#166534';
-          statusEl.innerHTML = `<i class="bi bi-check-circle-fill"></i> Data Dukcapil Ditemukan! <strong>${result.data.namaLengkap}</strong> â€” ${result.data.jenisKelamin}, ${result.data.usia} Thn (${result.data.provinsi})`;
-        }
-        showToast(`âœ“ Data Dukcapil berhasil diisi otomatis untuk NIK ${nik}`, 'success');
-        return;
+    // 1. Coba request ke API lookup-nik
+    const resLookup = await fetch(`/api/enco/lookup-nik?nik=${encodeURIComponent(cleanNik)}`);
+    if (resLookup.ok) {
+      const jsonLookup = await resLookup.json();
+      if (jsonLookup && jsonLookup.success && jsonLookup.found && jsonLookup.data) {
+        foundData = jsonLookup.data;
       }
     }
   } catch (err) {
-    console.warn('Dukcapil API call failed, trying local parser:', err);
+    console.warn('API lookup-nik error:', err);
   }
 
-  // Fallback to local parser
-  const localResult = parseNikIndonesia(nik, '');
-  if (localResult.valid) {
-    await autoFillFormFromDukcapil(localResult);
-
-    if (statusEl) {
-      statusEl.style.display = 'block';
-      statusEl.style.background = '#fffbeb';
-      statusEl.style.border = '1px solid #fde68a';
-      statusEl.style.color = '#92400e';
-      statusEl.innerHTML = `<i class="bi bi-cpu-fill"></i> Data Terisi via Parser NIK Lokal â€” ${localResult.jenisKelamin}, ${localResult.usia} Thn (${localResult.provinsi})`;
-    }
-    showToast(`Data terisi otomatis via Parser NIK Lokal`, 'info');
-  } else {
-    if (statusEl) {
-      statusEl.style.display = 'block';
-      statusEl.style.background = '#fef2f2';
-      statusEl.style.border = '1px solid #fca5a5';
-      statusEl.style.color = '#991b1b';
-      statusEl.innerHTML = `<i class="bi bi-x-circle-fill"></i> ${localResult.message || 'NIK tidak valid'}`;
-    }
-  }
-
-  if (btn) {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-search"></i> Cek Dukcapil';
-  }
-}
-
-async function autoFillFormFromDukcapil(data) {
-  const btn = document.getElementById('btnCekNikDukcapil');
-
-  // Auto-fill Nama (only if currently empty)
-  const namaInput = document.getElementById('nama');
-  if (namaInput && !namaInput.value.trim() && data.namaLengkap && data.namaLengkap !== 'DATA DUKCAPIL VERIFIED') {
-    namaInput.value = data.namaLengkap;
-  }
-
-  // Auto-fill Tanggal Lahir
-  if (data.tanggalLahir) {
-    const dobInput = document.getElementById('tanggal_lahir');
-    if (dobInput) {
-      // Convert DD/MM/YYYY to YYYY-MM-DD for HTML date input
-      const parts = data.tanggalLahir.split('/');
-      if (parts.length === 3) {
-        const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        dobInput.value = isoDate;
-        // Trigger age calculation
-        calculateAgeFromDOB();
-      }
-    }
-  }
-
-  // Auto-fill Usia
-  if (data.usia !== undefined && data.usia !== null) {
-    const usiaInput = document.getElementById('usia');
-    if (usiaInput) usiaInput.value = data.usia;
-  }
-
-  // Auto-fill Jenis Kelamin
-  if (data.jenisKelamin) {
-    const jkSelect = document.getElementById('jenis_kelamin');
-    if (jkSelect) {
-      const jk = data.jenisKelamin.toLowerCase();
-      jkSelect.value = (jk === 'perempuan' || jk === 'p') ? 'P' : 'L';
-    }
-  }
-
-  // Auto-fill Provinsi, Kabupaten/Kota, dan Kecamatan dropdowns
-  if (data.provinsi) {
-    const provSelect = document.getElementById('provinsi');
-    if (provSelect) {
-      const provName = data.provinsi.toLowerCase();
-      const match = Array.from(provSelect.options).find(o =>
-        o.value.toLowerCase().includes(provName) ||
-        provName.includes(o.value.toLowerCase())
-      );
-      if (match) {
-        provSelect.value = match.value;
-        provSelect.dispatchEvent(new Event('change'));
-
-        // Wait for Kab/Kota dropdown options to load asynchronously
-        await new Promise(r => setTimeout(r, 250));
-
-        if (data.kabupaten) {
-          const kabSelect = document.getElementById('kab_kota');
-          if (kabSelect) {
-            const kabNameClean = data.kabupaten.toLowerCase().replace(/^(kab\.|kota|kabupaten)\s*/i, '').trim();
-            const kabMatch = Array.from(kabSelect.options).find(o => {
-              const valClean = o.value.toLowerCase().replace(/^(kab\.|kota|kabupaten)\s*/i, '').trim();
-              return valClean.includes(kabNameClean) || kabNameClean.includes(valClean);
-            });
-            if (kabMatch) {
-              kabSelect.value = kabMatch.value;
-              kabSelect.dispatchEvent(new Event('change'));
-
-              // Wait for Kecamatan dropdown options to load asynchronously
-              await new Promise(r => setTimeout(r, 250));
-
-              if (data.kecamatan && !data.kecamatan.includes('KODE')) {
-                const kecSelect = document.getElementById('kecamatan');
-                if (kecSelect) {
-                  const kecNameClean = data.kecamatan.toLowerCase().replace(/^kecamatan\s*/i, '').trim();
-                  const kecMatch = Array.from(kecSelect.options).find(o => {
-                    const valClean = o.value.toLowerCase().replace(/^kecamatan\s*/i, '').trim();
-                    return valClean.includes(kecNameClean) || kecNameClean.includes(valClean);
-                  });
-                  if (kecMatch) {
-                    kecSelect.value = kecMatch.value;
-                    kecSelect.dispatchEvent(new Event('change'));
-                  }
-                }
-              }
-            }
-          }
+  // 2. Fallback: coba search ke /api/enco/records
+  if (!foundData) {
+    try {
+      const resSearch = await fetch(`/api/enco/records?search=${encodeURIComponent(cleanNik)}&limit=10`);
+      if (resSearch.ok) {
+        const jsonSearch = await resSearch.json();
+        if (jsonSearch && jsonSearch.success && Array.isArray(jsonSearch.data)) {
+          const match = jsonSearch.data.find(item => String(item.nik || '').replace(/\D/g, '') === cleanNik);
+          if (match) foundData = match;
         }
       }
+    } catch (err) {
+      console.warn('Fallback enco search error:', err);
     }
   }
 
-  // Reset button state
+  // 3. Fallback: cek cache lokal di browser (ckgGratisRecords & records)
+  if (!foundData) {
+    if (typeof ckgGratisRecords !== 'undefined' && Array.isArray(ckgGratisRecords)) {
+      const match = ckgGratisRecords.find(item => String(item.nik || '').replace(/\D/g, '') === cleanNik);
+      if (match) foundData = match;
+    }
+    if (!foundData && typeof records !== 'undefined' && Array.isArray(records)) {
+      const match = records.find(item => String(item.nik || '').replace(/\D/g, '') === cleanNik);
+      if (match) foundData = match;
+    }
+  }
+
+  // Kembalikan tombol ke state normal
   if (btn) {
     btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Terverifikasi';
-    btn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
-    // Reset after 5 seconds
-    setTimeout(() => {
-      btn.innerHTML = '<i class="bi bi-search"></i> Cek Dukcapil';
-      btn.style.background = 'linear-gradient(135deg, #1e3a8a, #3b82f6)';
-    }, 5000);
+    btn.innerHTML = origBtnHtml || '<i class="bi bi-search"></i> Cek NIK';
+  }
+
+  // Skenario 1: DATA DITEMUKAN
+  if (foundData) {
+    const rawNama = foundData.nama || foundData.nama_pasien || '';
+    const rawDob = foundData.tanggal_lahir || foundData.tgl_lahir || '';
+    const rawJk = foundData.jenis_kelamin || foundData.jk || 'L';
+    const rawWa = foundData.no_wa || foundData.no_whatsapp || foundData.no_telepon || foundData.no_hp || '';
+    const rawAlamat = foundData.alamat || '';
+    const rawPekerjaan = foundData.pekerjaan || '';
+    const rawNikah = foundData.status_pernikahan || '';
+    const rawProv = foundData.provinsi || 'Jawa Barat';
+    const rawKab = foundData.kab_kota || 'Kab. Bandung';
+    const rawKec = foundData.kecamatan || 'Banjaran';
+    const rawKel = foundData.kelurahan || '';
+
+    let calcAgeText = '';
+    if (rawDob) {
+      const iso = (typeof formatDateToYYYYMMDD === 'function') ? formatDateToYYYYMMDD(rawDob) : rawDob;
+      const bDate = new Date(iso);
+      if (!isNaN(bDate.getTime())) {
+        const diff = Date.now() - bDate.getTime();
+        const ageY = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+        if (ageY >= 0) calcAgeText = `(${ageY} Tahun)`;
+      }
+    }
+
+    const jkLabel = (rawJk === 'P' || String(rawJk).toLowerCase().startsWith('p')) ? 'Perempuan (P)' : 'Laki-laki (L)';
+    const wilayahLabel = [rawKel, rawKec, rawKab, rawProv].filter(Boolean).join(', ') || '-';
+
+    const result = await Swal.fire({
+      title: isWali ? 'Data Wali Ditemukan!' : 'Data Pasien Ditemukan!',
+      icon: 'success',
+      html: `
+        <div style="text-align: left; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-top: 10px; font-size: 13px;">
+          <div style="font-weight: 800; color: #1e293b; font-size: 13.5px; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-person-check-fill" style="color: #10b981; font-size: 18px;"></i>
+            <span>Identitas Bank Data Rekam Pasien ASIK</span>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; line-height: 1.6;">
+            <tr>
+              <td style="width: 110px; color: #64748b; font-weight: 600;">NIK</td>
+              <td style="font-weight: 700; color: #1e293b; font-family: monospace;">: ${escapeHtml(cleanNik)}</td>
+            </tr>
+            <tr>
+              <td style="color: #64748b; font-weight: 600;">Nama Lengkap</td>
+              <td style="font-weight: 800; color: #2563eb; font-size: 14px;">: ${escapeHtml(rawNama)}</td>
+            </tr>
+            <tr>
+              <td style="color: #64748b; font-weight: 600;">Tgl Lahir</td>
+              <td style="color: #334155;">: ${escapeHtml(rawDob)} ${calcAgeText}</td>
+            </tr>
+            <tr>
+              <td style="color: #64748b; font-weight: 600;">Jenis Kelamin</td>
+              <td style="color: #334155;">: ${jkLabel}</td>
+            </tr>
+            <tr>
+              <td style="color: #64748b; font-weight: 600;">No. WhatsApp</td>
+              <td style="color: #334155;">: ${escapeHtml(rawWa || '-')}</td>
+            </tr>
+            ${!isWali ? `
+            <tr>
+              <td style="color: #64748b; font-weight: 600;">Pekerjaan</td>
+              <td style="color: #334155;">: ${escapeHtml(rawPekerjaan || '-')}</td>
+            </tr>
+            <tr>
+              <td style="color: #64748b; font-weight: 600;">Alamat</td>
+              <td style="color: #334155;">: ${escapeHtml(rawAlamat || '-')}</td>
+            </tr>
+            <tr>
+              <td style="color: #64748b; font-weight: 600;">Wilayah</td>
+              <td style="color: #334155;">: ${escapeHtml(wilayahLabel)}</td>
+            </tr>
+            ` : ''}
+          </table>
+        </div>
+        <p style="margin-top: 14px; font-size: 13px; color: #475569; text-align: center; font-weight: 600;">
+          Apakah Anda ingin mengonfirmasi dan mengisi otomatis data ${isWali ? 'wali' : 'pasien'} ini ke formulir?
+        </p>
+      `,
+      showCancelButton: true,
+      confirmButtonColor: '#2563eb',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: '<i class="bi bi-check2-circle"></i> Konfirmasi & Gunakan Data',
+      cancelButtonText: '<i class="bi bi-pencil-square"></i> Isi Manual / Ubah',
+      reverseButtons: true,
+      customClass: { popup: 'rounded-2xl shadow-2xl' }
+    });
+
+    if (result.isConfirmed) {
+      if (isWali) {
+        // Isi Data Wali
+        const elNamaWali = document.getElementById('nama_wali');
+        const elDobWali = document.getElementById('tanggal_lahir_wali');
+        const elJkWali = document.getElementById('jenis_kelamin_wali');
+        const elWaWali = document.getElementById('no_whatsapp_wali');
+
+        if (elNamaWali) elNamaWali.value = rawNama;
+        if (elDobWali && rawDob) {
+          elDobWali.value = (typeof formatDateToYYYYMMDD === 'function') ? formatDateToYYYYMMDD(rawDob) : rawDob;
+        }
+        if (elJkWali) {
+          elJkWali.value = (rawJk === 'P' || String(rawJk).toLowerCase().startsWith('p')) ? 'P' : 'L';
+        }
+        if (elWaWali) {
+          elWaWali.value = String(rawWa).replace(/^(\+62|62|0)/, '');
+        }
+      } else {
+        // Isi Data Pasien
+        const elNama = document.getElementById('nama');
+        const elDob = document.getElementById('tanggal_lahir');
+        const elJk = document.getElementById('jenis_kelamin');
+        const elWa = document.getElementById('no_whatsapp');
+        const elNikah = document.getElementById('status_pernikahan');
+        const elPek = document.getElementById('pekerjaan');
+        const elAlm = document.getElementById('alamat');
+
+        if (elNama) elNama.value = rawNama;
+        if (elDob && rawDob) {
+          elDob.value = (typeof formatDateToYYYYMMDD === 'function') ? formatDateToYYYYMMDD(rawDob) : rawDob;
+          calculateAgeFromDOB();
+        }
+        if (elJk) {
+          elJk.value = (rawJk === 'P' || String(rawJk).toLowerCase().startsWith('p')) ? 'P' : 'L';
+        }
+        if (elWa) elWa.value = rawWa;
+        if (elNikah && rawNikah) {
+          const matchNikah = Array.from(elNikah.options).find(o => o.value.toLowerCase() === rawNikah.toLowerCase());
+          if (matchNikah) elNikah.value = matchNikah.value;
+        }
+        if (elPek) elPek.value = rawPekerjaan;
+        if (elAlm) elAlm.value = rawAlamat;
+
+        // Dropdown Wilayah
+        const provSelect = document.getElementById('provinsi');
+        if (provSelect && rawProv) {
+          const matchProv = Array.from(provSelect.options).find(o => o.value.toLowerCase().includes(rawProv.toLowerCase()));
+          if (matchProv) provSelect.value = matchProv.value;
+        }
+        const kabSelect = document.getElementById('kab_kota');
+        if (kabSelect && rawKab) {
+          const matchKab = Array.from(kabSelect.options).find(o => o.value.toLowerCase().includes(rawKab.toLowerCase()));
+          if (matchKab) kabSelect.value = matchKab.value;
+        }
+        const kecSelect = document.getElementById('kecamatan');
+        if (kecSelect && rawKec) {
+          const matchKec = Array.from(kecSelect.options).find(o => o.value.toLowerCase().includes(rawKec.toLowerCase()));
+          if (matchKec) kecSelect.value = matchKec.value;
+        }
+        const kelSelect = document.getElementById('kelurahan');
+        if (kelSelect && rawKel) {
+          const matchKel = Array.from(kelSelect.options).find(o => o.value.toLowerCase().includes(rawKel.toLowerCase()));
+          if (matchKel) kelSelect.value = matchKel.value;
+        }
+      }
+
+      // Buka kolom identitas
+      setDemographicLock(target, false);
+      showToast(`Data ${isWali ? 'Wali' : 'Pasien'} berhasil dikonfirmasi dan diisi otomatis dari bank data ASIK`, 'success');
+    } else {
+      // User membatalkan konfirmasi -> buka kuncian kolom agar bisa diisi/diubah manual
+      setDemographicLock(target, false);
+      showToast(`Kolom ${isWali ? 'data wali' : 'identitas pasien'} telah dibuka untuk pengisian manual`, 'info');
+    }
+  } else {
+    // Skenario 2: DATA TIDAK DITEMUKAN
+    await Swal.fire({
+      title: 'Data Tidak Ditemukan',
+      icon: 'info',
+      html: `
+        <div style="font-size: 13.5px; color: #475569; line-height: 1.6; margin-top: 8px;">
+          <p style="margin: 0 0 12px 0;">
+            NIK <strong>${escapeHtml(cleanNik)}</strong> belum terdaftar di bank data rekam data pasien ASIK (Menu ENCO).
+          </p>
+          <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; color: #1e40af; font-size: 13.5px; font-weight: 700; text-align: center;">
+            <i class="bi bi-pencil-square" style="font-size: 16px;"></i> Silakan isi identitas secara manual.
+          </div>
+        </div>
+      `,
+      confirmButtonColor: '#2563eb',
+      confirmButtonText: '<i class="bi bi-pencil-fill"></i> Isi Identitas Manual',
+      customClass: { popup: 'rounded-2xl shadow-2xl' }
+    });
+
+    // Buka kuncian kolom agar bisa diisi manual
+    setDemographicLock(target, false);
+
+    // Focus ke input nama
+    if (isWali) {
+      const el = document.getElementById('nama_wali');
+      if (el) el.focus();
+    } else {
+      const el = document.getElementById('nama');
+      if (el) el.focus();
+    }
   }
 }
+
 
 /* ==========================================================================
    CLOUDFLARE D1 DATABASE CLOUD SYNC ENGINE
