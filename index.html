@@ -1143,16 +1143,16 @@
               <i class="bi bi-heart-pulse-fill" style="color: #10b981;"></i> Data Cek Kesehatan Gratis (Format Bot ENCO)
             </div>
             <div class="action-buttons-group">
-              <button class="btn btn-primary" onclick="openInputModal('Luar Gedung')">
+              <button class="btn btn-primary" onclick="openInputModal('Luar Gedung', false, 'ckg-gratis')">
                 <i class="bi bi-plus-lg"></i> Input Data CKG
               </button>
-              <button class="btn btn-secondary" onclick="exportToBotEncoXLSX()" title="Download Excel Format Bot ENCO untuk CKG Umum" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-weight: 700; border: none; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
+              <button class="btn btn-secondary" onclick="exportToBotEncoXLSX('ckg-gratis')" title="Download Excel Format Bot ENCO untuk CKG Umum" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-weight: 700; border: none; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
                 <i class="bi bi-robot"></i> Download Format Bot ENCO
               </button>
-              <button class="btn btn-secondary" onclick="openImportModal()">
+              <button class="btn btn-secondary" onclick="openImportModal('ckg-gratis')">
                 <i class="bi bi-file-earmark-arrow-up"></i> Import Data
               </button>
-              <button class="btn btn-secondary" onclick="renderCkgGratisTable()">
+              <button class="btn btn-secondary" onclick="fetchCkgGratisFromCloud(true)">
                 <i class="bi bi-arrow-clockwise"></i> Refresh
               </button>
             </div>
@@ -3410,6 +3410,13 @@
                     <span id="nikCharCount">0</span> / 16
                   </small>
                 </div>
+                <!-- Checkbox Khusus Bayi/Balita: Belum Punya NIK -->
+                <div id="wrapperBelumPunyaNik" style="margin-top: 8px; display: none;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: #b45309; cursor: pointer; background: #fffbeb; padding: 7px 12px; border-radius: 8px; border: 1.5px solid #fde68a; user-select: none;">
+                    <input type="checkbox" id="belum_punya_nik" onchange="toggleBelumPunyaNik(this.checked)" style="width: 17px; height: 17px; cursor: pointer; accent-color: #d97706;">
+                    <span><i class="bi bi-person-slash"></i> Belum punya NIK (Khusus Bayi / Balita / Prasekolah)</span>
+                  </label>
+                </div>
                 <div id="nikDukcapilStatus"
                   style="display: none; margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600;">
                 </div>
@@ -3484,21 +3491,6 @@
               <div class="form-group">
                 <label class="form-label" for="kelurahan">Kelurahan / Desa <span class="required">*</span></label>
                 <select id="kelurahan" class="form-control" style="width: 100%;"></select>
-              </div>
-
-              <!-- Riwayat Merokok (Full Width) -->
-              <div class="form-group full-width" style="grid-column: 1 / -1; margin-top: 4px;">
-                <label class="form-label">Riwayat Merokok</label>
-                <div class="pill-group" style="display: flex; gap: 10px; max-width: 280px;">
-                  <div class="pill-option" style="flex: 1;">
-                    <input type="radio" id="rokok_tidak" name="merokok" value="Tidak" checked>
-                    <label for="rokok_tidak" class="pill-label" style="text-align: center; width: 100%; padding: 8px 16px;">Tidak</label>
-                  </div>
-                  <div class="pill-option" style="flex: 1;">
-                    <input type="radio" id="rokok_ya" name="merokok" value="Ya">
-                    <label for="rokok_ya" class="pill-label" style="text-align: center; width: 100%; padding: 8px 16px;">Ya</label>
-                  </div>
-                </div>
               </div>
             </div>
 

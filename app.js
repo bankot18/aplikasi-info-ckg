@@ -128,6 +128,9 @@ const INITIAL_MOCK_RECORDS = [];
 
 let usersDb = [];
 let records = [];
+let ckgGratisRecords = [];
+let currentInputTarget = 'records'; // 'records' | 'ckg-gratis'
+let currentImportTarget = 'records'; // 'records' | 'ckg-gratis'
 let simpusRecords = [];
 let recycleBin = [];
 let announcementData = null;
@@ -238,6 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadStoredRecycleBin();
   loadStoredAnnouncement();
   loadStoredSekolahRecords();
+  loadStoredCkgGratisRecords();
   setupImportDropzone();
   startLiveClock();
   initWilayahDropdowns();
@@ -535,6 +539,136 @@ async function syncRecordsToCloud(dataToSync) {
   } catch (e) {
     console.log('Failed to sync CKG records to cloud D1:', e);
     updateCloudSyncPill(true, `D1 Active`);
+  }
+}
+
+// ==========================================================================
+// 🌿 DATA CEK KESEHATAN GRATIS (STANDALONE CLOUD D1 DATASET - FORMAT BOT ENCO)
+// ==========================================================================
+function loadStoredCkgGratisRecords() {
+  const saved = localStorage.getItem('ckg_gratis_records');
+  if (saved) {
+    try {
+      ckgGratisRecords = JSON.parse(saved);
+    } catch (e) {
+      ckgGratisRecords = [];
+    }
+  } else {
+    ckgGratisRecords = [];
+  }
+  if (typeof CkgIdb !== 'undefined') {
+    CkgIdb.get('ckg_gratis_records').then(cached => {
+      if (Array.isArray(cached) && cached.length > 0 && ckgGratisRecords.length === 0) {
+        ckgGratisRecords = cached;
+        if (typeof renderCkgGratisTable === 'function') renderCkgGratisTable();
+      }
+    }).catch(() => {});
+  }
+  fetchCkgGratisFromCloud(false);
+}
+
+function saveCkgGratisRecordsToStorage() {
+  safeLocalStorageSet('ckg_gratis_records', JSON.stringify(ckgGratisRecords));
+  if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_gratis_records', ckgGratisRecords);
+  syncCkgGratisRecordsToCloud(ckgGratisRecords);
+}
+
+async function fetchCkgGratisFromCloud(showFeedback = false) {
+  const tbody = document.getElementById('tableBodyCkgGratis');
+  if (showFeedback && tbody && ckgGratisRecords.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="29" style="text-align: center; padding: 40px; color: #059669;">
+          <div class="spinner-border text-success" role="status" style="width: 2rem; height: 2rem; border-width: 3px; display: inline-block;"></div>
+          <div style="font-weight: 800; font-size: 13.5px; margin-top: 12px; color: #065f46;">
+            <i class="bi bi-cloud-arrow-down-fill"></i> Memuat Data Cek Kesehatan Gratis dari Cloud D1...
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  try {
+    const res = await fetch('/api/ckg-gratis');
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success && Array.isArray(result.data)) {
+        ckgGratisRecords = result.data.map(r => ({
+          id: r.id ? String(r.id) : ('CKG-G-' + Date.now()),
+          jenis_kegiatan: r.jenis_kegiatan || r.lokasi_pelayanan || 'Luar Gedung',
+          nik: r.nik || '',
+          belum_punya_nik: r.belum_punya_nik ? 1 : 0,
+          nama: r.nama || r.nama_pasien || 'Pasien',
+          tanggal_lahir: formatDateToYYYYMMDD(r.tanggal_lahir) || '1990-01-01',
+          usia: r.usia !== undefined ? r.usia : 30,
+          jenis_kelamin: r.jenis_kelamin || 'L',
+          no_whatsapp: r.no_whatsapp || '',
+          status_pernikahan: r.status_pernikahan || 'MENIKAH',
+          provinsi: r.provinsi || 'Jawa Barat',
+          kab_kota: r.kab_kota || 'Kab. Bandung',
+          kecamatan: r.kecamatan || 'Banjaran',
+          kelurahan: r.kelurahan || 'Banjaran Kota',
+          alamat: r.alamat || 'Banjaran',
+          pekerjaan: r.pekerjaan || '',
+          merokok: r.merokok || 'Tidak',
+          bb: r.bb !== undefined ? r.bb : 60,
+          tb: r.tb !== undefined ? r.tb : 165,
+          lp: r.lp !== undefined ? r.lp : 80,
+          imt: r.imt !== undefined ? r.imt : '22.0',
+          td_sistolik: r.td_sistolik !== undefined ? r.td_sistolik : 120,
+          td_diastolik: r.td_diastolik !== undefined ? r.td_diastolik : 80,
+          gula_darah: r.gula_darah !== undefined ? r.gula_darah : '110',
+          kolesterol: r.kolesterol !== undefined ? r.kolesterol : '180',
+          hb: r.hb !== undefined ? r.hb : '14.0',
+          telinga: r.telinga || 'Normal',
+          mata: r.mata || 'Normal',
+          gigi: r.gigi || 'Baik',
+          katarak: r.katarak || 'Tidak',
+          status_validasi: r.status_validasi || 'Terverifikasi',
+          petugas_entry: r.petugas_entry || r.created_by || 'Admin',
+          created_by: r.created_by || r.petugas_entry || 'Admin',
+          created_at: r.created_at || r.tanggal_entry || new Date().toISOString().substring(0, 10),
+          tanggal_entry: r.tanggal_entry || r.created_at || new Date().toISOString().substring(0, 10),
+          kategori_sasaran: r.kategori_sasaran || '',
+          kategori_umur: r.kategori_umur || '',
+          tanpa_wali: r.tanpa_wali ? 1 : 0,
+          nik_wali: r.nik_wali || '',
+          nama_wali: r.nama_wali || '',
+          tanggal_lahir_wali: r.tanggal_lahir_wali || '',
+          jenis_kelamin_wali: r.jenis_kelamin_wali || '',
+          no_whatsapp_wali: r.no_whatsapp_wali || '',
+          wali_nomor_sama: r.wali_nomor_sama ? 1 : 0
+        }));
+
+        safeLocalStorageSet('ckg_gratis_records', JSON.stringify(ckgGratisRecords));
+        if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_gratis_records', ckgGratisRecords);
+
+        if (typeof renderCkgGratisTable === 'function') renderCkgGratisTable();
+        if (showFeedback) {
+          showToast(`Berhasil memuat ${ckgGratisRecords.length} Data Cek Kesehatan Gratis dari Cloud.`, 'success');
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Gagal memuat /api/ckg-gratis dari cloud:', err);
+    if (typeof renderCkgGratisTable === 'function') renderCkgGratisTable();
+  }
+}
+
+async function syncCkgGratisRecordsToCloud(dataToSync) {
+  if (!dataToSync || !Array.isArray(dataToSync)) return;
+  try {
+    const CHUNK_SIZE = 100;
+    for (let i = 0; i < dataToSync.length; i += CHUNK_SIZE) {
+      const chunk = dataToSync.slice(i, i + CHUNK_SIZE);
+      await fetch('/api/ckg-gratis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chunk)
+      });
+    }
+  } catch (err) {
+    console.warn('Gagal menyingkronkan data CKG Gratis ke Cloud D1:', err);
   }
 }
 
@@ -2475,6 +2609,7 @@ function switchView(viewId) {
     renderTableRecords();
   } else if (viewId === 'ckg-gratis') {
     renderCkgGratisTable();
+    fetchCkgGratisFromCloud(false);
   } else if (viewId === 'recycle-data') {
     renderRecycleTable();
   } else if (viewId === 'enco') {
@@ -3661,11 +3796,27 @@ function getSelectedKategoriSasaran() {
 function updateDataWaliVisibility() {
   const kat = getSelectedKategoriSasaran();
   const section = document.getElementById('sectionDataWali');
-  if (!section) return;
+  const wrapperBelumNik = document.getElementById('wrapperBelumPunyaNik');
+  const belumNikCb = document.getElementById('belum_punya_nik');
 
   const isWajib = (kat === 'bayi_balita' || kat === 'prasekolah');
   const isLansia = (kat === 'lansia');
   const tanpaWaliCb = document.getElementById('daftarkan_tanpa_wali');
+
+  // Khusus Bayi/Balita dan Prasekolah: tampilkan opsi Belum Punya NIK
+  if (wrapperBelumNik) {
+    if (isWajib) {
+      wrapperBelumNik.style.display = 'block';
+    } else {
+      wrapperBelumNik.style.display = 'none';
+      if (belumNikCb && belumNikCb.checked) {
+        belumNikCb.checked = false;
+        toggleBelumPunyaNik(false);
+      }
+    }
+  }
+
+  if (!section) return;
 
   if (isWajib) {
     section.style.display = 'block';
@@ -3705,6 +3856,63 @@ function updateDataWaliVisibility() {
   } else {
     // Hidden for Dewasa & Sekolah / Remaja
     section.style.display = 'none';
+  }
+}
+
+function toggleBelumPunyaNik(isChecked) {
+  const nikInput = document.getElementById('nik');
+  const nikHelpText = document.getElementById('nikHelpText');
+  const nikBadge = document.getElementById('nikCounterBadge');
+  const btnCekNik = document.getElementById('btnCekNikDukcapil');
+  const tanpaWaliCb = document.getElementById('daftarkan_tanpa_wali');
+
+  if (isChecked) {
+    if (nikInput) {
+      nikInput.value = '';
+      nikInput.disabled = true;
+      nikInput.removeAttribute('required');
+      nikInput.placeholder = 'Belum punya NIK (Terdaftar via NIK Wali)';
+      nikInput.style.backgroundColor = '#f8fafc';
+    }
+    if (btnCekNik) btnCekNik.disabled = true;
+    if (nikHelpText) {
+      nikHelpText.style.color = '#b45309';
+      nikHelpText.innerHTML = '<i class="bi bi-info-circle-fill"></i> Pasien balita belum memiliki NIK. Pengisian Data Wali wajib dilengkapi.';
+    }
+    if (nikBadge) {
+      nikBadge.style.background = '#fef3c7';
+      nikBadge.style.color = '#b45309';
+      nikBadge.style.borderColor = '#fde68a';
+      const countEl = document.getElementById('nikCharCount');
+      if (countEl) countEl.textContent = '-';
+    }
+    if (tanpaWaliCb) {
+      tanpaWaliCb.checked = false;
+      tanpaWaliCb.disabled = true;
+      toggleTanpaWaliInputs(false);
+    }
+  } else {
+    if (nikInput) {
+      nikInput.disabled = false;
+      nikInput.setAttribute('required', 'required');
+      nikInput.placeholder = 'Masukkan 16 Digit NIK';
+      nikInput.style.backgroundColor = '#ffffff';
+    }
+    if (btnCekNik) btnCekNik.disabled = false;
+    if (tanpaWaliCb) {
+      tanpaWaliCb.disabled = false;
+    }
+    if (nikHelpText) {
+      nikHelpText.style.color = '#dc2626';
+      nikHelpText.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i> NIK wajib tepat 16 digit angka';
+    }
+    if (nikBadge) {
+      nikBadge.style.background = '#fef2f2';
+      nikBadge.style.color = '#dc2626';
+      nikBadge.style.borderColor = '#fecaca';
+      const countEl = document.getElementById('nikCharCount');
+      if (countEl) countEl.textContent = (nikInput?.value || '').length;
+    }
   }
 }
 
@@ -6410,6 +6618,7 @@ function validateCurrentStep(step) {
     return true;
   }
   if (step === 2) {
+    const belumPunyaNik = document.getElementById('belum_punya_nik')?.checked || false;
     const nik = (document.getElementById('nik')?.value || '').replace(/\D/g, '').trim();
     const nama = document.getElementById('nama')?.value.trim();
     const dob = document.getElementById('tanggal_lahir')?.value;
@@ -6419,10 +6628,12 @@ function validateCurrentStep(step) {
     const kel = document.getElementById('kelurahan')?.value;
     const alamat = document.getElementById('alamat')?.value.trim();
 
-    if (!nik || nik.length !== 16) {
-      showToast('NIK Pasien WAJIB tepat 16 digit angka! (Saat ini: ' + nik.length + ' digit)', 'error');
-      document.getElementById('nik')?.focus();
-      return false;
+    if (!belumPunyaNik) {
+      if (!nik || nik.length !== 16) {
+        showToast('NIK Pasien WAJIB tepat 16 digit angka! (Saat ini: ' + nik.length + ' digit)', 'error');
+        document.getElementById('nik')?.focus();
+        return false;
+      }
     }
     if (!nama) {
       showToast('Nama Lengkap Pasien wajib diisi!', 'error');
@@ -6445,7 +6656,12 @@ function validateCurrentStep(step) {
     const isWajibWali = (kat === 'bayi_balita' || kat === 'prasekolah');
     const isTanpaWali = document.getElementById('daftarkan_tanpa_wali')?.checked || false;
 
-    if (isWajibWali && !isTanpaWali) {
+    if (belumPunyaNik && isTanpaWali) {
+      showToast('Pasien yang belum memiliki NIK WAJIB mengisi data wali!', 'error');
+      return false;
+    }
+
+    if ((isWajibWali || belumPunyaNik) && !isTanpaWali) {
       const nikWali = (document.getElementById('nik_wali')?.value || '').replace(/\D/g, '').trim();
       const namaWali = (document.getElementById('nama_wali')?.value || '').trim();
       const dobWali = document.getElementById('tanggal_lahir_wali')?.value;
@@ -6455,7 +6671,7 @@ function validateCurrentStep(step) {
       const waPasien = (document.getElementById('no_whatsapp')?.value || '').trim();
 
       if (!nikWali || nikWali.length !== 16) {
-        showToast('Kategori ' + (kat === 'bayi_balita' ? 'Bayi & Balita' : 'Anak Prasekolah') + ' WAJIB mengisi NIK Wali 16 digit angka (atau centang Daftarkan tanpa data wali)!', 'error');
+        showToast('NIK Wali WAJIB 16 digit angka' + (belumPunyaNik ? ' (karena pasien belum punya NIK)!' : '!'), 'error');
         document.getElementById('nik_wali')?.focus();
         return false;
       }
@@ -6540,7 +6756,8 @@ function prevWizardStep() {
   }
 }
 
-function openInputModal(kategori = 'Luar Gedung', isEdit = false) {
+function openInputModal(kategori = 'Luar Gedung', isEdit = false, target = 'records') {
+  currentInputTarget = target || 'records';
   if (!isEdit) {
     currentEditingId = null;
     const form = document.getElementById('ckgForm');
@@ -6565,7 +6782,13 @@ function openInputModal(kategori = 'Luar Gedung', isEdit = false) {
     const tanpaWaliCb = document.getElementById('daftarkan_tanpa_wali');
     if (tanpaWaliCb) {
       tanpaWaliCb.checked = false;
+      tanpaWaliCb.disabled = false;
       toggleTanpaWaliInputs(false);
+    }
+    const belumNikCb = document.getElementById('belum_punya_nik');
+    if (belumNikCb) {
+      belumNikCb.checked = false;
+      toggleBelumPunyaNik(false);
     }
     updateDataWaliVisibility();
   }
@@ -6581,10 +6804,12 @@ function openInputModal(kategori = 'Luar Gedung', isEdit = false) {
   const titleEl = document.getElementById('inputModalTitle');
   const btnSubmit = document.getElementById('btnWizardSubmit');
 
+  const isCkgGratis = (currentInputTarget === 'ckg-gratis');
+
   if (titleEl) {
     titleEl.innerHTML = isEdit
-      ? '<i class="bi bi-pencil-square" style="color: var(--primary);"></i> Edit Data Record CKG Pasien'
-      : '<i class="bi bi-file-earmark-medical-fill" style="color: var(--primary);"></i> Form Input Data CKG Pasien Baru';
+      ? `<i class="bi bi-pencil-square" style="color: var(--primary);"></i> Edit Data ${isCkgGratis ? 'CKG Gratis' : 'Record CKG'} Pasien`
+      : `<i class="bi bi-file-earmark-medical-fill" style="color: var(--primary);"></i> Form Input Data ${isCkgGratis ? 'CKG Gratis (Format Bot ENCO)' : 'CKG Pasien Baru'}`;
   }
 
   if (btnSubmit) {
@@ -6730,7 +6955,8 @@ function deleteUser(namaUser) {
 async function handleFormSubmit(e) {
   if (e && e.preventDefault) e.preventDefault();
 
-  const nik = (document.getElementById('nik')?.value || '').replace(/\D/g, '').trim();
+  const belumPunyaNik = document.getElementById('belum_punya_nik')?.checked || false;
+  let nik = (document.getElementById('nik')?.value || '').replace(/\D/g, '').trim();
   const nama = (document.getElementById('nama')?.value || '').trim();
   const tanggalLahir = (document.getElementById('tanggal_lahir')?.value || '').trim();
   const alamat = (document.getElementById('alamat')?.value || '').trim();
@@ -6738,12 +6964,16 @@ async function handleFormSubmit(e) {
   const tb = parseFloat(document.getElementById('tb')?.value) || 0;
 
   // Smart Validation with automatic step switching
-  if (!nik || nik.length !== 16) {
-    currentWizardStep = 2;
-    updateWizardUI();
-    showToast('NIK Pasien WAJIB tepat 16 digit angka! (Saat ini: ' + nik.length + ' digit)', 'error');
-    setTimeout(() => document.getElementById('nik')?.focus(), 100);
-    return;
+  if (!belumPunyaNik) {
+    if (!nik || nik.length !== 16) {
+      currentWizardStep = 2;
+      updateWizardUI();
+      showToast('NIK Pasien WAJIB tepat 16 digit angka! (Saat ini: ' + nik.length + ' digit)', 'error');
+      setTimeout(() => document.getElementById('nik')?.focus(), 100);
+      return;
+    }
+  } else {
+    nik = ''; // Belum punya NIK
   }
 
   if (!nama) {
@@ -6788,11 +7018,18 @@ async function handleFormSubmit(e) {
 
   const isTanpaWali = document.getElementById('daftarkan_tanpa_wali')?.checked || false;
 
-  if (isWajibWali && !isTanpaWali) {
+  if (belumPunyaNik && isTanpaWali) {
+    currentWizardStep = 2;
+    updateWizardUI();
+    showToast('Pasien yang belum memiliki NIK WAJIB mengisi data wali!', 'error');
+    return;
+  }
+
+  if ((isWajibWali || belumPunyaNik) && !isTanpaWali) {
     if (!nikWali || nikWali.length !== 16) {
       currentWizardStep = 2;
       updateWizardUI();
-      showToast('Kategori ' + (katSasaran === 'bayi_balita' ? 'Bayi & Balita' : 'Anak Prasekolah') + ' WAJIB mengisi NIK Wali 16 digit angka (atau centang Daftarkan tanpa data wali)!', 'error');
+      showToast('Kategori ' + (katSasaran === 'bayi_balita' ? 'Bayi & Balita' : 'Anak Prasekolah') + ' WAJIB mengisi NIK Wali 16 digit angka' + (belumPunyaNik ? ' (karena pasien belum punya NIK)!' : '!'), 'error');
       setTimeout(() => document.getElementById('nik_wali')?.focus(), 100);
       return;
     }
@@ -6848,12 +7085,16 @@ async function handleFormSubmit(e) {
     return;
   }
 
-  const existingRecord = currentEditingId ? records.find(r => r.id === currentEditingId) : null;
+  const isCkgGratis = (currentInputTarget === 'ckg-gratis');
+  const targetDataset = isCkgGratis ? ckgGratisRecords : records;
+  const existingRecord = currentEditingId ? targetDataset.find(r => r.id === currentEditingId) : null;
 
+  const prefix = isCkgGratis ? 'CKG-G-2026-' : 'CKG-2026-';
   const formData = {
-    id: currentEditingId || `CKG-2026-${String(records.length + 1).padStart(3, '0')}`,
+    id: currentEditingId || `${prefix}${String(targetDataset.length + 1).padStart(3, '0')}`,
     kategori_sasaran: katSasaran,
     kategori_umur: getKategoriUmur(parseInt(document.getElementById('usia')?.value) || 0, tanggalLahir),
+    belum_punya_nik: belumPunyaNik ? 1 : 0,
     tanpa_wali: isTanpaWali ? 1 : 0,
     nik_wali: isTanpaWali ? '' : nikWali,
     nama_wali: isTanpaWali ? '' : namaWali,
@@ -6876,7 +7117,7 @@ async function handleFormSubmit(e) {
     kelurahan: document.getElementById('kelurahan')?.value || 'Banjaran Kota',
     alamat: alamat,
     pekerjaan: document.getElementById('pekerjaan')?.value || '',
-    merokok: document.querySelector('input[name="merokok"]:checked')?.value || 'Tidak',
+    merokok: 'Tidak',
     bb: bb,
     tb: tb,
     lp: parseFloat(document.getElementById('lp')?.value) || 0,
@@ -6903,15 +7144,15 @@ async function handleFormSubmit(e) {
   if (typeof Swal !== 'undefined') {
     Swal.fire({
       title: isEdit ? 'Memperbarui Data Pasien...' : 'Menyimpan ke Cloud Database...',
-      html: '<div style="font-size:13px;color:#475569;">Mengirim data ke Cloudflare D1 Database</div>',
+      html: `<div style="font-size:13px;color:#475569;">Mengirim data ke Cloudflare D1 Database (${isCkgGratis ? 'CKG Gratis' : 'Records'})</div>`,
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading()
     });
   }
 
   try {
-    // 1. Send directly to Cloud D1 Database FIRST
-    const res = await fetch('/api/ckg', {
+    const apiEndpoint = isCkgGratis ? '/api/ckg-gratis' : '/api/ckg';
+    const res = await fetch(apiEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify([formData])
@@ -6921,46 +7162,67 @@ async function handleFormSubmit(e) {
       throw new Error('Server responded with status ' + res.status);
     }
 
-    // 2. Update local cache AFTER cloud success
-    if (currentEditingId) {
-      const idx = records.findIndex(r => r.id === currentEditingId);
-      if (idx !== -1) records[idx] = formData;
+    if (isCkgGratis) {
+      if (currentEditingId) {
+        const idx = ckgGratisRecords.findIndex(r => r.id === currentEditingId);
+        if (idx !== -1) ckgGratisRecords[idx] = formData;
+      } else {
+        ckgGratisRecords.unshift(formData);
+      }
+      safeLocalStorageSet('ckg_gratis_records', JSON.stringify(ckgGratisRecords));
+      if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_gratis_records', ckgGratisRecords);
+      renderCkgGratisTable();
     } else {
-      records.unshift(formData);
+      if (currentEditingId) {
+        const idx = records.findIndex(r => r.id === currentEditingId);
+        if (idx !== -1) records[idx] = formData;
+      } else {
+        records.unshift(formData);
+      }
+      safeLocalStorageSet('ckg_records', JSON.stringify(records));
+      if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_records', records);
+      renderApp();
+      updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
     }
-    safeLocalStorageSet('ckg_records', JSON.stringify(records));
-    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_records', records);
 
-    const editedId = currentEditingId;
-    currentEditingId = null; // Reset editing ID!
+    currentEditingId = null;
     closeInputModal();
-    renderApp();
-    updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
 
     if (typeof Swal !== 'undefined') {
       Swal.fire({
         icon: 'success',
-        title: isEdit ? 'Data CKG Berhasil Diperbarui!' : 'Data CKG Tersimpan ke Cloud!',
-        html: `Rekam medis pasien <strong>${formData.nama}</strong> (NIK: ${formData.nik}) telah tersimpan langsung ke <strong>Cloudflare D1 Database</strong>.`,
+        title: isEdit ? 'Data Pasien Diperbarui!' : 'Data Berhasil Disimpan ke Cloud!',
+        html: `Rekam medis pasien <strong>${formData.nama}</strong> (${formData.nik ? 'NIK: ' + formData.nik : 'Belum Punya NIK'}) telah tersimpan langsung ke <strong>Cloudflare D1 Database</strong>.`,
         confirmButtonColor: '#059669'
       });
     } else {
-      showToast(isEdit ? 'Data CKG Berhasil Diperbarui!' : 'Data CKG Tersimpan ke Cloud D1!', 'success');
+      showToast(isEdit ? 'Data Pasien Berhasil Diperbarui!' : 'Data Pasien Tersimpan ke Cloud D1!', 'success');
     }
   } catch (err) {
     console.error('Failed to save to cloud D1:', err);
-    // Fallback: save to local only
-    if (currentEditingId) {
-      const idx = records.findIndex(r => r.id === currentEditingId);
-      if (idx !== -1) records[idx] = formData;
+    if (isCkgGratis) {
+      if (currentEditingId) {
+        const idx = ckgGratisRecords.findIndex(r => r.id === currentEditingId);
+        if (idx !== -1) ckgGratisRecords[idx] = formData;
+      } else {
+        ckgGratisRecords.unshift(formData);
+      }
+      safeLocalStorageSet('ckg_gratis_records', JSON.stringify(ckgGratisRecords));
+      if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_gratis_records', ckgGratisRecords);
+      renderCkgGratisTable();
     } else {
-      records.unshift(formData);
+      if (currentEditingId) {
+        const idx = records.findIndex(r => r.id === currentEditingId);
+        if (idx !== -1) records[idx] = formData;
+      } else {
+        records.unshift(formData);
+      }
+      safeLocalStorageSet('ckg_records', JSON.stringify(records));
+      if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_records', records);
+      renderApp();
     }
-    safeLocalStorageSet('ckg_records', JSON.stringify(records));
-    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_records', records);
-    currentEditingId = null; // Reset editing ID!
+    currentEditingId = null;
     closeInputModal();
-    renderApp();
 
     if (typeof Swal !== 'undefined') {
       Swal.fire({
@@ -7961,7 +8223,7 @@ function renderCkgGratisTable() {
   const filterPetugasVal = document.getElementById('filterCkgGratisPetugas')?.value || '';
   const searchQuery = (document.getElementById('searchCkgGratis')?.value || '').trim().toLowerCase();
 
-  let filtered = getVisibleRecords(records);
+  let filtered = getVisibleRecords(ckgGratisRecords);
 
   // 1. Filter Usia (Kategori)
   if (filterUsiaVal) {
@@ -8058,7 +8320,7 @@ function buildCkgGratisRowsHtml(list) {
         <td colspan="29" style="text-align: center; padding: 40px 10px; color: #64748b;">
           <div style="font-size: 36px; margin-bottom: 8px; color: #cbd5e1;"><i class="bi bi-inbox"></i></div>
           <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">Tidak ada data Cek Kesehatan Gratis</div>
-          <div style="font-size: 12.5px;">Coba ubah kriteria filter usia, bulan, atau kata kunci pencarian.</div>
+          <div style="font-size: 12.5px;">Gunakan tombol "Input Data CKG" atau "Import Data" untuk menambahkan data.</div>
         </td>
       </tr>
     `;
@@ -8091,6 +8353,7 @@ function buildCkgGratisRowsHtml(list) {
   return list.map((r, i) => {
     const cleanNik = String(r.nik || r.nik_pasien || '').replace(/\D/g, '');
     const is16 = cleanNik.length === 16;
+    const isBelumPunyaNik = !!(r.belum_punya_nik || (!cleanNik && (r.nik_wali || r.nama_wali)));
     const jk = formatGenderBot(r.jenis_kelamin);
     const wa = formatWaBot(r.no_whatsapp);
     const statusNikah = formatNikahBot(r.status_pernikahan);
@@ -8111,13 +8374,13 @@ function buildCkgGratisRowsHtml(list) {
         <td style="text-align: center; font-weight: 700; color: #64748b;">${i + 1}</td>
         <td style="text-align: center;">
           <div style="display: flex; gap: 4px; justify-content: center;">
-            <button class="btn btn-secondary btn-sm" onclick="viewDetailModal('${r.id}')" title="Detail Pasien">
+            <button class="btn btn-secondary btn-sm" onclick="viewDetailModal('${r.id}', 'ckg-gratis')" title="Detail Pasien">
               <i class="bi bi-eye"></i>
             </button>
-            <button class="btn btn-cyan btn-sm" onclick="editRecord('${r.id}')" title="Edit Data Pasien">
+            <button class="btn btn-cyan btn-sm" onclick="editCkgGratisRecord('${r.id}')" title="Edit Data Pasien">
               <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')" title="Hapus ke Tempat Sampah">
+            <button class="btn btn-danger btn-sm" onclick="deleteCkgGratisRecord('${r.id}')" title="Hapus Data">
               <i class="bi bi-trash"></i>
             </button>
           </div>
@@ -8125,7 +8388,9 @@ function buildCkgGratisRowsHtml(list) {
         <td>
           ${is16
             ? `<span style="font-family: monospace; font-weight: 700; color: #0284c7; letter-spacing: 0.5px;">${cleanNik}</span>`
-            : `<span style="font-family: monospace; font-weight: 700; color: #dc2626;">${cleanNik || '-'} <span class="badge badge-rose" style="font-size: 9px; padding: 1px 4px;">Bukan 16 digit</span></span>`
+            : isBelumPunyaNik
+              ? `<span class="badge" style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-size: 10.5px; font-weight: 800; padding: 2px 7px;"><i class="bi bi-person-slash"></i> Belum Ada NIK</span>`
+              : `<span style="font-family: monospace; font-weight: 700; color: #dc2626;">${cleanNik || '-'} <span class="badge badge-rose" style="font-size: 9px; padding: 1px 4px;">Bukan 16 digit</span></span>`
           }
         </td>
         <td><strong>${r.nama || '-'}</strong></td>
@@ -8157,6 +8422,189 @@ function buildCkgGratisRowsHtml(list) {
       </tr>
     `;
   }).join('');
+}
+
+function editCkgGratisRecord(id) {
+  const r = ckgGratisRecords.find(item => item.id === id);
+  if (!r) return;
+
+  openInputModal(r.jenis_kegiatan, true, 'ckg-gratis');
+  currentEditingId = id;
+
+  const setVal = (fieldId, val) => {
+    const el = document.getElementById(fieldId);
+    if (el) el.value = val !== undefined && val !== null ? val : '';
+  };
+
+  setVal('pos_lokasi', r.pos_lokasi);
+
+  const belumNikCb = document.getElementById('belum_punya_nik');
+  const isBelumNik = !!(r.belum_punya_nik || (!r.nik && (r.nik_wali || r.nama_wali)));
+  if (belumNikCb) {
+    belumNikCb.checked = isBelumNik;
+    toggleBelumPunyaNik(isBelumNik);
+  }
+
+  if (!isBelumNik) {
+    setVal('nik', r.nik);
+    const cleanNikVal = String(r.nik || '').replace(/\D/g, '').slice(0, 16);
+    const nikCountSpan = document.getElementById('nikCharCount');
+    const nikHelpText = document.getElementById('nikHelpText');
+    const nikBadge = document.getElementById('nikCounterBadge');
+    if (nikCountSpan) nikCountSpan.textContent = cleanNikVal.length;
+    if (cleanNikVal.length === 16) {
+      if (nikHelpText) {
+        nikHelpText.style.color = '#059669';
+        nikHelpText.innerHTML = '<i class="bi bi-check-circle-fill"></i> NIK 16 digit lengkap & valid';
+      }
+      if (nikBadge) {
+        nikBadge.style.background = '#ecfdf5';
+        nikBadge.style.color = '#059669';
+        nikBadge.style.borderColor = '#a7f3d0';
+      }
+    }
+  }
+
+  setVal('nama', r.nama);
+  setVal('tanggal_lahir', formatDateToYYYYMMDD(r.tanggal_lahir));
+  setVal('usia', r.usia);
+  setVal('jenis_kelamin', r.jenis_kelamin);
+  setVal('no_whatsapp', r.no_whatsapp);
+  setVal('status_pernikahan', r.status_pernikahan || 'MENIKAH');
+  setVal('pekerjaan', r.pekerjaan);
+
+  setVal('bb', r.bb);
+  setVal('tb', r.tb);
+  setVal('lp', r.lp);
+  setVal('imt', r.imt);
+  setVal('td_sistolik', r.td_sistolik);
+  setVal('td_diastolik', r.td_diastolik);
+  setVal('gula_darah', r.gula_darah);
+  setVal('kolesterol', r.kolesterol);
+  setVal('hb', r.hb);
+  setVal('telinga', r.telinga || 'Normal');
+  setVal('mata', r.mata || 'Normal');
+  setVal('gigi', r.gigi || 'Normal');
+
+  if (r.katarak === 'Ya') {
+    const el = document.getElementById('katarak_ya');
+    if (el) el.checked = true;
+  } else {
+    const el = document.getElementById('katarak_tidak');
+    if (el) el.checked = true;
+  }
+
+  setVal('nik_wali', r.nik_wali || '');
+  setVal('nama_wali', r.nama_wali || '');
+  setVal('tanggal_lahir_wali', formatDateToYYYYMMDD(r.tanggal_lahir_wali) || '');
+  setVal('jenis_kelamin_wali', r.jenis_kelamin_wali || '');
+  setVal('no_whatsapp_wali', r.no_whatsapp_wali || '');
+
+  const tanpaWaliCb = document.getElementById('daftarkan_tanpa_wali');
+  if (tanpaWaliCb) {
+    tanpaWaliCb.checked = !!r.tanpa_wali;
+    toggleTanpaWaliInputs(!!r.tanpa_wali);
+  }
+
+  let katRadioId = 'kat_dewasa';
+  if (r.kategori_sasaran) {
+    katRadioId = 'kat_' + r.kategori_sasaran;
+  } else {
+    const age = parseInt(r.usia) || 0;
+    if (age <= 5) katRadioId = 'kat_bayi_balita';
+    else if (age <= 6) katRadioId = 'kat_prasekolah';
+    else if (age < 18) katRadioId = 'kat_sekolah_remaja';
+    else if (age >= 60) katRadioId = 'kat_lansia';
+  }
+  const radEl = document.getElementById(katRadioId);
+  if (radEl) radEl.checked = true;
+
+  updateDataWaliVisibility();
+  if (isBelumNik && belumNikCb) {
+    belumNikCb.checked = true;
+    toggleBelumPunyaNik(true);
+  }
+
+  setTimeout(() => {
+    initWilayahDropdowns();
+    setTimeout(() => {
+      setVal('provinsi', r.provinsi || 'Jawa Barat');
+      setVal('kab_kota', r.kab_kota || 'Kab. Bandung');
+      setVal('kecamatan', r.kecamatan || 'Banjaran');
+      setVal('kelurahan', r.kelurahan || 'Banjaran Kota');
+      setVal('alamat', r.alamat || '');
+    }, 50);
+  }, 50);
+}
+
+async function deleteCkgGratisRecord(id) {
+  const targetRecord = ckgGratisRecords.find(r => r.id === id);
+  if (!targetRecord) {
+    showToast('Data Cek Kesehatan Gratis tidak ditemukan!', 'error');
+    return;
+  }
+
+  const result = await Swal.fire({
+    title: 'Hapus Data CKG Gratis?',
+    html: `<div style="font-size: 13.5px; text-align: left; line-height: 1.5;">
+            Apakah Anda yakin ingin menghapus data pasien:
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 8px; margin: 10px 0; font-size: 13px;">
+              <strong>Nama:</strong> ${targetRecord.nama}<br>
+              <strong>NIK:</strong> ${targetRecord.nik || (targetRecord.belum_punya_nik ? 'Belum Punya NIK' : '-')}<br>
+              <strong>ID:</strong> ${targetRecord.id}
+            </div>
+            <span style="color: #dc2626; font-weight: 600; font-size: 12px;">
+              <i class="bi bi-cloud-arrow-down-fill"></i> Data akan dihapus dari Cloud D1 Database (Tabel CKG Gratis).
+            </span>
+          </div>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: '<i class="bi bi-trash-fill"></i> Ya, Hapus Data',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!result.isConfirmed) return;
+
+  Swal.fire({
+    title: 'Menghapus Data dari Cloud Database...',
+    html: `<div style="font-size: 13px; color: #475569; margin-top: 6px;">
+            <i class="bi bi-cloud-arrow-up-fill" style="color: #059669;"></i> Menghapus <strong>${targetRecord.nama}</strong> dari Cloud D1...
+          </div>`,
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    const res = await fetch(`/api/ckg-gratis?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP Error ${res.status}: Gagal menghapus dari server cloud`);
+    }
+
+    ckgGratisRecords = ckgGratisRecords.filter(r => r.id !== id);
+    safeLocalStorageSet('ckg_gratis_records', JSON.stringify(ckgGratisRecords));
+    if (typeof CkgIdb !== 'undefined') CkgIdb.set('ckg_gratis_records', ckgGratisRecords);
+
+    renderCkgGratisTable();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Berhasil Dihapus!',
+      text: `Data pasien ${targetRecord.nama} berhasil dihapus dari Cloud Database CKG Gratis.`,
+      timer: 1800,
+      showConfirmButton: false
+    });
+  } catch (err) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Menghapus',
+      text: err.message
+    });
+  }
 }
 
 function resetCkgGratisFilters() {
@@ -9290,8 +9738,8 @@ function emptyRecycleBin() {
   });
 }
 
-function viewDetailModal(id) {
-  const r = records.find(item => item.id === id);
+function viewDetailModal(id, source = 'records') {
+  const r = (source === 'ckg-gratis' ? ckgGratisRecords.find(item => item.id === id) : null) || records.find(item => item.id === id) || ckgGratisRecords.find(item => item.id === id);
   if (!r) return;
 
   const modalBody = document.getElementById('detailModalBody');
@@ -9692,9 +10140,10 @@ function exportToCSV() {
  * Export Data CKG to Excel (.XLSX) in the format matching Bot ENCO (CKG Umum)
  * Compatible with Bot ENCO Pendaftaran & Pelayanan tabs.
  */
-function exportToBotEncoXLSX() {
-  if (records.length === 0) {
-    showToast('Tidak ada data untuk diekspor!', 'error');
+function exportToBotEncoXLSX(source = 'records') {
+  const dataPool = (source === 'ckg-gratis') ? ckgGratisRecords : records;
+  if (dataPool.length === 0) {
+    showToast(source === 'ckg-gratis' ? 'Tidak ada data Cek Kesehatan Gratis untuk diekspor!' : 'Tidak ada data untuk diekspor!', 'error');
     return;
   }
 
@@ -9797,13 +10246,14 @@ function exportToBotEncoXLSX() {
   }).then((result) => {
     if (result.isConfirmed && result.value) {
       const { kategoriVal, bulanVal, tahunVal, petugasVal } = result.value;
-      processExportBotEncoXLSX(kategoriVal, bulanVal, tahunVal, petugasVal);
+      processExportBotEncoXLSX(kategoriVal, bulanVal, tahunVal, petugasVal, source);
     }
   });
 }
 
-function processExportBotEncoXLSX(kategoriVal, bulanVal, tahunVal, petugasVal) {
-  let targetRecords = getVisibleRecords(records);
+function processExportBotEncoXLSX(kategoriVal, bulanVal, tahunVal, petugasVal, source = 'records') {
+  const dataPool = (source === 'ckg-gratis') ? ckgGratisRecords : records;
+  let targetRecords = getVisibleRecords(dataPool);
 
   // Filter Kategori
   if (kategoriVal === 'umum') {
@@ -10015,7 +10465,8 @@ function processExportBotEncoXLSX(kategoriVal, bulanVal, tahunVal, petugasVal) {
 
 let selectedImportFile = null;
 
-function openImportModal() {
+function openImportModal(target = 'records') {
+  currentImportTarget = target || 'records';
   const modal = document.getElementById('importModal');
   if (modal) modal.classList.add('open', 'active');
   selectedImportFile = null;
@@ -10587,11 +11038,13 @@ async function executeAdminXLSXImport() {
   const chunkSize = 20;
   let uploaded = 0;
   let failed = 0;
+  const isCkgGratisImport = (currentImportTarget === 'ckg-gratis');
+  const importEndpoint = isCkgGratisImport ? '/api/ckg-gratis' : '/api/ckg';
 
   for (let i = 0; i < parsedAdminRecords.length; i += chunkSize) {
     const chunk = parsedAdminRecords.slice(i, i + chunkSize);
     try {
-      const res = await fetch('/api/ckg', {
+      const res = await fetch(importEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(chunk)
@@ -10608,11 +11061,16 @@ async function executeAdminXLSXImport() {
     if (txtEl) txtEl.textContent = `${uploaded + failed} / ${parsedAdminRecords.length} data pasien (${pct}%)`;
   }
 
-  records = [...parsedAdminRecords, ...records];
-  saveRecordsToStorage();
-
-  renderApp();
-  updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
+  if (isCkgGratisImport) {
+    ckgGratisRecords = [...parsedAdminRecords, ...ckgGratisRecords];
+    saveCkgGratisRecordsToStorage();
+    renderCkgGratisTable();
+  } else {
+    records = [...parsedAdminRecords, ...records];
+    saveRecordsToStorage();
+    renderApp();
+    updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
+  }
 
   let breakdownList = Object.entries(officerStats).map(([pName, cnt]) => {
     return `<li style="margin-bottom:4px;"><strong>${pName}</strong>: <span style="color:#059669; font-weight:700;">${cnt} Data Pasien</span></li>`;
@@ -11216,11 +11674,13 @@ function executeXLSXImport() {
       const chunkSize = 20;
       let uploaded = 0;
       let failed = 0;
+      const isCkgGratisImport = (currentImportTarget === 'ckg-gratis');
+      const importEndpoint = isCkgGratisImport ? '/api/ckg-gratis' : '/api/ckg';
 
       for (let i = 0; i < newRecords.length; i += chunkSize) {
         const chunk = newRecords.slice(i, i + chunkSize);
         try {
-          const res = await fetch('/api/ckg', {
+          const res = await fetch(importEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(chunk)
@@ -11236,10 +11696,16 @@ function executeXLSXImport() {
       }
 
       // Update local cache
-      records = [...newRecords, ...records];
-      saveRecordsToStorage();
-      renderApp();
-      updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
+      if (isCkgGratisImport) {
+        ckgGratisRecords = [...newRecords, ...ckgGratisRecords];
+        saveCkgGratisRecordsToStorage();
+        renderCkgGratisTable();
+      } else {
+        records = [...newRecords, ...records];
+        saveRecordsToStorage();
+        renderApp();
+        updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
+      }
 
       // Show result
       let skippedNotice = '';
