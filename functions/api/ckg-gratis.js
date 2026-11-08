@@ -35,12 +35,65 @@ export async function onRequestGet(context) {
       )
     `).run();
 
-    const { results } = await env.DB.prepare('SELECT * FROM ckg_gratis_records ORDER BY rowid DESC').all();
-    const parsed = (results || []).map(r => {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS enco_pasien (
+        id TEXT PRIMARY KEY,
+        nik TEXT NOT NULL UNIQUE,
+        nama TEXT NOT NULL,
+        tanggal_lahir TEXT,
+        jenis_kelamin TEXT,
+        status_pernikahan TEXT DEFAULT '',
+        pekerjaan TEXT DEFAULT '',
+        provinsi TEXT DEFAULT 'Jawa Barat',
+        kab_kota TEXT DEFAULT 'Kab. Bandung',
+        kecamatan TEXT DEFAULT 'Banjaran',
+        kelurahan TEXT DEFAULT '',
+        alamat TEXT DEFAULT '',
+        no_tiket TEXT,
+        kategori TEXT DEFAULT 'Umum',
+        status_pendaftaran TEXT DEFAULT 'Sudah Terdaftar',
+        status_pelayanan TEXT DEFAULT 'Belum Pelayanan',
+        petugas_bot TEXT DEFAULT '',
+        raw_details TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+
+    let results = [];
+    try {
+      const q = await env.DB.prepare(`
+        SELECT c.*, 
+               e.id AS enco_pasien_id, 
+               e.status_pendaftaran AS enco_status_pendaftaran, 
+               e.status_pelayanan AS enco_status_pelayanan,
+               e.no_tiket AS enco_no_tiket
+        FROM ckg_gratis_records c
+        LEFT JOIN enco_pasien e ON TRIM(c.nik) = TRIM(e.nik)
+        ORDER BY c.rowid DESC
+      `).all();
+      results = q.results || [];
+    } catch (_) {
+      const q = await env.DB.prepare('SELECT * FROM ckg_gratis_records ORDER BY rowid DESC').all();
+      results = q.results || [];
+    }
+
+    const parsed = results.map(r => {
       let item = {};
       if (r.raw_json) {
         try { item = JSON.parse(r.raw_json); } catch (_) {}
       }
+
+      const isInBankData = (
+        r.enco_pasien_id != null ||
+        item.from_bank_data == 1 ||
+        item.is_bank_data == 1 ||
+        (item.status_pendaftaran && (item.status_pendaftaran === 'Sudah Terdaftar' || item.status_pendaftaran === 'berhasil')) ||
+        (item.status_pelayanan && (item.status_pelayanan === 'Selesai Pelayanan' || item.status_pelayanan === 'selesai')) ||
+        (r.enco_status_pendaftaran && (r.enco_status_pendaftaran === 'Sudah Terdaftar' || r.enco_status_pendaftaran === 'berhasil')) ||
+        (r.enco_status_pelayanan && (r.enco_status_pelayanan === 'Selesai Pelayanan' || r.enco_status_pelayanan === 'selesai'))
+      ) ? 1 : 0;
+
       return {
         ...item,
         id: item.id || (r.id ? (String(r.id).startsWith('CKG-G-') ? String(r.id) : `CKG-G-${r.id}`) : 'CKG-G-' + Date.now()),
@@ -51,7 +104,14 @@ export async function onRequestGet(context) {
         tanggal_entry: item.tanggal_entry || r.tanggal_entry || '',
         created_at: item.created_at || r.tanggal_entry || '',
         jenis_kegiatan: item.jenis_kegiatan || r.lokasi_pelayanan || 'Luar Gedung',
-        status_validasi: item.status_validasi || r.status_entry || 'Terverifikasi'
+        status_validasi: item.status_validasi || r.status_entry || 'Terverifikasi',
+        is_bank_data: isInBankData,
+        from_bank_data: item.from_bank_data ? 1 : (isInBankData ? 1 : 0),
+        enco_pasien_id: r.enco_pasien_id || null,
+        enco_status_pendaftaran: r.enco_status_pendaftaran || item.status_pendaftaran || '',
+        enco_status_pelayanan: r.enco_status_pelayanan || item.status_pelayanan || '',
+        status_pendaftaran: r.enco_status_pendaftaran || item.status_pendaftaran || '',
+        status_pelayanan: r.enco_status_pelayanan || item.status_pelayanan || ''
       };
     });
 

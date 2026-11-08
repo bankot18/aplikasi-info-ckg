@@ -638,7 +638,16 @@ async function fetchCkgGratisFromCloud(showFeedback = false) {
           tanggal_lahir_wali: r.tanggal_lahir_wali || '',
           jenis_kelamin_wali: r.jenis_kelamin_wali || '',
           no_whatsapp_wali: r.no_whatsapp_wali || '',
-          wali_nomor_sama: r.wali_nomor_sama ? 1 : 0
+          wali_nomor_sama: r.wali_nomor_sama ? 1 : 0,
+          is_bank_data: r.is_bank_data !== undefined ? r.is_bank_data : (r.from_bank_data || 0),
+          from_bank_data: r.from_bank_data !== undefined ? r.from_bank_data : 0,
+          enco_pasien_id: r.enco_pasien_id || null,
+          enco_status_pendaftaran: r.enco_status_pendaftaran || '',
+          enco_status_pelayanan: r.enco_status_pelayanan || '',
+          status_pendaftaran: r.status_pendaftaran || r.enco_status_pendaftaran || '',
+          status_pelayanan: r.status_pelayanan || r.enco_status_pelayanan || '',
+          in_bot_queue: r.in_bot_queue || 0,
+          bot_queue_date: r.bot_queue_date || ''
         }));
 
         safeLocalStorageSet('ckg_gratis_records', JSON.stringify(ckgGratisRecords));
@@ -2436,6 +2445,7 @@ function setupEventListeners() {
   const nikInput = document.getElementById('nik');
   if (nikInput) {
     nikInput.addEventListener('input', () => {
+      nikInput.dataset.fromBankData = '0';
       const val = nikInput.value.replace(/\D/g, '').slice(0, 16);
       nikInput.value = val; // strip non-digits and cap at exactly 16
       
@@ -7057,6 +7067,8 @@ function openInputModal(kategori = 'Luar Gedung', isEdit = false, target = 'reco
     currentEditingId = null;
     const form = document.getElementById('ckgForm');
     if (form) form.reset();
+    const nikInputEl = document.getElementById('nik');
+    if (nikInputEl) nikInputEl.dataset.fromBankData = '0';
     const countEl = document.getElementById('nikWaliCounter');
     if (countEl) { countEl.textContent = '0'; countEl.style.color = '#64748b'; }
     const nikCountSpan = document.getElementById('nikCharCount');
@@ -7396,10 +7408,13 @@ async function handleFormSubmit(e) {
   const existingRecord = currentEditingId ? targetDataset.find(r => r.id === currentEditingId) : null;
 
   const prefix = isCkgGratis ? 'CKG-G-2026-' : 'CKG-2026-';
+  const isFromBankData = (document.getElementById('nik')?.dataset?.fromBankData === '1' || existingRecord?.from_bank_data === 1 || existingRecord?.is_bank_data === 1) ? 1 : 0;
   const formData = {
     id: currentEditingId || `${prefix}${String(targetDataset.length + 1).padStart(3, '0')}`,
     kategori_sasaran: katSasaran,
     kategori_umur: getKategoriUmur(parseInt(document.getElementById('usia')?.value) || 0, tanggalLahir),
+    from_bank_data: isFromBankData,
+    is_bank_data: isFromBankData,
     belum_punya_nik: belumPunyaNik ? 1 : 0,
     tanpa_wali: isTanpaWali ? 1 : 0,
     nik_wali: isTanpaWali ? '' : nikWali,
@@ -7441,7 +7456,12 @@ async function handleFormSubmit(e) {
     created_by: existingRecord ? (existingRecord.created_by || 'Admin') : (sessionStorage.getItem('ckg_user_name') || currentRole || 'Admin'),
     petugas_entry: existingRecord ? (existingRecord.petugas_entry || 'Admin') : (sessionStorage.getItem('ckg_user_name') || currentRole || 'Admin'),
     created_at: existingRecord ? (existingRecord.created_at || new Date().toISOString().substring(0, 10)) : new Date().toISOString().substring(0, 10),
-    tanggal_entry: new Date().toISOString().substring(0, 10)
+    tanggal_entry: new Date().toISOString().substring(0, 10),
+    status_pendaftaran: existingRecord ? (existingRecord.status_pendaftaran || '') : '',
+    status_pelayanan: existingRecord ? (existingRecord.status_pelayanan || '') : '',
+    enco_pasien_id: existingRecord ? (existingRecord.enco_pasien_id || null) : null,
+    in_bot_queue: existingRecord ? (existingRecord.in_bot_queue || 0) : 0,
+    bot_queue_date: existingRecord ? (existingRecord.bot_queue_date || '') : ''
   };
 
   const isEdit = !!currentEditingId;
@@ -8463,6 +8483,17 @@ function buildTableRowsHtml(data) {
       ? `<span class="badge badge-cyan"><i class="bi bi-geo-alt-fill"></i> Luar Gedung</span>`
       : `<span class="badge badge-emerald"><i class="bi bi-building-fill"></i> Dalam Gedung</span>`;
 
+    const cleanRecNik = String(r.nik || '').replace(/\D/g, '');
+    const isInEncoCacheRec = typeof encoState !== 'undefined' && Array.isArray(encoState.cachedRecords) && encoState.cachedRecords.some(ep => cleanRecNik && String(ep.nik || '').replace(/\D/g, '') === cleanRecNik);
+    const isBankDataOrAsikRec = !!(
+      r.is_bank_data == 1 ||
+      r.from_bank_data == 1 ||
+      r.enco_pasien_id ||
+      isInEncoCacheRec ||
+      (r.status_pelayanan && (r.status_pelayanan.toLowerCase().includes('selesai'))) ||
+      (r.status_pendaftaran && (r.status_pendaftaran.toLowerCase().includes('terdaftar') || r.status_pendaftaran.toLowerCase().includes('berhasil')))
+    );
+
     return `
       <tr class="${trClass}">
         <td style="text-align: center;">
@@ -8486,7 +8517,10 @@ function buildTableRowsHtml(data) {
         </td>
         <td>${kegiatanBadge}</td>
         <td>
-          <strong>${r.nama}</strong><br>
+          <div style="display: inline-flex; align-items: center; gap: 5px;">
+            <strong>${r.nama}</strong>
+            ${isBankDataOrAsikRec ? `<i class="bi bi-check-circle-fill" style="color: #10b981; font-size: 13.5px; line-height: 1; flex-shrink: 0;" title="Terdaftar di Bank Data ASIK"></i>` : ''}
+          </div><br>
           ${isNik16Digit(r.nik)
             ? `<span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${r.nik}</span>`
             : `<span style="font-size: 11px; color: #dc2626; font-weight: 700; font-family: monospace;">${r.nik || '-'} <span class="badge badge-rose" style="font-size: 9px; padding: 1px 5px;" title="NIK bukan 16 digit"><i class="bi bi-exclamation-triangle-fill"></i> ${String(r.nik || '').replace(/\D/g, '').length ? String(r.nik || '').replace(/\D/g, '').length + ' Digit' : 'NIK Kosong'}</span></span>`
@@ -9138,6 +9172,23 @@ function buildCkgGratisRowsHtml(list) {
           ? `<div style="margin-top: 3px;"><span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 10px; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-hourglass-split"></i> Antre Bot</span></div>`
           : '';
 
+    const isInEncoCache = typeof encoState !== 'undefined' && Array.isArray(encoState.cachedRecords) && encoState.cachedRecords.some(ep => cleanNik && String(ep.nik || '').replace(/\D/g, '') === cleanNik);
+    const isFromBankData = !!(
+      r.is_bank_data == 1 ||
+      r.from_bank_data == 1 ||
+      r.enco_pasien_id ||
+      isInEncoCache
+    );
+    const isEntriBotAsik = !!(
+      isBotSelesai ||
+      isBotTerdaftar ||
+      (r.status_pelayanan && (r.status_pelayanan.toLowerCase().includes('selesai'))) ||
+      (r.status_pendaftaran && (r.status_pendaftaran.toLowerCase().includes('terdaftar') || r.status_pendaftaran.toLowerCase().includes('berhasil'))) ||
+      (r.enco_status_pendaftaran && (r.enco_status_pendaftaran.toLowerCase().includes('terdaftar') || r.enco_status_pendaftaran.toLowerCase().includes('berhasil'))) ||
+      (r.enco_status_pelayanan && (r.enco_status_pelayanan.toLowerCase().includes('selesai')))
+    );
+    const showCentangHijau = isFromBankData || isEntriBotAsik;
+
     return `
       <tr>
         <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="chk-ckg-gratis-row" value="${r.id}" style="cursor: pointer; width: 15px; height: 15px; accent-color: #0284c7;"></td>
@@ -9145,8 +9196,9 @@ function buildCkgGratisRowsHtml(list) {
         
         <!-- KOLOM 2: NAMA PASIEN & IDENTITAS -->
         <td style="vertical-align: middle;">
-          <div style="font-weight: 800; font-size: 13.5px; color: #1e293b; margin-bottom: 3px;">
-            ${r.nama || '-'}
+          <div style="font-weight: 800; font-size: 13.5px; color: #1e293b; margin-bottom: 3px; display: inline-flex; align-items: center; gap: 6px;">
+            <span>${r.nama || '-'}</span>
+            ${showCentangHijau ? `<i class="bi bi-check-circle-fill" style="color: #10b981; font-size: 14px; line-height: 1; flex-shrink: 0;" title="Terdaftar di Bank Data ASIK / Selesai Entri Bot"></i>` : ''}
           </div>
           <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 4px;">
             ${is16
@@ -9270,6 +9322,8 @@ function editCkgGratisRecord(id) {
 
   if (!isBelumNik) {
     setVal('nik', r.nik);
+    const nikInputEl = document.getElementById('nik');
+    if (nikInputEl) nikInputEl.dataset.fromBankData = String(r.from_bank_data || r.is_bank_data || 0);
     const cleanNikVal = String(r.nik || '').replace(/\D/g, '').slice(0, 16);
     const nikCountSpan = document.getElementById('nikCharCount');
     const nikHelpText = document.getElementById('nikHelpText');
@@ -10620,6 +10674,8 @@ function editRecord(id) {
 
   setVal('pos_lokasi', r.pos_lokasi);
   setVal('nik', r.nik);
+  const nikInputEl = document.getElementById('nik');
+  if (nikInputEl) nikInputEl.dataset.fromBankData = String(r.from_bank_data || r.is_bank_data || 0);
   const cleanNikVal = String(r.nik || '').replace(/\D/g, '').slice(0, 16);
   const nikCountSpan = document.getElementById('nikCharCount');
   const nikHelpText = document.getElementById('nikHelpText');
@@ -13217,15 +13273,27 @@ async function triggerCekNikEnco(target = 'pasien') {
       }
 
       // Buka kolom identitas
+      if (!isWali) {
+        const nikInput = document.getElementById('nik');
+        if (nikInput) nikInput.dataset.fromBankData = '1';
+      }
       setDemographicLock(target, false);
       showToast(`Data ${isWali ? 'Wali' : 'Pasien'} berhasil dikonfirmasi dan diisi otomatis dari bank data ASIK`, 'success');
     } else {
       // User membatalkan konfirmasi -> buka kuncian kolom agar bisa diisi/diubah manual
+      if (!isWali) {
+        const nikInput = document.getElementById('nik');
+        if (nikInput) nikInput.dataset.fromBankData = '0';
+      }
       setDemographicLock(target, false);
       showToast(`Kolom ${isWali ? 'data wali' : 'identitas pasien'} telah dibuka untuk pengisian manual`, 'info');
     }
   } else {
     // Skenario 2: DATA TIDAK DITEMUKAN
+    if (!isWali) {
+      const nikInput = document.getElementById('nik');
+      if (nikInput) nikInput.dataset.fromBankData = '0';
+    }
     await Swal.fire({
       title: 'Data Tidak Ditemukan',
       icon: 'info',
