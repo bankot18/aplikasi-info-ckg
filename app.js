@@ -250,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchMasterSekolahFromCloud();
   fetchMasterPosyanduFromCloud();
   checkAuthSession();
+  fetchBotQueueCounts();
 
   // Load maintenance settings from Cloud D1 and poll periodically
   loadMaintenanceSettings();
@@ -1513,6 +1514,7 @@ function performLoginSuccess(user) {
     fetchLiveSessions();
 
     checkAuthSession();
+  fetchBotQueueCounts();
     hideLoadingOverlay();
 
     // Background load maintenance settings and apply locks
@@ -1558,6 +1560,7 @@ function handleLogout() {
         sessionStorage.removeItem('ckg_allowed_menus');
         sessionStorage.removeItem('ckg_sekolah_filter');
         checkAuthSession();
+  fetchBotQueueCounts();
         Swal.fire({
           icon: 'success',
           title: 'Berhasil Keluar',
@@ -1575,6 +1578,7 @@ function handleLogout() {
     sessionStorage.removeItem('ckg_allowed_menus');
     sessionStorage.removeItem('ckg_sekolah_filter');
     checkAuthSession();
+  fetchBotQueueCounts();
     showToast('Anda telah keluar dari sistem CKG.', 'info');
   }
 }
@@ -1767,6 +1771,7 @@ function handleSekolahLogin(e) {
   showLoadingOverlay('Memverifikasi Akun...', `Login sebagai ${school.nama}`);
   setTimeout(() => {
     checkAuthSession();
+  fetchBotQueueCounts();
     hideLoadingOverlay();
     Swal.fire({
       icon: 'success',
@@ -1871,6 +1876,7 @@ function handlePosyanduLogin(e) {
   showLoadingOverlay('Memverifikasi Akun...', `Login sebagai ${posyandu.nama}`);
   setTimeout(() => {
     checkAuthSession();
+  fetchBotQueueCounts();
     hideLoadingOverlay();
     Swal.fire({
       icon: 'success',
@@ -2640,6 +2646,7 @@ function switchView(viewId) {
     renderLaporanView();
   } else if (viewId === 'sekolah') {
     fetchSekolahRecordsFromCloud(false);
+    fetchBotQueueCounts();
   } else if (viewId === 'alat-bnhp') {
     if (typeof initAlatBnhpView === 'function') initAlatBnhpView();
   } else if (viewId === 'data-records') {
@@ -2647,6 +2654,7 @@ function switchView(viewId) {
   } else if (viewId === 'ckg-gratis') {
     renderCkgGratisTable();
     fetchCkgGratisFromCloud(false);
+    fetchBotQueueCounts();
   } else if (viewId === 'recycle-data') {
     renderRecycleTable();
   } else if (viewId === 'enco') {
@@ -8500,6 +8508,454 @@ function buildTableRowsHtml(data) {
 }
 
 /* ==========================================================================
+   🤖 FITUR INTEGRASI ANTREAN BOT ENCO (CKG UMUM & CKG SEKOLAH)
+   ========================================================================== */
+
+let botQueueData = {
+  UMUM: [],
+  SEKOLAH: [],
+  summary: {}
+};
+
+// Ambil jumlah antrean untuk badge di header view
+async function fetchBotQueueCounts() {
+  try {
+    const res = await fetch('/api/enco/queue');
+    if (!res.ok) return;
+    const json = await res.json();
+    if (json.success && json.summary) {
+      const bUmum = document.getElementById('badgeQueueCountUmum');
+      const bSekolah = document.getElementById('badgeQueueCountSekolah');
+      if (bUmum) bUmum.textContent = json.summary.total_umum || 0;
+      if (bSekolah) bSekolah.textContent = json.summary.total_sekolah || 0;
+      botQueueData.summary = json.summary;
+    }
+  } catch (err) {
+    console.warn('Gagal memuat count antrean bot:', err);
+  }
+}
+
+// Toggle Pilih Semua Checkbox CKG Gratis
+function toggleSelectAllCkgGratis(masterEl) {
+  const isChecked = !!masterEl.checked;
+  document.querySelectorAll('.chk-ckg-gratis-row').forEach(chk => {
+    chk.checked = isChecked;
+  });
+}
+
+// Kirim pasien terpilih ke antrean Bot ENCO (CKG Umum)
+async function sendSelectedCkgGratisToBotQueue() {
+  const checkedBoxes = Array.from(document.querySelectorAll('.chk-ckg-gratis-row:checked'));
+  if (checkedBoxes.length === 0) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Belum Ada Pasien Dipilih',
+      text: 'Silakan centang satu atau beberapa pasien pada kotak centang tabel terlebih dahulu.'
+    });
+    return;
+  }
+
+  const selectedIds = checkedBoxes.map(c => c.value);
+  const selectedRecords = ckgGratisRecords.filter(r => selectedIds.includes(r.id));
+
+  const result = await Swal.fire({
+    title: '<div style="font-size: 17px; font-weight: 800; color: #0284c7; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-robot" style="font-size: 24px;"></i> Masukkan ke Antrean Bot ENCO</div>',
+    html: `
+      <div style="text-align: left; font-size: 13px; color: #334155; line-height: 1.5;">
+        Anda akan memasukkan <strong>${selectedRecords.length} pasien</strong> ke dalam antrean pengerjaan <strong>Bot ENCO (CKG Umum)</strong>.<br><br>
+        Setelah dimasukkan, Anda dapat langsung mengklik tombol <em>"Ambil Data dari CKG Bankot"</em> pada ekstensi Chrome Bot ENCO untuk memproses pendaftaran & pelayanan secara otomatis tanpa perlu unduh/unggah file Excel manual.
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: `<i class="bi bi-cloud-arrow-up-fill"></i> Ya, Masukkan (${selectedRecords.length} Pasien)`,
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#0284c7',
+    cancelButtonColor: '#64748b'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    showLoadingOverlay('Memproses Antrean Bot...', `Mengirim ${selectedRecords.length} data pasien ke antrean Cloud D1...`);
+    const petugas = sessionStorage.getItem('ckg_user_name') || 'Petugas';
+    const res = await fetch('/api/enco/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: selectedRecords,
+        jenis: 'UMUM',
+        petugas: petugas
+      })
+    });
+    hideLoadingOverlay();
+    const json = await res.json();
+    if (json.success) {
+      // Tandai records secara lokal
+      selectedRecords.forEach(r => {
+        r.in_bot_queue = 1;
+        r.bot_queue_date = new Date().toISOString();
+      });
+      saveCkgGratisRecordsToStorage();
+      renderCkgGratisTable();
+      fetchBotQueueCounts();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil Masuk Antrean Bot!',
+        html: `
+          <div style="font-size: 13.5px; color: #334155; line-height: 1.5;">
+            <strong>${json.count || selectedRecords.length} data pasien</strong> berhasil ditambahkan ke antrean <strong>CKG Umum</strong>.<br><br>
+            Buka ekstensi <strong>Bot ENCO</strong>, pilih menu Pendaftaran atau Pelayanan, lalu klik <strong>"Ambil Data dari CKG Bankot"</strong> untuk mulai mengerjakan.
+          </div>
+        `,
+        confirmButtonColor: '#059669'
+      });
+    } else {
+      throw new Error(json.error || 'Gagal menyimpan antrean');
+    }
+  } catch (err) {
+    hideLoadingOverlay();
+    Swal.fire('Gagal Menambahkan Antrean', err.message, 'error');
+  }
+}
+
+// Kirim single pasien CKG Gratis ke antrean Bot
+async function sendSingleCkgGratisToBotQueue(id) {
+  const r = ckgGratisRecords.find(item => item.id === id);
+  if (!r) return;
+
+  try {
+    const petugas = sessionStorage.getItem('ckg_user_name') || 'Petugas';
+    const res = await fetch('/api/enco/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: [r],
+        jenis: 'UMUM',
+        petugas: petugas
+      })
+    });
+    const json = await res.json();
+    if (json.success) {
+      r.in_bot_queue = 1;
+      r.bot_queue_date = new Date().toISOString();
+      saveCkgGratisRecordsToStorage();
+      renderCkgGratisTable();
+      fetchBotQueueCounts();
+      showToast(`Pasien "${r.nama || r.nik}" berhasil dimasukkan ke antrean Bot ENCO!`, 'success');
+    } else {
+      throw new Error(json.error || 'Gagal menyimpan antrean');
+    }
+  } catch (err) {
+    showToast('Gagal: ' + err.message, 'error');
+  }
+}
+
+// Kirim seluruh siswa di kelas/sekolah yang sedang tampil ke antrean Bot ENCO (CKG Sekolah)
+async function sendCurrentSekolahToBotQueue() {
+  const chosenSekolah = (document.getElementById('filterSelectSekolah')?.value || '').trim().toUpperCase();
+  const chosenKelas = (document.getElementById('filterSelectKelas')?.value || '').trim().toUpperCase();
+
+  if (!chosenSekolah) {
+    Swal.fire('Pilih Sekolah', 'Silakan tentukan Sekolah terlebih dahulu.', 'warning');
+    return;
+  }
+
+  let dataset = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === chosenSekolah);
+  if (chosenKelas) {
+    dataset = dataset.filter(r => (r.kelas || '').toUpperCase() === chosenKelas);
+  }
+
+  if (dataset.length === 0) {
+    Swal.fire('Data Kosong', 'Tidak ada data siswa yang cocok dengan pilihan sekolah dan kelas ini.', 'warning');
+    return;
+  }
+
+  const result = await Swal.fire({
+    title: '<div style="font-size: 17px; font-weight: 800; color: #4f46e5; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="bi bi-robot" style="font-size: 24px;"></i> Masukkan Kelas ke Antrean Bot</div>',
+    html: `
+      <div style="text-align: left; font-size: 13px; color: #334155; line-height: 1.5;">
+        Kirim <strong>${dataset.length} siswa</strong> (${chosenSekolah} ${chosenKelas ? '- ' + chosenKelas : ''}) ke antrean <strong>Bot ENCO (CKG Sekolah)</strong>?<br><br>
+        Data siswa siap diambil langsung di ekstensi Bot ENCO (menu Pendaftaran Anak Sekolah & Pelayanan Siswa).
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: `<i class="bi bi-cloud-arrow-up-fill"></i> Ya, Kirim (${dataset.length} Siswa)`,
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#4f46e5',
+    cancelButtonColor: '#64748b'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    showLoadingOverlay('Memproses Antrean Bot...', `Mengirim ${dataset.length} data siswa ke antrean Cloud D1...`);
+    const petugas = sessionStorage.getItem('ckg_user_name') || 'Petugas';
+    const res = await fetch('/api/enco/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: dataset,
+        jenis: 'SEKOLAH',
+        petugas: petugas
+      })
+    });
+    hideLoadingOverlay();
+    const json = await res.json();
+    if (json.success) {
+      fetchBotQueueCounts();
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil Masuk Antrean Bot Sekolah!',
+        html: `
+          <div style="font-size: 13.5px; color: #334155; line-height: 1.5;">
+            <strong>${json.count || dataset.length} siswa</strong> berhasil ditambahkan ke antrean <strong>CKG Sekolah</strong>.<br><br>
+            Buka ekstensi <strong>Bot ENCO</strong>, lalu klik <strong>"Ambil Data dari CKG Bankot" ➔ Pilih CKG Sekolah</strong>.
+          </div>
+        `,
+        confirmButtonColor: '#4f46e5'
+      });
+    } else {
+      throw new Error(json.error || 'Gagal menyimpan antrean');
+    }
+  } catch (err) {
+    hideLoadingOverlay();
+    Swal.fire('Gagal Menambahkan Antrean', err.message, 'error');
+  }
+}
+
+// Kirim single siswa sekolah ke antrean Bot
+async function sendSingleSekolahToBotQueue(id) {
+  const r = sekolahRecords.find(item => item.id === id);
+  if (!r) return;
+
+  try {
+    const petugas = sessionStorage.getItem('ckg_user_name') || 'Petugas';
+    const res = await fetch('/api/enco/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: [r],
+        jenis: 'SEKOLAH',
+        petugas: petugas
+      })
+    });
+    const json = await res.json();
+    if (json.success) {
+      fetchBotQueueCounts();
+      showToast(`Siswa "${r.nama || r.nik}" berhasil dimasukkan ke antrean Bot Sekolah!`, 'success');
+    } else {
+      throw new Error(json.error || 'Gagal menyimpan antrean');
+    }
+  } catch (err) {
+    showToast('Gagal: ' + err.message, 'error');
+  }
+}
+
+// Buka Modal Kelola Antrean Bot (Popup Lengkap)
+async function openBotQueueModal(jenis = 'UMUM') {
+  showLoadingOverlay('Memuat Antrean Bot...', 'Mengambil data antrean dari Cloud Database...');
+  let queueList = [];
+  let summary = {};
+
+  try {
+    const res = await fetch(`/api/enco/queue?jenis=${jenis}`);
+    const json = await res.json();
+    hideLoadingOverlay();
+    if (json.success) {
+      queueList = json.data || [];
+      summary = json.summary || {};
+    }
+  } catch (err) {
+    hideLoadingOverlay();
+    Swal.fire('Gagal Memuat Antrean', err.message, 'error');
+    return;
+  }
+
+  const isUmum = (jenis === 'UMUM');
+  const titleText = isUmum ? 'Antrean Bot ENCO - CKG Umum' : 'Antrean Bot ENCO - CKG Sekolah';
+  const themeColor = isUmum ? '#0284c7' : '#4f46e5';
+
+  const rowsHtml = queueList.length > 0 ? queueList.map((q, idx) => {
+    const regBadge = (q.status_pendaftaran === 'berhasil' || q.status_pendaftaran === 'Sudah Terdaftar')
+      ? `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 10.5px;"><i class="bi bi-check-circle-fill"></i> Terdaftar</span>`
+      : (q.status_pendaftaran === 'gagal')
+        ? `<span class="badge" style="background: #fee2e2; color: #dc2626; font-weight: 700; font-size: 10.5px;"><i class="bi bi-x-circle-fill"></i> Gagal</span>`
+        : `<span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 10.5px;"><i class="bi bi-hourglass-split"></i> Antre</span>`;
+
+    const pelBadge = (q.status_pelayanan === 'selesai' || q.status_pelayanan === 'Selesai Pelayanan')
+      ? `<span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 700; font-size: 10.5px;"><i class="bi bi-check-circle-fill"></i> Selesai</span>`
+      : `<span class="badge" style="background: #f1f5f9; color: #64748b; font-weight: 700; font-size: 10.5px;"><i class="bi bi-hourglass"></i> Belum</span>`;
+
+    const tiketStr = q.no_tiket ? `<span style="font-family: monospace; font-size: 11px; color: #0284c7; font-weight: 700;">${escapeHtml(q.no_tiket)}</span>` : '-';
+    const detailExtra = !isUmum && q.data ? `<div style="font-size: 11px; color: #64748b;">${escapeHtml(q.data.sekolah || '')} ${q.data.kelas ? '(' + escapeHtml(q.data.kelas) + ')' : ''}</div>` : '';
+
+    return `
+      <tr>
+        <td style="text-align: center; font-weight: 700; color: #64748b; vertical-align: middle;">${idx + 1}</td>
+        <td style="vertical-align: middle;">
+          <div style="font-weight: 800; font-size: 13px; color: #1e293b;">${escapeHtml(q.nama)}</div>
+          <div style="font-family: monospace; font-size: 11px; color: #475569;">${escapeHtml(q.nik)}</div>
+          ${detailExtra}
+        </td>
+        <td style="text-align: center; vertical-align: middle;">${regBadge}</td>
+        <td style="text-align: center; vertical-align: middle;">${pelBadge}</td>
+        <td style="text-align: center; vertical-align: middle;">${tiketStr}</td>
+        <td style="text-align: center; vertical-align: middle;">
+          <button type="button" class="btn btn-danger btn-sm" onclick="removeBotQueueItem('${q.id}', '${jenis}')" title="Hapus dari Antrean" style="padding: 3px 8px; font-size: 10.5px; border-radius: 6px;">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('') : `
+    <tr>
+      <td colspan="6" style="text-align: center; padding: 36px 16px; color: #94a3b8;">
+        <i class="bi bi-robot" style="font-size: 32px; display: block; margin-bottom: 8px; color: #cbd5e1;"></i>
+        <div style="font-weight: 700; font-size: 13.5px; color: #64748b;">Antrean Kosong</div>
+        <div style="font-size: 12px; margin-top: 4px;">Belum ada data ${isUmum ? 'CKG Umum' : 'CKG Sekolah'} yang dimasukkan ke antrean Bot.</div>
+      </td>
+    </tr>
+  `;
+
+  Swal.fire({
+    title: `<div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 800; color: ${themeColor};"><i class="bi bi-robot" style="font-size: 24px;"></i> ${titleText}</div>`,
+    width: '850px',
+    html: `
+      <div style="text-align: left; font-family: 'Plus Jakarta Sans', sans-serif;">
+        <!-- KPI Metrics Header -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; text-align: center;">
+            <div style="font-size: 11px; color: #64748b; font-weight: 700;">TOTAL ANTREAN</div>
+            <div style="font-size: 18px; font-weight: 800; color: #0f172a;">${queueList.length}</div>
+          </div>
+          <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 8px 12px; text-align: center;">
+            <div style="font-size: 11px; color: #854d0e; font-weight: 700;">SIAP / ANTRE</div>
+            <div style="font-size: 18px; font-weight: 800; color: #ca8a04;">${queueList.filter(q => q.status_pendaftaran === 'antre' || q.status_pelayanan === 'antre').length}</div>
+          </div>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 12px; text-align: center;">
+            <div style="font-size: 11px; color: #166534; font-weight: 700;">TERDAFTAR</div>
+            <div style="font-size: 18px; font-weight: 800; color: #16a34a;">${queueList.filter(q => q.status_pendaftaran === 'berhasil' || q.status_pendaftaran === 'Sudah Terdaftar').length}</div>
+          </div>
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; text-align: center;">
+            <div style="font-size: 11px; color: #1e40af; font-weight: 700;">SELESAI LAYANAN</div>
+            <div style="font-size: 18px; font-weight: 800; color: #2563eb;">${queueList.filter(q => q.status_pelayanan === 'selesai' || q.status_pelayanan === 'Selesai Pelayanan').length}</div>
+          </div>
+        </div>
+
+        <!-- Toolbar Aksi Antrean -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+          <div style="font-size: 12.5px; color: #475569; font-weight: 600;">
+            <i class="bi bi-info-circle-fill" style="color: ${themeColor};"></i> Data siap ditarik langsung melalui Bot ENCO.
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="clearCompletedBotQueue('${jenis}')" style="font-size: 11px; padding: 5px 9px;">
+              <i class="bi bi-check2-all"></i> Bersihkan yang Selesai
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="clearAllBotQueue('${jenis}')" style="font-size: 11px; padding: 5px 9px;">
+              <i class="bi bi-trash"></i> Kosongkan Semua
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Antrean -->
+        <div style="max-height: 380px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <table class="custom-table" style="font-size: 12px; width: 100%; margin: 0;">
+            <thead>
+              <tr style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
+                <th style="width: 40px; text-align: center;">NO</th>
+                <th>NAMA & IDENTITAS</th>
+                <th style="width: 100px; text-align: center;">PENDAFTARAN</th>
+                <th style="width: 100px; text-align: center;">PELAYANAN</th>
+                <th style="width: 110px; text-align: center;">NO TIKET</th>
+                <th style="width: 60px; text-align: center;">AKSI</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `,
+    showConfirmButton: true,
+    confirmButtonText: 'Tutup',
+    confirmButtonColor: '#64748b'
+  });
+}
+
+// Hapus satu item dari antrean Bot
+async function removeBotQueueItem(id, jenis) {
+  try {
+    const res = await fetch(`/api/enco/queue/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('Item berhasil dihapus dari antrean Bot.', 'info');
+      fetchBotQueueCounts();
+      openBotQueueModal(jenis);
+    }
+  } catch (err) {
+    showToast('Gagal menghapus item: ' + err.message, 'error');
+  }
+}
+
+// Bersihkan antrean yang statusnya sudah selesai
+async function clearCompletedBotQueue(jenis) {
+  try {
+    const res = await fetch(`/api/enco/queue/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clear_completed: true, jenis: jenis })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(`Berhasil membersihkan ${json.deleted || 0} data yang sudah selesai.`, 'success');
+      fetchBotQueueCounts();
+      openBotQueueModal(jenis);
+    }
+  } catch (err) {
+    showToast('Gagal membersihkan: ' + err.message, 'error');
+  }
+}
+
+// Kosongkan seluruh antrean untuk jenis tertentu
+async function clearAllBotQueue(jenis) {
+  const isUmum = (jenis === 'UMUM');
+  const confirmRes = await Swal.fire({
+    title: 'Kosongkan Seluruh Antrean?',
+    text: `Seluruh data antrean ${isUmum ? 'CKG Umum' : 'CKG Sekolah'} akan dihapus dari antrean Bot ENCO. Data asli di rekam medis tetap tersimpan aman.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Kosongkan Semua',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b'
+  });
+
+  if (!confirmRes.isConfirmed) return;
+
+  try {
+    const res = await fetch(`/api/enco/queue/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clear_all: true, jenis: jenis })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(`Antrean ${isUmum ? 'CKG Umum' : 'CKG Sekolah'} berhasil dikosongkan.`, 'success');
+      fetchBotQueueCounts();
+      openBotQueueModal(jenis);
+    }
+  } catch (err) {
+    showToast('Gagal mengosongkan antrean: ' + err.message, 'error');
+  }
+}
+
+/* ==========================================================================
    🏥 VIEW: CEK KESEHATAN GRATIS (FORMAT TEMPLATE BOT ENCO)
    ========================================================================== */
 
@@ -8671,8 +9127,20 @@ function buildCkgGratisRowsHtml(list) {
     const isGulaTinggi = r.gula_darah > 200;
     const isAnemia = r.hb > 0 && r.hb < 11.0;
 
+    const isBotSelesai = (r.status_pelayanan === 'Selesai Pelayanan' || r.status_pelayanan === 'selesai');
+    const isBotTerdaftar = (r.status_pendaftaran === 'Sudah Terdaftar' || r.status_pendaftaran === 'berhasil');
+    const isBotAntre = !!(r.in_bot_queue || r.bot_queue_date);
+    const botStatusBadge = isBotSelesai
+      ? `<div style="margin-top: 3px;"><span class="badge" style="background: #ecfdf5; color: #059669; font-weight: 800; font-size: 10px; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-robot"></i> Selesai Bot</span></div>`
+      : isBotTerdaftar
+        ? `<div style="margin-top: 3px;"><span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 800; font-size: 10px; border: 1px solid #bae6fd; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-robot"></i> Terdaftar Bot</span></div>`
+        : isBotAntre
+          ? `<div style="margin-top: 3px;"><span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 10px; border: 1px solid #fde68a; display: inline-flex; align-items: center; gap: 3px;"><i class="bi bi-hourglass-split"></i> Antre Bot</span></div>`
+          : '';
+
     return `
       <tr>
+        <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="chk-ckg-gratis-row" value="${r.id}" style="cursor: pointer; width: 15px; height: 15px; accent-color: #0284c7;"></td>
         <td style="text-align: center; font-weight: 700; color: #64748b; vertical-align: middle;">${i + 1}</td>
         
         <!-- KOLOM 2: NAMA PASIEN & IDENTITAS -->
@@ -8753,19 +9221,23 @@ function buildCkgGratisRowsHtml(list) {
             <span class="badge badge-emerald" style="font-size: 10px; font-weight: 700; padding: 2px 7px;">
               <i class="bi bi-check-circle-fill"></i> ${r.status_validasi || 'Terverifikasi'}
             </span>
+            ${botStatusBadge}
           </div>
         </td>
 
         <!-- KOLOM 6: AKSI -->
         <td style="text-align: center; vertical-align: middle;">
-          <div style="display: flex; gap: 5px; justify-content: center;">
-            <button class="btn btn-secondary btn-sm" onclick="viewDetailModal('${r.id}', 'ckg-gratis')" title="Detail Pasien" style="padding: 5px 9px;">
+          <div style="display: flex; gap: 4px; justify-content: center;">
+            <button class="btn btn-secondary btn-sm" onclick="sendSingleCkgGratisToBotQueue('${r.id}')" title="Kirim Pasien Ini ke Antrean Bot ENCO" style="padding: 5px 8px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
+              <i class="bi bi-robot"></i>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="viewDetailModal('${r.id}', 'ckg-gratis')" title="Detail Pasien" style="padding: 5px 8px;">
               <i class="bi bi-eye"></i>
             </button>
-            <button class="btn btn-cyan btn-sm" onclick="editCkgGratisRecord('${r.id}')" title="Edit Data Pasien" style="padding: 5px 9px;">
+            <button class="btn btn-cyan btn-sm" onclick="editCkgGratisRecord('${r.id}')" title="Edit Data Pasien" style="padding: 5px 8px;">
               <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn btn-danger btn-sm" onclick="deleteCkgGratisRecord('${r.id}')" title="Hapus Data" style="padding: 5px 9px;">
+            <button class="btn btn-danger btn-sm" onclick="deleteCkgGratisRecord('${r.id}')" title="Hapus Data" style="padding: 5px 8px;">
               <i class="bi bi-trash"></i>
             </button>
           </div>
@@ -15056,9 +15528,12 @@ function renderSekolahView() {
 
         <!-- Column 6: Aksi -->
         <td style="text-align: center; vertical-align: middle;">
-          <div style="display: flex; gap: 6px; justify-content: center;">
-            <button type="button" class="btn btn-primary btn-sm" onclick="openPemeriksaanModal('${safeId}')" title="Periksa / Edit Siswa" style="padding: 5px 10px; font-size: 11.5px; border-radius: 8px;">
+          <div style="display: flex; gap: 5px; justify-content: center;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="openPemeriksaanModal('${safeId}')" title="Periksa / Edit Siswa" style="padding: 5px 9px; font-size: 11px; border-radius: 8px;">
               <i class="bi bi-heart-pulse"></i> Periksa
+            </button>
+            <button type="button" class="btn btn-sm" onclick="sendSingleSekolahToBotQueue('${safeId}')" title="Kirim Siswa Ini ke Antrean Bot ENCO" style="padding: 5px 8px; font-size: 11px; border-radius: 8px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
+              <i class="bi bi-robot"></i>
             </button>
             ${!isSekolahUser ? `
             <button type="button" class="btn btn-sm btn-print-siswa" onclick="cetakHasilSiswaIndividu('${safeId}')" title="Cetak Surat / Lembar Hasil Pemeriksaan Siswa Ini" style="padding: 5px 8px; font-size: 11px; border-radius: 8px; background: #0d9488; color: #fff;">

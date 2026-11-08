@@ -1146,8 +1146,14 @@
               <button class="btn btn-primary" onclick="openInputModal('Luar Gedung', false, 'ckg-gratis')">
                 <i class="bi bi-plus-lg"></i> Input Data CKG
               </button>
+              <button class="btn btn-secondary" onclick="openBotQueueModal('UMUM')" title="Kelola Antrean Pasien yang Akan Dientry oleh Bot ENCO" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: #fff; font-weight: 700; border: none; box-shadow: 0 2px 6px rgba(2,132,199,0.25);">
+                <i class="bi bi-robot"></i> Antrean Bot CKG Umum <span id="badgeQueueCountUmum" class="badge" style="background: rgba(255,255,255,0.25); margin-left: 4px; font-size: 11px;">0</span>
+              </button>
+              <button class="btn btn-secondary" onclick="sendSelectedCkgGratisToBotQueue()" title="Kirim Pasien Terpilih ke Antrean Bot ENCO" style="background: #f0fdf4; color: #166534; border: 1.5px solid #bbf7d0; font-weight: 700;">
+                <i class="bi bi-cloud-arrow-up-fill" style="color: #16a34a;"></i> Masukkan ke Antrean Bot
+              </button>
               <button class="btn btn-secondary" onclick="exportToBotEncoXLSX('ckg-gratis')" title="Download Excel Format Bot ENCO untuk CKG Umum" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-weight: 700; border: none; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
-                <i class="bi bi-robot"></i> Download Format Bot ENCO
+                <i class="bi bi-download"></i> Download Format Bot ENCO
               </button>
               <button class="btn btn-secondary" onclick="openImportModal('ckg-gratis')">
                 <i class="bi bi-file-earmark-arrow-up"></i> Import Data
@@ -1270,12 +1276,13 @@
             <table class="custom-table" style="font-size: 12.5px; width: 100%;">
               <thead>
                 <tr style="position: sticky; top: 0; background: #f8fafc; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                  <th style="width: 38px; text-align: center;"><input type="checkbox" id="chkSelectAllCkgGratis" onchange="toggleSelectAllCkgGratis(this)" title="Pilih Semua" style="cursor: pointer; width: 15px; height: 15px; accent-color: #0284c7;"></th>
                   <th style="width: 45px; text-align: center;">NO</th>
                   <th style="min-width: 220px;">NAMA PASIEN & IDENTITAS</th>
                   <th style="min-width: 200px;">ALAMAT & KONTAK</th>
                   <th style="min-width: 320px;">HASIL PEMERIKSAAN MEDIS</th>
                   <th style="min-width: 140px;">PETUGAS & TGL ENTRY</th>
-                  <th style="width: 110px; text-align: center;">AKSI</th>
+                  <th style="width: 140px; text-align: center;">AKSI</th>
                 </tr>
               </thead>
               <tbody id="tableBodyCkgGratis">
@@ -1855,6 +1862,12 @@
             <div class="action-buttons-group">
               <button class="btn btn-purple" onclick="openTambahSiswaModal()" id="btnTambahSiswaSekolah">
                 <i class="bi bi-person-plus-fill"></i> Tambah Siswa
+              </button>
+              <button class="btn btn-secondary" onclick="openBotQueueModal('SEKOLAH')" title="Kelola Antrean Siswa Sekolah untuk Bot ENCO" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: #fff; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
+                <i class="bi bi-robot"></i> Antrean Bot Sekolah <span id="badgeQueueCountSekolah" class="badge" style="background: rgba(255,255,255,0.25); margin-left: 4px; font-size: 11px;">0</span>
+              </button>
+              <button class="btn btn-secondary" onclick="sendCurrentSekolahToBotQueue()" title="Kirim Seluruh Siswa di Kelas Ini ke Antrean Bot ENCO" style="background: #f0fdf4; color: #166534; border: 1.5px solid #bbf7d0; font-weight: 700;">
+                <i class="bi bi-cloud-arrow-up-fill" style="color: #16a34a;"></i> Kirim Kelas ke Antrean Bot
               </button>
               <button class="btn btn-amber" onclick="openImportSekolahModal()">
                 <i class="bi bi-file-earmark-arrow-up-fill"></i> Import Excel
