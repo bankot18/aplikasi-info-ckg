@@ -4129,6 +4129,14 @@ function determineKategoriSasaran(dob, age) {
 }
 
 function checkDobKategoriCompatibility(isManual = false) {
+  if (currentInputTarget === 'ckg-gratis') {
+    const alertFooter = document.getElementById('alertKategoriMismatch');
+    if (alertFooter) alertFooter.style.display = 'none';
+    const dobWarning = document.getElementById('dobKategoriWarning');
+    if (dobWarning) dobWarning.style.display = 'none';
+    return true;
+  }
+
   const dobVal = document.getElementById('tanggal_lahir')?.value;
   const alertFooter = document.getElementById('alertKategoriMismatch');
   const textFooter = document.getElementById('textKategoriMismatch');
@@ -4245,6 +4253,22 @@ function calculateAgeFromDOB(isFromCekNik = false) {
 
   const correct = determineKategoriSasaran(dobVal, finalAge);
   const currentKey = getSelectedKategoriSasaran();
+
+  if (currentInputTarget === 'ckg-gratis') {
+    // Mode Simpel CKG Gratis: Otomatis sinkronkan pill kategori tanpa perlu popup error
+    if (correct.radioId) {
+      const radio = document.getElementById(correct.radioId);
+      if (radio && !radio.checked) {
+        radio.checked = true;
+        updateDataWaliVisibility();
+      }
+    }
+    const alertFooter = document.getElementById('alertKategoriMismatch');
+    if (alertFooter) alertFooter.style.display = 'none';
+    const dobWarning = document.getElementById('dobKategoriWarning');
+    if (dobWarning) dobWarning.style.display = 'none';
+    return;
+  }
 
   if (isFromCekNik) {
     // Skenario 1: Cek NIK -> langsung otomatis pindah ke kategori umur yang sesuai
@@ -6843,10 +6867,63 @@ function updateWizardUI() {
   const isCkgGratis = (currentInputTarget === 'ckg-gratis');
   const maxSteps = isCkgGratis ? 2 : 4;
 
+  const formOverlay = document.getElementById('inputModalOverlay');
+  const formEl = document.getElementById('ckgForm');
+  if (formOverlay) formOverlay.classList.toggle('ckg-gratis-mode', isCkgGratis);
+  if (formEl) formEl.classList.toggle('ckg-gratis-mode', isCkgGratis);
+
+  const subtitleEl = document.getElementById('inputModalSubtitle');
+  if (subtitleEl) {
+    subtitleEl.style.display = isCkgGratis ? 'block' : 'none';
+  }
+
+  const btnPrev = document.getElementById('btnWizardPrev');
+  const btnCancel = document.getElementById('btnWizardCancel');
+  const btnNext = document.getElementById('btnWizardNext');
+  const btnSubmit = document.getElementById('btnWizardSubmit');
+  const alertFooter = document.getElementById('alertKategoriMismatch');
+
+  if (isCkgGratis) {
+    // Mode Simpel & Elegan: Single-Page Form Identitas Pasien (Tanpa Step Wizard)
+    const s1 = document.getElementById('wizardStep1');
+    const s2 = document.getElementById('wizardStep2');
+    const s3 = document.getElementById('wizardStep3');
+    const s4 = document.getElementById('wizardStep4');
+    if (s1) { s1.classList.add('active'); s1.style.display = 'block'; }
+    if (s2) { s2.classList.add('active'); s2.style.display = 'block'; }
+    if (s3) { s3.classList.remove('active'); s3.style.display = 'none'; }
+    if (s4) { s4.classList.remove('active'); s4.style.display = 'none'; }
+
+    const stepperBar = document.querySelector('.wizard-stepper-bar');
+    if (stepperBar) stepperBar.style.display = 'none';
+
+    if (btnPrev) btnPrev.style.display = 'none';
+    if (btnNext) btnNext.style.display = 'none';
+    if (btnCancel) btnCancel.style.display = 'inline-flex';
+    if (btnSubmit) {
+      btnSubmit.style.display = 'inline-flex';
+      btnSubmit.innerHTML = currentEditingId
+        ? '<i class="bi bi-check-circle-fill"></i> Simpan Perubahan Identitas'
+        : '<i class="bi bi-check-circle-fill"></i> Simpan Data Pasien';
+    }
+    if (alertFooter) alertFooter.style.display = 'none';
+
+    const modalBody = document.querySelector('#inputModalOverlay .modal-body');
+    if (modalBody && currentWizardStep === 1) {
+      modalBody.scrollTop = 0;
+    }
+    return;
+  }
+
+  // Standar Multi-Step Wizard untuk Data Records Puskesmas
+  const stepperBar = document.querySelector('.wizard-stepper-bar');
+  if (stepperBar) stepperBar.style.display = 'flex';
+
   for (let i = 1; i <= 4; i++) {
     const stepEl = document.getElementById(`wizardStep${i}`);
     if (stepEl) {
       stepEl.classList.toggle('active', i === currentWizardStep);
+      stepEl.style.display = (i === currentWizardStep) ? 'block' : 'none';
     }
   }
 
@@ -6856,82 +6933,49 @@ function updateWizardUI() {
 
   stepperItems.forEach(item => {
     const stepNum = parseInt(item.getAttribute('data-step')) || 1;
-    if (isCkgGratis && stepNum > 2) {
-      item.style.display = 'none';
-    } else {
-      item.style.display = 'flex';
-      item.classList.toggle('active', stepNum === currentWizardStep);
-      item.classList.toggle('completed', stepNum < currentWizardStep);
-    }
+    item.style.display = 'flex';
+    item.classList.toggle('active', stepNum === currentWizardStep);
+    item.classList.toggle('completed', stepNum < currentWizardStep);
   });
 
   stepperLines.forEach((line, idx) => {
-    if (isCkgGratis && idx >= 1) {
-      line.style.display = 'none';
-    } else {
-      line.style.display = 'block';
-      line.classList.toggle('completed', (idx + 1) < currentWizardStep);
-    }
+    line.style.display = 'block';
+    line.classList.toggle('completed', (idx + 1) < currentWizardStep);
   });
 
   // Step Section Titles
   const s1Title = document.getElementById('wizardStep1Title');
   const s2Title = document.getElementById('wizardStep2Title');
   if (s1Title) {
-    s1Title.innerHTML = `<i class="bi bi-people-fill"></i> Step 1 dari ${maxSteps}: Pilih Kategori Usia Sasaran Skrining`;
+    s1Title.innerHTML = `<i class="bi bi-people-fill"></i> Step 1 dari 4: Pilih Kategori Usia Sasaran Skrining`;
   }
   if (s2Title) {
-    s2Title.innerHTML = `<i class="bi bi-person-fill"></i> Step 2 dari ${maxSteps}: Data Demografi Pasien`;
+    s2Title.innerHTML = `<i class="bi bi-person-fill"></i> Step 2 dari 4: Data Demografi Pasien`;
   }
 
-  const btnPrev = document.getElementById('btnWizardPrev');
-  const btnCancel = document.getElementById('btnWizardCancel');
-  const btnNext = document.getElementById('btnWizardNext');
-  const btnSubmit = document.getElementById('btnWizardSubmit');
-
-  if (isCkgGratis) {
-    if (currentWizardStep === 1) {
-      if (btnPrev) btnPrev.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'inline-flex';
-      if (btnNext) btnNext.style.display = 'inline-flex';
-      if (btnSubmit) btnSubmit.style.display = 'none';
-    } else if (currentWizardStep >= 2) {
-      if (btnPrev) btnPrev.style.display = 'inline-flex';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnNext) btnNext.style.display = 'none';
-      if (btnSubmit) {
-        btnSubmit.style.display = 'inline-flex';
-        btnSubmit.innerHTML = currentEditingId
-          ? '<i class="bi bi-check-circle-fill"></i> Simpan Perubahan Identitas'
-          : '<i class="bi bi-check-circle-fill"></i> Simpan Data Pasien';
-      }
+  if (currentWizardStep === 1) {
+    if (btnPrev) btnPrev.style.display = 'none';
+    if (btnCancel) btnCancel.style.display = 'inline-flex';
+    if (btnNext) btnNext.style.display = 'inline-flex';
+    if (btnSubmit) btnSubmit.style.display = 'none';
+  } else if (currentWizardStep === 4) {
+    if (btnPrev) btnPrev.style.display = 'inline-flex';
+    if (btnCancel) btnCancel.style.display = 'none';
+    if (btnNext) btnNext.style.display = 'none';
+    if (btnSubmit) {
+      btnSubmit.style.display = 'inline-flex';
+      btnSubmit.innerHTML = currentEditingId
+        ? '<i class="bi bi-check-circle-fill"></i> Simpan Perubahan Data'
+        : '<i class="bi bi-check-circle-fill"></i> Simpan Data CKG';
     }
   } else {
-    if (currentWizardStep === 1) {
-      if (btnPrev) btnPrev.style.display = 'none';
-      if (btnCancel) btnCancel.style.display = 'inline-flex';
-      if (btnNext) btnNext.style.display = 'inline-flex';
-      if (btnSubmit) btnSubmit.style.display = 'none';
-    } else if (currentWizardStep === 4) {
-      if (btnPrev) btnPrev.style.display = 'inline-flex';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnNext) btnNext.style.display = 'none';
-      if (btnSubmit) {
-        btnSubmit.style.display = 'inline-flex';
-        btnSubmit.innerHTML = currentEditingId
-          ? '<i class="bi bi-check-circle-fill"></i> Simpan Perubahan Data'
-          : '<i class="bi bi-check-circle-fill"></i> Simpan Data CKG';
-      }
-    } else {
-      if (btnPrev) btnPrev.style.display = 'inline-flex';
-      if (btnCancel) btnCancel.style.display = 'none';
-      if (btnNext) btnNext.style.display = 'inline-flex';
-      if (btnSubmit) btnSubmit.style.display = 'none';
-    }
+    if (btnPrev) btnPrev.style.display = 'inline-flex';
+    if (btnCancel) btnCancel.style.display = 'none';
+    if (btnNext) btnNext.style.display = 'inline-flex';
+    if (btnSubmit) btnSubmit.style.display = 'none';
   }
 
   // Update visibilitas alert mismatch kategori
-  const alertFooter = document.getElementById('alertKategoriMismatch');
   if (currentWizardStep === 1) {
     if (alertFooter) alertFooter.style.display = 'none';
   } else if (currentWizardStep === 2) {

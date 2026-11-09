@@ -7156,3 +7156,164 @@ body.dark-mode .empty-access-card {
   color: #f8fafc;
 }
 
+/* ==========================================================================
+   FORM INPUT DATA IDENTITAS PASIEN (FORMAT BOT ENCO / CKG GRATIS)
+   Mode Simpel, Elegan, Single-Page Form
+   ========================================================================== */
+#inputModalOverlay.ckg-gratis-mode .modal-container {
+  max-width: 740px !important;
+}
+
+#inputModalOverlay.ckg-gratis-mode .modal-body {
+  padding: 16px 22px !important;
+}
+
+#inputModalOverlay.ckg-gratis-mode #wizardStep1 .form-group.full-width {
+  margin-bottom: 12px !important;
+}
+
+.ckg-gratis-mode .wizard-stepper-bar {
+  display: none !important;
+}
+
+.ckg-gratis-mode #wizardStep1,
+.ckg-gratis-mode #wizardStep2 {
+  display: block !important;
+  animation: none !important;
+}
+
+.ckg-gratis-mode #wizardStep3,
+.ckg-gratis-mode #wizardStep4 {
+  display: none !important;
+}
+
+.ckg-gratis-mode #wizardStep1Title,
+.ckg-gratis-mode #wizardStep2Title,
+.ckg-gratis-mode #infoSiklusHidupIlp,
+.ckg-gratis-mode .default-kategori-label {
+  display: none !important;
+}
+
+.ckg-gratis-mode .kategori-header-bar {
+  display: flex !important;
+}
+
+.ckg-gratis-mode .identitas-header-bar {
+  display: flex !important;
+}
+
+/* Category Pills in CKG Gratis: Modern, Compact, Segmented Row/Grid */
+.ckg-gratis-mode .kategori-usia-grid {
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr) !important;
+  gap: 8px !important;
+  margin-top: 6px !important;
+}
+
+@media (max-width: 820px) {
+  .ckg-gratis-mode .kategori-usia-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 540px) {
+  .ckg-gratis-mode .kategori-usia-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+.ckg-gratis-mode .pill-option {
+  width: 100% !important;
+}
+
+.ckg-gratis-mode .pill-card-label {
+  position: relative !important;
+  padding: 8px 6px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
+  border-radius: 10px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  overflow: hidden !important;
+}
+
+.ckg-gratis-mode .pill-card-label:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06) !important;
+}
+
+.ckg-gratis-mode .pill-card-label .badge {
+  display: none !important;
+}
+
+.ckg-gratis-mode .pill-card-icon {
+  font-size: 18px !important;
+  margin-bottom: 2px !important;
+  line-height: 1 !important;
+  transition: transform 0.2s ease !important;
+}
+
+.ckg-gratis-mode .pill-card-text {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  color: #1e293b !important;
+  white-space: nowrap !important;
+}
+
+.ckg-gratis-mode .pill-card-subtext {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  margin-top: 1px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.ckg-gratis-mode .pill-option input:checked + .pill-card-label {
+  background: linear-gradient(135deg, #1e40af, #2563eb) !important;
+  border-color: #1d4ed8 !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+  transform: translateY(-1px) !important;
+}
+
+.ckg-gratis-mode .pill-option input:checked + .pill-card-label .pill-card-icon {
+  color: #ffffff !important;
+  transform: scale(1.1) !important;
+}
+
+.ckg-gratis-mode .pill-option input:checked + .pill-card-label .pill-card-text,
+.ckg-gratis-mode .pill-option input:checked + .pill-card-label .pill-card-subtext {
+  color: #ffffff !important;
+}
+
+/* Dark mode support */
+body.dark-mode .ckg-gratis-mode .pill-card-label {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+body.dark-mode .ckg-gratis-mode .pill-card-label:hover {
+  background: #334155 !important;
+  border-color: #475569 !important;
+}
+body.dark-mode .ckg-gratis-mode .pill-card-text {
+  color: #f1f5f9 !important;
+}
+body.dark-mode .ckg-gratis-mode .pill-card-subtext {
+  color: #94a3b8 !important;
+}
+body.dark-mode .ckg-gratis-mode .pill-option input:checked + .pill-card-label {
+  background: linear-gradient(135deg, #1e3a8a, #3b82f6) !important;
+  border-color: #60a5fa !important;
+}
+

@@ -3256,8 +3256,13 @@
 
         <!-- Wizard Header -->
         <div class="modal-header" style="flex-shrink: 0; padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: #ffffff;">
-          <div class="modal-title" id="inputModalTitle" style="font-size: 16px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-            <i class="bi bi-file-earmark-medical-fill" style="color: var(--primary);"></i> Form Input Data CKG Pasien
+          <div>
+            <div class="modal-title" id="inputModalTitle" style="font-size: 16px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+              <i class="bi bi-file-earmark-medical-fill" style="color: var(--primary);"></i> Form Input Data CKG Pasien
+            </div>
+            <div id="inputModalSubtitle" style="display: none; font-size: 12px; color: #64748b; margin-top: 3px; font-weight: 500;">
+              Pencatatan data identitas sasaran skrining. Pemeriksaan fisik/medis dilakukan di kolom <b>Aksi &rarr; 🩺 Periksa</b>.
+            </div>
           </div>
           <button type="button" class="modal-close" onclick="closeInputModal()">&times;</button>
         </div>
@@ -3298,11 +3303,19 @@
             <input type="radio" id="kegiatan_luar" name="jenis_kegiatan" value="Luar Gedung" checked style="display:none;">
 
             <div class="form-group full-width" style="margin-bottom: 20px;">
-              <label class="form-label" style="font-size: 13.5px; font-weight: 800; margin-bottom: 12px; display: block;">
+              <div class="kategori-header-bar" style="display: none; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <label class="form-label" style="font-size: 13px; font-weight: 800; color: #334155; margin: 0; display: flex; align-items: center; gap: 6px;">
+                  <i class="bi bi-people-fill" style="color: var(--primary);"></i> Kategori Sasaran (Siklus Hidup ILP) <span class="required">*</span>
+                </label>
+                <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">
+                  <i class="bi bi-magic" style="color: #2563eb;"></i> Otomatis sesuai Tanggal Lahir
+                </span>
+              </div>
+              <label class="form-label default-kategori-label" style="font-size: 13.5px; font-weight: 800; margin-bottom: 12px; display: block;">
                 Pilih Kategori Usia / Kelompok Sasaran (Siklus Hidup ILP) <span class="required">*</span>
               </label>
 
-              <div class="kategori-usia-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;">
+              <div class="kategori-usia-grid" id="kategoriUsiaGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;">
                 <!-- 1. Bayi dan Balita -->
                 <div class="pill-option" style="width: 100%;">
                   <input type="radio" id="kat_bayi_balita" name="kategori_sasaran" value="bayi_balita">
@@ -3364,7 +3377,7 @@
               </div>
 
               <!-- Petunjuk Informasi Siklus Hidup ILP -->
-              <div style="margin-top: 14px; padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #1e40af; line-height: 1.5;">
+              <div id="infoSiklusHidupIlp" style="margin-top: 14px; padding: 12px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; color: #1e40af; line-height: 1.5;">
                 <i class="bi bi-info-circle-fill" style="font-size: 16px; margin-top: 2px; flex-shrink: 0; color: #2563eb;"></i>
                 <div>
                   <strong>Integrasi Layanan Primer (ILP):</strong> Pilih kategori usia sasaran skrining. Apabila memilih kategori <strong>Bayi & Balita</strong> atau <strong>Anak Prasekolah</strong>, sistem secara otomatis mewajibkan pengisian <strong>Data Wali</strong> pada langkah berikutnya.
@@ -3377,6 +3390,14 @@
           <div class="wizard-step-content" id="wizardStep2">
             <div class="form-section-title" id="wizardStep2Title">
               <i class="bi bi-person-fill"></i> Step 2 dari 4: Data Demografi Pasien
+            </div>
+            <div class="identitas-header-bar" style="display: none; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px dashed #e2e8f0;">
+              <span style="font-size: 13px; font-weight: 800; color: #334155; display: flex; align-items: center; gap: 6px;">
+                <i class="bi bi-person-lines-fill" style="color: var(--primary);"></i> Data Identitas Pasien
+              </span>
+              <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">
+                <span class="required" style="color: #dc2626;">*</span> Kolom Wajib Diisi
+              </span>
             </div>
 
             <div class="form-grid">
