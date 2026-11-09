@@ -3289,7 +3289,7 @@
 
           <!-- STEP 1: Kategori Usia Sasaran Skrining -->
           <div class="wizard-step-content active" id="wizardStep1">
-            <div class="form-section-title">
+            <div class="form-section-title" id="wizardStep1Title">
               <i class="bi bi-people-fill"></i> Step 1 dari 4: Pilih Kategori Usia Sasaran Skrining
             </div>
 
@@ -3375,7 +3375,7 @@
 
           <!-- STEP 2: Data Demografi Pasien -->
           <div class="wizard-step-content" id="wizardStep2">
-            <div class="form-section-title">
+            <div class="form-section-title" id="wizardStep2Title">
               <i class="bi bi-person-fill"></i> Step 2 dari 4: Data Demografi Pasien
             </div>
 
@@ -3723,6 +3723,167 @@
         </div>
 
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL PEMERIKSAAN MEDIS PASIEN (FORMAT BOT ENCO / CKG GRATIS) -->
+  <div id="pemeriksaanCkgGratisModalOverlay" class="modal-overlay">
+    <div class="modal-container" style="max-width: 760px; width: 92%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--radius-lg); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+      
+      <!-- Modal Header -->
+      <div class="modal-header" style="flex-shrink: 0; padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: #ffffff;">
+        <div class="modal-title" style="font-size: 16px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-heart-pulse-fill" style="color: #0284c7; font-size: 20px;"></i> Form Pemeriksaan Medis Pasien (Format Bot ENCO)
+        </div>
+        <button type="button" class="modal-close" onclick="closePemeriksaanCkgGratisModal()">&times;</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body" style="flex: 1 1 auto; overflow-y: auto; padding: 20px 24px; background: #f8fafc;">
+        
+        <!-- Patient Identity Banner Card -->
+        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span id="periksaModalNama" style="font-weight: 800; font-size: 16px; color: #0f172a;">Nama Pasien</span>
+              <span id="periksaModalNik" class="badge" style="background: #e0f2fe; color: #0369a1; font-family: monospace; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;">3204...</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span id="periksaModalJkUsia" class="badge badge-slate" style="font-size: 11px; font-weight: 700; padding: 3px 8px;">-</span>
+              <span id="periksaModalKategori" class="badge badge-cyan" style="font-size: 11px; font-weight: 800; padding: 3px 8px;">-</span>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 5px;">
+            <i class="bi bi-geo-alt-fill" style="color: #ef4444; font-size: 12px;"></i>
+            <span id="periksaModalAlamat">-</span>
+          </div>
+        </div>
+
+        <form id="pemeriksaanCkgGratisForm" onsubmit="event.preventDefault(); savePemeriksaanCkgGratis();">
+          
+          <!-- SECTION 1: ANTROPOMETRI & IMT -->
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size: 13.5px; font-weight: 800; color: #0369a1; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+              <i class="bi bi-speedometer2" style="font-size: 16px;"></i> 1. Pengukuran Antropometri & Indeks Massa Tubuh (IMT)
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_bb">Berat Badan (BB) <span style="font-weight: normal; color: #64748b;">(kg)</span></label>
+                <input type="number" step="0.1" id="pemeriksaan_bb" class="form-control" placeholder="Contoh: 55" oninput="calculatePemeriksaanIMT()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_tb">Tinggi Badan (TB) <span style="font-weight: normal; color: #64748b;">(cm)</span></label>
+                <input type="number" step="0.1" id="pemeriksaan_tb" class="form-control" placeholder="Contoh: 157" oninput="calculatePemeriksaanIMT()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_lp">Lingkar Perut (LP) <span style="font-weight: normal; color: #64748b;">(cm)</span></label>
+                <input type="number" step="0.1" id="pemeriksaan_lp" class="form-control" placeholder="Contoh: 81">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_imt">IMT & Status</label>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <input type="text" id="pemeriksaan_imt" class="form-control" placeholder="Otomatis" readonly style="background: #f1f5f9; font-weight: 700; width: 85px;">
+                  <span id="pemeriksaan_imt_badge" class="badge badge-slate" style="font-size: 10.5px; font-weight: 700; padding: 4px 8px; flex: 1; text-align: center;">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 2: TANDA VITAL & LAB -->
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size: 13.5px; font-weight: 800; color: #059669; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+              <i class="bi bi-heart-pulse-fill" style="font-size: 16px;"></i> 2. Tekanan Darah & Pemeriksaan Darah (Lab)
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;">
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_td_sistolik">TD Sistolik <span style="font-weight: normal; color: #64748b;">(mmHg)</span></label>
+                <input type="number" id="pemeriksaan_td_sistolik" class="form-control" placeholder="Contoh: 120">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_td_diastolik">TD Diastolik <span style="font-weight: normal; color: #64748b;">(mmHg)</span></label>
+                <input type="number" id="pemeriksaan_td_diastolik" class="form-control" placeholder="Contoh: 80">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_gds">Gula Darah (GDS) <span style="font-weight: normal; color: #64748b;">(mg/dL)</span></label>
+                <input type="number" id="pemeriksaan_gds" class="form-control" placeholder="Contoh: 110">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_kolesterol">Kolesterol <span style="font-weight: normal; color: #64748b;">(mg/dL)</span></label>
+                <input type="number" id="pemeriksaan_kolesterol" class="form-control" placeholder="Contoh: 170">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_hb">Hemoglobin (HB) <span style="font-weight: normal; color: #64748b;">(g/dL)</span></label>
+                <input type="number" step="0.1" id="pemeriksaan_hb" class="form-control" placeholder="Contoh: 13.5">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 3: PEMERIKSAAN FISIK & INDERA -->
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size: 13.5px; font-weight: 800; color: #4f46e5; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+              <i class="bi bi-eye-fill" style="font-size: 16px;"></i> 3. Pemeriksaan Fisik & Skrining Indera
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_mata">Pemeriksaan Mata / Penglihatan</label>
+                <select id="pemeriksaan_mata" class="form-control">
+                  <option value="Normal">Normal</option>
+                  <option value="Gangguan Penglihatan">Gangguan Penglihatan</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Skrining Katarak</label>
+                <div style="display: flex; gap: 16px; align-items: center; height: 38px;">
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                    <input type="radio" name="pemeriksaan_katarak" id="pemeriksaan_katarak_tidak" value="Tidak" checked> Tidak
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: #dc2626;">
+                    <input type="radio" name="pemeriksaan_katarak" id="pemeriksaan_katarak_ya" value="Ya"> Ya (Katarak)
+                  </label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_telinga">Pemeriksaan Telinga / Pendengaran</label>
+                <select id="pemeriksaan_telinga" class="form-control">
+                  <option value="Normal">Normal</option>
+                  <option value="Gangguan Pendengaran">Gangguan Pendengaran</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="pemeriksaan_gigi">Kesehatan Gigi & Mulut</label>
+                <select id="pemeriksaan_gigi" class="form-control">
+                  <option value="Baik">Baik</option>
+                  <option value="Karies">Karies</option>
+                  <option value="Perlu Perawatan">Perlu Perawatan</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kebiasaan Merokok</label>
+                <div style="display: flex; gap: 16px; align-items: center; height: 38px;">
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                    <input type="radio" name="pemeriksaan_rokok" id="pemeriksaan_rokok_tidak" value="Tidak" checked> Tidak
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                    <input type="radio" name="pemeriksaan_rokok" id="pemeriksaan_rokok_ya" value="Ya"> Ya
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer" style="flex-shrink: 0; padding: 14px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: flex-end; gap: 10px; background: #ffffff;">
+        <button type="button" class="btn btn-secondary" onclick="closePemeriksaanCkgGratisModal()" style="padding: 8px 20px; font-weight: 700; border-radius: 8px;">
+          Batal
+        </button>
+        <button type="button" class="btn btn-primary" onclick="savePemeriksaanCkgGratis()" style="padding: 8px 22px; font-weight: 700; border-radius: 8px; background: #0284c7; color: white; border: none; box-shadow: 0 2px 8px rgba(2,132,199,0.3);">
+          <i class="bi bi-check-circle-fill"></i> Simpan Hasil Pemeriksaan
+        </button>
+      </div>
+
     </div>
   </div>
 

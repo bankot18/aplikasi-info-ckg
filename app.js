@@ -6840,6 +6840,9 @@ function exportSimpusXlsx() {
 let currentWizardStep = 1;
 
 function updateWizardUI() {
+  const isCkgGratis = (currentInputTarget === 'ckg-gratis');
+  const maxSteps = isCkgGratis ? 2 : 4;
+
   for (let i = 1; i <= 4; i++) {
     const stepEl = document.getElementById(`wizardStep${i}`);
     if (stepEl) {
@@ -6847,36 +6850,84 @@ function updateWizardUI() {
     }
   }
 
-  document.querySelectorAll('.wizard-stepper-bar .stepper-item').forEach(item => {
+  // Stepper Items & Lines
+  const stepperItems = document.querySelectorAll('.wizard-stepper-bar .stepper-item');
+  const stepperLines = document.querySelectorAll('.wizard-stepper-bar .stepper-line');
+
+  stepperItems.forEach(item => {
     const stepNum = parseInt(item.getAttribute('data-step')) || 1;
-    item.classList.toggle('active', stepNum === currentWizardStep);
-    item.classList.toggle('completed', stepNum < currentWizardStep);
+    if (isCkgGratis && stepNum > 2) {
+      item.style.display = 'none';
+    } else {
+      item.style.display = 'flex';
+      item.classList.toggle('active', stepNum === currentWizardStep);
+      item.classList.toggle('completed', stepNum < currentWizardStep);
+    }
   });
 
-  document.querySelectorAll('.wizard-stepper-bar .stepper-line').forEach((line, idx) => {
-    line.classList.toggle('completed', (idx + 1) < currentWizardStep);
+  stepperLines.forEach((line, idx) => {
+    if (isCkgGratis && idx >= 1) {
+      line.style.display = 'none';
+    } else {
+      line.style.display = 'block';
+      line.classList.toggle('completed', (idx + 1) < currentWizardStep);
+    }
   });
+
+  // Step Section Titles
+  const s1Title = document.getElementById('wizardStep1Title');
+  const s2Title = document.getElementById('wizardStep2Title');
+  if (s1Title) {
+    s1Title.innerHTML = `<i class="bi bi-people-fill"></i> Step 1 dari ${maxSteps}: Pilih Kategori Usia Sasaran Skrining`;
+  }
+  if (s2Title) {
+    s2Title.innerHTML = `<i class="bi bi-person-fill"></i> Step 2 dari ${maxSteps}: Data Demografi Pasien`;
+  }
 
   const btnPrev = document.getElementById('btnWizardPrev');
   const btnCancel = document.getElementById('btnWizardCancel');
   const btnNext = document.getElementById('btnWizardNext');
   const btnSubmit = document.getElementById('btnWizardSubmit');
 
-  if (currentWizardStep === 1) {
-    if (btnPrev) btnPrev.style.display = 'none';
-    if (btnCancel) btnCancel.style.display = 'inline-flex';
-    if (btnNext) btnNext.style.display = 'inline-flex';
-    if (btnSubmit) btnSubmit.style.display = 'none';
-  } else if (currentWizardStep === 4) {
-    if (btnPrev) btnPrev.style.display = 'inline-flex';
-    if (btnCancel) btnCancel.style.display = 'none';
-    if (btnNext) btnNext.style.display = 'none';
-    if (btnSubmit) btnSubmit.style.display = 'inline-flex';
+  if (isCkgGratis) {
+    if (currentWizardStep === 1) {
+      if (btnPrev) btnPrev.style.display = 'none';
+      if (btnCancel) btnCancel.style.display = 'inline-flex';
+      if (btnNext) btnNext.style.display = 'inline-flex';
+      if (btnSubmit) btnSubmit.style.display = 'none';
+    } else if (currentWizardStep >= 2) {
+      if (btnPrev) btnPrev.style.display = 'inline-flex';
+      if (btnCancel) btnCancel.style.display = 'none';
+      if (btnNext) btnNext.style.display = 'none';
+      if (btnSubmit) {
+        btnSubmit.style.display = 'inline-flex';
+        btnSubmit.innerHTML = currentEditingId
+          ? '<i class="bi bi-check-circle-fill"></i> Simpan Perubahan Identitas'
+          : '<i class="bi bi-check-circle-fill"></i> Simpan Data Pasien';
+      }
+    }
   } else {
-    if (btnPrev) btnPrev.style.display = 'inline-flex';
-    if (btnCancel) btnCancel.style.display = 'none';
-    if (btnNext) btnNext.style.display = 'inline-flex';
-    if (btnSubmit) btnSubmit.style.display = 'none';
+    if (currentWizardStep === 1) {
+      if (btnPrev) btnPrev.style.display = 'none';
+      if (btnCancel) btnCancel.style.display = 'inline-flex';
+      if (btnNext) btnNext.style.display = 'inline-flex';
+      if (btnSubmit) btnSubmit.style.display = 'none';
+    } else if (currentWizardStep === 4) {
+      if (btnPrev) btnPrev.style.display = 'inline-flex';
+      if (btnCancel) btnCancel.style.display = 'none';
+      if (btnNext) btnNext.style.display = 'none';
+      if (btnSubmit) {
+        btnSubmit.style.display = 'inline-flex';
+        btnSubmit.innerHTML = currentEditingId
+          ? '<i class="bi bi-check-circle-fill"></i> Simpan Perubahan Data'
+          : '<i class="bi bi-check-circle-fill"></i> Simpan Data CKG';
+      }
+    } else {
+      if (btnPrev) btnPrev.style.display = 'inline-flex';
+      if (btnCancel) btnCancel.style.display = 'none';
+      if (btnNext) btnNext.style.display = 'inline-flex';
+      if (btnSubmit) btnSubmit.style.display = 'none';
+    }
   }
 
   // Update visibilitas alert mismatch kategori
@@ -7032,6 +7083,9 @@ function validateCurrentStep(step) {
 }
 
 function goToStep(targetStep) {
+  const isCkgGratis = (currentInputTarget === 'ckg-gratis');
+  if (isCkgGratis && targetStep > 2) return;
+
   if (targetStep < currentWizardStep) {
     currentWizardStep = targetStep;
     updateWizardUI();
@@ -7047,8 +7101,10 @@ function goToStep(targetStep) {
 }
 
 function nextWizardStep() {
+  const isCkgGratis = (currentInputTarget === 'ckg-gratis');
+  const maxSteps = isCkgGratis ? 2 : 4;
   if (!validateCurrentStep(currentWizardStep)) return;
-  if (currentWizardStep < 4) {
+  if (currentWizardStep < maxSteps) {
     currentWizardStep++;
     updateWizardUI();
   }
@@ -7132,15 +7188,27 @@ function openInputModal(kategori = 'Luar Gedung', isEdit = false, target = 'reco
   const isCkgGratis = (currentInputTarget === 'ckg-gratis');
 
   if (titleEl) {
-    titleEl.innerHTML = isEdit
-      ? `<i class="bi bi-pencil-square" style="color: var(--primary);"></i> Edit Data ${isCkgGratis ? 'CKG Gratis' : 'Record CKG'} Pasien`
-      : `<i class="bi bi-file-earmark-medical-fill" style="color: var(--primary);"></i> Form Input Data ${isCkgGratis ? 'CKG Gratis (Format Bot ENCO)' : 'CKG Pasien Baru'}`;
+    if (isCkgGratis) {
+      titleEl.innerHTML = isEdit
+        ? `<i class="bi bi-pencil-square" style="color: var(--primary);"></i> Edit Data Identitas Pasien (Format Bot ENCO)`
+        : `<i class="bi bi-person-vcard-fill" style="color: var(--primary);"></i> Form Input Data Identitas Pasien (Format Bot ENCO)`;
+    } else {
+      titleEl.innerHTML = isEdit
+        ? `<i class="bi bi-pencil-square" style="color: var(--primary);"></i> Edit Data Record CKG Pasien`
+        : `<i class="bi bi-file-earmark-medical-fill" style="color: var(--primary);"></i> Form Input Data CKG Pasien Baru`;
+    }
   }
 
   if (btnSubmit) {
-    btnSubmit.innerHTML = isEdit
-      ? '<i class="bi bi-check-circle-fill"></i> Simpan Perubahan Data'
-      : '<i class="bi bi-check-circle-fill"></i> Simpan Data CKG';
+    if (isCkgGratis) {
+      btnSubmit.innerHTML = isEdit
+        ? '<i class="bi bi-check-circle-fill"></i> Simpan Perubahan Identitas'
+        : '<i class="bi bi-check-circle-fill"></i> Simpan Data Pasien';
+    } else {
+      btnSubmit.innerHTML = isEdit
+        ? '<i class="bi bi-check-circle-fill"></i> Simpan Perubahan Data'
+        : '<i class="bi bi-check-circle-fill"></i> Simpan Data CKG';
+    }
   }
 
   calculateIMT();
@@ -7387,23 +7455,26 @@ async function handleFormSubmit(e) {
     return;
   }
 
-  if (!bb || bb <= 0) {
-    currentWizardStep = 3;
-    updateWizardUI();
-    showToast('Berat Badan (BB) wajib diisi!', 'error');
-    setTimeout(() => document.getElementById('bb')?.focus(), 100);
-    return;
-  }
-
-  if (!tb || tb <= 0) {
-    currentWizardStep = 3;
-    updateWizardUI();
-    showToast('Tinggi Badan (TB) wajib diisi!', 'error');
-    setTimeout(() => document.getElementById('tb')?.focus(), 100);
-    return;
-  }
-
   const isCkgGratis = (currentInputTarget === 'ckg-gratis');
+
+  if (!isCkgGratis) {
+    if (!bb || bb <= 0) {
+      currentWizardStep = 3;
+      updateWizardUI();
+      showToast('Berat Badan (BB) wajib diisi!', 'error');
+      setTimeout(() => document.getElementById('bb')?.focus(), 100);
+      return;
+    }
+
+    if (!tb || tb <= 0) {
+      currentWizardStep = 3;
+      updateWizardUI();
+      showToast('Tinggi Badan (TB) wajib diisi!', 'error');
+      setTimeout(() => document.getElementById('tb')?.focus(), 100);
+      return;
+    }
+  }
+
   const targetDataset = isCkgGratis ? ckgGratisRecords : records;
   const existingRecord = currentEditingId ? targetDataset.find(r => r.id === currentEditingId) : null;
 
@@ -7438,20 +7509,20 @@ async function handleFormSubmit(e) {
     kelurahan: document.getElementById('kelurahan')?.value || 'Banjaran Kota',
     alamat: alamat,
     pekerjaan: document.getElementById('pekerjaan')?.value || '',
-    merokok: 'Tidak',
-    bb: bb,
-    tb: tb,
-    lp: parseFloat(document.getElementById('lp')?.value) || 0,
-    imt: parseFloat(document.getElementById('imt')?.value) || 0,
-    td_sistolik: parseInt(document.getElementById('td_sistolik')?.value) || 0,
-    td_diastolik: parseInt(document.getElementById('td_diastolik')?.value) || 0,
-    gula_darah: parseInt(document.getElementById('gula_darah')?.value) || 0,
-    kolesterol: parseInt(document.getElementById('kolesterol')?.value) || 0,
-    hb: parseFloat(document.getElementById('hb')?.value) || 0,
-    telinga: document.getElementById('telinga')?.value || 'Normal',
-    mata: document.getElementById('mata')?.value || 'Normal',
-    gigi: document.getElementById('gigi')?.value || 'Baik',
-    katarak: document.querySelector('input[name="katarak"]:checked')?.value || 'Tidak',
+    merokok: isCkgGratis ? (existingRecord?.merokok || 'Tidak') : (document.querySelector('input[name="merokok"]:checked')?.value || 'Tidak'),
+    bb: isCkgGratis ? (existingRecord?.bb || 0) : bb,
+    tb: isCkgGratis ? (existingRecord?.tb || 0) : tb,
+    lp: isCkgGratis ? (existingRecord?.lp || 0) : (parseFloat(document.getElementById('lp')?.value) || 0),
+    imt: isCkgGratis ? (existingRecord?.imt || 0) : (parseFloat(document.getElementById('imt')?.value) || 0),
+    td_sistolik: isCkgGratis ? (existingRecord?.td_sistolik || 0) : (parseInt(document.getElementById('td_sistolik')?.value) || 0),
+    td_diastolik: isCkgGratis ? (existingRecord?.td_diastolik || 0) : (parseInt(document.getElementById('td_diastolik')?.value) || 0),
+    gula_darah: isCkgGratis ? (existingRecord?.gula_darah || 0) : (parseInt(document.getElementById('gula_darah')?.value) || 0),
+    kolesterol: isCkgGratis ? (existingRecord?.kolesterol || 0) : (parseInt(document.getElementById('kolesterol')?.value) || 0),
+    hb: isCkgGratis ? (existingRecord?.hb || 0) : (parseFloat(document.getElementById('hb')?.value) || 0),
+    telinga: isCkgGratis ? (existingRecord?.telinga || 'Normal') : (document.getElementById('telinga')?.value || 'Normal'),
+    mata: isCkgGratis ? (existingRecord?.mata || 'Normal') : (document.getElementById('mata')?.value || 'Normal'),
+    gigi: isCkgGratis ? (existingRecord?.gigi || 'Baik') : (document.getElementById('gigi')?.value || 'Baik'),
+    katarak: isCkgGratis ? (existingRecord?.katarak || 'Tidak') : (document.querySelector('input[name="katarak"]:checked')?.value || 'Tidak'),
     status_validasi: existingRecord ? (existingRecord.status_validasi || 'Terverifikasi') : 'Terverifikasi',
     created_by: existingRecord ? (existingRecord.created_by || 'Admin') : (sessionStorage.getItem('ckg_user_name') || currentRole || 'Admin'),
     petugas_entry: existingRecord ? (existingRecord.petugas_entry || 'Admin') : (sessionStorage.getItem('ckg_user_name') || currentRole || 'Admin'),
@@ -9279,6 +9350,7 @@ function buildCkgGratisRowsHtml(list) {
 
         <!-- KOLOM 4: HASIL PEMERIKSAAN MEDIS -->
         <td style="vertical-align: middle;">
+          ${(r.bb > 0 || r.tb > 0 || r.lp > 0 || r.td_sistolik > 0 || r.gula_darah > 0 || r.kolesterol > 0 || r.hb > 0) ? `
           <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 5px;">
             <span class="badge" style="background: #f8fafc; color: #334155; font-size: 11px; font-weight: 700; border: 1px solid #e2e8f0; padding: 3px 8px;">
               <i class="bi bi-speedometer2" style="color: #64748b;"></i> ${r.bb ? r.bb + ' kg' : '-'} / ${r.tb ? r.tb + ' cm' : '-'} / LP ${r.lp ? r.lp + ' cm' : '-'}
@@ -9302,6 +9374,16 @@ function buildCkgGratisRowsHtml(list) {
               : `<span class="badge badge-slate" style="font-size: 10px; padding: 2px 6px;"><i class="bi bi-eye"></i> Mata Normal</span>`
             }
           </div>
+          ` : `
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="badge" style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
+              <i class="bi bi-hourglass-split"></i> Belum Diperiksa
+            </span>
+            <button type="button" class="btn btn-sm" onclick="openPemeriksaanCkgGratisModal('${r.id}')" style="padding: 2px 7px; font-size: 10.5px; font-weight: 700; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; border-radius: 5px; cursor: pointer;">
+              + Input Medis
+            </button>
+          </div>
+          `}
         </td>
 
         <!-- KOLOM 5: PETUGAS & TGL ENTRY -->
@@ -9322,14 +9404,17 @@ function buildCkgGratisRowsHtml(list) {
 
         <!-- KOLOM 6: AKSI -->
         <td style="text-align: center; vertical-align: middle;">
-          <div style="display: flex; gap: 4px; justify-content: center;">
+          <div style="display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" onclick="openPemeriksaanCkgGratisModal('${r.id}')" title="Input / Edit Hasil Pemeriksaan Medis" style="padding: 5px 9px; font-weight: 700; font-size: 11px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; background: #0284c7; color: white; border: none; box-shadow: 0 2px 4px rgba(2,132,199,0.2);">
+              <i class="bi bi-heart-pulse-fill"></i> Periksa
+            </button>
             <button class="btn btn-secondary btn-sm" onclick="sendSingleCkgGratisToBotQueue('${r.id}')" title="Kirim Pasien Ini ke Antrean Bot ENCO" style="padding: 5px 8px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
               <i class="bi bi-robot"></i>
             </button>
             <button class="btn btn-secondary btn-sm" onclick="viewDetailModal('${r.id}', 'ckg-gratis')" title="Detail Pasien" style="padding: 5px 8px;">
               <i class="bi bi-eye"></i>
             </button>
-            <button class="btn btn-cyan btn-sm" onclick="editCkgGratisRecord('${r.id}')" title="Edit Data Pasien" style="padding: 5px 8px;">
+            <button class="btn btn-cyan btn-sm" onclick="editCkgGratisRecord('${r.id}')" title="Edit Data Identitas Pasien" style="padding: 5px 8px;">
               <i class="bi bi-pencil"></i>
             </button>
             <button class="btn btn-danger btn-sm" onclick="deleteCkgGratisRecord('${r.id}')" title="Hapus Data" style="padding: 5px 8px;">
@@ -9455,6 +9540,198 @@ function editCkgGratisRecord(id) {
       setVal('alamat', r.alamat || '');
     }, 50);
   }, 50);
+}
+
+/* ==========================================================================
+   🩺 MODAL & ENGINE PEMERIKSAAN MEDIS PASIEN CKG GRATIS (FORMAT BOT ENCO)
+   ========================================================================== */
+
+let currentPemeriksaanId = null;
+
+function openPemeriksaanCkgGratisModal(recordId) {
+  const r = ckgGratisRecords.find(item => String(item.id) === String(recordId));
+  if (!r) {
+    showToast('Data pasien tidak ditemukan!', 'error');
+    return;
+  }
+
+  currentPemeriksaanId = recordId;
+
+  // Header banner info
+  const nameEl = document.getElementById('periksaModalNama');
+  const nikEl = document.getElementById('periksaModalNik');
+  const jkUsiaEl = document.getElementById('periksaModalJkUsia');
+  const katEl = document.getElementById('periksaModalKategori');
+  const alamatEl = document.getElementById('periksaModalAlamat');
+
+  if (nameEl) nameEl.textContent = r.nama || '-';
+  if (nikEl) nikEl.textContent = r.nik ? r.nik : (r.belum_punya_nik ? 'Belum Ada NIK' : '-');
+  if (jkUsiaEl) jkUsiaEl.textContent = `${r.jenis_kelamin === 'P' ? '♀ Perempuan' : '♂ Laki-laki'} • ${r.usia || 0} Tahun`;
+  if (katEl) katEl.textContent = getKategoriLabel(r.kategori_sasaran || determineKategoriSasaran(r.tanggal_lahir)?.category || 'dewasa');
+  if (alamatEl) alamatEl.textContent = `${r.alamat || '-'}, ${r.kelurahan || '-'}, Kec. ${r.kecamatan || '-'}`;
+
+  // Populate Examination Fields
+  const setInput = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = (val !== undefined && val !== null && val !== 0 && val !== '0') ? val : '';
+  };
+
+  setInput('pemeriksaan_bb', r.bb);
+  setInput('pemeriksaan_tb', r.tb);
+  setInput('pemeriksaan_lp', r.lp);
+  setInput('pemeriksaan_td_sistolik', r.td_sistolik);
+  setInput('pemeriksaan_td_diastolik', r.td_diastolik);
+  setInput('pemeriksaan_gds', r.gula_darah);
+  setInput('pemeriksaan_kolesterol', r.kolesterol);
+  setInput('pemeriksaan_hb', r.hb);
+
+  const mataEl = document.getElementById('pemeriksaan_mata');
+  if (mataEl) mataEl.value = r.mata || 'Normal';
+
+  const telingaEl = document.getElementById('pemeriksaan_telinga');
+  if (telingaEl) telingaEl.value = r.telinga || 'Normal';
+
+  const gigiEl = document.getElementById('pemeriksaan_gigi');
+  if (gigiEl) gigiEl.value = r.gigi || 'Baik';
+
+  const isKatarak = String(r.katarak || '').toLowerCase().includes('ya');
+  const radKatarakYa = document.getElementById('pemeriksaan_katarak_ya');
+  const radKatarakTidak = document.getElementById('pemeriksaan_katarak_tidak');
+  if (radKatarakYa && radKatarakTidak) {
+    if (isKatarak) radKatarakYa.checked = true;
+    else radKatarakTidak.checked = true;
+  }
+
+  const isMerokok = String(r.merokok || '').toLowerCase().includes('ya');
+  const radRokokYa = document.getElementById('pemeriksaan_rokok_ya');
+  const radRokokTidak = document.getElementById('pemeriksaan_rokok_tidak');
+  if (radRokokYa && radRokokTidak) {
+    if (isMerokok) radRokokYa.checked = true;
+    else radRokokTidak.checked = true;
+  }
+
+  calculatePemeriksaanIMT();
+
+  const overlay = document.getElementById('pemeriksaanCkgGratisModalOverlay');
+  if (overlay) overlay.classList.add('open');
+}
+
+function calculatePemeriksaanIMT() {
+  const bb = parseFloat(document.getElementById('pemeriksaan_bb')?.value) || 0;
+  const tb = parseFloat(document.getElementById('pemeriksaan_tb')?.value) || 0;
+  const imtEl = document.getElementById('pemeriksaan_imt');
+  const badgeEl = document.getElementById('pemeriksaan_imt_badge');
+
+  if (bb > 0 && tb > 0) {
+    const tbM = tb / 100;
+    const imt = (bb / (tbM * tbM)).toFixed(1);
+    if (imtEl) imtEl.value = imt;
+    if (badgeEl) {
+      if (imt < 18.5) {
+        badgeEl.textContent = 'Kurus / Kurang BB';
+        badgeEl.className = 'badge badge-amber';
+      } else if (imt <= 25.0) {
+        badgeEl.textContent = 'Normal';
+        badgeEl.className = 'badge badge-emerald';
+      } else if (imt <= 27.0) {
+        badgeEl.textContent = 'Kelebihan BB';
+        badgeEl.className = 'badge badge-amber';
+      } else {
+        badgeEl.textContent = 'Obesitas';
+        badgeEl.className = 'badge badge-rose';
+      }
+    }
+  } else {
+    if (imtEl) imtEl.value = '';
+    if (badgeEl) {
+      badgeEl.textContent = '-';
+      badgeEl.className = 'badge badge-slate';
+    }
+  }
+}
+
+async function savePemeriksaanCkgGratis() {
+  if (!currentPemeriksaanId) return;
+  const r = ckgGratisRecords.find(item => String(item.id) === String(currentPemeriksaanId));
+  if (!r) return;
+
+  const bb = parseFloat(document.getElementById('pemeriksaan_bb')?.value) || 0;
+  const tb = parseFloat(document.getElementById('pemeriksaan_tb')?.value) || 0;
+  const lp = parseFloat(document.getElementById('pemeriksaan_lp')?.value) || 0;
+  const imt = parseFloat(document.getElementById('pemeriksaan_imt')?.value) || 0;
+  const tdSistolik = parseInt(document.getElementById('pemeriksaan_td_sistolik')?.value) || 0;
+  const tdDiastolik = parseInt(document.getElementById('pemeriksaan_td_diastolik')?.value) || 0;
+  const gds = parseInt(document.getElementById('pemeriksaan_gds')?.value) || 0;
+  const kolesterol = parseInt(document.getElementById('pemeriksaan_kolesterol')?.value) || 0;
+  const hb = parseFloat(document.getElementById('pemeriksaan_hb')?.value) || 0;
+
+  const mata = document.getElementById('pemeriksaan_mata')?.value || 'Normal';
+  const telinga = document.getElementById('pemeriksaan_telinga')?.value || 'Normal';
+  const gigi = document.getElementById('pemeriksaan_gigi')?.value || 'Baik';
+  const katarak = document.querySelector('input[name="pemeriksaan_katarak"]:checked')?.value || 'Tidak';
+  const merokok = document.querySelector('input[name="pemeriksaan_rokok"]:checked')?.value || 'Tidak';
+
+  // Update object
+  r.bb = bb;
+  r.tb = tb;
+  r.lp = lp;
+  r.imt = imt;
+  r.td_sistolik = tdSistolik;
+  r.td_diastolik = tdDiastolik;
+  r.gula_darah = gds;
+  r.kolesterol = kolesterol;
+  r.hb = hb;
+  r.mata = mata;
+  r.telinga = telinga;
+  r.gigi = gigi;
+  r.katarak = katarak;
+  r.merokok = merokok;
+
+  // Loading
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      title: 'Menyimpan Pemeriksaan Medis...',
+      text: `Menyimpan data medis pasien ${r.nama} ke Cloud Database...`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+  }
+
+  try {
+    const res = await fetch('/api/ckg-gratis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([r])
+    });
+
+    saveCkgGratisRecordsToStorage();
+    renderCkgGratisTable();
+    closePemeriksaanCkgGratisModal();
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'success',
+        title: 'Pemeriksaan Berhasil Disimpan!',
+        text: `Hasil pemeriksaan medis pasien ${r.nama} telah berhasil diperbarui di Cloud Database.`,
+        timer: 1800,
+        showConfirmButton: false
+      });
+    } else {
+      showToast(`✓ Hasil pemeriksaan medis ${r.nama} berhasil disimpan!`, 'success');
+    }
+  } catch (err) {
+    console.error('Failed saving pemeriksaan:', err);
+    saveCkgGratisRecordsToStorage();
+    renderCkgGratisTable();
+    closePemeriksaanCkgGratisModal();
+    showToast(`Data pemeriksaan disimpan secara lokal (Offline)`, 'warning');
+  }
+}
+
+function closePemeriksaanCkgGratisModal() {
+  const overlay = document.getElementById('pemeriksaanCkgGratisModalOverlay');
+  if (overlay) overlay.classList.remove('open');
+  currentPemeriksaanId = null;
 }
 
 async function deleteCkgGratisRecord(id) {
