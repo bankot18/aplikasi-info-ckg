@@ -1657,8 +1657,6 @@ function openPuskesmasGate() {
     }
   });
 }
-  });
-}
 
 function openSekolahPortal() {
   const portalOverlay = document.getElementById('portalSelectionContainer');
