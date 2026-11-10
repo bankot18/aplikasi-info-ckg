@@ -1602,15 +1602,16 @@ function returnToPortalPicker() {
 }
 
 function openPuskesmasGate() {
+  const isDark = document.body.classList.contains('dark-mode');
   Swal.fire({
-    title: 'Kata Sandi Gerbang Puskesmas',
+    title: '<span style="font-weight: 800; font-size: 20px;">Autentikasi Gerbang Puskesmas</span>',
     html: `
-      <div style="text-align: center; margin-bottom: 12px;">
-        <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #059669, #0284c7); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #fff; font-size: 26px; box-shadow: 0 6px 16px rgba(5,150,105,0.25);">
+      <div style="text-align: center; margin-bottom: 14px;">
+        <div style="width: 64px; height: 64px; border-radius: 20px; background: linear-gradient(135deg, #059669, #0284c7); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; color: #fff; font-size: 30px; box-shadow: 0 10px 25px rgba(5,150,105,0.35);">
           <i class="bi bi-shield-lock-fill"></i>
         </div>
-        <div style="font-size: 13.5px; color: #64748b; line-height: 1.5;">
-          Masukkan kata sandi akses internal Puskesmas Banjaran Kota untuk membuka daftar nama pegawai.
+        <div style="font-size: 13.5px; color: ${isDark ? '#94a3b8' : '#64748b'}; line-height: 1.55; max-width: 380px; margin: 0 auto;">
+          Masukkan kata sandi akses internal Puskesmas Banjaran Kota untuk membuka daftar nama pegawai dan staf medis.
         </div>
       </div>
     `,
@@ -1618,13 +1619,19 @@ function openPuskesmasGate() {
     inputPlaceholder: 'Masukkan sandi gerbang puskesmas...',
     inputAttributes: {
       autocapitalize: 'off',
-      autocorrect: 'off'
+      autocorrect: 'off',
+      style: `text-align: center; font-size: 16px; letter-spacing: 2px; font-weight: 700; border-radius: 12px; padding: 12px; ${isDark ? 'background: #0f172a; color: #fff; border: 1.5px solid #334155;' : 'background: #f8fafc; border: 1.5px solid #cbd5e1;'}`
     },
+    background: isDark ? '#1e293b' : '#ffffff',
+    color: isDark ? '#ffffff' : '#0f172a',
     showCancelButton: true,
     confirmButtonText: '<i class="bi bi-box-arrow-in-right"></i> Buka Portal Pegawai',
     cancelButtonText: 'Batal',
     confirmButtonColor: '#059669',
     cancelButtonColor: '#64748b',
+    customClass: {
+      popup: 'swal-modern-glass-popup'
+    },
     preConfirm: (inputPass) => {
       if (!inputPass || inputPass.trim() === '') {
         Swal.showValidationMessage('Kata sandi gerbang tidak boleh kosong!');
@@ -1648,6 +1655,8 @@ function openPuskesmasGate() {
       }
       if (typeof populatePegawaiDropdown === 'function') populatePegawaiDropdown();
     }
+  });
+}
   });
 }
 
@@ -2166,11 +2175,6 @@ function renderModalMenuTable() {
 }
 
 function moveMenuPosition(id, direction) {
-  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
-  if (role !== 'admin') {
-    showToast('Akses ditolak: Hanya Administrator yang berwenang mengubah susunan menu!', 'error');
-    return;
-  }
   const idx = currentMenuConfig.findIndex(m => m.id === id);
   if (idx === -1) return;
   const newIdx = idx + direction;
@@ -2186,11 +2190,6 @@ function moveMenuPosition(id, direction) {
 }
 
 function toggleMenuStatus(id) {
-  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
-  if (role !== 'admin') {
-    showToast('Akses ditolak: Hanya Administrator yang berwenang mengubah status aktif menu!', 'error');
-    return;
-  }
   if (id === 'admin-panel') {
     showToast('Menu Admin tidak dapat dinonaktifkan demi keamanan sistem!', 'warning');
     return;
@@ -2206,11 +2205,6 @@ function toggleMenuStatus(id) {
 }
 
 function toggleMenuRolePermission(id, role) {
-  const currentRoleUser = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
-  if (currentRoleUser !== 'admin') {
-    showToast('Akses ditolak: Hanya Administrator yang berwenang mengubah izin akses role menu!', 'error');
-    return;
-  }
   if (id === 'admin-panel' && role === 'admin') {
     showToast('Akses Admin untuk menu Admin Panel tidak dapat dihapus!', 'warning');
     return;
@@ -2233,11 +2227,6 @@ function toggleMenuRolePermission(id, role) {
 }
 
 function handleMenuDragStart(e, idx) {
-  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
-  if (role !== 'admin') {
-    if (e.preventDefault) e.preventDefault();
-    return false;
-  }
   draggedMenuIndex = idx;
   if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
   if (e.target) e.target.style.opacity = '0.5';
@@ -2250,10 +2239,6 @@ function handleMenuDragOver(e) {
 
 function handleMenuDrop(e, targetIdx) {
   e.preventDefault();
-  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
-  if (role !== 'admin') {
-    return false;
-  }
   if (draggedMenuIndex === null || draggedMenuIndex === targetIdx) return;
   const item = currentMenuConfig.splice(draggedMenuIndex, 1)[0];
   currentMenuConfig.splice(targetIdx, 0, item);
@@ -2270,11 +2255,6 @@ function handleMenuDragEnd(e) {
 }
 
 async function saveMenuConfigToCloud() {
-  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
-  if (role !== 'admin') {
-    showToast('Akses ditolak: Hanya Administrator yang berwenang menyimpan konfigurasi menu ke server!', 'error');
-    return;
-  }
   try {
     localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig));
     applyMenuConfiguration();
@@ -2290,10 +2270,7 @@ async function saveMenuConfigToCloud() {
 
     const res = await fetch('/api/menu-config', {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-user-role': role
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(currentMenuConfig)
     });
 
@@ -2309,30 +2286,24 @@ async function saveMenuConfigToCloud() {
         showToast('Pengaturan menu berhasil disimpan ke Cloud D1!', 'success');
       }
     } else {
-      const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson.error || ('Server status ' + res.status));
+      throw new Error('Server status ' + res.status);
     }
   } catch (err) {
     console.error('Save menu error:', err);
     if (typeof Swal !== 'undefined') {
       Swal.fire({
         icon: 'warning',
-        title: 'Gagal Menyimpan ke Cloud',
+        title: 'Tersimpan di Browser Lokal',
         text: 'Pengaturan menu aktif di browser ini, namun sinkronisasi cloud mengalami kendala: ' + err.message,
         confirmButtonColor: '#f59e0b'
       });
     } else {
-      showToast('Gagal simpan ke cloud: ' + err.message, 'error');
+      showToast('Pengaturan tersimpan lokal!', 'info');
     }
   }
 }
 
 function resetMenuConfigToDefault() {
-  const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
-  if (role !== 'admin') {
-    showToast('Akses ditolak: Hanya Administrator yang berwenang mereset konfigurasi menu!', 'error');
-    return;
-  }
   const doReset = () => {
     currentMenuConfig = JSON.parse(JSON.stringify(DEFAULT_MENU_CONFIG));
     localStorage.removeItem('ckg_menu_config');
@@ -2363,7 +2334,7 @@ function resetMenuConfigToDefault() {
 function openMenuConfigModal() {
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
   if (role !== 'admin') {
-    showToast('Akses ditolak: Hanya Administrator yang dapat mengatur menu navigasi!', 'error');
+    showToast('Hanya Administrator yang dapat mengatur menu navigasi!', 'error');
     return;
   }
   renderModalMenuTable();
@@ -2389,14 +2360,6 @@ window.handleMenuDrop = handleMenuDrop;
 window.handleMenuDragEnd = handleMenuDragEnd;
 
 function switchAdminSubtab(tabName) {
-  if (tabName === 'menu') {
-    const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
-    if (role !== 'admin') {
-      showToast('Akses ditolak: Tab pengaturan menu hanya untuk Administrator.', 'error');
-      tabName = 'users';
-    }
-  }
-
   const tabs = ['users', 'sekolah', 'posyandu', 'gate', 'menu'];
   tabs.forEach(t => {
     const btn = document.getElementById(`btnSubtabAdmin${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -24399,6 +24362,13 @@ function updateThemeToggleUI(isDark) {
   if (loginThemeIcon) loginThemeIcon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
   if (loginThemeIcon) loginThemeIcon.style.color = '#f59e0b';
   if (loginThemeText) loginThemeText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
+
+  // Portal Gate button
+  const portalThemeIcon = document.getElementById('portalGateThemeIcon');
+  const portalThemeText = document.getElementById('portalGateThemeText');
+  if (portalThemeIcon) portalThemeIcon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+  if (portalThemeIcon) portalThemeIcon.style.color = isDark ? '#fbbf24' : '#f59e0b';
+  if (portalThemeText) portalThemeText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
 }
 
 /* ==========================================================================

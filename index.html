@@ -22,7 +22,7 @@
 
   <!-- Application Stylesheet & SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-  <link rel="stylesheet" href="index.css?v=2.5">
+  <link rel="stylesheet" href="index.css?v=3.0">
 
   <!-- Chart.js, SweetAlert2 & SheetJS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -30,101 +30,245 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
-<body>
+<body class="dark-mode">
 
   <!-- ==========================================================================
-       PORTAL SELECTION GATE CONTAINER (GERBANG UTAMA PILIH AKSES)
+       PORTAL SELECTION GATE CONTAINER (GERBANG UTAMA PILIH AKSES - MODERN REDESIGN)
        ========================================================================== -->
   <div id="portalSelectionContainer" class="portal-gate-container">
-    <div class="portal-gate-header">
-      <div class="portal-gate-brand">
-        <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" onerror="this.style.display='none'">
-        <div class="portal-gate-brand-title">
-          <h3>Puskesmas Banjaran Kota</h3>
-          <p>Sistem Informasi CKG (BNBA)</p>
-        </div>
-      </div>
-      <div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDarkMode()"
-          style="border-radius: 20px; padding: 6px 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff;">
-          <i class="bi bi-sun-fill" style="color: #f59e0b;"></i>
-          <span>Mode Tema</span>
-        </button>
-      </div>
+    <!-- Ambient Animated Background Glow Orbs & Technical Grid -->
+    <div class="portal-ambient-orbs" aria-hidden="true">
+      <div class="ambient-orb ambient-orb-emerald"></div>
+      <div class="ambient-orb ambient-orb-blue"></div>
+      <div class="ambient-orb ambient-orb-rose"></div>
+      <div class="portal-tech-grid"></div>
     </div>
 
-    <div class="portal-gate-main">
-      <div class="portal-banner-container">
-        <img src="banner_ckg.png" alt="CKG Puskesmas Banjaran Kota" class="portal-hero-banner">
+    <!-- Floating Glass Island Header Navbar -->
+    <header class="portal-gate-header">
+      <div class="portal-gate-brand">
+        <div class="portal-brand-logo-wrap">
+          <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" onerror="this.style.display='none'">
+          <span class="portal-brand-pulse" title="Sistem Aktif & Terhubung"></span>
+        </div>
+        <div class="portal-gate-brand-title">
+          <h3>Puskesmas Banjaran Kota</h3>
+          <p><span class="badge-ilp-dot"></span> Sistem Informasi CKG Siklus Hidup (BNBA)</p>
+        </div>
       </div>
-      <h1 class="portal-headline-title">
-        Cek Kesehatan Gratis
-      </h1>
-      <h2 class="portal-headline-instansi">
-        Puskesmas Banjaran Kota
-      </h2>
-      <p class="portal-headline-subtitle">
-        Silakan tentukan pintu masuk sesuai instansi atau peran Anda.
-      </p>
 
-      <div class="portal-cards-grid">
-        <!-- CARD 1: PUSKESMAS BANJARAN KOTA -->
-        <div class="portal-card card-puskesmas" onclick="openPuskesmasGate()">
-          <div>
-            <div class="portal-card-icon-wrap">
-              <i class="bi bi-hospital-fill"></i>
-            </div>
-            <span class="portal-card-badge">Puskesmas Internal</span>
-            <h2 class="portal-card-title">Puskesmas Banjaran Kota</h2>
-            <p class="portal-card-desc">
-              Akses khusus staf medis, petugas skrining, koordinator, dan administrator Puskesmas Banjaran Kota.
-            </p>
-          </div>
-          <button type="button" class="portal-card-btn">
-            Masuk Portal Puskesmas <i class="bi bi-arrow-right"></i>
-          </button>
+      <div class="portal-header-actions">
+        <div class="portal-status-badge d-none-mobile">
+          <span class="pulse-indicator"></span>
+          <span>Cloudflare D1 Active</span>
+        </div>
+        <button type="button" class="portal-theme-toggle-btn" onclick="toggleDarkMode()" title="Ganti Mode Tema (Terang / Gelap)">
+          <i id="portalGateThemeIcon" class="bi bi-sun-fill" style="color: #fbbf24;"></i>
+          <span id="portalGateThemeText">Mode Terang</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Hero & Selection Grid -->
+    <main class="portal-gate-main">
+      <!-- Hero Top Showcase -->
+      <div class="portal-hero-top">
+        <div class="portal-hero-tag">
+          <i class="bi bi-stars"></i>
+          <span>Integrasi Layanan Primer (ILP) • Kemenkes RI 2026</span>
         </div>
 
-        <!-- CARD 2: SEKOLAH -->
-        <div class="portal-card card-sekolah" onclick="openSekolahPortal()">
-          <div>
-            <div class="portal-card-icon-wrap">
-              <i class="bi bi-mortarboard-fill"></i>
+        <div class="portal-banner-container">
+          <div class="portal-banner-glow"></div>
+          <img src="banner_ckg.png" alt="CKG Puskesmas Banjaran Kota" class="portal-hero-banner">
+        </div>
+
+        <h1 class="portal-headline-title">
+          Cek Kesehatan Gratis
+        </h1>
+        <div class="portal-headline-badge-wrap">
+          <span class="portal-headline-instansi">
+            <i class="bi bi-hospital"></i> Puskesmas Banjaran Kota
+          </span>
+        </div>
+        <p class="portal-headline-subtitle">
+          Satu portal cerdas, terpadu & akurat untuk monitoring skrining kesehatan siklus hidup (0 s/d Lansia) By Name By Address di seluruh wilayah binaan.
+        </p>
+      </div>
+
+      <!-- 3 Modern Interactive Portal Cards -->
+      <div class="portal-cards-grid">
+
+        <!-- CARD 1: PUSKESMAS BANJARAN KOTA (INTERNAL) -->
+        <div class="portal-card card-puskesmas" onclick="openPuskesmasGate()">
+          <div class="card-accent-bar"></div>
+          <div class="card-glow-layer"></div>
+          
+          <div class="portal-card-inner">
+            <div class="portal-card-top-row">
+              <div class="portal-card-icon-wrap">
+                <i class="bi bi-hospital-fill"></i>
+              </div>
+              <span class="portal-card-pill pill-puskesmas">
+                <i class="bi bi-shield-check"></i> Staf & Nakes
+              </span>
             </div>
-            <span class="portal-card-badge">Instansi Pendidikan</span>
-            <h2 class="portal-card-title">Sekolah (UKS / Guru)</h2>
-            <p class="portal-card-desc">
-              Akses instansi sekolah jenjang SD/MI, SMP/MTs, dan SMA/SMK untuk entri & monitoring hasil skrining CKG siswa.
-            </p>
+
+            <div class="portal-card-body">
+              <h2 class="portal-card-title">Puskesmas Banjaran Kota</h2>
+              <p class="portal-card-desc">
+                Pintu masuk tenaga kesehatan, dokter, perawat, analis, koordinator program, dan administrator internal puskesmas.
+              </p>
+
+              <ul class="portal-card-features">
+                <li><i class="bi bi-check-circle-fill"></i> Rekam Medis & Skrining CKG Lengkap</li>
+                <li><i class="bi bi-check-circle-fill"></i> Pelayanan Dalam Gedung & Lapangan</li>
+                <li><i class="bi bi-check-circle-fill"></i> Otomasi ASIK / ENCO & Rekap Ekspor</li>
+              </ul>
+            </div>
+
+            <div class="portal-card-bottom">
+              <button type="button" class="portal-card-btn btn-puskesmas">
+                <span>Masuk Portal Puskesmas</span>
+                <i class="bi bi-arrow-right"></i>
+              </button>
+              <div class="portal-card-hint">
+                <i class="bi bi-shield-lock-fill"></i> Sandi Gerbang Akses Pegawai
+              </div>
+            </div>
           </div>
-          <button type="button" class="portal-card-btn">
-            Masuk Portal Sekolah <i class="bi bi-arrow-right"></i>
-          </button>
+        </div>
+
+        <!-- CARD 2: SEKOLAH (UKS / GURU) -->
+        <div class="portal-card card-sekolah" onclick="openSekolahPortal()">
+          <div class="card-accent-bar"></div>
+          <div class="card-glow-layer"></div>
+
+          <div class="portal-card-inner">
+            <div class="portal-card-top-row">
+              <div class="portal-card-icon-wrap">
+                <i class="bi bi-mortarboard-fill"></i>
+              </div>
+              <span class="portal-card-pill pill-sekolah">
+                <i class="bi bi-building"></i> Instansi Pendidikan
+              </span>
+            </div>
+
+            <div class="portal-card-body">
+              <h2 class="portal-card-title">Sekolah (UKS / Guru)</h2>
+              <p class="portal-card-desc">
+                Akses mandiri pihak sekolah dan guru pembina UKS (SD/MI, SMP/MTs, SMA/SMK) untuk entri skrining berkala siswa.
+              </p>
+
+              <ul class="portal-card-features">
+                <li><i class="bi bi-check-circle-fill"></i> Terintegrasi 39+ Sekolah Binaan</li>
+                <li><i class="bi bi-check-circle-fill"></i> Skrining Massal Anak Sekolah Mandiri</li>
+                <li><i class="bi bi-check-circle-fill"></i> Evaluasi Status Gizi, Anemia & Indera</li>
+              </ul>
+            </div>
+
+            <div class="portal-card-bottom">
+              <button type="button" class="portal-card-btn btn-sekolah">
+                <span>Masuk Portal Sekolah</span>
+                <i class="bi bi-arrow-right"></i>
+              </button>
+              <div class="portal-card-hint">
+                <i class="bi bi-key-fill"></i> Pilih Sekolah & Password UKS
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- CARD 3: POSYANDU / KADER -->
         <div class="portal-card card-posyandu" onclick="openPosyanduPortal()">
-          <div>
-            <div class="portal-card-icon-wrap">
-              <i class="bi bi-heart-pulse-fill"></i>
+          <div class="card-accent-bar"></div>
+          <div class="card-glow-layer"></div>
+
+          <div class="portal-card-inner">
+            <div class="portal-card-top-row">
+              <div class="portal-card-icon-wrap">
+                <i class="bi bi-heart-pulse-fill"></i>
+              </div>
+              <span class="portal-card-pill pill-posyandu">
+                <i class="bi bi-people-fill"></i> Kader Wilayah
+              </span>
             </div>
-            <span class="portal-card-badge">Kader Desa</span>
-            <h2 class="portal-card-title">Posyandu / Kader</h2>
-            <p class="portal-card-desc">
-              Akses kader kesehatan Posyandu desa/kelurahan untuk skrining terpadu balita, remaja, lansia, dan masyarakat.
-            </p>
+
+            <div class="portal-card-body">
+              <h2 class="portal-card-title">Posyandu / Kader</h2>
+              <p class="portal-card-desc">
+                Akses kader posyandu desa/kelurahan untuk pelaksanaan skrining terpadu balita, anak, remaja, dewasa & lansia.
+              </p>
+
+              <ul class="portal-card-features">
+                <li><i class="bi bi-check-circle-fill"></i> Skrining Terpadu Balita s/d Lansia</li>
+                <li><i class="bi bi-check-circle-fill"></i> Deteksi Dini PTM & Antropometri Balita</li>
+                <li><i class="bi bi-check-circle-fill"></i> Cetak Kartu Skrining Pasien Cepat</li>
+              </ul>
+            </div>
+
+            <div class="portal-card-bottom">
+              <button type="button" class="portal-card-btn btn-posyandu">
+                <span>Masuk Portal Posyandu</span>
+                <i class="bi bi-arrow-right"></i>
+              </button>
+              <div class="portal-card-hint">
+                <i class="bi bi-geo-alt-fill"></i> Pilih Posyandu & Sandi Kader
+              </div>
+            </div>
           </div>
-          <button type="button" class="portal-card-btn">
-            Masuk Portal Posyandu <i class="bi bi-arrow-right"></i>
-          </button>
+        </div>
+
+      </div>
+
+      <!-- Scope & Coverage Metrics Bar -->
+      <div class="portal-trust-strip">
+        <div class="trust-item">
+          <div class="trust-icon"><i class="bi bi-hospital"></i></div>
+          <div class="trust-info">
+            <span class="trust-number">1 Puskesmas</span>
+            <span class="trust-sub">Induk Banjaran Kota</span>
+          </div>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <div class="trust-icon"><i class="bi bi-mortarboard"></i></div>
+          <div class="trust-info">
+            <span class="trust-number">39+ Sekolah</span>
+            <span class="trust-sub">Jenjang SD s/d SMA</span>
+          </div>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <div class="trust-icon"><i class="bi bi-geo-alt"></i></div>
+          <div class="trust-info">
+            <span class="trust-number">60+ Posyandu</span>
+            <span class="trust-sub">Kader Kesehatan Desa</span>
+          </div>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-item">
+          <div class="trust-icon"><i class="bi bi-shield-check"></i></div>
+          <div class="trust-info">
+            <span class="trust-number">Siklus Hidup</span>
+            <span class="trust-sub">Standar Integrasi ILP</span>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
 
-    <div class="portal-gate-footer">
-      <span>Create by: Mochamad Fauzie, S.Gz @2026</span>
-      <span>Puskesmas Banjaran Kota • v1.2</span>
-    </div>
+    <!-- Modern Glass Footer -->
+    <footer class="portal-gate-footer">
+      <div class="portal-footer-left">
+        <span>© 2026 Puskesmas Banjaran Kota • Sistem Informasi CKG (BNBA)</span>
+      </div>
+      <div class="portal-footer-right">
+        <span class="footer-badge"><i class="bi bi-lock-fill"></i> SSL Terenkripsi</span>
+        <span class="footer-badge"><i class="bi bi-cloud-check-fill"></i> Cloudflare D1</span>
+        <span class="footer-badge badge-author"><i class="bi bi-person-fill"></i> Mochamad Fauzie, S.Gz</span>
+        <span class="footer-badge badge-version">v2.0 Modern Edition</span>
+      </div>
+    </footer>
   </div>
 
   <!-- ==========================================================================
@@ -6755,7 +6899,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=3.7"></script>
+  <script src="app.js?v=3.8"></script>
   <script src="alat-bnhp.js"></script>
 </body>
 
