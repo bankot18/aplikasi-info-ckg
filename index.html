@@ -22,7 +22,7 @@
 
   <!-- Application Stylesheet & SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-  <link rel="stylesheet" href="index.css?v=3.0">
+  <link rel="stylesheet" href="index.css?v=4.0">
 
   <!-- Chart.js, SweetAlert2 & SheetJS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -30,7 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
-<body class="dark-mode">
+<body>
 
   <!-- ==========================================================================
        PORTAL SELECTION GATE CONTAINER (GERBANG UTAMA PILIH AKSES - MODERN REDESIGN)
@@ -58,13 +58,17 @@
       </div>
 
       <div class="portal-header-actions">
+        <div class="portal-kemenkes-badge d-none-mobile">
+          <i class="bi bi-patch-check-fill" style="color: #059669;"></i>
+          <span>Standar ILP Kemenkes RI</span>
+        </div>
         <div class="portal-status-badge d-none-mobile">
           <span class="pulse-indicator"></span>
-          <span>Cloudflare D1 Active</span>
+          <span>Cloudflare D1 Aktif</span>
         </div>
         <button type="button" class="portal-theme-toggle-btn" onclick="toggleDarkMode()" title="Ganti Mode Tema (Terang / Gelap)">
-          <i id="portalGateThemeIcon" class="bi bi-sun-fill" style="color: #fbbf24;"></i>
-          <span id="portalGateThemeText">Mode Terang</span>
+          <i id="portalGateThemeIcon" class="bi bi-moon-stars-fill" style="color: #64748b;"></i>
+          <span id="portalGateThemeText">Mode Gelap</span>
         </button>
       </div>
     </header>
@@ -74,12 +78,11 @@
       <!-- Hero Top Showcase -->
       <div class="portal-hero-top">
         <div class="portal-hero-tag">
-          <i class="bi bi-stars"></i>
-          <span>Integrasi Layanan Primer (ILP) • Kemenkes RI 2026</span>
+          <i class="bi bi-shield-check"></i>
+          <span>Portal Resmi Pelayanan CKG • Integrasi Layanan Primer (ILP) 2026</span>
         </div>
 
         <div class="portal-banner-container">
-          <div class="portal-banner-glow"></div>
           <img src="banner_ckg.png" alt="CKG Puskesmas Banjaran Kota" class="portal-hero-banner">
         </div>
 
@@ -92,7 +95,7 @@
           </span>
         </div>
         <p class="portal-headline-subtitle">
-          Satu portal cerdas, terpadu & akurat untuk monitoring skrining kesehatan siklus hidup (0 s/d Lansia) By Name By Address di seluruh wilayah binaan.
+          Silakan tentukan pintu masuk sesuai instansi atau peran Anda untuk memulai pencatatan dan monitoring hasil skrining kesehatan By Name By Address.
         </p>
       </div>
 
@@ -6899,7 +6902,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=3.9"></script>
+  <script src="app.js?v=4.0"></script>
   <script src="alat-bnhp.js"></script>
 </body>
 

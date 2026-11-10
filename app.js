@@ -1,4 +1,4 @@
-// Main Application Logic for Pencatatan CKG Puskesmas Banjaran Kota
+﻿// Main Application Logic for Pencatatan CKG Puskesmas Banjaran Kota
 
 // Quota & Storage Optimization: Clean up oversized/obsolete localStorage keys immediately
 (function cleanupStorageQuota() {
@@ -24310,8 +24310,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initDarkMode() {
   const savedTheme = localStorage.getItem('ckg_theme_mode');
-  // Default is strictly Dark Mode unless user explicitly saved 'light'
-  const isDark = (savedTheme !== 'light');
+  // Default is clean Light Mode (Official Medical SatuSehat Theme)
+  const isDark = (savedTheme === 'dark');
   
   if (isDark) {
     document.body.classList.add('dark-mode');
