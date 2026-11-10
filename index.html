@@ -617,6 +617,10 @@
         <i class="bi bi-person-workspace"></i>
         <span>Admin</span>
       </button>
+      <button class="nav-tab-btn btn-kelola-menu-quick admin-only" onclick="openMenuConfigModal()" title="Pengaturan Urutan Posisi & Hak Akses Menu" style="margin-left: auto; border: 1.5px dashed #93c5fd; background: rgba(37, 99, 235, 0.05); color: #2563eb; font-weight: 700;">
+        <i class="bi bi-sliders2-vertical"></i>
+        <span>Atur Menu</span>
+      </button>
     </nav>
 
     <!-- Main Content Container -->
@@ -2598,6 +2602,9 @@
           <button type="button" class="btn btn-secondary btn-sm admin-subtab-btn" id="btnSubtabAdminGate" onclick="switchAdminSubtab('gate')">
             <i class="bi bi-shield-lock-fill"></i> Password Gerbang Puskesmas
           </button>
+          <button type="button" class="btn btn-secondary btn-sm admin-subtab-btn" id="btnSubtabAdminMenu" onclick="switchAdminSubtab('menu')">
+            <i class="bi bi-ui-checks-grid"></i> Pengaturan & Izin Menu
+          </button>
         </div>
 
         <!-- SUBSECTION 1: PEGAWAI PUSKESMAS -->
@@ -2776,6 +2783,67 @@
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <!-- SUBSECTION 5: PENGATURAN & IZIN MENU NAVIGASI -->
+        <div id="adminSectionMenu" class="admin-panel-section" style="display: none;">
+          <div class="card-panel">
+            <div class="card-header-bar" style="flex-wrap: wrap; gap: 12px;">
+              <div>
+                <div class="card-header-title">
+                  <i class="bi bi-ui-checks-grid" style="color: #2563eb;"></i> Manajemen Susunan, Hak Akses, & Status Menu Navigasi
+                </div>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px; line-height: 1.5;">
+                  Atur urutan posisi menu (geser naik/turun), izin hak akses (permission) per level user/role, serta aktifkan atau nonaktifkan menu navigasi utama.
+                </p>
+              </div>
+              <div class="action-buttons-group">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="resetMenuConfigToDefault()" title="Kembalikan urutan dan hak akses ke pengaturan awal">
+                  <i class="bi bi-arrow-counterclockwise"></i> Reset Default
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="saveMenuConfigToCloud()" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); font-weight: 700;">
+                  <i class="bi bi-cloud-check-fill"></i> Simpan Pengaturan Menu
+                </button>
+              </div>
+            </div>
+
+            <!-- Petunjuk Penggunaan -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 12.5px; color: #1e40af; line-height: 1.6; display: flex; align-items: flex-start; gap: 10px;">
+              <i class="bi bi-info-circle-fill" style="font-size: 16px; color: #2563eb; margin-top: 2px; flex-shrink: 0;"></i>
+              <div>
+                <strong>Panduan Manajemen Menu:</strong>
+                <ul style="margin: 4px 0 0 16px; padding: 0;">
+                  <li><strong>Geser Posisi:</strong> Gunakan tombol <strong>Naik (▲)</strong> atau <strong>Turun (▼)</strong> untuk memindahkan urutan tab menu navigasi.</li>
+                  <li><strong>Status Menu:</strong> Klik tombol status untuk <strong>Mengaktifkan</strong> atau <strong>Menonaktifkan</strong> menu. Menu yang dinonaktifkan tidak akan tampil di navbar.</li>
+                  <li><strong>Permission (Hak Akses):</strong> Centang kotak role yang diizinkan untuk melihat dan membuka menu tersebut. Menu Admin selalu aktif bagi role Admin.</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Table Daftar Menu -->
+            <div class="table-responsive">
+              <table class="data-table" id="tableAdminMenuConfig" style="width: 100%; font-size: 13px;">
+                <thead>
+                  <tr style="background: #f8fafc;">
+                    <th style="width: 50px; text-align: center;">No.</th>
+                    <th style="width: 120px; text-align: center;">Geser Posisi</th>
+                    <th style="width: 220px;">Nama Menu & ID</th>
+                    <th style="width: 130px; text-align: center;">Status Menu</th>
+                    <th style="min-width: 330px;">Permission Hak Akses (Role yang Diizinkan)</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyAdminMenuConfig">
+                  <!-- Populated dynamically by renderAdminMenuTable() -->
+                </tbody>
+              </table>
+            </div>
+
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+              <button type="button" class="btn btn-primary" onclick="saveMenuConfigToCloud()" style="padding: 10px 24px; font-weight: 700; font-size: 13.5px; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">
+                <i class="bi bi-cloud-check-fill"></i> Simpan & Terapkan Perubahan Menu
+              </button>
+            </div>
           </div>
         </div>
         <!-- KAMUS ALAMAT & AUTO-LEARNING CONTROL PANEL -->
@@ -6632,6 +6700,49 @@
     </div>
   </div>
 
+  <!-- MODAL QUICK MENU CONFIGURATION (Geser Posisi, Permission & Status Menu) -->
+  <div id="modalMenuConfigOverlay" class="modal-overlay">
+    <div class="modal-container" style="max-width: 880px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--radius-lg); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: #fff; padding: 16px 20px;">
+        <div class="modal-title" style="color: #fff; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-ui-checks-grid"></i> Pengaturan Posisi, Permission & Status Menu
+        </div>
+        <button class="modal-close" onclick="closeMenuConfigModal()" style="color: #fff; opacity: 0.85;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px 20px; overflow-y: auto;">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px; color: #1e40af; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+          <span><i class="bi bi-info-circle-fill" style="color: #2563eb;"></i> Gunakan tombol <strong>Naik (▲) / Turun (▼)</strong> untuk menggeser urutan menu, centang role untuk hak akses, dan klik status untuk mengaktifkan/menonaktifkan.</span>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="resetMenuConfigToDefault()" style="font-size: 11.5px; padding: 4px 10px;">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset Default
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" style="width: 100%; font-size: 12.5px;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="width: 45px; text-align: center;">No.</th>
+                <th style="width: 110px; text-align: center;">Geser Posisi</th>
+                <th style="width: 200px;">Nama Menu & ID</th>
+                <th style="width: 120px; text-align: center;">Status</th>
+                <th>Permission Hak Akses (Role yang Diizinkan)</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyModalMenuConfig">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeMenuConfigModal()">Tutup</button>
+        <button type="button" class="btn btn-primary" onclick="saveMenuConfigToCloud()" style="font-weight: 700; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; padding: 8px 20px;">
+          <i class="bi bi-cloud-check-fill"></i> Simpan & Terapkan Perubahan
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Fullscreen Loading Overlay -->
@@ -6644,7 +6755,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=3.5"></script>
+  <script src="app.js?v=3.7"></script>
   <script src="alat-bnhp.js"></script>
 </body>
 
