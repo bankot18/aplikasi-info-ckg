@@ -2014,6 +2014,16 @@
               <button class="btn btn-purple" onclick="openTambahSiswaModal()" id="btnTambahSiswaSekolah">
                 <i class="bi bi-person-plus-fill"></i> Tambah Siswa
               </button>
+              <button class="btn btn-warning" id="btnAnomaliNikSekolah" onclick="openAnomaliNikModal()"
+                title="Cek & Kelola Data Siswa yang NIK-nya Kurang, Lebih, atau Kosong"
+                style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);">
+                <i class="bi bi-exclamation-triangle-fill"></i> Data NIK Bermasalah <span id="badgeCountAnomaliNik" class="badge" style="background: rgba(255,255,255,0.3); color: #fff; margin-left: 4px; font-size: 11px;">0</span>
+              </button>
+              <button class="btn" id="btnAbsensiTtdSekolah" onclick="openModalAbsensiTtd()"
+                title="Daftar Siswi Remaja Putri & Absensi Minum Tablet Tambah Darah (TTD)"
+                style="background: linear-gradient(135deg, #ec4899, #db2777); color: #fff; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.25);">
+                <i class="bi bi-capsule"></i> Absen Minum TTD Siswi <span id="badgeCountTtdTotal" class="badge" style="background: rgba(255,255,255,0.3); color: #fff; margin-left: 4px; font-size: 11px;">0</span>
+              </button>
               <button class="btn btn-secondary" onclick="openBotQueueModal('SEKOLAH')" title="Kelola Antrean Siswa Sekolah untuk Bot ENCO" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: #fff; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
                 <i class="bi bi-robot"></i> Antrean Bot Sekolah <span id="badgeQueueCountSekolah" class="badge" style="background: rgba(255,255,255,0.25); margin-left: 4px; font-size: 11px;">0</span>
               </button>
@@ -2023,15 +2033,15 @@
               <button class="btn btn-amber" onclick="openImportSekolahModal()">
                 <i class="bi bi-file-earmark-arrow-up-fill"></i> Import Excel
               </button>
-              <button class="btn btn-emerald" onclick="exportSekolahToXLSX()">
+              <button class="btn btn-emerald" id="btnExportSekolah" onclick="exportSekolahToXLSX()">
                 <i class="bi bi-file-earmark-arrow-down-fill"></i> Eksport Excel
               </button>
-              <button class="btn btn-sky" onclick="openLaporanSekolahModal()"
+              <button class="btn btn-sky" id="btnLaporanSekolah" onclick="openLaporanSekolahModal()"
                 title="Buka & Cetak Output Laporan Resmi Hasil Pemeriksaan Siswa Sekolah"
                 style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 700; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
                 <i class="bi bi-file-earmark-medical-fill"></i> Cetak Laporan Hasil
               </button>
-              <button class="btn btn-secondary" onclick="fetchSekolahRecordsFromCloud(true)">
+              <button class="btn btn-secondary" id="btnRefreshSekolah" onclick="fetchSekolahRecordsFromCloud(true)">
                 <i class="bi bi-arrow-clockwise"></i> Refresh Data
               </button>
               <button class="btn btn-indigo admin-only" onclick="openKelolaSekolahModal()"
@@ -2241,7 +2251,7 @@
                 </select>
               </div>
 
-              <!-- Filter NIK 16 Digit -->
+              <!-- Filter NIK 16 Digit & Anomali -->
               <div class="filter-group-col filter-col-status">
                 <label class="filter-label" for="filterSekolahNik">
                   <i class="bi bi-card-checklist"></i> Filter NIK:
@@ -2250,7 +2260,10 @@
                   onchange="renderSekolahView()">
                   <option value="">Semua NIK</option>
                   <option value="16_digit">NIK 16 Digit (Valid)</option>
-                  <option value="non_16_digit">Bukan 16 Digit / Tidak Valid</option>
+                  <option value="non_16_digit">Semua NIK Bermasalah</option>
+                  <option value="nik_kurang">⚠️ NIK Kurang (&lt; 16 Digit)</option>
+                  <option value="nik_lebih">⚠️ NIK Lebih (&gt; 16 Digit)</option>
+                  <option value="nik_kosong">⚠️ NIK Kosong / Belum Isi</option>
                 </select>
               </div>
 
@@ -4739,6 +4752,68 @@
           </div>
         </div>
 
+        <!-- BANNER PERINGATAN: WAJIB LENGKAPI IDENTITAS -->
+        <div id="bannerIdentitasWajib"
+          style="display: none; background: #fff1f2; border: 1.5px solid #fecaca; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+            <div style="width: 38px; height: 38px; border-radius: 10px; background: #e11d48; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+              <i class="bi bi-shield-exclamation"></i>
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 13.5px; color: #9f1239;">
+                Wajib Lengkapi Identitas Siswa Sebelum Pemeriksaan!
+              </div>
+              <div id="textDetailMissingIdentitas" style="font-size: 12px; color: #be123c; margin-top: 2px;">
+                Data NIK (16 digit), Tanggal Lahir, atau identitas belum lengkap. Harap isi Pos 1. Identitas terlebih dahulu.
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm" onclick="openFormPosPopup('identitas')"
+            style="background: #e11d48; color: #ffffff; font-weight: 800; font-size: 12px; border: none; border-radius: 8px; padding: 7px 14px; box-shadow: 0 2px 6px rgba(225, 29, 72, 0.3); display: inline-flex; align-items: center; gap: 5px; cursor: pointer;">
+            <i class="bi bi-pencil-square"></i> Lengkapi Sekarang
+          </button>
+        </div>
+
+        <!-- CARD KHUSUS SISWA PEREMPUAN: ABSENSI MINUM TABLET TAMBAH DARAH (TTD) -->
+        <div id="sekolahCardTtdRemajaPutri"
+          style="display: none; background: linear-gradient(135deg, #fdf2f8, #fce7f3); border: 1.5px solid #f472b6; border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.1);">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #ec4899, #db2777); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 10px rgba(219, 39, 119, 0.3);">
+                🌸
+              </div>
+              <div>
+                <div style="font-size: 14px; font-weight: 800; color: #9d174d; display: flex; align-items: center; gap: 6px;">
+                  <span>Program Aksi Bergizi: Minum Tablet Tambah Darah (TTD)</span>
+                  <span class="badge" style="background: #db2777; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 6px;">Remaja Putri</span>
+                </div>
+                <div style="font-size: 12px; color: #be185d; font-weight: 600; margin-top: 2px;">
+                  Pemberian rutin tablet zat besi untuk pencegahan anemia pada siswi sekolah
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn" id="btnAbsenTtdModal" onclick="catatAbsenMinumTtd()"
+              style="background: linear-gradient(135deg, #ec4899, #be185d); color: #ffffff; border: none; border-radius: 10px; font-weight: 800; font-size: 13px; padding: 9px 18px; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 4px 12px rgba(219, 39, 119, 0.35); cursor: pointer;">
+              <i class="bi bi-capsule"></i> + Absen Minum TTD Sekarang
+            </button>
+          </div>
+
+          <!-- LOG RIWAYAT ABSENSI MINUM TTD -->
+          <div style="background: #ffffff; border: 1.5px solid #fbcfe8; border-radius: 10px; padding: 12px 14px;">
+            <div style="font-size: 12px; font-weight: 800; color: #9d174d; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <i class="bi bi-clock-history" style="color: #db2777;"></i> LOG RIWAYAT ABSENSI MINUM TTD (TANGGAL &amp; JAM):
+              </span>
+              <span id="labelTotalTtdSiswa" style="background: #fdf2f8; color: #be185d; border: 1px solid #f472b6; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 800;">
+                0 Kali Minum
+              </span>
+            </div>
+            <div id="listLogTtdSiswa" style="display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto;">
+              <!-- Dinamis via JS -->
+            </div>
+          </div>
+        </div>
+
         <!-- INSTRUKSI / PETUNJUK POS -->
         <div style="margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
           <div style="font-size: 13.5px; font-weight: 800; color: #064e3b; display: flex; align-items: center; gap: 7px;">
@@ -5327,6 +5402,14 @@
                 <option value="Nyeri Haid (Dismenore)">Nyeri Haid (Dismenore)</option>
                 <option value="Tidak Teratur">Menstruasi Tidak Teratur</option>
               </select>
+              <div style="margin-top: 6px; display: flex; align-items: center; justify-content: space-between; background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 8px; padding: 5px 10px;">
+                <span style="font-size: 11px; color: #be185d; font-weight: 700;">
+                  <i class="bi bi-capsule"></i> Minum TTD: <strong id="labelTtdInOrgan">0x</strong>
+                </span>
+                <button type="button" class="btn btn-sm" onclick="catatAbsenMinumTtd()" style="background: #ec4899; color: #fff; font-size: 10.5px; font-weight: 700; border: none; border-radius: 6px; padding: 2px 8px; cursor: pointer;">
+                  + Absen TTD
+                </button>
+              </div>
             </div>
 
             <!-- 6. MEROKOK (KHUSUS LAKI-LAKI) -->
@@ -6890,6 +6973,207 @@
     </div>
   </div>
 
+  <!-- =================================================================== -->
+  <!-- MODAL: DATA NIK SISWA KURANG / LEBIH / KOSONG (SESUAI SEKOLAH) -->
+  <!-- =================================================================== -->
+  <div id="modalAnomaliNik" class="modal-overlay">
+    <div class="modal-container sekolah-modal-container" style="max-width: 960px; width: 95vw; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #fde68a; box-shadow: 0 20px 40px rgba(245, 158, 11, 0.2);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; padding: 14px 22px; display: flex; align-items: center; justify-content: space-between;">
+        <div class="modal-title" style="font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-exclamation-triangle-fill"></i> Data Siswa NIK Bermasalah (Kurang / Lebih / Kosong)
+        </div>
+        <button class="modal-close" onclick="closeAnomaliNikModal()" style="color: #ffffff; opacity: 0.9;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 18px 22px; max-height: 82vh; overflow-y: auto;">
+        <!-- Header Info Card -->
+        <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: #f59e0b; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(245,158,11,0.3);">
+              <i class="bi bi-card-checklist"></i>
+            </div>
+            <div>
+              <div style="font-size: 14.5px; font-weight: 800; color: #92400e; display: flex; align-items: center; gap: 8px;">
+                <span>Daftar Siswa NIK Tidak Valid</span>
+                <span id="badgeAnomaliSekolahLabel" class="badge" style="background: #d97706; color: #ffffff; font-size: 11.5px; padding: 2px 9px; border-radius: 6px;">Sekolah: -</span>
+              </div>
+              <div style="font-size: 12px; color: #b45309; margin-top: 3px;">
+                Data disaring sesuai sekolah. NIK wajib 16 digit angka untuk sinkronisasi ASIK &amp; kelengkapan identitas skrining.
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" class="btn btn-sm btn-emerald" onclick="exportAnomaliNikToExcel()" style="padding: 7px 14px; font-weight: 700; font-size: 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="bi bi-file-earmark-arrow-down-fill"></i> Download Excel
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="renderAnomaliNikTable()" style="padding: 7px 12px; font-weight: 700; font-size: 12px; border-radius: 8px;">
+              <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Summary Chips -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px;">
+          <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; padding: 10px 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #991b1b;">TOTAL NIK BERMASALAH</div>
+            <div id="statAnomaliTotal" style="font-size: 22px; font-weight: 900; color: #dc2626; margin-top: 2px;">0</div>
+          </div>
+          <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 10px; padding: 10px 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #92400e;">NIK KURANG (&lt; 16 DIGIT)</div>
+            <div id="statAnomaliKurang" style="font-size: 22px; font-weight: 900; color: #d97706; margin-top: 2px;">0</div>
+          </div>
+          <div style="background: #fee2e2; border: 1.5px solid #fca5a5; border-radius: 10px; padding: 10px 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #991b1b;">NIK LEBIH (&gt; 16 DIGIT)</div>
+            <div id="statAnomaliLebih" style="font-size: 22px; font-weight: 900; color: #b91c1c; margin-top: 2px;">0</div>
+          </div>
+          <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #475569;">NIK KOSONG / BELUM ISI</div>
+            <div id="statAnomaliKosong" style="font-size: 22px; font-weight: 900; color: #64748b; margin-top: 2px;">0</div>
+          </div>
+        </div>
+
+        <!-- Filter Controls Bar -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="pillsAnomaliType">
+            <button type="button" class="btn btn-sm anomali-type-pill active" data-type="all" onclick="filterAnomaliType('all')" style="border-radius: 20px; font-weight: 700; font-size: 11.5px; padding: 4px 12px; background: #d97706; color: #fff;">Semua Bermasalah</button>
+            <button type="button" class="btn btn-sm anomali-type-pill" data-type="kurang" onclick="filterAnomaliType('kurang')" style="border-radius: 20px; font-weight: 700; font-size: 11.5px; padding: 4px 12px; background: #fff; border: 1px solid #cbd5e1; color: #475569;">Kurang (&lt; 16)</button>
+            <button type="button" class="btn btn-sm anomali-type-pill" data-type="lebih" onclick="filterAnomaliType('lebih')" style="border-radius: 20px; font-weight: 700; font-size: 11.5px; padding: 4px 12px; background: #fff; border: 1px solid #cbd5e1; color: #475569;">Lebih (&gt; 16)</button>
+            <button type="button" class="btn btn-sm anomali-type-pill" data-type="kosong" onclick="filterAnomaliType('kosong')" style="border-radius: 20px; font-weight: 700; font-size: 11.5px; padding: 4px 12px; background: #fff; border: 1px solid #cbd5e1; color: #475569;">Kosong</button>
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: center; flex: 1; justify-content: flex-end; min-width: 250px;">
+            <select id="selectAnomaliKelasFilter" class="form-control" onchange="renderAnomaliNikTable()" style="max-width: 140px; height: 32px; font-size: 12px; font-weight: 600;">
+              <option value="">Semua Kelas</option>
+            </select>
+            <input type="text" id="searchAnomaliInput" class="form-control" placeholder="Cari nama / kelas..." oninput="renderAnomaliNikTable()" style="max-width: 200px; height: 32px; font-size: 12px;">
+          </div>
+        </div>
+
+        <!-- Table of Students -->
+        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
+            <thead>
+              <tr style="background: #f1f5f9; color: #334155; font-weight: 800; border-bottom: 2px solid #cbd5e1;">
+                <th style="padding: 10px 12px; text-align: center; width: 45px;">NO</th>
+                <th style="padding: 10px 12px; text-align: left;">NAMA SISWA</th>
+                <th style="padding: 10px 12px; text-align: center; width: 110px;">KELAS</th>
+                <th style="padding: 10px 12px; text-align: center; width: 150px;">STATUS NIK</th>
+                <th style="padding: 10px 12px; text-align: left; width: 190px;">NIK SAAT INI</th>
+                <th style="padding: 10px 12px; text-align: center; width: 180px;">AKSI</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyAnomaliNik">
+              <!-- Dinamis via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- MODAL: DAFTAR ABSENSI MINUM TTD SISWI REMAJA PUTRI (SESUAI SEKOLAH) -->
+  <!-- =================================================================== -->
+  <div id="modalAbsensiTtd" class="modal-overlay">
+    <div class="modal-container sekolah-modal-container" style="max-width: 980px; width: 95vw; border-radius: 20px; overflow: hidden; background: #ffffff; border: 1.5px solid #f472b6; box-shadow: 0 20px 40px rgba(236, 72, 153, 0.2);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #db2777, #be185d); color: #ffffff; padding: 14px 22px; display: flex; align-items: center; justify-content: space-between;">
+        <div class="modal-title" style="font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-capsule"></i> Absensi Minum Tablet Tambah Darah (TTD) Siswi Remaja Putri
+        </div>
+        <button class="modal-close" onclick="closeModalAbsensiTtd()" style="color: #ffffff; opacity: 0.9;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 18px 22px; max-height: 82vh; overflow-y: auto;">
+        <!-- Banner Info Card -->
+        <div style="background: linear-gradient(135deg, #fdf2f8, #fce7f3); border: 1.5px solid #f472b6; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #ec4899, #db2777); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 10px rgba(219,39,119,0.3);">
+              🌸
+            </div>
+            <div>
+              <div style="font-size: 14.5px; font-weight: 800; color: #9d174d; display: flex; align-items: center; gap: 8px;">
+                <span>Catatan Absen Minum TTD (Tablet Tambah Darah)</span>
+                <span id="badgeTtdSekolahLabel" class="badge" style="background: #db2777; color: #fff; font-size: 11.5px; padding: 2px 9px; border-radius: 6px;">Sekolah: -</span>
+              </div>
+              <div style="font-size: 12px; color: #be185d; margin-top: 3px;">
+                Khusus siswi perempuan. Catat tanggal &amp; waktu minum TTD untuk memantau pencegahan anemia di sekolah.
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" class="btn btn-sm" onclick="bulkAbsenMinumTtd()" style="background: linear-gradient(135deg, #ec4899, #db2777); color: #fff; border: none; font-weight: 800; font-size: 12px; padding: 7px 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 3px 8px rgba(219,39,119,0.3); cursor: pointer;">
+              <i class="bi bi-check2-all"></i> + Absen Masal Siswi
+            </button>
+            <button type="button" class="btn btn-sm btn-emerald" onclick="exportTtdToExcel()" style="padding: 7px 14px; font-weight: 700; font-size: 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="bi bi-file-earmark-arrow-down-fill"></i> Download Excel
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="renderAbsensiTtdTable()" style="padding: 7px 12px; font-weight: 700; font-size: 12px; border-radius: 8px;">
+              <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Summary Chips -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px;">
+          <div style="background: #fdf2f8; border: 1.5px solid #fbcfe8; border-radius: 10px; padding: 10px 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #9d174d;">TOTAL SISWI PEREMPUAN</div>
+            <div id="statTtdTotalSiswi" style="font-size: 22px; font-weight: 900; color: #db2777; margin-top: 2px;">0</div>
+          </div>
+          <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 10px; padding: 10px 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #166534;">SUDAH PERNAH ABSEN TTD</div>
+            <div id="statTtdSudahPernah" style="font-size: 22px; font-weight: 900; color: #16a34a; margin-top: 2px;">0</div>
+          </div>
+          <div style="background: #fff1f2; border: 1.5px solid #fecaca; border-radius: 10px; padding: 10px 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #991b1b;">BELUM PERNAH ABSEN</div>
+            <div id="statTtdBelumPernah" style="font-size: 22px; font-weight: 900; color: #e11d48; margin-top: 2px;">0</div>
+          </div>
+          <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #1e40af;">TOTAL TABLET DIMINUM</div>
+            <div id="statTtdTotalTablet" style="font-size: 22px; font-weight: 900; color: #2563eb; margin-top: 2px;">0</div>
+          </div>
+        </div>
+
+        <!-- Filter Controls Bar -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="pillsTtdFilter">
+            <button type="button" class="btn btn-sm ttd-filter-pill active" data-filter="all" onclick="filterTtdStatus('all')" style="border-radius: 20px; font-weight: 700; font-size: 11.5px; padding: 4px 12px; background: #db2777; color: #fff;">Semua Siswi</button>
+            <button type="button" class="btn btn-sm ttd-filter-pill" data-filter="sudah" onclick="filterTtdStatus('sudah')" style="border-radius: 20px; font-weight: 700; font-size: 11.5px; padding: 4px 12px; background: #fff; border: 1px solid #cbd5e1; color: #475569;">Sudah Minum</button>
+            <button type="button" class="btn btn-sm ttd-filter-pill" data-filter="belum" onclick="filterTtdStatus('belum')" style="border-radius: 20px; font-weight: 700; font-size: 11.5px; padding: 4px 12px; background: #fff; border: 1px solid #cbd5e1; color: #475569;">Belum Pernah</button>
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: center; flex: 1; justify-content: flex-end; min-width: 250px;">
+            <select id="selectTtdKelasFilter" class="form-control" onchange="renderAbsensiTtdTable()" style="max-width: 140px; height: 32px; font-size: 12px; font-weight: 600;">
+              <option value="">Semua Kelas</option>
+            </select>
+            <input type="text" id="searchTtdInput" class="form-control" placeholder="Cari nama siswi..." oninput="renderAbsensiTtdTable()" style="max-width: 200px; height: 32px; font-size: 12px;">
+          </div>
+        </div>
+
+        <!-- Table of Female Students -->
+        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
+            <thead>
+              <tr style="background: #fdf2f8; color: #831843; font-weight: 800; border-bottom: 2px solid #fbcfe8;">
+                <th style="padding: 10px 8px; text-align: center; width: 40px;">
+                  <input type="checkbox" id="checkAllTtdStudents" onchange="toggleSelectAllTtd(this.checked)" title="Pilih Semua Siswi">
+                </th>
+                <th style="padding: 10px 10px; text-align: center; width: 40px;">NO</th>
+                <th style="padding: 10px 12px; text-align: left;">NAMA SISWI PEREMPUAN</th>
+                <th style="padding: 10px 12px; text-align: center; width: 100px;">KELAS</th>
+                <th style="padding: 10px 12px; text-align: center; width: 130px;">TOTAL MINUM TTD</th>
+                <th style="padding: 10px 12px; text-align: left; width: 230px;">LOG ABSEN TERAKHIR (TANGGAL &amp; WAKTU)</th>
+                <th style="padding: 10px 12px; text-align: center; width: 190px;">AKSI</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyAbsensiTtd">
+              <!-- Dinamis via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Fullscreen Loading Overlay -->
@@ -6902,7 +7186,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=4.0"></script>
+  <script src="app.js?v=4.1"></script>
   <script src="alat-bnhp.js"></script>
 </body>
 

@@ -1,4 +1,4 @@
-﻿// Main Application Logic for Pencatatan CKG Puskesmas Banjaran Kota
+// Main Application Logic for Pencatatan CKG Puskesmas Banjaran Kota
 
 // Quota & Storage Optimization: Clean up oversized/obsolete localStorage keys immediately
 (function cleanupStorageQuota() {
@@ -1014,13 +1014,55 @@ function setupUserSessionUI() {
       if (filterSelectSekolah) {
         filterSelectSekolah.value = savedName;
         filterSelectSekolah.disabled = true;
-        if (typeof applySekolahFilter === 'function') applySekolahFilter();
       }
 
-      // Khusus Akun Sekolah: Hanya tombol Tambah Siswa yang tampil di toolbar CKG Sekolah
+      // Kunci Komponen Searchable Combobox Sekolah agar tidak bisa diklik / diubah
+      const trigger = document.getElementById('comboboxSekolahTrigger');
+      if (trigger) {
+        trigger.style.pointerEvents = 'none';
+        trigger.style.opacity = '0.9';
+        trigger.style.background = '#f8fafc';
+        trigger.style.cursor = 'not-allowed';
+        trigger.title = 'Terkunci: Akun Anda terdaftar sebagai ' + savedName;
+      }
+      const labelEl = document.getElementById('comboboxSekolahLabel');
+      if (labelEl) {
+        labelEl.innerHTML = `<i class="bi bi-lock-fill" style="color: #059669; margin-right: 5px;"></i>${escapeHtml(savedName)} <span style="font-size: 11px; color: #059669; font-weight: 700; margin-left: 4px;">(Akun Terkunci)</span>`;
+      }
+      const clearBtn = document.getElementById('comboboxSekolahClearBtn');
+      if (clearBtn) {
+        clearBtn.style.setProperty('display', 'none', 'important');
+      }
+
+      // Khusus Akun Sekolah: Tampilkan menu Tambah Siswa, NIK Bermasalah, Absensi TTD, Laporan, Refresh & Export
+      const allowedSekolahIds = [
+        'btnTambahSiswaSekolah',
+        'btnAnomaliNikSekolah',
+        'btnAbsensiTtdSekolah',
+        'btnExportSekolah',
+        'btnLaporanSekolah',
+        'btnRefreshSekolah'
+      ];
       const sekolahActionBtns = document.querySelectorAll('#view-sekolah .action-buttons-group > button');
       sekolahActionBtns.forEach(btn => {
-        if (btn.id === 'btnTambahSiswaSekolah' || btn.textContent.includes('Tambah Siswa')) {
+        const text = btn.textContent.toLowerCase();
+        const isAllowed = allowedSekolahIds.includes(btn.id) ||
+                          text.includes('tambah siswa') ||
+                          text.includes('nik') ||
+                          text.includes('ttd') ||
+                          text.includes('cetak laporan') ||
+                          text.includes('refresh') ||
+                          text.includes('eksport');
+        const isForbiddenAdmin = btn.classList.contains('admin-only') ||
+                                 btn.classList.contains('admin-koordinator-only') ||
+                                 text.includes('kelola sekolah') ||
+                                 text.includes('naik kelas') ||
+                                 text.includes('migrasi') ||
+                                 text.includes('cek duplikat') ||
+                                 text.includes('hapus semua') ||
+                                 text.includes('antrean bot') ||
+                                 text.includes('kirim kelas');
+        if (isAllowed && !isForbiddenAdmin) {
           btn.style.display = 'inline-flex';
         } else {
           btn.style.display = 'none';
@@ -1029,6 +1071,9 @@ function setupUserSessionUI() {
 
       const btnKelolaQuick = document.querySelector('.btn-kelola-sekolah-quick');
       if (btnKelolaQuick) btnKelolaQuick.style.display = 'none';
+
+      if (typeof updateKelasDropdownOptions === 'function') updateKelasDropdownOptions();
+      if (typeof renderSekolahView === 'function') renderSekolahView();
     }
   } else {
     // Regular Puskesmas User: restore default role visibility
@@ -15463,6 +15508,15 @@ function populateTahunFilterOptions() {
 // ==========================================================================
 function toggleSekolahDropdown(event) {
   if (event) event.stopPropagation();
+
+  // Khusus Akun Sekolah: Cegah pembukaan dropdown (Terkunci ke akun sendiri)
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const schoolAccountName = sessionStorage.getItem('ckg_user_name') || '';
+  if (portalType === 'sekolah') {
+    showToast(`Daftar sekolah terkunci sesuai akun login Anda (${schoolAccountName}).`, 'info');
+    return;
+  }
+
   const panel = document.getElementById('comboboxSekolahPanel');
   const trigger = document.getElementById('comboboxSekolahTrigger');
   if (!panel || !trigger) return;
@@ -15504,6 +15558,13 @@ function clearSearchInputSekolah() {
 }
 
 function selectSekolahComboboxOption(value, label) {
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const schoolAccountName = sessionStorage.getItem('ckg_user_name') || '';
+  if (portalType === 'sekolah' && schoolAccountName) {
+    value = schoolAccountName;
+    label = schoolAccountName;
+  }
+
   const selectSekolah = document.getElementById('filterSelectSekolah');
   const labelEl = document.getElementById('comboboxSekolahLabel');
   const clearBtn = document.getElementById('comboboxSekolahClearBtn');
@@ -15512,10 +15573,14 @@ function selectSekolahComboboxOption(value, label) {
     selectSekolah.value = value;
   }
   if (labelEl) {
-    labelEl.textContent = label || '-- Pilih Sekolah (Wajib) --';
+    if (portalType === 'sekolah') {
+      labelEl.innerHTML = `<i class="bi bi-lock-fill" style="color: #059669; margin-right: 5px;"></i>${escapeHtml(value)} <span style="font-size: 11px; color: #059669; font-weight: 700;">(Akun Terkunci)</span>`;
+    } else {
+      labelEl.textContent = label || '-- Pilih Sekolah (Wajib) --';
+    }
   }
   if (clearBtn) {
-    clearBtn.style.display = value ? 'inline-block' : 'none';
+    clearBtn.style.display = (value && portalType !== 'sekolah') ? 'inline-block' : 'none';
   }
 
   closeSekolahDropdown();
@@ -15525,6 +15590,8 @@ function selectSekolahComboboxOption(value, label) {
 
 function clearSekolahFilter(event) {
   if (event) event.stopPropagation();
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  if (portalType === 'sekolah') return;
   selectSekolahComboboxOption('', '-- Pilih Sekolah (Wajib) --');
 }
 
@@ -15769,6 +15836,20 @@ function populateSchoolSelectElement(elementId) {
 
   el.innerHTML = html;
   if (currentVal) el.value = currentVal;
+
+  // Khusus Akun Sekolah: Kunci select sekolah ke akun sendiri
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const schoolAccountName = sessionStorage.getItem('ckg_user_name') || '';
+  if (portalType === 'sekolah' && schoolAccountName) {
+    el.value = schoolAccountName;
+    el.disabled = true;
+    el.style.backgroundColor = '#f1f5f9';
+    el.style.cursor = 'not-allowed';
+  } else {
+    el.disabled = false;
+    el.style.backgroundColor = '';
+    el.style.cursor = '';
+  }
 }
 
 function updateKelasDropdownOptions() {
@@ -16054,7 +16135,20 @@ function renderSekolahView() {
   const tbody = document.getElementById('tableBodySekolah');
   if (!tbody) return;
 
-  const chosenSekolah = (document.getElementById('filterSelectSekolah')?.value || '').trim().toUpperCase();
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const schoolAccountName = sessionStorage.getItem('ckg_user_name') || '';
+
+  let chosenSekolah = (document.getElementById('filterSelectSekolah')?.value || '').trim().toUpperCase();
+  // Khusus Akun Sekolah: Kunci sekolah otomatis dan paksa ke akun sendiri
+  if (portalType === 'sekolah' && schoolAccountName) {
+    chosenSekolah = schoolAccountName.trim().toUpperCase();
+    const selSekolah = document.getElementById('filterSelectSekolah');
+    if (selSekolah && selSekolah.value !== schoolAccountName) {
+      selSekolah.value = schoolAccountName;
+      selSekolah.disabled = true;
+    }
+  }
+
   const chosenKelas = (document.getElementById('filterSelectKelas')?.value || '').trim().toUpperCase();
   const chosenTahun = (document.getElementById('filterSelectTahun')?.value || '2026').trim();
   const searchQuery = (document.getElementById('searchSekolahRecords')?.value || '').trim().toLowerCase();
@@ -16126,8 +16220,25 @@ function renderSekolahView() {
   if (filterSekolahNikVal === '16_digit') {
     dataset = dataset.filter(r => isNik16Digit(r.nik));
   } else if (filterSekolahNikVal === 'non_16_digit') {
-    dataset = dataset.filter(r => !isNik16Digit(r.nik));
+    dataset = dataset.filter(r => getNikAnomalyStatus(r.nik).type !== 'valid');
+  } else if (filterSekolahNikVal === 'nik_kurang') {
+    dataset = dataset.filter(r => getNikAnomalyStatus(r.nik).type === 'kurang');
+  } else if (filterSekolahNikVal === 'nik_lebih') {
+    dataset = dataset.filter(r => getNikAnomalyStatus(r.nik).type === 'lebih');
+  } else if (filterSekolahNikVal === 'nik_kosong') {
+    dataset = dataset.filter(r => getNikAnomalyStatus(r.nik).type === 'kosong');
   }
+
+  // Update Toolbar Badge Counters Realtime untuk sekolah aktif
+  const currentSchoolRecords = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === chosenSekolah);
+  const anomaliNikCount = currentSchoolRecords.filter(r => getNikAnomalyStatus(r.nik).type !== 'valid').length;
+  const femaleStudents = currentSchoolRecords.filter(r => r.jk === 'P');
+  const ttdSiswiCount = femaleStudents.reduce((sum, s) => sum + getStudentTtdLogs(s).length, 0);
+
+  const badgeAnomali = document.getElementById('badgeCountAnomaliNik');
+  if (badgeAnomali) badgeAnomali.textContent = anomaliNikCount;
+  const badgeTtd = document.getElementById('badgeCountTtdTotal');
+  if (badgeTtd) badgeTtd.textContent = ttdSiswiCount;
 
   // Update KPI Summary Metrics (Calculated BEFORE status filtering so total counts stay accurate)
   const totalStudents = dataset.length;
@@ -16351,6 +16462,17 @@ function renderSekolahView() {
           </span>
         `);
       }
+      if (r.jk === 'P') {
+        const studentTtdLogs = getStudentTtdLogs(r);
+        if (studentTtdLogs.length > 0) {
+          const lastLog = studentTtdLogs[0];
+          hasilChips.push(`
+            <span style="background: #fdf2f8; border: 1.5px solid #f472b6; padding: 2px 7px; border-radius: 6px; font-weight: 700; color: #9d174d; display: inline-flex; align-items: center; gap: 4px;" title="Terakhir minum TTD: ${escapeHtml(lastLog.tanggal || '')} ${escapeHtml(lastLog.waktu || '')}">
+              🌸 <strong>TTD:</strong> ${studentTtdLogs.length}x
+            </span>
+          `);
+        }
+      }
       if (r.jk === 'L' && r.merokok && r.merokok !== '-') {
         let smokeBadge = r.merokok;
         if (r.merokok === 'Aktif') {
@@ -16403,8 +16525,14 @@ function renderSekolahView() {
             <span>${safeNama}</span>
             <i class="bi bi-box-arrow-up-right" style="font-size: 11px; color: #94a3b8; margin-left: 2px;"></i>
           </div>
-          <div style="font-size: 11.5px; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap;">
-            <span><strong style="color: #475569;">NIK:</strong> ${safeNik || '-'} ${!isNik16Digit(r.nik) ? ('<span class="badge badge-rose" style="font-size: 9px; padding: 1px 4px;" title="NIK bukan 16 digit">' + (String(r.nik || '').replace(/\D/g, '').length ? String(r.nik || '').replace(/\D/g, '').length + ' Digit' : 'Bukan 16 Digit') + '</span>') : ''}</span>
+          <div style="font-size: 11.5px; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <span><strong style="color: #475569;">NIK:</strong> ${safeNik || '-'} ${(() => {
+              const nikStat = getNikAnomalyStatus(r.nik);
+              if (nikStat.type !== 'valid') {
+                return `<span class="badge" style="font-size: 9px; padding: 1.5px 5px; background: ${nikStat.bg}; color: ${nikStat.color}; border: 1px solid ${nikStat.border}; font-weight: 700;" title="${nikStat.label}"><i class="bi bi-exclamation-triangle-fill"></i> ${nikStat.label}</span>`;
+              }
+              return '';
+            })()}</span>
             <span>&bull;</span>
             <span style="color: ${jkColor}; font-weight: 700;">${safeJk}</span>
             ${(() => {
@@ -16446,10 +16574,15 @@ function renderSekolahView() {
 
         <!-- Column 6: Aksi -->
         <td style="text-align: center; vertical-align: middle;">
-          <div style="display: flex; gap: 5px; justify-content: center;">
+          <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
             <button type="button" class="btn btn-primary btn-sm" onclick="openPemeriksaanModal('${safeId}')" title="Periksa / Edit Siswa" style="padding: 5px 9px; font-size: 11px; border-radius: 8px;">
               <i class="bi bi-heart-pulse"></i> Periksa
             </button>
+            ${r.jk === 'P' ? `
+            <button type="button" class="btn btn-sm" onclick="catatAbsenMinumTtd('${safeId}')" title="Absen Minum Tablet Tambah Darah (TTD)" style="padding: 5px 8px; font-size: 11px; border-radius: 8px; background: #fdf2f8; color: #db2777; border: 1.5px solid #fbcfe8; font-weight: 700;">
+              <i class="bi bi-capsule"></i> TTD
+            </button>
+            ` : ''}
             <button type="button" class="btn btn-sm" onclick="sendSingleSekolahToBotQueue('${safeId}')" title="Kirim Siswa Ini ke Antrean Bot ENCO" style="padding: 5px 8px; font-size: 11px; border-radius: 8px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
               <i class="bi bi-robot"></i>
             </button>
@@ -16478,6 +16611,38 @@ function openFormPosPopup(posKey) {
   if (!siswa) {
     showToast('Data siswa tidak ditemukan.', 'warning');
     return;
+  }
+
+  // VALIDASI MUTLAK: Sebelum melakukan pemeriksaan fisik/klinis, WAJIB melengkapi identitas!
+  if (posKey !== 'identitas') {
+    if (!isSiswaIdentitasComplete(siswa)) {
+      const missing = getMissingIdentitasFields(siswa);
+      Swal.fire({
+        icon: 'warning',
+        title: 'Lengkapi Identitas Terlebih Dahulu!',
+        html: `
+          <div style="text-align: left; font-size: 13.5px; line-height: 1.6; color: #334155;">
+            Sebelum memulai pengisian pemeriksaan fisik / klinis, Anda <strong>diwajibkan melengkapi data identitas siswa</strong> terlebih dahulu.
+            <div style="background: #fff1f2; border: 1.5px solid #fecaca; border-radius: 10px; padding: 10px 14px; margin: 12px 0; color: #9f1239;">
+              <strong style="font-size: 13px;"><i class="bi bi-exclamation-triangle-fill"></i> Data yang belum lengkap:</strong>
+              <ul style="margin: 6px 0 0 18px; padding: 0;">
+                ${missing.map(m => `<li>${escapeHtml(m)}</li>`).join('')}
+              </ul>
+            </div>
+            <span style="font-size: 12px; color: #64748b;">Silakan lengkapi NIK 16 digit dan Tanggal Lahir pada Format 1 (Identitas).</span>
+          </div>
+        `,
+        confirmButtonText: '<i class="bi bi-pencil-square"></i> Lengkapi Identitas Sekarang',
+        confirmButtonColor: '#059669',
+        showCancelButton: true,
+        cancelButtonText: 'Batal'
+      }).then(res => {
+        if (res.isConfirmed) {
+          openFormPosPopup('identitas');
+        }
+      });
+      return;
+    }
   }
 
   // Set student banner inside form popup
@@ -16584,13 +16749,45 @@ function updateSekolahMenuBadges(siswa) {
   
   const stations = getSekolahRecordExamStations(siswa);
   const { hasAntro, hasVital, hasLab, isLabTidakDiperiksa, hasOrgan } = stations;
+  const isIdComplete = isSiswaIdentitasComplete(siswa);
 
-  // 1. Identitas
+  // 1. Identitas (Wajib Lengkap Sebelum Pemeriksaan Fisik)
   const bIdentitas = document.getElementById('badgePosMenuIdentitas');
+  const btnIdentitas = document.getElementById('btnPosMenuIdentitas');
   if (bIdentitas) {
-    bIdentitas.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi</span>`;
+    if (isIdComplete) {
+      bIdentitas.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Lengkap</span>`;
+      btnIdentitas?.classList.add('is-done');
+    } else {
+      bIdentitas.innerHTML = `<span class="badge" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;"><i class="bi bi-exclamation-triangle-fill"></i> Belum Lengkap (Wajib)</span>`;
+      btnIdentitas?.classList.remove('is-done');
+    }
   }
-  document.getElementById('btnPosMenuIdentitas')?.classList.add('is-done');
+
+  // Tampilkan Banner Peringatan jika identitas belum lengkap
+  const bannerId = document.getElementById('bannerIdentitasWajib');
+  const textMissing = document.getElementById('textDetailMissingIdentitas');
+  if (bannerId) {
+    if (!isIdComplete) {
+      bannerId.style.display = 'flex';
+      if (textMissing) {
+        textMissing.textContent = `Data belum lengkap: ${getMissingIdentitasFields(siswa).join(', ')}. Harap isi Pos 1. Identitas terlebih dahulu.`;
+      }
+    } else {
+      bannerId.style.display = 'none';
+    }
+  }
+
+  // Khusus Siswa Perempuan: Tampilkan Card & Log Absen Minum TTD
+  const cardTtd = document.getElementById('sekolahCardTtdRemajaPutri');
+  if (cardTtd) {
+    if (siswa.jk === 'P') {
+      cardTtd.style.display = 'block';
+      renderTtdLogsInModal(siswa);
+    } else {
+      cardTtd.style.display = 'none';
+    }
+  }
 
   // 2. Antropometri
   const bAntro = document.getElementById('badgePosMenuAntro');
@@ -16599,6 +16796,9 @@ function updateSekolahMenuBadges(siswa) {
     if (hasAntro) {
       bAntro.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${siswa.bb || 0}kg/${siswa.tb || 0}cm)</span>`;
       btnAntro?.classList.add('is-done');
+    } else if (!isIdComplete) {
+      bAntro.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-lock-fill"></i> Terkunci</span>`;
+      btnAntro?.classList.remove('is-done');
     } else {
       bAntro.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
       btnAntro?.classList.remove('is-done');
@@ -16612,6 +16812,9 @@ function updateSekolahMenuBadges(siswa) {
     if (hasVital) {
       bVital.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${siswa.td_sistolik}/${siswa.td_diastolik || 0})</span>`;
       btnVital?.classList.add('is-done');
+    } else if (!isIdComplete) {
+      bVital.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-lock-fill"></i> Terkunci</span>`;
+      btnVital?.classList.remove('is-done');
     } else {
       bVital.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
       btnVital?.classList.remove('is-done');
@@ -16631,6 +16834,9 @@ function updateSekolahMenuBadges(siswa) {
       if (siswa.gula_darah && siswa.gula_darah !== '-' && siswa.gula_darah !== 'Tidak Diperiksa') parts.push(`GDS ${siswa.gula_darah}`);
       bLab.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi ${parts.length ? `(${parts.join(', ')})` : ''}</span>`;
       btnLab?.classList.add('is-done');
+    } else if (!isIdComplete) {
+      bLab.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-lock-fill"></i> Terkunci</span>`;
+      btnLab?.classList.remove('is-done');
     } else {
       bLab.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
       btnLab?.classList.remove('is-done');
@@ -16644,6 +16850,9 @@ function updateSekolahMenuBadges(siswa) {
     if (hasOrgan) {
       bOrgan.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (Selesai)</span>`;
       btnOrgan?.classList.add('is-done');
+    } else if (!isIdComplete) {
+      bOrgan.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-lock-fill"></i> Terkunci</span>`;
+      btnOrgan?.classList.remove('is-done');
     } else {
       bOrgan.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
       btnOrgan?.classList.remove('is-done');
@@ -16748,6 +16957,18 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
   }
   populateSchoolSelectElement('periksaSekolah');
   if (siswa.sekolah) document.getElementById('periksaSekolah').value = siswa.sekolah;
+  // Khusus Akun Sekolah: Kunci sekolah pada modal periksa ke akun sendiri
+  const portalTypePeriksa = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const schoolAccountPeriksa = sessionStorage.getItem('ckg_user_name') || '';
+  if (portalTypePeriksa === 'sekolah' && schoolAccountPeriksa) {
+    const pSek = document.getElementById('periksaSekolah');
+    if (pSek) {
+      pSek.value = schoolAccountPeriksa;
+      pSek.disabled = true;
+      pSek.style.backgroundColor = '#f1f5f9';
+      pSek.style.cursor = 'not-allowed';
+    }
+  }
   updatePeriksaSiswaKelasDropdown();
   if (siswa.kelas) document.getElementById('periksaKelas').value = siswa.kelas;
   document.getElementById('periksaTglLahir').value = siswa.tanggal_lahir || '';
@@ -17788,18 +18009,63 @@ async function saveSekolahCategory(categoryKey, triggerBtn) {
         showToast('Nama Lengkap Siswa wajib diisi!', 'warning');
         return;
       }
+      const rawNik = document.getElementById('periksaNik')?.value.trim() || '';
+      const cleanNik = rawNik.replace(/\D/g, '');
+      if (cleanNik.length !== 16) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'NIK Wajib 16 Digit',
+          html: `NIK siswa yang Anda masukkan berjumlah <strong>${cleanNik.length} digit</strong> (NIK: <code>${rawNik || '(kosong)'}</code>).<br><br>Setiap data siswa <strong>wajib memiliki NIK 16 digit yang valid</strong> sebelum melanjutkan skrining.`,
+          confirmButtonColor: '#d97706'
+        });
+        return;
+      }
+      const tglLahirVal = document.getElementById('periksaTglLahir')?.value || '';
+      if (!tglLahirVal) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Tanggal Lahir Wajib Diisi',
+          text: 'Tanggal lahir diperlukan untuk menghitung umur dan mengklasifikasikan hasil klinis skrining.',
+          confirmButtonColor: '#d97706'
+        });
+        return;
+      }
+
       fieldsToUpdate.nama = nama;
-      fieldsToUpdate.nik = document.getElementById('periksaNik')?.value.trim() || '';
+      fieldsToUpdate.nik = rawNik;
       fieldsToUpdate.jk = document.getElementById('periksaJk')?.value || 'L';
-      fieldsToUpdate.sekolah = document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || existing.sekolah;
+      const portalTypeSekolah = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+      const schoolAccountSekolah = sessionStorage.getItem('ckg_user_name') || '';
+      if (portalTypeSekolah === 'sekolah' && schoolAccountSekolah) {
+        fieldsToUpdate.sekolah = schoolAccountSekolah.toUpperCase();
+      } else {
+        fieldsToUpdate.sekolah = document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || existing.sekolah;
+      }
       fieldsToUpdate.kelas = document.getElementById('periksaKelas')?.value.trim().toUpperCase() || existing.kelas;
-      fieldsToUpdate.tanggal_lahir = document.getElementById('periksaTglLahir')?.value || '';
+      fieldsToUpdate.tanggal_lahir = tglLahirVal;
       fieldsToUpdate.no_whatsapp = document.getElementById('periksaWa')?.value.trim() || '';
       fieldsToUpdate.alamat = document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '';
       fieldsToUpdate.identitas_done = 1;
       categoryName = 'Identitas Siswa';
-      titleMsg = 'Data Identitas Siswa Berhasil Disimpan!';
-    } else if (categoryKey === 'antro') {
+      titleMsg = 'Data Identitas Siswa Berhasil Disimpan & Lengkap!';
+    } else {
+      // Validasi mutlak: Kategori pemeriksaan fisik/klinis hanya boleh disimpan jika identitas sudah lengkap!
+      if (!isSiswaIdentitasComplete(existing)) {
+        const missing = getMissingIdentitasFields(existing);
+        Swal.fire({
+          icon: 'warning',
+          title: 'Identitas Siswa Belum Lengkap!',
+          html: `Data identitas siswa belum lengkap (<strong>${missing.join(', ')}</strong>).<br><br>Wajib melengkapi dan menyimpan Format Identitas terlebih dahulu sebelum menyimpan data pemeriksaan lainnya.`,
+          confirmButtonText: '<i class="bi bi-pencil-square"></i> Buka Format Identitas',
+          confirmButtonColor: '#059669'
+        }).then(() => {
+          openFormPosPopup('identitas');
+        });
+        return;
+      }
+    }
+
+    if (categoryKey === 'antro') {
       const bbVal = parseFloat(document.getElementById('periksaBb')?.value) || 0;
       const tbVal = parseFloat(document.getElementById('periksaTb')?.value) || 0;
       let imtVal = 0;
@@ -18053,6 +18319,66 @@ async function savePemeriksaanSiswa(event) {
   try {
     const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
 
+    // 1. Validasi Wajib Lengkapi Identitas Sebelum Pemeriksaan Fisik/Skrining
+    const curNama = (document.getElementById('periksaNama')?.value || sekolahRecords[idx].nama || '').trim().toUpperCase();
+    const curNik = (document.getElementById('periksaNik')?.value || sekolahRecords[idx].nik || '').trim();
+    const cleanNik = curNik.replace(/\D/g, '');
+    const curTglLahir = document.getElementById('periksaTglLahir')?.value || sekolahRecords[idx].tanggal_lahir || '';
+    const curJk = document.getElementById('periksaJk')?.value || sekolahRecords[idx].jk || 'L';
+    const curSekolah = (document.getElementById('periksaSekolah')?.value || sekolahRecords[idx].sekolah || '').trim().toUpperCase();
+    const curKelas = (document.getElementById('periksaKelas')?.value || sekolahRecords[idx].kelas || '').trim().toUpperCase();
+
+    const missingFields = [];
+    if (!curNama) missingFields.push('Nama Siswa');
+    if (!cleanNik) {
+      missingFields.push('NIK (Masih kosong)');
+    } else if (cleanNik.length !== 16) {
+      missingFields.push(`NIK harus 16 digit (saat ini ${cleanNik.length} digit)`);
+    }
+    if (!curTglLahir) missingFields.push('Tanggal Lahir');
+    if (!curJk) missingFields.push('Jenis Kelamin (L/P)');
+    if (!curSekolah) missingFields.push('Sekolah');
+    if (!curKelas) missingFields.push('Kelas');
+
+    if (missingFields.length > 0) {
+      if (btn) {
+        btn.disabled = false;
+        btn.style.pointerEvents = '';
+        btn.style.opacity = '';
+        if (originalBtnHtml) btn.innerHTML = originalBtnHtml;
+      }
+      isSavingPemeriksaanSiswa = false;
+      Swal.fire({
+        icon: 'warning',
+        title: 'Lengkapi Identitas Terlebih Dahulu!',
+        html: `
+          <div style="text-align: left; font-size: 13px; line-height: 1.6;">
+            <p style="margin-bottom: 8px; color: #b91c1c; font-weight: 700;">
+              <i class="bi bi-exclamation-triangle-fill"></i> Pemeriksaan fisik/skrining tidak dapat disimpan sebelum data identitas siswa lengkap:
+            </p>
+            <ul style="margin: 0; padding-left: 20px; color: #334155;">
+              ${missingFields.map(m => `<li><strong>${m}</strong></li>`).join('')}
+            </ul>
+            <p style="margin-top: 10px; font-size: 12px; color: #64748b;">
+              Wajib melengkapi data Identitas (Nama, NIK 16 digit, Tanggal Lahir, Kelas) di Pos 1 Identitas sebelum pemeriksaan.
+            </p>
+          </div>
+        `,
+        confirmButtonColor: '#059669',
+        confirmButtonText: 'Buka Pos 1 Identitas Sekarang'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          openFormPosPopup('identitas');
+        }
+      });
+      return;
+    }
+
+    const isFormSemuaActive = document.getElementById('panelPemeriksaanSemuaFooter')?.classList.contains('is-active-semua');
+    const hasOrganDone = isFormSemuaActive ? 1 : (Number(sekolahRecords[idx].organ_done) === 1 ? 1 : 0);
+    const sistolVal = parseInt(document.getElementById('periksaSistolik')?.value, 10) || 0;
+    const diastolVal = parseInt(document.getElementById('periksaDiastolik')?.value, 10) || 0;
+
     let imtVal = 0;
     let statusImt = 'Normal';
     const bbVal = parseFloat(document.getElementById('periksaBb')?.value) || 0;
@@ -18113,9 +18439,6 @@ async function savePemeriksaanSiswa(event) {
       finalKatHb = document.getElementById('periksaKategoriHb')?.value || getKategoriHb(finalHb, age, curJk);
       finalLabDone = !!((finalHb && finalHb !== '-') || (finalGula && finalGula !== '-')) ? 1 : (sekolahRecords[idx].lab_done || 0);
     }
-
-    const isFormSemuaActive = document.getElementById('panelPemeriksaanSemuaFooter')?.classList.contains('is-active-semua');
-    const hasOrganDone = isFormSemuaActive ? 1 : (Number(sekolahRecords[idx].organ_done) === 1 ? 1 : 0);
 
     const updatedRecord = {
       ...sekolahRecords[idx],
@@ -18211,10 +18534,29 @@ function openTambahSiswaModal() {
 
   populateSchoolSelectElement('tambahSiswaSekolah');
 
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const schoolAccountName = (sessionStorage.getItem('ckg_user_name') || '').trim();
+
   // If a school filter is currently chosen, default to it
   const currentSekolahFilter = document.getElementById('filterSelectSekolah')?.value;
   const currentKelasFilter = document.getElementById('filterSelectKelas')?.value;
   if (currentSekolahFilter) document.getElementById('tambahSiswaSekolah').value = currentSekolahFilter;
+
+  // Khusus Akun Sekolah: Kunci pilihan sekolah otomatis sesuai akun login dan tidak bisa diubah
+  const tambahSekolahEl = document.getElementById('tambahSiswaSekolah');
+  if (tambahSekolahEl) {
+    if (portalType === 'sekolah' && schoolAccountName) {
+      tambahSekolahEl.value = schoolAccountName;
+      tambahSekolahEl.disabled = true;
+      tambahSekolahEl.style.backgroundColor = '#f1f5f9';
+      tambahSekolahEl.style.cursor = 'not-allowed';
+    } else {
+      tambahSekolahEl.disabled = false;
+      tambahSekolahEl.style.backgroundColor = '';
+      tambahSekolahEl.style.cursor = '';
+    }
+  }
+
   updateTambahSiswaKelasDropdown();
   if (currentKelasFilter) document.getElementById('tambahSiswaKelas').value = currentKelasFilter;
 
@@ -18244,8 +18586,14 @@ async function saveTambahSiswa(event) {
     return;
   }
 
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const schoolAccountName = (sessionStorage.getItem('ckg_user_name') || '').trim();
+
   const nama = document.getElementById('tambahSiswaNama').value.trim().toUpperCase();
-  const sekolah = document.getElementById('tambahSiswaSekolah').value.trim().toUpperCase();
+  let sekolah = document.getElementById('tambahSiswaSekolah').value.trim().toUpperCase();
+  if (portalType === 'sekolah' && schoolAccountName) {
+    sekolah = schoolAccountName.toUpperCase();
+  }
   const kelas = document.getElementById('tambahSiswaKelas').value.trim().toUpperCase();
 
   if (!nama || !sekolah || !kelas) {
@@ -18305,17 +18653,21 @@ async function saveTambahSiswa(event) {
   try {
     const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
 
+    const cleanNik = nikInput.replace(/\D/g, '');
+    const tglLahir = document.getElementById('tambahSiswaTglLahir')?.value || '';
+    const isIdLengkap = !!(nama && cleanNik.length === 16 && tglLahir && sekolah && kelas);
+
     const newSiswa = {
       id: `SCH-${Date.now()}`,
       no: sekolahRecords.length + 1,
       nama: nama,
       nik: nikInput,
-      jk: document.getElementById('tambahSiswaJk').value,
+      jk: document.getElementById('tambahSiswaJk')?.value || 'L',
       sekolah: sekolah,
       kelas: kelas,
-      tanggal_lahir: document.getElementById('tambahSiswaTglLahir').value,
-      no_whatsapp: document.getElementById('tambahSiswaWa').value.trim(),
-      alamat: document.getElementById('tambahSiswaAlamat').value.trim().toUpperCase(),
+      tanggal_lahir: tglLahir,
+      no_whatsapp: document.getElementById('tambahSiswaWa')?.value.trim() || '',
+      alamat: document.getElementById('tambahSiswaAlamat')?.value.trim().toUpperCase() || '',
       provinsi: 'Jawa Barat',
       kab_kota: 'Kab. Bandung',
       kecamatan: 'Banjaran',
@@ -18346,7 +18698,8 @@ async function saveTambahSiswa(event) {
       lab_done: 0,
       organ_done: 0,
       kesimpulan_done: 0,
-      identitas_done: 1,
+      identitas_done: isIdLengkap ? 1 : 0,
+      ttd_logs: '[]',
       is_examined: false,
       petugas_entry: currentUserName,
       tanggal_entry: new Date().toISOString().substring(0, 10),
@@ -20560,7 +20913,13 @@ function exportSekolahToXLSX() {
     return;
   }
 
-  const chosenSekolah = (document.getElementById('filterSelectSekolah')?.value || '').trim().toUpperCase();
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const schoolAccountName = (sessionStorage.getItem('ckg_user_name') || '').trim();
+
+  let chosenSekolah = (document.getElementById('filterSelectSekolah')?.value || '').trim().toUpperCase();
+  if (portalType === 'sekolah' && schoolAccountName) {
+    chosenSekolah = schoolAccountName.toUpperCase();
+  }
   if (!chosenSekolah) {
     showToast('Silakan pilih sekolah terlebih dahulu sebelum mengekspor data.', 'warning');
     return;
@@ -21238,8 +21597,21 @@ function openLaporanSekolahModal() {
     });
     selectSekolah.innerHTML = html;
 
-    if (currentMainSekolah && allSchools.some(s => s.toUpperCase() === currentMainSekolah.toUpperCase())) {
-      selectSekolah.value = currentMainSekolah;
+    const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+    const schoolAccountName = (sessionStorage.getItem('ckg_user_name') || '').trim();
+
+    if (portalType === 'sekolah' && schoolAccountName) {
+      selectSekolah.value = schoolAccountName;
+      selectSekolah.disabled = true;
+      selectSekolah.style.backgroundColor = '#f1f5f9';
+      selectSekolah.style.cursor = 'not-allowed';
+    } else {
+      selectSekolah.disabled = false;
+      selectSekolah.style.backgroundColor = '';
+      selectSekolah.style.cursor = '';
+      if (currentMainSekolah && allSchools.some(s => s.toUpperCase() === currentMainSekolah.toUpperCase())) {
+        selectSekolah.value = currentMainSekolah;
+      }
     }
   }
 
@@ -25530,3 +25902,1128 @@ window.filterEncoReportRows = filterEncoReportRows;
 
 
 
+
+
+// ==========================================================================
+// PENGELOLAAN NIK ANOMALI & ABSENSI MINUM TTD SISWI REMAJA PUTRI
+// ==========================================================================
+
+// 1. Helper Status Anomali NIK (Kurang / Lebih / Kosong / Valid)
+function getNikAnomalyStatus(nik) {
+  if (nik === null || nik === undefined) {
+    return { type: 'kosong', label: 'Kosong', digits: 0, color: '#64748b', bg: '#f1f5f9', border: '#cbd5e1' };
+  }
+  const clean = String(nik).trim().replace(/\D/g, '');
+  if (clean.length === 0) {
+    return { type: 'kosong', label: 'Kosong', digits: 0, color: '#64748b', bg: '#f1f5f9', border: '#cbd5e1' };
+  } else if (clean.length < 16) {
+    return { type: 'kurang', label: `Kurang (${clean.length} dgt)`, digits: clean.length, color: '#d97706', bg: '#fffbeb', border: '#fde68a' };
+  } else if (clean.length > 16) {
+    return { type: 'lebih', label: `Lebih (${clean.length} dgt)`, digits: clean.length, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+  } else {
+    return { type: 'valid', label: 'Valid (16 dgt)', digits: 16, color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' };
+  }
+}
+
+// 2. Helper Validasi Kelengkapan Identitas Siswa
+function isSiswaIdentitasComplete(siswa) {
+  if (!siswa) return false;
+  const nama = (siswa.nama || '').trim();
+  const nikClean = String(siswa.nik || '').replace(/\D/g, '');
+  const tglLahir = (siswa.tanggal_lahir || '').trim();
+  const jk = (siswa.jk || '').trim().toUpperCase();
+  const sekolah = (siswa.sekolah || '').trim();
+  const kelas = (siswa.kelas || '').trim();
+
+  return Boolean(nama && nikClean.length === 16 && tglLahir && (jk === 'L' || jk === 'P') && sekolah && kelas);
+}
+
+function getMissingIdentitasFields(siswa) {
+  const missing = [];
+  if (!siswa) return ['Data Siswa Kosong'];
+
+  const nama = (siswa.nama || '').trim();
+  const nikRaw = String(siswa.nik || '').trim();
+  const nikClean = nikRaw.replace(/\D/g, '');
+  const tglLahir = (siswa.tanggal_lahir || '').trim();
+  const jk = (siswa.jk || '').trim().toUpperCase();
+  const sekolah = (siswa.sekolah || '').trim();
+  const kelas = (siswa.kelas || '').trim();
+
+  if (!nama) missing.push('Nama Lengkap');
+  if (!nikRaw) {
+    missing.push('NIK (Kosong)');
+  } else if (nikClean.length < 16) {
+    missing.push(`NIK Kurang (${nikClean.length} dari 16 digit)`);
+  } else if (nikClean.length > 16) {
+    missing.push(`NIK Lebih (${nikClean.length} dari 16 digit)`);
+  }
+  if (!tglLahir) missing.push('Tanggal Lahir');
+  if (!jk || (jk !== 'L' && jk !== 'P')) missing.push('Jenis Kelamin (L/P)');
+  if (!sekolah) missing.push('Sekolah');
+  if (!kelas) missing.push('Kelas');
+
+  return missing;
+}
+
+// 3. Helper Log Absensi Minum Tablet Tambah Darah (TTD)
+function getStudentTtdLogs(siswa) {
+  if (!siswa || !siswa.ttd_logs) return [];
+  if (Array.isArray(siswa.ttd_logs)) return siswa.ttd_logs;
+  try {
+    const parsed = typeof siswa.ttd_logs === 'string' ? JSON.parse(siswa.ttd_logs) : siswa.ttd_logs;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function formatTtdIndoDate(dateStr) {
+  if (!dateStr) return '-';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    }
+    return dateStr;
+  } catch (_) {
+    return dateStr;
+  }
+}
+
+function renderTtdLogsInModal(siswa) {
+  if (!siswa) {
+    if (typeof currentPemeriksaanSiswaIndex !== 'undefined' && currentPemeriksaanSiswaIndex >= 0) {
+      siswa = sekolahRecords[currentPemeriksaanSiswaIndex];
+    }
+  }
+  if (!siswa) return;
+
+  const logs = getStudentTtdLogs(siswa);
+  const count = logs.length;
+
+  const lblTotal = document.getElementById('labelTotalTtdSiswa');
+  if (lblTotal) lblTotal.textContent = `${count} Kali Minum`;
+
+  const lblOrgan = document.getElementById('labelTtdInOrgan');
+  if (lblOrgan) lblOrgan.textContent = `${count}x`;
+
+  const container = document.getElementById('listLogTtdSiswa');
+  if (!container) return;
+
+  if (count === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 14px 10px; color: #9d174d; font-size: 12px; font-weight: 600; background: #fff5f8; border-radius: 8px; border: 1px dashed #fbcfe8;">
+        <i class="bi bi-info-circle-fill" style="color: #ec4899;"></i> Belum ada catatan absensi minum TTD untuk siswi ini. Klik tombol <strong>+ Absen Minum TTD Sekarang</strong> di atas untuk mencatat.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = logs.map((log, idx) => {
+    const dateFormatted = formatTtdIndoDate(log.tanggal);
+    const safePetugas = escapeHtml(log.petugas || 'Petugas');
+    const safeKet = escapeHtml(log.keterangan || 'Minum 1 Tablet TTD');
+    const safeWaktu = escapeHtml(log.waktu || '-');
+    const logNo = count - idx;
+
+    return `
+      <div style="display: flex; align-items: center; justify-content: space-between; background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 8px; padding: 7px 12px; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+          <span style="background: #db2777; color: #fff; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 6px; white-space: nowrap;">
+            #${logNo}
+          </span>
+          <div style="font-size: 12px; color: #831843; line-height: 1.4;">
+            <div>
+              <strong style="color: #9d174d;">📅 ${dateFormatted}</strong>
+              <span style="margin: 0 4px; color: #f472b6;">•</span>
+              <span style="font-weight: 700; color: #db2777;"><i class="bi bi-clock-fill"></i> ${safeWaktu} WIB</span>
+            </div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 1px;">
+              Petugas: <strong>${safePetugas}</strong> ${safeKet ? `• <span style="font-style: italic;">${safeKet}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <button type="button" onclick="hapusLogTtd('${siswa.id}', '${log.id}')" title="Hapus catatan ini" style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; transition: all 0.15s ease;" onmouseover="this.style.background='#fca5a5'" onmouseout="this.style.background='#fee2e2'">
+          <i class="bi bi-trash3-fill"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+async function catatAbsenMinumTtd(targetId) {
+  let siswa = null;
+  if (targetId) {
+    siswa = sekolahRecords.find(r => r.id === targetId);
+  } else if (typeof currentPemeriksaanSiswaIndex !== 'undefined' && currentPemeriksaanSiswaIndex >= 0) {
+    siswa = sekolahRecords[currentPemeriksaanSiswaIndex];
+  } else {
+    const curId = document.getElementById('periksaSiswaId')?.value;
+    if (curId) siswa = sekolahRecords.find(r => r.id === curId);
+  }
+
+  if (!siswa) {
+    showToast('Pilih data siswi terlebih dahulu.', 'warning');
+    return;
+  }
+
+  if (siswa.jk !== 'P') {
+    Swal.fire({
+      icon: 'info',
+      title: 'Khusus Siswi Perempuan',
+      text: 'Program Minum Tablet Tambah Darah (TTD) hanya diperuntukkan bagi siswi remaja putri (P).',
+      confirmButtonColor: '#3b82f6'
+    });
+    return;
+  }
+
+  const todayStr = new Date().toISOString().substring(0, 10);
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const defaultPetugas = sessionStorage.getItem('ckg_user_name') || 'Petugas UKS / Puskesmas';
+
+  const result = await Swal.fire({
+    title: `<div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:18px;color:#9d174d;"><span style="font-size:22px;">🌸</span> Catat Absen Minum TTD</div>`,
+    html: `
+      <div style="text-align: left; font-size: 13px; line-height: 1.6;">
+        <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; color: #831843;">
+          <div style="font-weight: 800; font-size: 14px; color: #9d174d;">${escapeHtml(siswa.nama)}</div>
+          <div style="font-size: 12px; color: #be185d;">${escapeHtml(siswa.sekolah || '-')} • Kelas ${escapeHtml(siswa.kelas || '-')}</div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px; font-size: 12px;">Tanggal Minum TTD:</label>
+          <input type="date" id="swalTtdTanggal" class="swal2-input" value="${todayStr}" style="width: 100%; margin: 0; height: 38px; font-size: 13px;">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px; font-size: 12px;">Waktu / Jam (WIB):</label>
+          <input type="time" id="swalTtdWaktu" class="swal2-input" value="${timeStr}" style="width: 100%; margin: 0; height: 38px; font-size: 13px;">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px; font-size: 12px;">Nama Petugas / Guru Pendamping:</label>
+          <input type="text" id="swalTtdPetugas" class="swal2-input" value="${escapeHtml(defaultPetugas)}" placeholder="Nama Petugas / Guru UKS" style="width: 100%; margin: 0; height: 38px; font-size: 13px;">
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px; font-size: 12px;">Keterangan / Catatan:</label>
+          <input type="text" id="swalTtdKeterangan" class="swal2-input" value="Minum 1 Tablet TTD di Sekolah" placeholder="Contoh: Minum bersama di kelas" style="width: 100%; margin: 0; height: 38px; font-size: 13px;">
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-check2-circle"></i> Simpan Catatan Absen',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#db2777',
+    cancelButtonColor: '#64748b',
+    preConfirm: () => {
+      const tanggal = document.getElementById('swalTtdTanggal')?.value;
+      const waktu = document.getElementById('swalTtdWaktu')?.value;
+      const petugas = document.getElementById('swalTtdPetugas')?.value.trim() || defaultPetugas;
+      const keterangan = document.getElementById('swalTtdKeterangan')?.value.trim() || 'Minum 1 Tablet TTD di Sekolah';
+
+      if (!tanggal) {
+        Swal.showValidationMessage('Tanggal wajib diisi.');
+        return false;
+      }
+      if (!waktu) {
+        Swal.showValidationMessage('Waktu/jam wajib diisi.');
+        return false;
+      }
+      return { tanggal, waktu, petugas, keterangan };
+    }
+  });
+
+  if (!result.isConfirmed || !result.value) return;
+
+  const { tanggal, waktu, petugas, keterangan } = result.value;
+
+  const currentLogs = getStudentTtdLogs(siswa);
+  const newLogEntry = {
+    id: `TTD-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    tanggal,
+    waktu,
+    timestamp: new Date().toISOString(),
+    petugas,
+    keterangan
+  };
+
+  currentLogs.unshift(newLogEntry);
+  const updatedLogsJson = JSON.stringify(currentLogs);
+  siswa.ttd_logs = updatedLogsJson;
+
+  try {
+    let res = await fetch('/api/sekolah', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: siswa.id,
+        fields: { ttd_logs: updatedLogsJson }
+      })
+    });
+
+    if (!res.ok) {
+      await fetch('/api/sekolah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([siswa])
+      });
+    }
+
+    renderTtdLogsInModal(siswa);
+    renderSekolahView();
+    if (document.getElementById('modalAbsensiTtd')?.classList.contains('open')) {
+      renderAbsensiTtdTable();
+    }
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Absensi TTD Berhasil Dicatat!',
+      html: `Siswi <strong>${escapeHtml(siswa.nama)}</strong> telah dicatat minum TTD pada <strong>${formatTtdIndoDate(tanggal)} pk. ${waktu} WIB</strong>.`,
+      confirmButtonColor: '#db2777',
+      timer: 2000
+    });
+  } catch (err) {
+    console.error('Gagal mencatat absen TTD:', err);
+    showToast('Gagal menyimpan absensi TTD ke cloud: ' + err.message, 'danger');
+  }
+}
+
+async function hapusLogTtd(siswaId, logId) {
+  const siswa = sekolahRecords.find(r => r.id === siswaId);
+  if (!siswa) return;
+
+  const confirmRes = await Swal.fire({
+    title: 'Hapus Catatan Absen TTD?',
+    text: 'Data absensi minum TTD yang dihapus tidak dapat dikembalikan.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b'
+  });
+
+  if (!confirmRes.isConfirmed) return;
+
+  const currentLogs = getStudentTtdLogs(siswa);
+  const filtered = currentLogs.filter(l => l.id !== logId);
+  const updatedLogsJson = JSON.stringify(filtered);
+  siswa.ttd_logs = updatedLogsJson;
+
+  try {
+    let res = await fetch('/api/sekolah', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: siswa.id,
+        fields: { ttd_logs: updatedLogsJson }
+      })
+    });
+
+    if (!res.ok) {
+      await fetch('/api/sekolah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([siswa])
+      });
+    }
+
+    renderTtdLogsInModal(siswa);
+    renderSekolahView();
+    if (document.getElementById('modalAbsensiTtd')?.classList.contains('open')) {
+      renderAbsensiTtdTable();
+    }
+
+    showToast('Catatan absen TTD berhasil dihapus.', 'info');
+  } catch (err) {
+    console.error('Gagal menghapus log TTD:', err);
+    showToast('Gagal menghapus log TTD: ' + err.message, 'danger');
+  }
+}
+
+// ==========================================================================
+// MODAL: DATA SISWA NIK BERMASALAH (KURANG / LEBIH / KOSONG) SESUAI SEKOLAH
+// ==========================================================================
+
+let currentAnomaliTypeFilter = 'all';
+
+function getActiveSchoolForFilter() {
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const schoolAccountName = (sessionStorage.getItem('ckg_user_name') || '').trim();
+  if (portalType === 'sekolah' && schoolAccountName) {
+    return schoolAccountName.toUpperCase();
+  }
+  const selVal = (document.getElementById('filterSelectSekolah')?.value || '').trim();
+  return selVal ? selVal.toUpperCase() : '';
+}
+
+function openAnomaliNikModal() {
+  const activeSchool = getActiveSchoolForFilter();
+  if (!activeSchool) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Pilih Sekolah Terlebih Dahulu',
+      text: 'Silakan pilih sekolah pada filter utama di atas sebelum membuka menu Data NIK Bermasalah.',
+      confirmButtonColor: '#d97706'
+    });
+    return;
+  }
+
+  const lblSekolah = document.getElementById('badgeAnomaliSekolahLabel');
+  if (lblSekolah) lblSekolah.textContent = `Sekolah: ${activeSchool}`;
+
+  // Populate filter kelas khusus sekolah ini
+  const selKelas = document.getElementById('selectAnomaliKelasFilter');
+  if (selKelas) {
+    const schoolRecords = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === activeSchool);
+    const kelasSet = new Set();
+    schoolRecords.forEach(r => { if (r.kelas) kelasSet.add(r.kelas.trim()); });
+    let optionsHtml = '<option value="">Semua Kelas</option>';
+    Array.from(kelasSet).sort().forEach(k => {
+      optionsHtml += `<option value="${escapeHtml(k)}">Kelas ${escapeHtml(k)}</option>`;
+    });
+    selKelas.innerHTML = optionsHtml;
+    selKelas.value = '';
+  }
+
+  const searchInput = document.getElementById('searchAnomaliInput');
+  if (searchInput) searchInput.value = '';
+
+  filterAnomaliType('all');
+
+  const modal = document.getElementById('modalAnomaliNik');
+  if (modal) {
+    modal.classList.add('active', 'open');
+    modal.style.display = 'flex';
+  }
+}
+
+function closeAnomaliNikModal() {
+  const modal = document.getElementById('modalAnomaliNik');
+  if (modal) {
+    modal.classList.remove('active', 'open');
+    modal.style.display = 'none';
+  }
+}
+
+function filterAnomaliType(type) {
+  currentAnomaliTypeFilter = type || 'all';
+  const pills = document.querySelectorAll('#pillsAnomaliType .anomali-type-pill');
+  pills.forEach(p => {
+    if (p.getAttribute('data-type') === currentAnomaliTypeFilter) {
+      p.classList.add('active');
+      p.style.background = '#d97706';
+      p.style.color = '#ffffff';
+      p.style.border = 'none';
+    } else {
+      p.classList.remove('active');
+      p.style.background = '#ffffff';
+      p.style.color = '#475569';
+      p.style.border = '1px solid #cbd5e1';
+    }
+  });
+
+  renderAnomaliNikTable();
+}
+
+function renderAnomaliNikTable() {
+  const tbody = document.getElementById('tbodyAnomaliNik');
+  if (!tbody) return;
+
+  const activeSchool = getActiveSchoolForFilter();
+  if (!activeSchool) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:#64748b;">Sekolah belum dipilih.</td></tr>`;
+    return;
+  }
+
+  const schoolRecords = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === activeSchool);
+
+  // Hitung metrik ringkasan
+  const totalKurang = schoolRecords.filter(r => getNikAnomalyStatus(r.nik).type === 'kurang').length;
+  const totalLebih = schoolRecords.filter(r => getNikAnomalyStatus(r.nik).type === 'lebih').length;
+  const totalKosong = schoolRecords.filter(r => getNikAnomalyStatus(r.nik).type === 'kosong').length;
+  const totalAnomali = totalKurang + totalLebih + totalKosong;
+
+  const elTot = document.getElementById('statAnomaliTotal');
+  if (elTot) elTot.textContent = totalAnomali.toLocaleString('id-ID');
+  const elKurang = document.getElementById('statAnomaliKurang');
+  if (elKurang) elKurang.textContent = totalKurang.toLocaleString('id-ID');
+  const elLebih = document.getElementById('statAnomaliLebih');
+  if (elLebih) elLebih.textContent = totalLebih.toLocaleString('id-ID');
+  const elKosong = document.getElementById('statAnomaliKosong');
+  if (elKosong) elKosong.textContent = totalKosong.toLocaleString('id-ID');
+
+  // Filter anomali
+  let dataset = schoolRecords.filter(r => {
+    const st = getNikAnomalyStatus(r.nik);
+    if (currentAnomaliTypeFilter === 'all') return st.type !== 'valid';
+    return st.type === currentAnomaliTypeFilter;
+  });
+
+  // Filter kelas
+  const kelasVal = document.getElementById('selectAnomaliKelasFilter')?.value;
+  if (kelasVal) {
+    dataset = dataset.filter(r => (r.kelas || '').trim() === kelasVal);
+  }
+
+  // Filter query pencarian
+  const q = (document.getElementById('searchAnomaliInput')?.value || '').trim().toLowerCase();
+  if (q) {
+    dataset = dataset.filter(r => {
+      const nama = (r.nama || '').toLowerCase();
+      const nik = String(r.nik || '').toLowerCase();
+      const kelas = (r.kelas || '').toLowerCase();
+      return nama.includes(q) || nik.includes(q) || kelas.includes(q);
+    });
+  }
+
+  if (dataset.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 45px 20px; color: #64748b;">
+          <div style="width: 50px; height: 50px; margin: 0 auto 10px auto; background: #ecfdf5; color: #059669; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+            <i class="bi bi-shield-check"></i>
+          </div>
+          <div style="font-size: 14px; font-weight: 800; color: #065f46;">Tidak Ada Data NIK Bermasalah</div>
+          <p style="font-size: 12px; color: #64748b; margin: 4px 0 0 0;">Seluruh data siswa pada filter ini sudah memiliki NIK 16 digit yang valid.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = dataset.map((r, idx) => {
+    const st = getNikAnomalyStatus(r.nik);
+    const safeNama = escapeHtml(r.nama || '-');
+    const safeKelas = escapeHtml(r.kelas || '-');
+    const safeNik = escapeHtml(r.nik || '');
+    const cleanNik = String(r.nik || '').replace(/\D/g, '');
+    const jkColor = r.jk === 'P' ? '#ec4899' : '#4f46e5';
+    const jkLabel = r.jk === 'P' ? 'Perempuan' : 'Laki-laki';
+
+    return `
+      <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s ease;">
+        <td style="padding: 10px 12px; text-align: center; font-weight: 700; color: #64748b;">${idx + 1}</td>
+        <td style="padding: 10px 12px;">
+          <div style="font-weight: 800; color: #1e293b; font-size: 13.5px; display: flex; align-items: center; gap: 6px;">
+            <i class="bi bi-person-fill" style="color: ${jkColor};"></i>
+            <span>${safeNama}</span>
+          </div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+            <span style="color: ${jkColor}; font-weight: 600;">${jkLabel}</span>
+            ${r.tanggal_lahir ? ` • Lahir: ${r.tanggal_lahir}` : ''}
+          </div>
+        </td>
+        <td style="padding: 10px 12px; text-align: center;">
+          <span class="badge badge-purple" style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">${safeKelas}</span>
+        </td>
+        <td style="padding: 10px 12px; text-align: center;">
+          <span class="badge" style="background: ${st.bg}; color: ${st.color}; border: 1px solid ${st.border}; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+            <i class="bi bi-exclamation-triangle-fill"></i> ${st.label}
+          </span>
+        </td>
+        <td style="padding: 10px 12px;">
+          ${cleanNik.length > 0
+            ? `<div style="font-family: monospace; font-size: 13px; font-weight: 700; color: #1e293b; letter-spacing: 0.5px;">${safeNik}</div>
+               <div style="font-size: 10.5px; color: #64748b; margin-top: 1px;">Jumlah: <strong>${cleanNik.length} digit</strong> (wajib 16 digit)</div>`
+            : `<span style="font-style: italic; color: #94a3b8; font-size: 12px;">(Belum diisi / Kosong)</span>`
+          }
+        </td>
+        <td style="padding: 10px 12px; text-align: center;">
+          <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="editNikSiswaModal('${r.id}')" style="padding: 5px 10px; font-size: 11.5px; font-weight: 700; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+              <i class="bi bi-pencil-square"></i> Perbaiki NIK
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openPemeriksaanModal('${r.id}'); closeAnomaliNikModal();" style="padding: 5px 9px; font-size: 11.5px; border-radius: 6px;" title="Buka Detail Skrining">
+              <i class="bi bi-box-arrow-up-right"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function editNikSiswaModal(siswaId) {
+  const siswa = sekolahRecords.find(r => r.id === siswaId);
+  if (!siswa) {
+    showToast('Data siswa tidak ditemukan.', 'danger');
+    return;
+  }
+
+  const currentNikRaw = String(siswa.nik || '').trim();
+
+  const { value: newNik } = await Swal.fire({
+    title: '<div style="font-size: 17px; font-weight: 800; color: #1e293b;"><i class="bi bi-pencil-square" style="color: #059669;"></i> Perbaiki NIK Siswa</div>',
+    html: `
+      <div style="text-align: left; font-size: 13px; line-height: 1.6;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;">
+          <div style="font-weight: 800; font-size: 14px; color: #1e293b;">${escapeHtml(siswa.nama)}</div>
+          <div style="font-size: 12px; color: #64748b;">${escapeHtml(siswa.sekolah || '-')} • Kelas ${escapeHtml(siswa.kelas || '-')}</div>
+        </div>
+
+        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px; font-size: 12px;">
+          Masukkan NIK Baru (Tepat 16 Digit Angka):
+        </label>
+        <input id="swalInputEditNik" class="swal2-input" value="${escapeHtml(currentNikRaw)}" placeholder="Contoh: 3204123456780001" maxlength="16" style="width: 100%; margin: 0; font-family: monospace; font-size: 15px; font-weight: 700; letter-spacing: 1px;" oninput="
+          this.value = this.value.replace(/\\D/g, '');
+          const cnt = document.getElementById('swalNikDigitCounter');
+          if (cnt) {
+            cnt.textContent = this.value.length + '/16 digit';
+            cnt.style.color = this.value.length === 16 ? '#059669' : '#dc2626';
+          }
+        ">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+          <span style="font-size: 11px; color: #64748b;">NIK harus berasal dari Kartu Keluarga (KK) siswa.</span>
+          <span id="swalNikDigitCounter" style="font-size: 11.5px; font-weight: 800; color: ${currentNikRaw.length === 16 ? '#059669' : '#dc2626'};">
+            ${currentNikRaw.replace(/\D/g, '').length}/16 digit
+          </span>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="bi bi-check2-circle"></i> Simpan NIK Baru',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#059669',
+    cancelButtonColor: '#64748b',
+    preConfirm: () => {
+      const inputEl = document.getElementById('swalInputEditNik');
+      const val = (inputEl ? inputEl.value : '').replace(/\D/g, '');
+      if (!val) {
+        Swal.showValidationMessage('NIK wajib diisi.');
+        return false;
+      }
+      if (val.length !== 16) {
+        Swal.showValidationMessage(`NIK harus tepat 16 digit angka (saat ini ${val.length} digit).`);
+        return false;
+      }
+      return val;
+    }
+  });
+
+  if (!newNik) return;
+
+  // Cek duplikasi NIK dengan siswa lain di database
+  const dup = sekolahRecords.find(r => r.id !== siswa.id && isNikValidForDuplicate(r.nik) && String(r.nik).trim() === newNik);
+  if (dup) {
+    const dupConfirm = await Swal.fire({
+      icon: 'warning',
+      title: 'NIK Sudah Terdaftar!',
+      html: `NIK <strong>${newNik}</strong> sudah digunakan oleh siswa <strong>${escapeHtml(dup.nama)}</strong> (${escapeHtml(dup.sekolah || '')} - Kelas ${escapeHtml(dup.kelas || '')}).<br><br>Apakah Anda yakin ingin tetap menyimpan?`,
+      showCancelButton: true,
+      confirmButtonText: 'Tetap Simpan',
+      cancelButtonText: 'Batal Perbaiki',
+      confirmButtonColor: '#d97706',
+      cancelButtonColor: '#64748b'
+    });
+    if (!dupConfirm.isConfirmed) return;
+  }
+
+  siswa.nik = newNik;
+  siswa.identitas_done = isSiswaIdentitasComplete(siswa) ? 1 : 0;
+
+  try {
+    let res = await fetch('/api/sekolah', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: siswa.id,
+        fields: {
+          nik: newNik,
+          identitas_done: siswa.identitas_done
+        }
+      })
+    });
+
+    if (!res.ok) {
+      await fetch('/api/sekolah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([siswa])
+      });
+    }
+
+    renderAnomaliNikTable();
+    renderSekolahView();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'NIK Berhasil Diperbaiki!',
+      html: `NIK untuk siswa <strong>${escapeHtml(siswa.nama)}</strong> berhasil diperbarui menjadi <strong>${newNik}</strong> (16 digit valid).`,
+      confirmButtonColor: '#059669',
+      timer: 2000
+    });
+  } catch (err) {
+    console.error('Gagal memperbarui NIK:', err);
+    showToast('Gagal menyimpan perbaikan NIK: ' + err.message, 'danger');
+  }
+}
+
+function exportAnomaliNikToExcel() {
+  if (typeof XLSX === 'undefined') {
+    showToast('Library XLSX belum dimuat.', 'danger');
+    return;
+  }
+
+  const activeSchool = getActiveSchoolForFilter();
+  if (!activeSchool) {
+    showToast('Pilih sekolah terlebih dahulu.', 'warning');
+    return;
+  }
+
+  const schoolRecords = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === activeSchool);
+  const anomalousRecords = schoolRecords.filter(r => getNikAnomalyStatus(r.nik).type !== 'valid');
+
+  if (anomalousRecords.length === 0) {
+    showToast('Tidak ada data NIK bermasalah untuk diekspor.', 'info');
+    return;
+  }
+
+  const rows = anomalousRecords.map((r, idx) => {
+    const st = getNikAnomalyStatus(r.nik);
+    const cleanNik = String(r.nik || '').replace(/\D/g, '');
+    return {
+      'No': idx + 1,
+      'Nama Siswa': r.nama || '-',
+      'Jenis Kelamin': r.jk === 'P' ? 'Perempuan' : 'Laki-laki',
+      'Sekolah': r.sekolah || activeSchool,
+      'Kelas': r.kelas || '-',
+      'Tanggal Lahir': r.tanggal_lahir || '-',
+      'Status NIK': st.label,
+      'NIK Saat Ini': r.nik ? `'${r.nik}` : '(Kosong)',
+      'Jumlah Digit': cleanNik.length,
+      'Keterangan': st.type === 'kosong' ? 'NIK belum diisi' : (st.type === 'kurang' ? `Kurang ${16 - cleanNik.length} digit` : `Kelebihan ${cleanNik.length - 16} digit`)
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'NIK Bermasalah');
+
+  const cleanSchool = activeSchool.replace(/[^a-zA-Z0-9]/g, '_');
+  const dateStr = new Date().toISOString().substring(0, 10);
+  XLSX.writeFile(wb, `Data_NIK_Bermasalah_${cleanSchool}_${dateStr}.xlsx`);
+  showToast('File Excel NIK bermasalah berhasil diunduh!', 'success');
+}
+
+// ==========================================================================
+// MODAL: DAFTAR ABSENSI MINUM TTD SISWI REMAJA PUTRI SESUAI SEKOLAH
+// ==========================================================================
+
+let currentTtdFilterStatus = 'all';
+
+function openModalAbsensiTtd() {
+  const activeSchool = getActiveSchoolForFilter();
+  if (!activeSchool) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Pilih Sekolah Terlebih Dahulu',
+      text: 'Silakan pilih sekolah pada filter utama di atas sebelum membuka menu Absensi TTD.',
+      confirmButtonColor: '#db2777'
+    });
+    return;
+  }
+
+  const lblSekolah = document.getElementById('badgeTtdSekolahLabel');
+  if (lblSekolah) lblSekolah.textContent = `Sekolah: ${activeSchool}`;
+
+  // Populate filter kelas siswi khusus sekolah ini
+  const selKelas = document.getElementById('selectTtdKelasFilter');
+  if (selKelas) {
+    const femaleRecords = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === activeSchool && r.jk === 'P');
+    const kelasSet = new Set();
+    femaleRecords.forEach(r => { if (r.kelas) kelasSet.add(r.kelas.trim()); });
+    let optionsHtml = '<option value="">Semua Kelas</option>';
+    Array.from(kelasSet).sort().forEach(k => {
+      optionsHtml += `<option value="${escapeHtml(k)}">Kelas ${escapeHtml(k)}</option>`;
+    });
+    selKelas.innerHTML = optionsHtml;
+    selKelas.value = '';
+  }
+
+  const searchInput = document.getElementById('searchTtdInput');
+  if (searchInput) searchInput.value = '';
+
+  filterTtdStatus('all');
+
+  const modal = document.getElementById('modalAbsensiTtd');
+  if (modal) {
+    modal.classList.add('active', 'open');
+    modal.style.display = 'flex';
+  }
+}
+
+function closeModalAbsensiTtd() {
+  const modal = document.getElementById('modalAbsensiTtd');
+  if (modal) {
+    modal.classList.remove('active', 'open');
+    modal.style.display = 'none';
+  }
+}
+
+function filterTtdStatus(status) {
+  currentTtdFilterStatus = status || 'all';
+  const pills = document.querySelectorAll('#pillsTtdFilter .ttd-filter-pill');
+  pills.forEach(p => {
+    if (p.getAttribute('data-filter') === currentTtdFilterStatus) {
+      p.classList.add('active');
+      p.style.background = '#db2777';
+      p.style.color = '#ffffff';
+      p.style.border = 'none';
+    } else {
+      p.classList.remove('active');
+      p.style.background = '#ffffff';
+      p.style.color = '#475569';
+      p.style.border = '1px solid #cbd5e1';
+    }
+  });
+
+  renderAbsensiTtdTable();
+}
+
+function renderAbsensiTtdTable() {
+  const tbody = document.getElementById('tbodyAbsensiTtd');
+  if (!tbody) return;
+
+  const activeSchool = getActiveSchoolForFilter();
+  if (!activeSchool) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#64748b;">Sekolah belum dipilih.</td></tr>`;
+    return;
+  }
+
+  const femaleStudents = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === activeSchool && r.jk === 'P');
+
+  // Hitung metrik ringkasan siswi TTD
+  const totalSiswi = femaleStudents.length;
+  const sudahPernah = femaleStudents.filter(r => getStudentTtdLogs(r).length > 0).length;
+  const belumPernah = totalSiswi - sudahPernah;
+  const totalTablet = femaleStudents.reduce((sum, r) => sum + getStudentTtdLogs(r).length, 0);
+
+  const elTot = document.getElementById('statTtdTotalSiswi');
+  if (elTot) elTot.textContent = totalSiswi.toLocaleString('id-ID');
+  const elSudah = document.getElementById('statTtdSudahPernah');
+  if (elSudah) elSudah.textContent = sudahPernah.toLocaleString('id-ID');
+  const elBelum = document.getElementById('statTtdBelumPernah');
+  if (elBelum) elBelum.textContent = belumPernah.toLocaleString('id-ID');
+  const elTab = document.getElementById('statTtdTotalTablet');
+  if (elTab) elTab.textContent = totalTablet.toLocaleString('id-ID');
+
+  // Filter status TTD
+  let dataset = femaleStudents.filter(r => {
+    const logs = getStudentTtdLogs(r);
+    if (currentTtdFilterStatus === 'sudah') return logs.length > 0;
+    if (currentTtdFilterStatus === 'belum') return logs.length === 0;
+    return true;
+  });
+
+  // Filter kelas
+  const kelasVal = document.getElementById('selectTtdKelasFilter')?.value;
+  if (kelasVal) {
+    dataset = dataset.filter(r => (r.kelas || '').trim() === kelasVal);
+  }
+
+  // Filter search
+  const q = (document.getElementById('searchTtdInput')?.value || '').trim().toLowerCase();
+  if (q) {
+    dataset = dataset.filter(r => {
+      const nama = (r.nama || '').toLowerCase();
+      const nik = String(r.nik || '').toLowerCase();
+      const kelas = (r.kelas || '').toLowerCase();
+      return nama.includes(q) || nik.includes(q) || kelas.includes(q);
+    });
+  }
+
+  const checkAll = document.getElementById('checkAllTtdStudents');
+  if (checkAll) checkAll.checked = false;
+
+  if (dataset.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 45px 20px; color: #64748b;">
+          <div style="width: 50px; height: 50px; margin: 0 auto 10px auto; background: #fdf2f8; color: #db2777; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+            🌸
+          </div>
+          <div style="font-size: 14px; font-weight: 800; color: #9d174d;">Tidak Ada Data Siswi</div>
+          <p style="font-size: 12px; color: #64748b; margin: 4px 0 0 0;">Tidak ada siswi perempuan yang sesuai dengan kriteria filter saat ini.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = dataset.map((r, idx) => {
+    const logs = getStudentTtdLogs(r);
+    const count = logs.length;
+    const safeNama = escapeHtml(r.nama || '-');
+    const safeKelas = escapeHtml(r.kelas || '-');
+    const safeNik = escapeHtml(r.nik || '-');
+    const lastLog = count > 0 ? logs[0] : null;
+
+    let lastLogHtml = `<span style="color: #94a3b8; font-style: italic; font-size: 11.5px;">Belum pernah absen</span>`;
+    if (lastLog) {
+      const dFormatted = formatTtdIndoDate(lastLog.tanggal);
+      lastLogHtml = `
+        <div style="font-size: 12px; color: #831843;">
+          <strong>📅 ${dFormatted}</strong>
+          <span style="margin: 0 4px; color: #f472b6;">•</span>
+          <span style="font-weight: 700; color: #db2777;"><i class="bi bi-clock-fill"></i> ${escapeHtml(lastLog.waktu || '-')} WIB</span>
+        </div>
+        <div style="font-size: 11px; color: #64748b; margin-top: 1px;">
+          Petugas: <strong>${escapeHtml(lastLog.petugas || 'Petugas')}</strong>
+        </div>
+      `;
+    }
+
+    return `
+      <tr style="border-bottom: 1px solid #fce7f3; transition: background 0.15s ease;">
+        <td style="padding: 10px 8px; text-align: center;">
+          <input type="checkbox" class="check-ttd-student" value="${r.id}" style="cursor: pointer;">
+        </td>
+        <td style="padding: 10px 10px; text-align: center; font-weight: 700; color: #64748b;">${idx + 1}</td>
+        <td style="padding: 10px 12px;">
+          <div style="font-weight: 800; color: #831843; font-size: 13.5px; display: flex; align-items: center; gap: 6px;">
+            <i class="bi bi-person-fill" style="color: #ec4899;"></i>
+            <span>${safeNama}</span>
+          </div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+            <span>NIK: ${safeNik}</span>
+            ${(() => {
+              const a = calculateRealtimeAge(r.tanggal_lahir);
+              return a ? ` • <span style="font-weight: 600; color: #047857;">${a.years} Th</span>` : '';
+            })()}
+          </div>
+        </td>
+        <td style="padding: 10px 12px; text-align: center;">
+          <span class="badge badge-purple" style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">${safeKelas}</span>
+        </td>
+        <td style="padding: 10px 12px; text-align: center;">
+          <span class="badge" style="background: ${count > 0 ? '#fdf2f8' : '#f8fafc'}; color: ${count > 0 ? '#be185d' : '#64748b'}; border: 1.5px solid ${count > 0 ? '#f472b6' : '#cbd5e1'}; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 20px;">
+            ${count > 0 ? `🌸 ${count} Kali` : '0 Kali'}
+          </span>
+        </td>
+        <td style="padding: 10px 12px;">
+          ${lastLogHtml}
+        </td>
+        <td style="padding: 10px 12px; text-align: center;">
+          <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm" onclick="catatAbsenMinumTtd('${r.id}')" style="background: linear-gradient(135deg, #ec4899, #db2777); color: #fff; border: none; font-weight: 700; font-size: 11.5px; padding: 4px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(219,39,119,0.25);">
+              <i class="bi bi-capsule"></i> + Absen
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openPemeriksaanModal('${r.id}'); closeModalAbsensiTtd();" style="padding: 4px 8px; font-size: 11.5px; border-radius: 6px;" title="Lihat Log Riwayat Lengkap">
+              <i class="bi bi-clock-history"></i> Log
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function toggleSelectAllTtd(checked) {
+  const checkboxes = document.querySelectorAll('.check-ttd-student');
+  checkboxes.forEach(cb => { cb.checked = checked; });
+}
+
+async function bulkAbsenMinumTtd() {
+  const checkedBoxes = Array.from(document.querySelectorAll('.check-ttd-student:checked'));
+  if (checkedBoxes.length === 0) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Pilih Siswi Terlebih Dahulu',
+      text: 'Silakan centang satu atau beberapa siswi pada kolom paling kiri tabel untuk melakukan absen masal.',
+      confirmButtonColor: '#db2777'
+    });
+    return;
+  }
+
+  const selectedIds = checkedBoxes.map(cb => cb.value);
+  const selectedStudents = sekolahRecords.filter(r => selectedIds.includes(r.id));
+
+  const todayStr = new Date().toISOString().substring(0, 10);
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const defaultPetugas = sessionStorage.getItem('ckg_user_name') || 'Petugas UKS / Puskesmas';
+
+  const result = await Swal.fire({
+    title: `<div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;color:#9d174d;"><span style="font-size:22px;">🌸</span> Absen Masal Minum TTD (${selectedStudents.length} Siswi)</div>`,
+    html: `
+      <div style="text-align: left; font-size: 13px; line-height: 1.6;">
+        <div style="background: #fdf2f8; border: 1.5px solid #fbcfe8; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; color: #831843;">
+          <div style="font-weight: 800; font-size: 13.5px; color: #9d174d;">
+            <i class="bi bi-people-fill"></i> ${selectedStudents.length} Siswi Terpilih
+          </div>
+          <div style="font-size: 11.5px; color: #be185d; margin-top: 2px; max-height: 70px; overflow-y: auto;">
+            ${selectedStudents.map(s => escapeHtml(s.nama)).join(', ')}
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px; font-size: 12px;">Tanggal Minum TTD Bersama:</label>
+          <input type="date" id="swalBulkTanggal" class="swal2-input" value="${todayStr}" style="width: 100%; margin: 0; height: 38px; font-size: 13px;">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px; font-size: 12px;">Waktu / Jam (WIB):</label>
+          <input type="time" id="swalBulkWaktu" class="swal2-input" value="${timeStr}" style="width: 100%; margin: 0; height: 38px; font-size: 13px;">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px; font-size: 12px;">Nama Petugas / Guru UKS:</label>
+          <input type="text" id="swalBulkPetugas" class="swal2-input" value="${escapeHtml(defaultPetugas)}" placeholder="Nama Petugas / Guru" style="width: 100%; margin: 0; height: 38px; font-size: 13px;">
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px; font-size: 12px;">Keterangan / Catatan:</label>
+          <input type="text" id="swalBulkKeterangan" class="swal2-input" value="Aksi Bergizi: Minum TTD Bersama di Sekolah" placeholder="Keterangan" style="width: 100%; margin: 0; height: 38px; font-size: 13px;">
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: `<i class="bi bi-check2-all"></i> Simpan Absen (${selectedStudents.length} Siswi)`,
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#db2777',
+    cancelButtonColor: '#64748b',
+    preConfirm: () => {
+      const tanggal = document.getElementById('swalBulkTanggal')?.value;
+      const waktu = document.getElementById('swalBulkWaktu')?.value;
+      const petugas = document.getElementById('swalBulkPetugas')?.value.trim() || defaultPetugas;
+      const keterangan = document.getElementById('swalBulkKeterangan')?.value.trim() || 'Minum TTD Bersama di Sekolah';
+
+      if (!tanggal) {
+        Swal.showValidationMessage('Tanggal wajib diisi.');
+        return false;
+      }
+      if (!waktu) {
+        Swal.showValidationMessage('Waktu wajib diisi.');
+        return false;
+      }
+      return { tanggal, waktu, petugas, keterangan };
+    }
+  });
+
+  if (!result.isConfirmed || !result.value) return;
+
+  const { tanggal, waktu, petugas, keterangan } = result.value;
+
+  Swal.fire({
+    title: 'Menyimpan Absensi TTD...',
+    html: `Sedang memproses absensi untuk <strong>${selectedStudents.length}</strong> siswi...`,
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  for (const s of selectedStudents) {
+    const logs = getStudentTtdLogs(s);
+    logs.unshift({
+      id: `TTD-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      tanggal,
+      waktu,
+      timestamp: new Date().toISOString(),
+      petugas,
+      keterangan
+    });
+    s.ttd_logs = JSON.stringify(logs);
+  }
+
+  try {
+    await fetch('/api/sekolah', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(selectedStudents)
+    });
+
+    renderAbsensiTtdTable();
+    renderSekolahView();
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Absensi Masal Berhasil!',
+      html: `Berhasil mencatat absensi minum TTD untuk <strong>${selectedStudents.length} siswi</strong> pada tanggal <strong>${formatTtdIndoDate(tanggal)} pk. ${waktu} WIB</strong>.`,
+      confirmButtonColor: '#db2777'
+    });
+  } catch (err) {
+    console.error('Gagal simpan absensi masal:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Menyimpan Absensi Masal',
+      text: err.message,
+      confirmButtonColor: '#dc2626'
+    });
+  }
+}
+
+function exportTtdToExcel() {
+  if (typeof XLSX === 'undefined') {
+    showToast('Library XLSX belum dimuat.', 'danger');
+    return;
+  }
+
+  const activeSchool = getActiveSchoolForFilter();
+  if (!activeSchool) {
+    showToast('Pilih sekolah terlebih dahulu.', 'warning');
+    return;
+  }
+
+  const femaleStudents = sekolahRecords.filter(r => (r.sekolah || '').toUpperCase() === activeSchool && r.jk === 'P');
+  if (femaleStudents.length === 0) {
+    showToast('Tidak ada data siswi untuk diekspor.', 'info');
+    return;
+  }
+
+  const rows = femaleStudents.map((r, idx) => {
+    const logs = getStudentTtdLogs(r);
+    const lastLog = logs.length > 0 ? logs[0] : null;
+    const historyDetail = logs.map(l => `${l.tanggal} ${l.waktu} (${l.petugas || 'Petugas'})`).join('; ');
+
+    return {
+      'No': idx + 1,
+      'Nama Siswi': r.nama || '-',
+      'NIK': r.nik ? `'${r.nik}` : '(Kosong)',
+      'Sekolah': r.sekolah || activeSchool,
+      'Kelas': r.kelas || '-',
+      'Tanggal Lahir': r.tanggal_lahir || '-',
+      'Total Minum TTD': logs.length,
+      'Minum TTD Terakhir (Tgl & Waktu)': lastLog ? `${lastLog.tanggal} pk. ${lastLog.waktu} WIB` : 'Belum Pernah',
+      'Riwayat Lengkap Absensi': historyDetail || 'Belum Pernah'
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Absensi TTD Siswi');
+
+  const cleanSchool = activeSchool.replace(/[^a-zA-Z0-9]/g, '_');
+  const dateStr = new Date().toISOString().substring(0, 10);
+  XLSX.writeFile(wb, `Rekap_Absensi_TTD_Siswi_${cleanSchool}_${dateStr}.xlsx`);
+  showToast('File Excel Rekap Absensi TTD berhasil diunduh!', 'success');
+}
+
+// Global Window Bindings
+window.getNikAnomalyStatus = getNikAnomalyStatus;
+window.isSiswaIdentitasComplete = isSiswaIdentitasComplete;
+window.getMissingIdentitasFields = getMissingIdentitasFields;
+window.getStudentTtdLogs = getStudentTtdLogs;
+window.renderTtdLogsInModal = renderTtdLogsInModal;
+window.catatAbsenMinumTtd = catatAbsenMinumTtd;
+window.hapusLogTtd = hapusLogTtd;
+window.openAnomaliNikModal = openAnomaliNikModal;
+window.closeAnomaliNikModal = closeAnomaliNikModal;
+window.filterAnomaliType = filterAnomaliType;
+window.renderAnomaliNikTable = renderAnomaliNikTable;
+window.editNikSiswaModal = editNikSiswaModal;
+window.exportAnomaliNikToExcel = exportAnomaliNikToExcel;
+window.openModalAbsensiTtd = openModalAbsensiTtd;
+window.closeModalAbsensiTtd = closeModalAbsensiTtd;
+window.filterTtdStatus = filterTtdStatus;
+window.renderAbsensiTtdTable = renderAbsensiTtdTable;
+window.toggleSelectAllTtd = toggleSelectAllTtd;
+window.bulkAbsenMinumTtd = bulkAbsenMinumTtd;
+window.exportTtdToExcel = exportTtdToExcel;
