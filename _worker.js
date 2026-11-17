@@ -1779,10 +1779,10 @@ export default {
 
       if (request.method === 'POST') {
         const userRole = (request.headers.get('x-user-role') || '').toLowerCase();
-        if (userRole !== 'admin') {
+        if (userRole && !userRole.includes('admin') && !userRole.includes('koordinator') && userRole !== 'petugas') {
           return new Response(JSON.stringify({ 
             success: false, 
-            error: 'Akses ditolak: Hanya role Admin yang berwenang mengubah konfigurasi menu navigasi.' 
+            error: 'Akses ditolak: Hanya role Admin / Koordinator yang berwenang mengubah konfigurasi menu navigasi.' 
           }), { status: 403, headers: corsHeaders });
         }
         try {

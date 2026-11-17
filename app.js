@@ -2471,9 +2471,13 @@ async function saveMenuConfigToCloud() {
       });
     }
 
+    const userRole = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Admin').toLowerCase();
     const res = await fetch('/api/menu-config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-user-role': userRole
+      },
       body: JSON.stringify(currentMenuConfig)
     });
 
@@ -16620,6 +16624,7 @@ function getSekolahRecordExamStations(r) {
       hasLab: false,
       isLabTidakDiperiksa: false,
       hasOrgan: false,
+      hasKesimpulan: false,
       completedCount: 0,
       isComplete: false,
       isPartial: false,
@@ -16671,6 +16676,13 @@ function getSekolahRecordExamStations(r) {
     (hasOtherMedicalExams && r.telinga && r.telinga !== '-' && r.mata && r.mata !== '-' && r.gigi && r.gigi !== '-')
   );
 
+  // 6. Kesimpulan & Rujukan (Opsional)
+  const hasKesimpulan = !!(
+    Number(r.kesimpulan_done) === 1 ||
+    (r.status_kesehatan && r.status_kesehatan !== '-' && String(r.status_kesehatan).trim() !== '') ||
+    (r.catatan_rujukan && r.catatan_rujukan !== '-' && String(r.catatan_rujukan).trim() !== '')
+  );
+
   // Hitung jumlah stasiun medis yang terpenuhi (dari 4 stasiun medis: antro, vital, lab, organ)
   const medicalStations = [hasAntro, hasVital, hasLab, hasOrgan];
   const completedCount = medicalStations.filter(Boolean).length;
@@ -16692,6 +16704,7 @@ function getSekolahRecordExamStations(r) {
     hasLab,
     isLabTidakDiperiksa,
     hasOrgan,
+    hasKesimpulan,
     completedCount,
     isComplete,
     isPartial,
@@ -17441,7 +17454,7 @@ function updateSekolahMenuBadges(siswa) {
   if (!siswa) return;
   
   const stations = getSekolahRecordExamStations(siswa);
-  const { hasAntro, hasVital, hasLab, isLabTidakDiperiksa, hasOrgan } = stations;
+  const { hasAntro, hasVital, hasLab, isLabTidakDiperiksa, hasOrgan, hasKesimpulan } = stations;
   const isIdComplete = isSiswaIdentitasComplete(siswa);
 
   // 1. Identitas (Wajib Lengkap Sebelum Pemeriksaan Fisik)
