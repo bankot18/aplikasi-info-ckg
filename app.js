@@ -17752,8 +17752,6 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
     mForm.style.display = 'none';
   }
 
-  // Open the Menu Buttons Modal
-  const modal = document.getElementById('modalPemeriksaanSiswa');
   if (modal) {
     modal.classList.add('active', 'open');
     modal.style.display = 'flex';
