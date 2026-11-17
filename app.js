@@ -1034,13 +1034,11 @@ function setupUserSessionUI() {
         clearBtn.style.setProperty('display', 'none', 'important');
       }
 
-      // Khusus Akun Sekolah: Tampilkan menu Tambah Siswa, NIK Bermasalah, Absensi TTD, Laporan, Refresh & Export
+      // Khusus Akun Sekolah: Tampilkan menu Tambah Siswa, NIK Bermasalah, Absensi TTD, Refresh (Sembunyikan Export & Cetak Laporan)
       const allowedSekolahIds = [
         'btnTambahSiswaSekolah',
         'btnAnomaliNikSekolah',
         'btnAbsensiTtdSekolah',
-        'btnExportSekolah',
-        'btnLaporanSekolah',
         'btnRefreshSekolah'
       ];
       const sekolahActionBtns = document.querySelectorAll('#view-sekolah .action-buttons-group > button');
@@ -1050,19 +1048,21 @@ function setupUserSessionUI() {
                           text.includes('tambah siswa') ||
                           text.includes('nik') ||
                           text.includes('ttd') ||
-                          text.includes('cetak laporan') ||
-                          text.includes('refresh') ||
-                          text.includes('eksport');
-        const isForbiddenAdmin = btn.classList.contains('admin-only') ||
-                                 btn.classList.contains('admin-koordinator-only') ||
-                                 text.includes('kelola sekolah') ||
-                                 text.includes('naik kelas') ||
-                                 text.includes('migrasi') ||
-                                 text.includes('cek duplikat') ||
-                                 text.includes('hapus semua') ||
-                                 text.includes('antrean bot') ||
-                                 text.includes('kirim kelas');
-        if (isAllowed && !isForbiddenAdmin) {
+                          text.includes('refresh');
+        const isForbidden = btn.classList.contains('admin-only') ||
+                            btn.classList.contains('admin-koordinator-only') ||
+                            btn.id === 'btnExportSekolah' ||
+                            btn.id === 'btnLaporanSekolah' ||
+                            text.includes('cetak laporan') ||
+                            text.includes('eksport') ||
+                            text.includes('kelola sekolah') ||
+                            text.includes('naik kelas') ||
+                            text.includes('migrasi') ||
+                            text.includes('cek duplikat') ||
+                            text.includes('hapus semua') ||
+                            text.includes('antrean bot') ||
+                            text.includes('kirim kelas');
+        if (isAllowed && !isForbidden) {
           btn.style.setProperty('display', 'inline-flex', 'important');
         } else {
           btn.style.setProperty('display', 'none', 'important');
@@ -16057,19 +16057,217 @@ function updateTambahSiswaKelasDropdown() {
     standardClasses.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
 }
 
-function updatePeriksaSiswaKelasDropdown() {
+let emsifaProvincesCache = null;
+const emsifaRegenciesCache = {};
+const emsifaDistrictsCache = {};
+const emsifaVillagesCache = {};
+
+async function fetchEmsifaWilayah(endpoint) {
+  try {
+    const res = await fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/${endpoint}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.warn(`[Emsifa API Wilayah Notice] ${endpoint}:`, e);
+    return null;
+  }
+}
+
+async function initWilayahDropdownsSekolah(initialProv, initialKab, initialKec, initialKel) {
+  const provSelect = document.getElementById('periksaProvinsi');
+  const kabSelect = document.getElementById('periksaKabKota');
+  const kecSelect = document.getElementById('periksaKecamatan');
+  const kelSelect = document.getElementById('periksaKelurahan');
+  if (!provSelect || !kabSelect || !kecSelect || !kelSelect) return;
+
+  const defProv = initialProv || 'Jawa Barat';
+  const defKab = initialKab || 'Kabupaten Bandung';
+  const defKec = initialKec || 'Banjaran';
+  const defKel = initialKel || 'Tarajusari';
+
+  function selectOptionByText(selectEl, textVal) {
+    if (!selectEl || !textVal) return null;
+    const clean = String(textVal).trim().toLowerCase();
+    const cleanStripped = clean.replace(/^(kabupaten|kab\.|kota)\s*/i, '').trim();
+    for (let i = 0; i < selectEl.options.length; i++) {
+      const opt = selectEl.options[i];
+      const optVal = String(opt.value).trim().toLowerCase();
+      const optText = String(opt.textContent).trim().toLowerCase();
+      const optStripped = optVal.replace(/^(kabupaten|kab\.|kota)\s*/i, '').trim();
+      if (optVal === clean || optText === clean || (cleanStripped && optStripped === cleanStripped)) {
+        selectEl.selectedIndex = i;
+        return opt;
+      }
+    }
+    const opt = document.createElement('option');
+    opt.value = textVal;
+    opt.textContent = textVal;
+    selectEl.appendChild(opt);
+    selectEl.value = textVal;
+    return opt;
+  }
+
+  // Load Provinsi
+  provSelect.innerHTML = '<option value="">-- Pilih Provinsi --</option>';
+  if (!emsifaProvincesCache) {
+    emsifaProvincesCache = await fetchEmsifaWilayah('provinces.json');
+  }
+
+  if (emsifaProvincesCache && emsifaProvincesCache.length > 0) {
+    emsifaProvincesCache.forEach(p => {
+      const name = toTitleCase(p.name);
+      provSelect.innerHTML += `<option value="${name}" data-id="${p.id}">${name}</option>`;
+    });
+  } else if (typeof WILAYAH_DATA !== 'undefined') {
+    Object.keys(WILAYAH_DATA).forEach(prov => {
+      provSelect.innerHTML += `<option value="${prov}">${prov}</option>`;
+    });
+  }
+
+  async function loadKabSekolah(provName, selectKabVal) {
+    kabSelect.innerHTML = '<option value="">-- Pilih Kab/Kota --</option>';
+    kecSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
+    kelSelect.innerHTML = '<option value="">-- Pilih Kelurahan --</option>';
+    if (!provName) return;
+
+    const provOpt = Array.from(provSelect.options).find(o => o.value.toLowerCase() === provName.toLowerCase());
+    const provId = provOpt?.getAttribute('data-id');
+
+    if (provId) {
+      if (!emsifaRegenciesCache[provId]) {
+        emsifaRegenciesCache[provId] = await fetchEmsifaWilayah(`regencies/${provId}.json`);
+      }
+      const regList = emsifaRegenciesCache[provId];
+      if (regList && regList.length > 0) {
+        regList.forEach(r => {
+          const name = toTitleCase(r.name);
+          kabSelect.innerHTML += `<option value="${name}" data-id="${r.id}">${name}</option>`;
+        });
+      }
+    } else if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName]) {
+      Object.keys(WILAYAH_DATA[provName]).forEach(kab => {
+        kabSelect.innerHTML += `<option value="${kab}">${kab}</option>`;
+      });
+    }
+
+    if (selectKabVal) {
+      selectOptionByText(kabSelect, selectKabVal);
+      await loadKecSekolah(provName, kabSelect.value, defKec);
+    }
+  }
+
+  async function loadKecSekolah(provName, kabName, selectKecVal) {
+    kecSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
+    kelSelect.innerHTML = '<option value="">-- Pilih Kelurahan --</option>';
+    if (!kabName) return;
+
+    const kabOpt = Array.from(kabSelect.options).find(o => o.value.toLowerCase() === kabName.toLowerCase() || o.value.toLowerCase().replace(/^(kabupaten|kab\.|kota)\s*/i, '') === kabName.toLowerCase().replace(/^(kabupaten|kab\.|kota)\s*/i, ''));
+    const regId = kabOpt?.getAttribute('data-id');
+
+    if (regId) {
+      if (!emsifaDistrictsCache[regId]) {
+        emsifaDistrictsCache[regId] = await fetchEmsifaWilayah(`districts/${regId}.json`);
+      }
+      const distList = emsifaDistrictsCache[regId];
+      if (distList && distList.length > 0) {
+        distList.forEach(d => {
+          const name = toTitleCase(d.name);
+          kecSelect.innerHTML += `<option value="${name}" data-id="${d.id}">${name}</option>`;
+        });
+      }
+    } else if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName] && WILAYAH_DATA[provName][kabName]) {
+      Object.keys(WILAYAH_DATA[provName][kabName]).forEach(kec => {
+        kecSelect.innerHTML += `<option value="${kec}">${kec}</option>`;
+      });
+    }
+
+    if (selectKecVal) {
+      selectOptionByText(kecSelect, selectKecVal);
+      await loadKelSekolah(provName, kabName, kecSelect.value, defKel);
+    }
+  }
+
+  async function loadKelSekolah(provName, kabName, kecName, selectKelVal) {
+    kelSelect.innerHTML = '<option value="">-- Pilih Kelurahan --</option>';
+    if (!kecName) return;
+
+    const kecOpt = Array.from(kecSelect.options).find(o => o.value.toLowerCase() === kecName.toLowerCase());
+    const distId = kecOpt?.getAttribute('data-id');
+
+    if (distId) {
+      if (!emsifaVillagesCache[distId]) {
+        emsifaVillagesCache[distId] = await fetchEmsifaWilayah(`villages/${distId}.json`);
+      }
+      const vilList = emsifaVillagesCache[distId];
+      const kelNameOverrides = { 'Banjaran': 'Banjaran Kulon' };
+      if (vilList && vilList.length > 0) {
+        vilList.forEach(v => {
+          let displayName = toTitleCase(v.name);
+          if (kelNameOverrides[displayName]) displayName = kelNameOverrides[displayName];
+          kelSelect.innerHTML += `<option value="${displayName}" data-id="${v.id}">${displayName}</option>`;
+        });
+      }
+    } else if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName] && WILAYAH_DATA[provName][kabName] && WILAYAH_DATA[provName][kabName][kecName]) {
+      WILAYAH_DATA[provName][kabName][kecName].forEach(kel => {
+        kelSelect.innerHTML += `<option value="${kel}">${kel}</option>`;
+      });
+    }
+
+    if (selectKelVal) {
+      selectOptionByText(kelSelect, selectKelVal);
+    }
+  }
+
+  provSelect.onchange = () => loadKabSekolah(provSelect.value);
+  kabSelect.onchange = () => loadKecSekolah(provSelect.value, kabSelect.value);
+  kecSelect.onchange = () => loadKelSekolah(provSelect.value, kabSelect.value, kecSelect.value);
+
+  selectOptionByText(provSelect, defProv);
+  await loadKabSekolah(provSelect.value, defKab);
+}
+
+function setSelectKelasValue(selectEl, targetVal) {
+  if (!selectEl || !targetVal) return;
+  const rawTarget = String(targetVal).trim();
+  const cleanTarget = rawTarget.toLowerCase().replace(/^kelas\s*/i, '').trim();
+
+  // 1. Direct match (case-insensitive & whitespace tolerant)
+  for (let i = 0; i < selectEl.options.length; i++) {
+    const opt = selectEl.options[i];
+    const optVal = String(opt.value).trim().toLowerCase();
+    const optClean = optVal.replace(/^kelas\s*/i, '').trim();
+    if (optVal === rawTarget.toLowerCase() || optClean === cleanTarget) {
+      selectEl.selectedIndex = i;
+      return;
+    }
+  }
+
+  // 2. Custom class name (e.g. "12 RPL 1" or "10 IPA")
+  const customOpt = document.createElement('option');
+  customOpt.value = rawTarget;
+  customOpt.textContent = rawTarget;
+  selectEl.appendChild(customOpt);
+  selectEl.value = rawTarget;
+}
+
+function updatePeriksaSiswaKelasDropdown(targetKelasToSelect) {
   const selectSekolah = document.getElementById('periksaSekolah');
   const selectKelas = document.getElementById('periksaKelas');
   if (!selectKelas) return;
 
   const chosenSekolah = (selectSekolah?.value || '').trim();
-  const currentKelas = selectKelas.value;
+  const currentKelas = targetKelasToSelect || selectKelas.value;
   const standardClasses = getClassesForSchool(chosenSekolah);
 
-  selectKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
-    standardClasses.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
+  let html = '<option value="">-- Pilih Kelas --</option>';
+  standardClasses.forEach(k => {
+    html += `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`;
+  });
+  selectKelas.innerHTML = html;
 
-  if (currentKelas) selectKelas.value = currentKelas;
+  if (currentKelas) {
+    setSelectKelasValue(selectKelas, currentKelas);
+  }
 }
 
 // State for Filter Status Skrining (all | sudah | belum | rujukan)
@@ -16734,9 +16932,11 @@ function renderSekolahView() {
               <i class="bi bi-capsule"></i> TTD
             </button>
             ` : ''}
+            ${!isSekolahUser ? `
             <button type="button" class="btn btn-sm" onclick="sendSingleSekolahToBotQueue('${safeId}')" title="Kirim Siswa Ini ke Antrean Bot ENCO" style="padding: 5px 8px; font-size: 11px; border-radius: 8px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;">
               <i class="bi bi-robot"></i>
             </button>
+            ` : ''}
             ${!isSekolahUser ? `
             <button type="button" class="btn btn-sm btn-print-siswa" onclick="cetakHasilSiswaIndividu('${safeId}')" title="Cetak Surat / Lembar Hasil Pemeriksaan Siswa Ini" style="padding: 5px 8px; font-size: 11px; border-radius: 8px; background: #0d9488; color: #fff;">
               <i class="bi bi-printer-fill"></i>
@@ -16812,11 +17012,21 @@ function openFormPosPopup(posKey) {
     const safeKelas = (!cleanKelas || cleanKelas === '-') ? '-' : `KELAS ${cleanKelas}`;
     const safeAgeInfo = (() => {
       const a = calculateRealtimeAge(siswa.tanggal_lahir);
-      return a ? ` Ã¢â‚¬Â¢ ${a.years} Th` : '';
+      return a ? ` &bull; ${a.years} Th` : '';
     })();
-    subInfoEl.textContent = `${siswa.sekolah || 'Nama Sekolah'} Ã¢â‚¬Â¢ ${safeKelas} Ã¢â‚¬Â¢ ${safeJk}${safeAgeInfo}`;
+    subInfoEl.innerHTML = `${escapeHtml(siswa.sekolah || 'Nama Sekolah')} &bull; ${escapeHtml(safeKelas)} &bull; ${escapeHtml(safeJk)}${safeAgeInfo}`;
   }
   if (avatarEl) avatarEl.textContent = (siswa.nama || 'S').charAt(0).toUpperCase();
+
+  if (posKey === 'identitas' || posKey === 'semua') {
+    updatePeriksaSiswaKelasDropdown(siswa.kelas);
+    initWilayahDropdownsSekolah(
+      siswa.provinsi || 'Jawa Barat',
+      siswa.kab_kota || 'Kabupaten Bandung',
+      siswa.kecamatan || 'Banjaran',
+      siswa.kelurahan || 'Tarajusari'
+    );
+  }
 
   const titleMap = {
     identitas: '<i class="bi bi-person-vcard-fill" style="color: #10b981;"></i> Format 1: Identitas & Domisili Siswa',
@@ -16929,99 +17139,109 @@ function updateSekolahMenuBadges(siswa) {
     }
   }
 
-  // Khusus Siswa Perempuan: Tampilkan Card & Log Absen Minum TTD
+  // Khusus Siswa Perempuan: TTD di modal pemeriksaan ditiadakan per permintaan user
   const cardTtd = document.getElementById('sekolahCardTtdRemajaPutri');
   if (cardTtd) {
-    if (siswa.jk === 'P') {
-      cardTtd.style.display = 'block';
-      renderTtdLogsInModal(siswa);
-    } else {
-      cardTtd.style.display = 'none';
-    }
+    cardTtd.style.display = 'none';
   }
 
-  // 2. Antropometri
-  const bAntro = document.getElementById('badgePosMenuAntro');
-  const btnAntro = document.getElementById('btnPosMenuAntro');
-  if (bAntro) {
-    if (hasAntro) {
-      bAntro.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${siswa.bb || 0}kg/${siswa.tb || 0}cm)</span>`;
-      btnAntro?.classList.add('is-done');
-    } else if (!isIdComplete) {
-      bAntro.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-lock-fill"></i> Terkunci</span>`;
-      btnAntro?.classList.remove('is-done');
-    } else {
-      bAntro.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
-      btnAntro?.classList.remove('is-done');
-    }
-  }
+  const subsequentBtns = [
+    { btn: btnAntro, badge: bAntro, name: 'Antropometri' },
+    { btn: btnVital, badge: bVital, name: 'Tanda Vital' },
+    { btn: btnLab, badge: bLab, name: 'Laboratorium' },
+    { btn: btnOrgan, badge: bOrgan, name: 'Organ Indera' },
+    { btn: btnKesimpulan, badge: bKesimpulan, name: 'Kesimpulan & Rujukan' }
+  ];
 
-  // 3. Tanda Vital
-  const bVital = document.getElementById('badgePosMenuVital');
-  const btnVital = document.getElementById('btnPosMenuVital');
-  if (bVital) {
-    if (hasVital) {
-      bVital.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${siswa.td_sistolik}/${siswa.td_diastolik || 0})</span>`;
-      btnVital?.classList.add('is-done');
-    } else if (!isIdComplete) {
-      bVital.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-lock-fill"></i> Terkunci</span>`;
-      btnVital?.classList.remove('is-done');
-    } else {
-      bVital.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
-      btnVital?.classList.remove('is-done');
-    }
-  }
+  if (!isIdComplete) {
+    // KUNCI SELURUH FORM BERIKUTNYA JIKA IDENTITAS BELUM LENGKAP
+    subsequentBtns.forEach(item => {
+      if (item.btn) {
+        item.btn.classList.remove('is-done');
+        item.btn.classList.add('is-locked');
+        item.btn.style.opacity = '0.5';
+        item.btn.style.cursor = 'not-allowed';
+        item.btn.style.backgroundColor = '#f8fafc';
+        item.btn.style.borderColor = '#cbd5e1';
+        item.btn.title = 'Terkunci: Wajib melengkapi seluruh data identitas siswa terlebih dahulu!';
+      }
+      if (item.badge) {
+        item.badge.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-lock-fill"></i> Terkunci</span>`;
+      }
+    });
+  } else {
+    // BUKA KUNCI JIKA IDENTITAS SUDAH LENGKAP
+    subsequentBtns.forEach(item => {
+      if (item.btn) {
+        item.btn.classList.remove('is-locked');
+        item.btn.style.opacity = '1';
+        item.btn.style.cursor = 'pointer';
+        item.btn.style.backgroundColor = '';
+        item.btn.style.borderColor = '';
+        item.btn.title = '';
+      }
+    });
 
-  // 4. Lab
-  const bLab = document.getElementById('badgePosMenuLab');
-  const btnLab = document.getElementById('btnPosMenuLab');
-  if (bLab) {
-    if (isLabTidakDiperiksa) {
-      bLab.innerHTML = `<span class="badge badge-pos-done" style="background:#fce7f3; color:#be185d; border:1px solid #fbcfe8;"><i class="bi bi-check-circle-fill" style="color:#db2777;"></i> Terisi (Tidak Diperiksa)</span>`;
-      btnLab?.classList.add('is-done');
-    } else if (hasLab) {
-      const parts = [];
-      if (siswa.hb && siswa.hb !== '-' && siswa.hb !== 'Tidak Diperiksa') parts.push(`Hb ${siswa.hb}`);
-      if (siswa.gula_darah && siswa.gula_darah !== '-' && siswa.gula_darah !== 'Tidak Diperiksa') parts.push(`GDS ${siswa.gula_darah}`);
-      bLab.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi ${parts.length ? `(${parts.join(', ')})` : ''}</span>`;
-      btnLab?.classList.add('is-done');
-    } else if (!isIdComplete) {
-      bLab.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-lock-fill"></i> Terkunci</span>`;
-      btnLab?.classList.remove('is-done');
-    } else {
-      bLab.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
-      btnLab?.classList.remove('is-done');
+    // 2. Antropometri
+    if (bAntro) {
+      if (hasAntro) {
+        bAntro.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${siswa.bb || 0}kg/${siswa.tb || 0}cm)</span>`;
+        btnAntro?.classList.add('is-done');
+      } else {
+        bAntro.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
+        btnAntro?.classList.remove('is-done');
+      }
     }
-  }
 
-  // 5. Organ Indera
-  const bOrgan = document.getElementById('badgePosMenuOrgan');
-  const btnOrgan = document.getElementById('btnPosMenuOrgan');
-  if (bOrgan) {
-    if (hasOrgan) {
-      bOrgan.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (Selesai)</span>`;
-      btnOrgan?.classList.add('is-done');
-    } else if (!isIdComplete) {
-      bOrgan.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-lock-fill"></i> Terkunci</span>`;
-      btnOrgan?.classList.remove('is-done');
-    } else {
-      bOrgan.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
-      btnOrgan?.classList.remove('is-done');
+    // 3. Tanda Vital
+    if (bVital) {
+      if (hasVital) {
+        bVital.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${siswa.td_sistolik}/${siswa.td_diastolik || 0})</span>`;
+        btnVital?.classList.add('is-done');
+      } else {
+        bVital.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
+        btnVital?.classList.remove('is-done');
+      }
     }
-  }
 
-  // 6. Kesimpulan & Rujukan (Opsional)
-  const bKesimpulan = document.getElementById('badgePosMenuKesimpulan');
-  const btnKesimpulan = document.getElementById('btnPosMenuKesimpulan');
-  const hasKesimpulan = !!((siswa.catatan_rujukan && siswa.catatan_rujukan !== '-' && String(siswa.catatan_rujukan).trim() !== '') || (siswa.status_kesehatan && siswa.status_kesehatan !== 'Sehat') || Number(siswa.kesimpulan_done) === 1);
-  if (bKesimpulan) {
-    if (hasKesimpulan) {
-      const statLabel = siswa.status_kesehatan || 'Terisi';
-      bKesimpulan.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${escapeHtml(statLabel)})</span>`;
-      btnKesimpulan?.classList.add('is-done');
-    } else {
-      bKesimpulan.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-dash-circle"></i> Opsional</span>`;
-      btnKesimpulan?.classList.remove('is-done');
+    // 4. Lab
+    if (bLab) {
+      if (isLabTidakDiperiksa) {
+        bLab.innerHTML = `<span class="badge badge-pos-done" style="background:#fce7f3; color:#be185d; border:1px solid #fbcfe8;"><i class="bi bi-check-circle-fill" style="color:#db2777;"></i> Terisi (Tidak Diperiksa)</span>`;
+        btnLab?.classList.add('is-done');
+      } else if (hasLab) {
+        const parts = [];
+        if (siswa.hb && siswa.hb !== '-' && siswa.hb !== 'Tidak Diperiksa') parts.push(`Hb ${siswa.hb}`);
+        if (siswa.gula_darah && siswa.gula_darah !== '-' && siswa.gula_darah !== 'Tidak Diperiksa') parts.push(`GDS ${siswa.gula_darah}`);
+        bLab.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi ${parts.length ? `(${parts.join(', ')})` : ''}</span>`;
+        btnLab?.classList.add('is-done');
+      } else {
+        bLab.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
+        btnLab?.classList.remove('is-done');
+      }
+    }
+
+    // 5. Organ Indera
+    if (bOrgan) {
+      if (hasOrgan) {
+        bOrgan.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (Selesai)</span>`;
+        btnOrgan?.classList.add('is-done');
+      } else {
+        bOrgan.innerHTML = `<span class="badge badge-pos-pending"><i class="bi bi-hourglass-split"></i> Belum</span>`;
+        btnOrgan?.classList.remove('is-done');
+      }
+    }
+
+    // 6. Kesimpulan & Rujukan (Opsional)
+    if (bKesimpulan) {
+      if (hasKesimpulan) {
+        const statLabel = siswa.status_kesehatan || 'Terisi';
+        bKesimpulan.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Terisi (${escapeHtml(statLabel)})</span>`;
+        btnKesimpulan?.classList.add('is-done');
+      } else {
+        bKesimpulan.innerHTML = `<span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;"><i class="bi bi-dash-circle"></i> Opsional</span>`;
+        btnKesimpulan?.classList.remove('is-done');
+      }
     }
   }
 
@@ -17059,7 +17279,7 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
   document.getElementById('displayTahunSiswa') && (document.getElementById('displayTahunSiswa').textContent = `Tahun CKG ${siswa.tahun_skrining || '2026'}`);
 
   const ageObjModal = calculateRealtimeAge(siswa.tanggal_lahir);
-  const safeAgeModalStr = ageObjModal ? ` Ã¢â‚¬Â¢ ${ageObjModal.years} Th` : '';
+  const safeAgeModalStr = ageObjModal ? ` - ${ageObjModal.years} Th` : '';
   document.getElementById('displayJkSiswa').textContent = `${siswa.jk === 'P' ? 'Perempuan' : 'Laki-laki'}${safeAgeModalStr}`;
   document.getElementById('badgeAvatarSiswa').textContent = (siswa.nama || 'S').charAt(0).toUpperCase();
 
@@ -17120,12 +17340,16 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
       pSek.style.cursor = 'not-allowed';
     }
   }
-  updatePeriksaSiswaKelasDropdown();
-  if (siswa.kelas) document.getElementById('periksaKelas').value = siswa.kelas;
+  updatePeriksaSiswaKelasDropdown(siswa.kelas);
   document.getElementById('periksaTglLahir').value = siswa.tanggal_lahir || '';
-  document.getElementById('periksaWa').value = siswa.no_whatsapp || '';
   document.getElementById('periksaAlamat').value = siswa.alamat || '';
   calculateSiswaAge();
+  initWilayahDropdownsSekolah(
+    siswa.provinsi || 'Jawa Barat',
+    siswa.kab_kota || 'Kabupaten Bandung',
+    siswa.kecamatan || 'Banjaran',
+    siswa.kelurahan || 'Tarajusari'
+  );
 
   // Populate Section 2: Fisik & Klinis
   document.getElementById('periksaBb').value = siswa.bb || '';
@@ -18155,47 +18379,73 @@ async function saveSekolahCategory(categoryKey, triggerBtn) {
 
     // Preliminary field defaults
     if (categoryKey === 'identitas') {
-      const nama = document.getElementById('periksaNama')?.value.trim().toUpperCase();
-      if (!nama) {
-        showToast('Nama Lengkap Siswa wajib diisi!', 'warning');
-        return;
-      }
-      const rawNik = document.getElementById('periksaNik')?.value.trim() || '';
+      const nama = (document.getElementById('periksaNama')?.value || '').trim().toUpperCase();
+      const rawNik = (document.getElementById('periksaNik')?.value || '').trim();
       const cleanNik = rawNik.replace(/\D/g, '');
-      if (cleanNik.length !== 16) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'NIK Wajib 16 Digit',
-          html: `NIK siswa yang Anda masukkan berjumlah <strong>${cleanNik.length} digit</strong> (NIK: <code>${rawNik || '(kosong)'}</code>).<br><br>Setiap data siswa <strong>wajib memiliki NIK 16 digit yang valid</strong> sebelum melanjutkan skrining.`,
-          confirmButtonColor: '#d97706'
-        });
-        return;
+      const tglLahirVal = (document.getElementById('periksaTglLahir')?.value || '').trim();
+      const jkVal = document.getElementById('periksaJk')?.value || 'L';
+      const portalTypeSekolah = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+      const schoolAccountSekolah = sessionStorage.getItem('ckg_user_name') || '';
+      const sekolahVal = (portalTypeSekolah === 'sekolah' && schoolAccountSekolah)
+        ? schoolAccountSekolah.toUpperCase()
+        : (document.getElementById('periksaSekolah')?.value || existing.sekolah || '').trim().toUpperCase();
+      const kelasVal = (document.getElementById('periksaKelas')?.value || existing.kelas || '').trim().toUpperCase();
+      const provVal = (document.getElementById('periksaProvinsi')?.value || '').trim();
+      const kabVal = (document.getElementById('periksaKabKota')?.value || '').trim();
+      const kecVal = (document.getElementById('periksaKecamatan')?.value || '').trim();
+      const kelVal = (document.getElementById('periksaKelurahan')?.value || '').trim();
+      const alamatVal = (document.getElementById('periksaAlamat')?.value || '').trim().toUpperCase();
+
+      const missingIdentity = [];
+      if (!nama) missingIdentity.push('Nama Lengkap Siswa');
+      if (!rawNik) {
+        missingIdentity.push('NIK (Kosong)');
+      } else if (cleanNik.length !== 16) {
+        missingIdentity.push(`NIK harus 16 digit (saat ini ${cleanNik.length} digit)`);
       }
-      const tglLahirVal = document.getElementById('periksaTglLahir')?.value || '';
-      if (!tglLahirVal) {
+      if (!jkVal) missingIdentity.push('Jenis Kelamin');
+      if (!sekolahVal) missingIdentity.push('Asal Sekolah');
+      if (!kelasVal) missingIdentity.push('Kelas Siswa');
+      if (!tglLahirVal) missingIdentity.push('Tanggal Lahir');
+      if (!provVal) missingIdentity.push('Provinsi');
+      if (!kabVal) missingIdentity.push('Kabupaten / Kota');
+      if (!kecVal) missingIdentity.push('Kecamatan');
+      if (!kelVal) missingIdentity.push('Desa / Kelurahan');
+      if (!alamatVal) missingIdentity.push('Alamat Tempat Tinggal');
+
+      if (missingIdentity.length > 0) {
         Swal.fire({
           icon: 'warning',
-          title: 'Tanggal Lahir Wajib Diisi',
-          text: 'Tanggal lahir diperlukan untuk menghitung umur dan mengklasifikasikan hasil klinis skrining.',
-          confirmButtonColor: '#d97706'
+          title: 'Identitas Belum Lengkap!',
+          html: `
+            <div style="text-align: left; font-size: 13.5px; line-height: 1.6;">
+              <p style="margin-bottom: 8px; color: #b91c1c; font-weight: 700;">
+                <i class="bi bi-exclamation-triangle-fill"></i> Seluruh data identitas wajib diisi lengkap:
+              </p>
+              <ul style="margin: 0; padding-left: 20px; color: #334155;">
+                ${missingIdentity.map(m => `<li><strong>${escapeHtml(m)}</strong></li>`).join('')}
+              </ul>
+              <p style="margin-top: 10px; font-size: 12px; color: #64748b;">
+                Lengkapi seluruh isian di atas agar form pemeriksaan selanjutnya dapat dibuka.
+              </p>
+            </div>
+          `,
+          confirmButtonColor: '#059669'
         });
         return;
       }
 
       fieldsToUpdate.nama = nama;
       fieldsToUpdate.nik = rawNik;
-      fieldsToUpdate.jk = document.getElementById('periksaJk')?.value || 'L';
-      const portalTypeSekolah = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
-      const schoolAccountSekolah = sessionStorage.getItem('ckg_user_name') || '';
-      if (portalTypeSekolah === 'sekolah' && schoolAccountSekolah) {
-        fieldsToUpdate.sekolah = schoolAccountSekolah.toUpperCase();
-      } else {
-        fieldsToUpdate.sekolah = document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || existing.sekolah;
-      }
-      fieldsToUpdate.kelas = document.getElementById('periksaKelas')?.value.trim().toUpperCase() || existing.kelas;
+      fieldsToUpdate.jk = jkVal;
+      fieldsToUpdate.sekolah = sekolahVal;
+      fieldsToUpdate.kelas = kelasVal;
       fieldsToUpdate.tanggal_lahir = tglLahirVal;
-      fieldsToUpdate.no_whatsapp = document.getElementById('periksaWa')?.value.trim() || '';
-      fieldsToUpdate.alamat = document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '';
+      fieldsToUpdate.provinsi = provVal;
+      fieldsToUpdate.kab_kota = kabVal;
+      fieldsToUpdate.kecamatan = kecVal;
+      fieldsToUpdate.kelurahan = kelVal;
+      fieldsToUpdate.alamat = alamatVal;
       fieldsToUpdate.identitas_done = 1;
       categoryName = 'Identitas Siswa';
       titleMsg = 'Data Identitas Siswa Berhasil Disimpan & Lengkap!';
@@ -18479,6 +18729,12 @@ async function savePemeriksaanSiswa(event) {
     const curSekolah = (document.getElementById('periksaSekolah')?.value || sekolahRecords[idx].sekolah || '').trim().toUpperCase();
     const curKelas = (document.getElementById('periksaKelas')?.value || sekolahRecords[idx].kelas || '').trim().toUpperCase();
 
+    const curProv = (document.getElementById('periksaProvinsi')?.value || sekolahRecords[idx].provinsi || '').trim();
+    const curKab = (document.getElementById('periksaKabKota')?.value || sekolahRecords[idx].kab_kota || '').trim();
+    const curKec = (document.getElementById('periksaKecamatan')?.value || sekolahRecords[idx].kecamatan || '').trim();
+    const curKel = (document.getElementById('periksaKelurahan')?.value || sekolahRecords[idx].kelurahan || '').trim();
+    const curAlamat = (document.getElementById('periksaAlamat')?.value || sekolahRecords[idx].alamat || '').trim().toUpperCase();
+
     const missingFields = [];
     if (!curNama) missingFields.push('Nama Siswa');
     if (!cleanNik) {
@@ -18490,6 +18746,11 @@ async function savePemeriksaanSiswa(event) {
     if (!curJk) missingFields.push('Jenis Kelamin (L/P)');
     if (!curSekolah) missingFields.push('Sekolah');
     if (!curKelas) missingFields.push('Kelas');
+    if (!curProv) missingFields.push('Provinsi');
+    if (!curKab) missingFields.push('Kabupaten / Kota');
+    if (!curKec) missingFields.push('Kecamatan');
+    if (!curKel) missingFields.push('Desa / Kelurahan');
+    if (!curAlamat) missingFields.push('Alamat Tempat Tinggal');
 
     if (missingFields.length > 0) {
       if (btn) {
@@ -18598,8 +18859,11 @@ async function savePemeriksaanSiswa(event) {
       sekolah: document.getElementById('periksaSekolah')?.value.trim().toUpperCase() || sekolahRecords[idx].sekolah,
       kelas: document.getElementById('periksaKelas')?.value.trim().toUpperCase() || sekolahRecords[idx].kelas,
       tanggal_lahir: document.getElementById('periksaTglLahir')?.value || '',
-      no_whatsapp: document.getElementById('periksaWa')?.value.trim() || '',
-      alamat: document.getElementById('periksaAlamat')?.value.trim().toUpperCase() || '',
+      provinsi: curProv || 'Jawa Barat',
+      kab_kota: curKab || 'Kabupaten Bandung',
+      kecamatan: curKec || 'Banjaran',
+      kelurahan: curKel || 'Tarajusari',
+      alamat: curAlamat || '',
       bb: bbVal,
       tb: tbVal,
       lp: parseFloat(document.getElementById('periksaLp')?.value) || 0,
@@ -26084,8 +26348,25 @@ function isSiswaIdentitasComplete(siswa) {
   const jk = (siswa.jk || '').trim().toUpperCase();
   const sekolah = (siswa.sekolah || '').trim();
   const kelas = (siswa.kelas || '').trim();
+  const prov = (siswa.provinsi || '').trim();
+  const kab = (siswa.kab_kota || '').trim();
+  const kec = (siswa.kecamatan || '').trim();
+  const kel = (siswa.kelurahan || '').trim();
+  const alamat = (siswa.alamat || '').trim();
 
-  return Boolean(nama && nikClean.length === 16 && tglLahir && (jk === 'L' || jk === 'P') && sekolah && kelas);
+  return Boolean(
+    nama &&
+    nikClean.length === 16 &&
+    tglLahir &&
+    (jk === 'L' || jk === 'P') &&
+    sekolah &&
+    kelas &&
+    prov &&
+    kab &&
+    kec &&
+    kel &&
+    alamat
+  );
 }
 
 function getMissingIdentitasFields(siswa) {
@@ -26099,6 +26380,11 @@ function getMissingIdentitasFields(siswa) {
   const jk = (siswa.jk || '').trim().toUpperCase();
   const sekolah = (siswa.sekolah || '').trim();
   const kelas = (siswa.kelas || '').trim();
+  const prov = (siswa.provinsi || '').trim();
+  const kab = (siswa.kab_kota || '').trim();
+  const kec = (siswa.kecamatan || '').trim();
+  const kel = (siswa.kelurahan || '').trim();
+  const alamat = (siswa.alamat || '').trim();
 
   if (!nama) missing.push('Nama Lengkap');
   if (!nikRaw) {
@@ -26108,10 +26394,15 @@ function getMissingIdentitasFields(siswa) {
   } else if (nikClean.length > 16) {
     missing.push(`NIK Lebih (${nikClean.length} dari 16 digit)`);
   }
-  if (!tglLahir) missing.push('Tanggal Lahir');
   if (!jk || (jk !== 'L' && jk !== 'P')) missing.push('Jenis Kelamin (L/P)');
-  if (!sekolah) missing.push('Sekolah');
-  if (!kelas) missing.push('Kelas');
+  if (!sekolah) missing.push('Asal Sekolah');
+  if (!kelas) missing.push('Kelas Siswa');
+  if (!tglLahir) missing.push('Tanggal Lahir');
+  if (!prov) missing.push('Provinsi');
+  if (!kab) missing.push('Kab/Kota');
+  if (!kec) missing.push('Kecamatan');
+  if (!kel) missing.push('Desa/Kelurahan');
+  if (!alamat) missing.push('Alamat Tempat Tinggal');
 
   return missing;
 }

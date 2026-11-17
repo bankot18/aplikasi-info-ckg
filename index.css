@@ -1728,13 +1728,15 @@ body.role-koordinator .admin-only {
 /* ==========================================================================
    🏫 RESTRIKSI KHUSUS AKUN SEKOLAH
    ========================================================================== */
-/* Toolbar Atas: Tombol yang disembunyikan untuk Akun Sekolah (hanya admin/bot/import yang disembunyikan) */
+/* Toolbar Atas: Tombol yang disembunyikan untuk Akun Sekolah (admin, bot, import, eksport & cetak laporan) */
 body.role-sekolah #view-sekolah .action-buttons-group > button.admin-only,
 body.role-sekolah #view-sekolah .action-buttons-group > button.admin-koordinator-only,
 body.role-sekolah #view-sekolah .action-buttons-group > button[onclick*="openBotQueueModal"],
 body.role-sekolah #view-sekolah .action-buttons-group > button[onclick*="sendCurrentSekolahToBotQueue"],
 body.role-sekolah #view-sekolah .action-buttons-group > button[onclick*="openImportSekolahModal"],
-body.role-sekolah #view-sekolah .action-buttons-group > button[onclick*="openKelolaSekolahModal"] {
+body.role-sekolah #view-sekolah .action-buttons-group > button[onclick*="openKelolaSekolahModal"],
+body.role-sekolah #view-sekolah .action-buttons-group > button#btnExportSekolah,
+body.role-sekolah #view-sekolah .action-buttons-group > button#btnLaporanSekolah {
   display: none !important;
 }
 
@@ -1743,9 +1745,10 @@ body.role-sekolah .btn-kelola-sekolah-quick {
   display: none !important;
 }
 
-/* Tabel Siswa: Sembunyikan tombol Cetak di sebelah tombol Periksa */
+/* Tabel Siswa: Sembunyikan tombol Cetak dan Antrean Bot di kolom AKSI */
 body.role-sekolah .btn-print-siswa,
-body.role-sekolah button[onclick*="cetakHasilSiswaIndividu"] {
+body.role-sekolah button[onclick*="cetakHasilSiswaIndividu"],
+body.role-sekolah button[onclick*="sendSingleSekolahToBotQueue"] {
   display: none !important;
 }
 
