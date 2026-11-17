@@ -3385,7 +3385,9 @@ function updateRoleUI() {
   applyMenuConfiguration();
 }
 
-// API Wilayah Indonesia (Emsifa API) Integration
+// ==========================================================================
+// 🗺️ API WILAYAH INDONESIA (EMSIFA API & WILAYAH_DATA CACHED ENGINE)
+// ==========================================================================
 const EMSIFA_BASE = 'https://www.emsifa.com/api-wilayah-indonesia/api';
 
 function toTitleCase(str) {
@@ -3395,127 +3397,340 @@ function toTitleCase(str) {
   });
 }
 
-async function initWilayahDropdowns() {
-  const provSelect = document.getElementById('provinsi');
-  const kabSelect = document.getElementById('kab_kota');
-  const kecSelect = document.getElementById('kecamatan');
-  const kelSelect = document.getElementById('kelurahan');
+let emsifaProvincesCache = null;
+const emsifaRegenciesCache = {};
+const emsifaDistrictsCache = {};
+const emsifaVillagesCache = {};
 
-  if (!provSelect) return;
+async function fetchEmsifaWilayah(endpoint) {
+  try {
+    const res = await fetch(`${EMSIFA_BASE}/${endpoint}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.warn(`[Emsifa API Wilayah Notice] ${endpoint}:`, e);
+    return null;
+  }
+}
 
-  let provincesList = [];
-  let regenciesCache = {};
-  let districtsCache = {};
-  let villagesCache = {};
+// --------------------------------------------------------------------------
+// 🔍 SEARCHABLE COMBOBOX LOGIC UNTUK DROPDOWN WILAYAH (CKG GRATIS)
+// --------------------------------------------------------------------------
+function getWilayahComboboxIds(fieldKey) {
+  const map = {
+    'provinsi': { selectId: 'provinsi', wrapperId: 'comboboxProvinsiWrapper', triggerId: 'comboboxProvinsiTrigger', labelId: 'comboboxProvinsiLabel', panelId: 'comboboxProvinsiPanel', inputId: 'inputSearchProvinsiDropdown', optionsId: 'comboboxProvinsiOptions', icon: 'bi-geo-alt-fill', defaultText: '-- Pilih Provinsi --' },
+    'kab_kota': { selectId: 'kab_kota', wrapperId: 'comboboxKabKotaWrapper', triggerId: 'comboboxKabKotaTrigger', labelId: 'comboboxKabKotaLabel', panelId: 'comboboxKabKotaPanel', inputId: 'inputSearchKabKotaDropdown', optionsId: 'comboboxKabKotaOptions', icon: 'bi-buildings-fill', defaultText: '-- Pilih Kab/Kota --' },
+    'kecamatan': { selectId: 'kecamatan', wrapperId: 'comboboxKecamatanWrapper', triggerId: 'comboboxKecamatanTrigger', labelId: 'comboboxKecamatanLabel', panelId: 'comboboxKecamatanPanel', inputId: 'inputSearchKecamatanDropdown', optionsId: 'comboboxKecamatanOptions', icon: 'bi-pin-map-fill', defaultText: '-- Pilih Kecamatan --' },
+    'kelurahan': { selectId: 'kelurahan', wrapperId: 'comboboxKelurahanWrapper', triggerId: 'comboboxKelurahanTrigger', labelId: 'comboboxKelurahanLabel', panelId: 'comboboxKelurahanPanel', inputId: 'inputSearchKelurahanDropdown', optionsId: 'comboboxKelurahanOptions', icon: 'bi-house-door-fill', defaultText: '-- Pilih Kelurahan --' }
+  };
+  return map[fieldKey] || null;
+}
 
-  // Helper to fetch JSON from Emsifa API
-  async function fetchEmsifa(endpoint) {
-    try {
-      const res = await fetch(`${EMSIFA_BASE}/${endpoint}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (e) {
-      console.warn(`[Emsifa API Offline/Fallback] ${endpoint}:`, e);
-      return null;
+function syncWilayahComboboxUI(fieldKey) {
+  const ids = getWilayahComboboxIds(fieldKey);
+  if (!ids) return;
+  const select = document.getElementById(ids.selectId);
+  const label = document.getElementById(ids.labelId);
+  if (!select || !label) return;
+
+  const selIndex = select.selectedIndex;
+  if (selIndex >= 0 && select.options[selIndex] && select.options[selIndex].value) {
+    label.textContent = select.options[selIndex].textContent;
+    label.style.fontWeight = '700';
+    label.style.color = '#1e293b';
+  } else {
+    label.textContent = ids.defaultText;
+    label.style.fontWeight = '500';
+    label.style.color = '#64748b';
+  }
+}
+
+function syncWilayahComboboxLabels() {
+  ['provinsi', 'kab_kota', 'kecamatan', 'kelurahan'].forEach(f => syncWilayahComboboxUI(f));
+}
+
+function toggleWilayahSearchDropdown(fieldKey, event) {
+  if (event) event.stopPropagation();
+  const ids = getWilayahComboboxIds(fieldKey);
+  if (!ids) return;
+
+  const panel = document.getElementById(ids.panelId);
+  const trigger = document.getElementById(ids.triggerId);
+  const select = document.getElementById(ids.selectId);
+  if (!panel || !trigger || !select) return;
+
+  if (select.disabled) return;
+
+  const isOpen = panel.style.display === 'flex' || panel.style.display === 'block';
+  closeAllWilayahSearchDropdowns();
+
+  if (!isOpen) {
+    panel.style.display = 'flex';
+    trigger.classList.add('open');
+    renderWilayahSearchOptions(fieldKey, '');
+    const searchInput = document.getElementById(ids.inputId);
+    if (searchInput) {
+      searchInput.value = '';
+      setTimeout(() => searchInput.focus(), 50);
     }
   }
+}
 
-  // Populate Provinsi
+function closeAllWilayahSearchDropdowns() {
+  ['provinsi', 'kab_kota', 'kecamatan', 'kelurahan'].forEach(f => {
+    const ids = getWilayahComboboxIds(f);
+    if (!ids) return;
+    const panel = document.getElementById(ids.panelId);
+    const trigger = document.getElementById(ids.triggerId);
+    if (panel) panel.style.display = 'none';
+    if (trigger) trigger.classList.remove('open');
+  });
+}
+
+function clearWilayahSearchInput(fieldKey) {
+  const ids = getWilayahComboboxIds(fieldKey);
+  if (!ids) return;
+  const searchInput = document.getElementById(ids.inputId);
+  if (searchInput) {
+    searchInput.value = '';
+    renderWilayahSearchOptions(fieldKey, '');
+    searchInput.focus();
+  }
+}
+
+function filterWilayahSearchOptions(fieldKey, keyword) {
+  renderWilayahSearchOptions(fieldKey, keyword);
+}
+
+function renderWilayahSearchOptions(fieldKey, keyword = '') {
+  const ids = getWilayahComboboxIds(fieldKey);
+  if (!ids) return;
+
+  const select = document.getElementById(ids.selectId);
+  const container = document.getElementById(ids.optionsId);
+  if (!select || !container) return;
+
+  const kw = (keyword || '').toLowerCase().trim();
+  const options = Array.from(select.options);
+  const selectedVal = (select.value || '').toLowerCase();
+
+  let html = '';
+  let count = 0;
+
+  options.forEach(opt => {
+    const text = opt.textContent.trim();
+    const val = opt.value;
+    if (!val && !kw) {
+      const isSelected = !select.value;
+      html += `
+        <div class="combobox-option-item ${isSelected ? 'selected' : ''}" onclick="selectWilayahSearchOption('${fieldKey}', '', '${escapeHtml(text)}')">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <i class="bi ${ids.icon}" style="color: #94a3b8; font-size: 13px;"></i>
+            <span style="color: #64748b;">${escapeHtml(text)}</span>
+          </span>
+          ${isSelected ? '<i class="bi bi-check-lg" style="color: #4f46e5; font-size: 15px; font-weight: 800;"></i>' : ''}
+        </div>
+      `;
+      count++;
+      return;
+    }
+    if (!val) return;
+
+    if (!kw || text.toLowerCase().includes(kw) || val.toLowerCase().includes(kw)) {
+      const isSelected = (val.toLowerCase() === selectedVal);
+      html += `
+        <div class="combobox-option-item ${isSelected ? 'selected' : ''}" onclick="selectWilayahSearchOption('${fieldKey}', '${escapeHtml(val)}', '${escapeHtml(text)}')">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <i class="bi ${ids.icon}" style="color: ${isSelected ? '#4f46e5' : '#6366f1'}; font-size: 13px;"></i>
+            <span style="font-weight: ${isSelected ? '800' : '600'};">${escapeHtml(text)}</span>
+          </span>
+          ${isSelected ? '<i class="bi bi-check-lg" style="color: #4f46e5; font-size: 15px; font-weight: 800;"></i>' : ''}
+        </div>
+      `;
+      count++;
+    }
+  });
+
+  if (count === 0) {
+    html = `<div style="padding: 16px; text-align: center; color: #94a3b8; font-size: 12px;"><i class="bi bi-search" style="font-size: 16px; display: block; margin-bottom: 4px;"></i>Tidak ada hasil untuk "${escapeHtml(keyword)}"</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function selectWilayahSearchOption(fieldKey, value, text) {
+  const ids = getWilayahComboboxIds(fieldKey);
+  if (!ids) return;
+
+  const select = document.getElementById(ids.selectId);
+  if (select) {
+    select.value = value;
+    select.dispatchEvent(new Event('change'));
+  }
+  syncWilayahComboboxUI(fieldKey);
+  closeAllWilayahSearchDropdowns();
+}
+
+// Global outside-click listener for wilayah comboboxes
+document.addEventListener('click', function(e) {
+  ['provinsi', 'kab_kota', 'kecamatan', 'kelurahan'].forEach(f => {
+    const ids = getWilayahComboboxIds(f);
+    if (!ids) return;
+    const wrapper = document.getElementById(ids.wrapperId);
+    if (wrapper && !wrapper.contains(e.target)) {
+      const panel = document.getElementById(ids.panelId);
+      const trigger = document.getElementById(ids.triggerId);
+      if (panel) panel.style.display = 'none';
+      if (trigger) trigger.classList.remove('open');
+    }
+  });
+});
+
+// --------------------------------------------------------------------------
+// 🌐 UNIVERSAL CASCADING WILAYAH LOGIC (SE-INDONESIA EMSIFA API & CACHE)
+// --------------------------------------------------------------------------
+async function initWilayahDropdownsCascade(provSelectId, kabSelectId, kecSelectId, kelSelectId, initialProv, initialKab, initialKec, initialKel) {
+  const provSelect = document.getElementById(provSelectId);
+  const kabSelect = document.getElementById(kabSelectId);
+  const kecSelect = document.getElementById(kecSelectId);
+  const kelSelect = document.getElementById(kelSelectId);
+  if (!provSelect || !kabSelect || !kecSelect || !kelSelect) return;
+
+  const defProv = initialProv || 'Jawa Barat';
+  const defKab = initialKab || 'Kabupaten Bandung';
+  const defKec = initialKec || 'Banjaran';
+  const defKel = initialKel || 'Tarajusari';
+
+  function selectOptionByText(selectEl, textVal) {
+    if (!selectEl || !textVal) return null;
+    const clean = String(textVal).trim().toLowerCase();
+    const cleanStripped = clean.replace(/^(kabupaten|kab\.|kota)\s*/i, '').trim();
+    for (let i = 0; i < selectEl.options.length; i++) {
+      const opt = selectEl.options[i];
+      const optVal = String(opt.value).trim().toLowerCase();
+      const optText = String(opt.textContent).trim().toLowerCase();
+      const optStripped = optVal.replace(/^(kabupaten|kab\.|kota)\s*/i, '').trim();
+      if (optVal === clean || optText === clean || (cleanStripped && optStripped === cleanStripped)) {
+        selectEl.selectedIndex = i;
+        syncWilayahComboboxUI(selectEl.id);
+        return opt;
+      }
+    }
+    const opt = document.createElement('option');
+    opt.value = textVal;
+    opt.textContent = textVal;
+    selectEl.appendChild(opt);
+    selectEl.value = textVal;
+    syncWilayahComboboxUI(selectEl.id);
+    return opt;
+  }
+
+  // 1. Load Provinsi
   provSelect.innerHTML = '<option value="">-- Pilih Provinsi --</option>';
+  if (!emsifaProvincesCache) {
+    emsifaProvincesCache = await fetchEmsifaWilayah('provinces.json');
+  }
 
-  // Try API first
-  const apiProvinces = await fetchEmsifa('provinces.json');
-
-  if (apiProvinces && apiProvinces.length > 0) {
-    provincesList = apiProvinces.map(p => ({ id: p.id, name: toTitleCase(p.name) }));
-    provincesList.forEach(p => {
-      provSelect.innerHTML += `<option value="${p.name}" data-id="${p.id}">${p.name}</option>`;
+  if (emsifaProvincesCache && emsifaProvincesCache.length > 0) {
+    emsifaProvincesCache.forEach(p => {
+      const name = toTitleCase(p.name);
+      provSelect.innerHTML += `<option value="${name}" data-id="${p.id}">${name}</option>`;
     });
   } else if (typeof WILAYAH_DATA !== 'undefined') {
-    // Offline fallback to WILAYAH_DATA
     Object.keys(WILAYAH_DATA).forEach(prov => {
       provSelect.innerHTML += `<option value="${prov}">${prov}</option>`;
     });
   }
+  syncWilayahComboboxUI(provSelectId);
 
-  // Populate Kab/Kota
-  async function loadKabupaten(provName) {
+  // 2. Load Kab/Kota
+  async function loadKab(provName, selectKabVal) {
     kabSelect.innerHTML = '<option value="">-- Pilih Kab/Kota --</option>';
     kecSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
     kelSelect.innerHTML = '<option value="">-- Pilih Kelurahan --</option>';
-
+    syncWilayahComboboxUI(kabSelectId);
+    syncWilayahComboboxUI(kecSelectId);
+    syncWilayahComboboxUI(kelSelectId);
     if (!provName) return;
 
-    const provOpt = Array.from(provSelect.options).find(o => o.value === provName);
+    const provOpt = Array.from(provSelect.options).find(o => o.value.toLowerCase() === provName.toLowerCase());
     const provId = provOpt?.getAttribute('data-id');
 
     if (provId) {
-      if (!regenciesCache[provId]) {
-        regenciesCache[provId] = await fetchEmsifa(`regencies/${provId}.json`);
+      if (!emsifaRegenciesCache[provId]) {
+        emsifaRegenciesCache[provId] = await fetchEmsifaWilayah(`regencies/${provId}.json`);
       }
-      const regList = regenciesCache[provId];
+      const regList = emsifaRegenciesCache[provId];
       if (regList && regList.length > 0) {
         regList.forEach(r => {
-          kabSelect.innerHTML += `<option value="${toTitleCase(r.name)}" data-id="${r.id}">${toTitleCase(r.name)}</option>`;
+          const name = toTitleCase(r.name);
+          kabSelect.innerHTML += `<option value="${name}" data-id="${r.id}">${name}</option>`;
         });
-        return;
       }
-    }
-
-    // Static fallback
-    if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName]) {
+    } else if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName]) {
       Object.keys(WILAYAH_DATA[provName]).forEach(kab => {
         kabSelect.innerHTML += `<option value="${kab}">${kab}</option>`;
       });
     }
+
+    if (selectKabVal) {
+      selectOptionByText(kabSelect, selectKabVal);
+      await loadKec(provName, kabSelect.value, defKec);
+    } else {
+      syncWilayahComboboxUI(kabSelectId);
+    }
   }
 
-  // Populate Kecamatan
-  async function loadKecamatan(provName, kabName) {
+  // 3. Load Kecamatan
+  async function loadKec(provName, kabName, selectKecVal) {
     kecSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
     kelSelect.innerHTML = '<option value="">-- Pilih Kelurahan --</option>';
-
+    syncWilayahComboboxUI(kecSelectId);
+    syncWilayahComboboxUI(kelSelectId);
     if (!kabName) return;
 
-    const kabOpt = Array.from(kabSelect.options).find(o => o.value === kabName);
+    const kabOpt = Array.from(kabSelect.options).find(o => o.value.toLowerCase() === kabName.toLowerCase() || o.value.toLowerCase().replace(/^(kabupaten|kab\.|kota)\s*/i, '') === kabName.toLowerCase().replace(/^(kabupaten|kab\.|kota)\s*/i, ''));
     const regId = kabOpt?.getAttribute('data-id');
 
     if (regId) {
-      if (!districtsCache[regId]) {
-        districtsCache[regId] = await fetchEmsifa(`districts/${regId}.json`);
+      if (!emsifaDistrictsCache[regId]) {
+        emsifaDistrictsCache[regId] = await fetchEmsifaWilayah(`districts/${regId}.json`);
       }
-      const distList = districtsCache[regId];
+      const distList = emsifaDistrictsCache[regId];
       if (distList && distList.length > 0) {
         distList.forEach(d => {
-          kecSelect.innerHTML += `<option value="${toTitleCase(d.name)}" data-id="${d.id}">${toTitleCase(d.name)}</option>`;
+          const name = toTitleCase(d.name);
+          kecSelect.innerHTML += `<option value="${name}" data-id="${d.id}">${name}</option>`;
         });
-        return;
       }
-    }
-
-    // Static fallback
-    if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName] && WILAYAH_DATA[provName][kabName]) {
+    } else if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName] && WILAYAH_DATA[provName][kabName]) {
       Object.keys(WILAYAH_DATA[provName][kabName]).forEach(kec => {
         kecSelect.innerHTML += `<option value="${kec}">${kec}</option>`;
       });
     }
+
+    if (selectKecVal) {
+      selectOptionByText(kecSelect, selectKecVal);
+      await loadKel(provName, kabName, kecSelect.value, defKel);
+    } else {
+      syncWilayahComboboxUI(kecSelectId);
+    }
   }
 
-  // Populate Kelurahan
-  async function loadKelurahan(provName, kabName, kecName) {
+  // 4. Load Kelurahan
+  async function loadKel(provName, kabName, kecName, selectKelVal) {
     kelSelect.innerHTML = '<option value="">-- Pilih Kelurahan --</option>';
-
+    syncWilayahComboboxUI(kelSelectId);
     if (!kecName) return;
 
-    const kecOpt = Array.from(kecSelect.options).find(o => o.value === kecName);
+    const kecOpt = Array.from(kecSelect.options).find(o => o.value.toLowerCase() === kecName.toLowerCase());
     const distId = kecOpt?.getAttribute('data-id');
 
     if (distId) {
-      if (!villagesCache[distId]) {
-        villagesCache[distId] = await fetchEmsifa(`villages/${distId}.json`);
+      if (!emsifaVillagesCache[distId]) {
+        emsifaVillagesCache[distId] = await fetchEmsifaWilayah(`villages/${distId}.json`);
       }
-      const vilList = villagesCache[distId];
-      // Override map: API returns official names that need local renaming
+      const vilList = emsifaVillagesCache[distId];
       const kelNameOverrides = { 'Banjaran': 'Banjaran Kulon' };
       if (vilList && vilList.length > 0) {
         vilList.forEach(v => {
@@ -3523,45 +3738,43 @@ async function initWilayahDropdowns() {
           if (kelNameOverrides[displayName]) displayName = kelNameOverrides[displayName];
           kelSelect.innerHTML += `<option value="${displayName}" data-id="${v.id}">${displayName}</option>`;
         });
-        return;
       }
-    }
-
-    // Static fallback
-    if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName] && WILAYAH_DATA[provName][kabName] && WILAYAH_DATA[provName][kabName][kecName]) {
+    } else if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName] && WILAYAH_DATA[provName][kabName] && WILAYAH_DATA[provName][kabName][kecName]) {
       WILAYAH_DATA[provName][kabName][kecName].forEach(kel => {
         kelSelect.innerHTML += `<option value="${kel}">${kel}</option>`;
       });
     }
-  }
 
-  // Event Listeners
-  provSelect.addEventListener('change', () => loadKabupaten(provSelect.value));
-  kabSelect.addEventListener('change', () => loadKecamatan(provSelect.value, kabSelect.value));
-  kecSelect.addEventListener('change', () => loadKelurahan(provSelect.value, kabSelect.value, kecSelect.value));
-
-  // Set default values for Puskesmas Banjaran Kota (Jawa Barat -> Kabupaten Bandung -> Banjaran)
-  const defaultProv = "Jawa Barat";
-  const defaultKab = "Kabupaten Bandung";
-  const defaultKec = "Banjaran";
-
-  const provMatch = Array.from(provSelect.options).find(o => o.value.toLowerCase() === defaultProv.toLowerCase());
-  if (provMatch) {
-    provSelect.value = provMatch.value;
-    await loadKabupaten(provSelect.value);
-
-    const kabMatch = Array.from(kabSelect.options).find(o => o.value.toLowerCase() === defaultKab.toLowerCase());
-    if (kabMatch) {
-      kabSelect.value = kabMatch.value;
-      await loadKecamatan(provSelect.value, kabSelect.value);
-
-      const kecMatch = Array.from(kecSelect.options).find(o => o.value.toLowerCase() === defaultKec.toLowerCase());
-      if (kecMatch) {
-        kecSelect.value = kecMatch.value;
-        await loadKelurahan(provSelect.value, kabSelect.value, kecSelect.value);
-      }
+    if (selectKelVal) {
+      selectOptionByText(kelSelect, selectKelVal);
+    } else {
+      syncWilayahComboboxUI(kelSelectId);
     }
   }
+
+  provSelect.onchange = () => {
+    syncWilayahComboboxUI(provSelectId);
+    loadKab(provSelect.value);
+  };
+  kabSelect.onchange = () => {
+    syncWilayahComboboxUI(kabSelectId);
+    loadKec(provSelect.value, kabSelect.value);
+  };
+  kecSelect.onchange = () => {
+    syncWilayahComboboxUI(kecSelectId);
+    loadKel(provSelect.value, kabSelect.value, kecSelect.value);
+  };
+  kelSelect.onchange = () => {
+    syncWilayahComboboxUI(kelSelectId);
+  };
+
+  selectOptionByText(provSelect, defProv);
+  await loadKab(provSelect.value, defKab);
+}
+
+async function initWilayahDropdowns() {
+  await initWilayahDropdownsCascade('provinsi', 'kab_kota', 'kecamatan', 'kelurahan', 'Jawa Barat', 'Kabupaten Bandung', 'Banjaran', 'Tarajusari');
+  syncWilayahComboboxLabels();
 }
 
 function getDeletedKampungList() {
@@ -7954,6 +8167,7 @@ function openInputModal(kategori = 'Luar Gedung', isEdit = false, target = 'reco
   currentWizardStep = 1;
   updateWizardUI();
   updateDataWaliVisibility();
+  syncWilayahComboboxLabels();
   document.getElementById('inputModalOverlay').classList.add('open');
 }
 
@@ -10277,6 +10491,7 @@ function editCkgGratisRecord(id) {
       setVal('kecamatan', r.kecamatan || 'Banjaran');
       setVal('kelurahan', r.kelurahan || 'Banjaran Kota');
       setVal('alamat', r.alamat || '');
+      syncWilayahComboboxLabels();
     }, 50);
   }, 50);
 }
@@ -11772,6 +11987,7 @@ function editRecord(id) {
   setVal('kecamatan', r.kecamatan || 'Banjaran');
   setVal('kab_kota', r.kab_kota || 'Kab. Bandung');
   setVal('provinsi', r.provinsi || 'Jawa Barat');
+  syncWilayahComboboxLabels();
   setVal('pekerjaan', r.pekerjaan);
   setVal('bb', r.bb);
   setVal('tb', r.tb);
@@ -14050,6 +14266,25 @@ function setDemographicLock(target, isLocked) {
         }
       }
     });
+
+    ['provinsi', 'kab_kota', 'kecamatan', 'kelurahan'].forEach(f => {
+      const ids = getWilayahComboboxIds(f);
+      if (!ids) return;
+      const trigger = document.getElementById(ids.triggerId);
+      if (trigger) {
+        if (isLocked) {
+          trigger.style.backgroundColor = '#f1f5f9';
+          trigger.style.cursor = 'not-allowed';
+          trigger.style.pointerEvents = 'none';
+          trigger.title = 'Kolom terkunci. Silakan klik tombol "Cek NIK" terlebih dahulu.';
+        } else {
+          trigger.style.backgroundColor = '';
+          trigger.style.cursor = '';
+          trigger.style.pointerEvents = '';
+          trigger.removeAttribute('title');
+        }
+      }
+    });
   }
 
   if (target === 'wali' || target === 'all') {
@@ -14329,6 +14564,7 @@ async function triggerCekNikEnco(target = 'pasien') {
           const matchKel = Array.from(kelSelect.options).find(o => o.value.toLowerCase().includes(rawKel.toLowerCase()));
           if (matchKel) kelSelect.value = matchKel.value;
         }
+        syncWilayahComboboxLabels();
       }
 
       // Buka kolom identitas
@@ -16069,173 +16305,8 @@ function updateTambahSiswaKelasDropdown() {
     standardClasses.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
 }
 
-let emsifaProvincesCache = null;
-const emsifaRegenciesCache = {};
-const emsifaDistrictsCache = {};
-const emsifaVillagesCache = {};
-
-async function fetchEmsifaWilayah(endpoint) {
-  try {
-    const res = await fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/${endpoint}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } catch (e) {
-    console.warn(`[Emsifa API Wilayah Notice] ${endpoint}:`, e);
-    return null;
-  }
-}
-
 async function initWilayahDropdownsSekolah(initialProv, initialKab, initialKec, initialKel) {
-  const provSelect = document.getElementById('periksaProvinsi');
-  const kabSelect = document.getElementById('periksaKabKota');
-  const kecSelect = document.getElementById('periksaKecamatan');
-  const kelSelect = document.getElementById('periksaKelurahan');
-  if (!provSelect || !kabSelect || !kecSelect || !kelSelect) return;
-
-  const defProv = initialProv || 'Jawa Barat';
-  const defKab = initialKab || 'Kabupaten Bandung';
-  const defKec = initialKec || 'Banjaran';
-  const defKel = initialKel || 'Tarajusari';
-
-  function selectOptionByText(selectEl, textVal) {
-    if (!selectEl || !textVal) return null;
-    const clean = String(textVal).trim().toLowerCase();
-    const cleanStripped = clean.replace(/^(kabupaten|kab\.|kota)\s*/i, '').trim();
-    for (let i = 0; i < selectEl.options.length; i++) {
-      const opt = selectEl.options[i];
-      const optVal = String(opt.value).trim().toLowerCase();
-      const optText = String(opt.textContent).trim().toLowerCase();
-      const optStripped = optVal.replace(/^(kabupaten|kab\.|kota)\s*/i, '').trim();
-      if (optVal === clean || optText === clean || (cleanStripped && optStripped === cleanStripped)) {
-        selectEl.selectedIndex = i;
-        return opt;
-      }
-    }
-    const opt = document.createElement('option');
-    opt.value = textVal;
-    opt.textContent = textVal;
-    selectEl.appendChild(opt);
-    selectEl.value = textVal;
-    return opt;
-  }
-
-  // Load Provinsi
-  provSelect.innerHTML = '<option value="">-- Pilih Provinsi --</option>';
-  if (!emsifaProvincesCache) {
-    emsifaProvincesCache = await fetchEmsifaWilayah('provinces.json');
-  }
-
-  if (emsifaProvincesCache && emsifaProvincesCache.length > 0) {
-    emsifaProvincesCache.forEach(p => {
-      const name = toTitleCase(p.name);
-      provSelect.innerHTML += `<option value="${name}" data-id="${p.id}">${name}</option>`;
-    });
-  } else if (typeof WILAYAH_DATA !== 'undefined') {
-    Object.keys(WILAYAH_DATA).forEach(prov => {
-      provSelect.innerHTML += `<option value="${prov}">${prov}</option>`;
-    });
-  }
-
-  async function loadKabSekolah(provName, selectKabVal) {
-    kabSelect.innerHTML = '<option value="">-- Pilih Kab/Kota --</option>';
-    kecSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
-    kelSelect.innerHTML = '<option value="">-- Pilih Kelurahan --</option>';
-    if (!provName) return;
-
-    const provOpt = Array.from(provSelect.options).find(o => o.value.toLowerCase() === provName.toLowerCase());
-    const provId = provOpt?.getAttribute('data-id');
-
-    if (provId) {
-      if (!emsifaRegenciesCache[provId]) {
-        emsifaRegenciesCache[provId] = await fetchEmsifaWilayah(`regencies/${provId}.json`);
-      }
-      const regList = emsifaRegenciesCache[provId];
-      if (regList && regList.length > 0) {
-        regList.forEach(r => {
-          const name = toTitleCase(r.name);
-          kabSelect.innerHTML += `<option value="${name}" data-id="${r.id}">${name}</option>`;
-        });
-      }
-    } else if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName]) {
-      Object.keys(WILAYAH_DATA[provName]).forEach(kab => {
-        kabSelect.innerHTML += `<option value="${kab}">${kab}</option>`;
-      });
-    }
-
-    if (selectKabVal) {
-      selectOptionByText(kabSelect, selectKabVal);
-      await loadKecSekolah(provName, kabSelect.value, defKec);
-    }
-  }
-
-  async function loadKecSekolah(provName, kabName, selectKecVal) {
-    kecSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
-    kelSelect.innerHTML = '<option value="">-- Pilih Kelurahan --</option>';
-    if (!kabName) return;
-
-    const kabOpt = Array.from(kabSelect.options).find(o => o.value.toLowerCase() === kabName.toLowerCase() || o.value.toLowerCase().replace(/^(kabupaten|kab\.|kota)\s*/i, '') === kabName.toLowerCase().replace(/^(kabupaten|kab\.|kota)\s*/i, ''));
-    const regId = kabOpt?.getAttribute('data-id');
-
-    if (regId) {
-      if (!emsifaDistrictsCache[regId]) {
-        emsifaDistrictsCache[regId] = await fetchEmsifaWilayah(`districts/${regId}.json`);
-      }
-      const distList = emsifaDistrictsCache[regId];
-      if (distList && distList.length > 0) {
-        distList.forEach(d => {
-          const name = toTitleCase(d.name);
-          kecSelect.innerHTML += `<option value="${name}" data-id="${d.id}">${name}</option>`;
-        });
-      }
-    } else if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName] && WILAYAH_DATA[provName][kabName]) {
-      Object.keys(WILAYAH_DATA[provName][kabName]).forEach(kec => {
-        kecSelect.innerHTML += `<option value="${kec}">${kec}</option>`;
-      });
-    }
-
-    if (selectKecVal) {
-      selectOptionByText(kecSelect, selectKecVal);
-      await loadKelSekolah(provName, kabName, kecSelect.value, defKel);
-    }
-  }
-
-  async function loadKelSekolah(provName, kabName, kecName, selectKelVal) {
-    kelSelect.innerHTML = '<option value="">-- Pilih Kelurahan --</option>';
-    if (!kecName) return;
-
-    const kecOpt = Array.from(kecSelect.options).find(o => o.value.toLowerCase() === kecName.toLowerCase());
-    const distId = kecOpt?.getAttribute('data-id');
-
-    if (distId) {
-      if (!emsifaVillagesCache[distId]) {
-        emsifaVillagesCache[distId] = await fetchEmsifaWilayah(`villages/${distId}.json`);
-      }
-      const vilList = emsifaVillagesCache[distId];
-      const kelNameOverrides = { 'Banjaran': 'Banjaran Kulon' };
-      if (vilList && vilList.length > 0) {
-        vilList.forEach(v => {
-          let displayName = toTitleCase(v.name);
-          if (kelNameOverrides[displayName]) displayName = kelNameOverrides[displayName];
-          kelSelect.innerHTML += `<option value="${displayName}" data-id="${v.id}">${displayName}</option>`;
-        });
-      }
-    } else if (typeof WILAYAH_DATA !== 'undefined' && WILAYAH_DATA[provName] && WILAYAH_DATA[provName][kabName] && WILAYAH_DATA[provName][kabName][kecName]) {
-      WILAYAH_DATA[provName][kabName][kecName].forEach(kel => {
-        kelSelect.innerHTML += `<option value="${kel}">${kel}</option>`;
-      });
-    }
-
-    if (selectKelVal) {
-      selectOptionByText(kelSelect, selectKelVal);
-    }
-  }
-
-  provSelect.onchange = () => loadKabSekolah(provSelect.value);
-  kabSelect.onchange = () => loadKecSekolah(provSelect.value, kabSelect.value);
-  kecSelect.onchange = () => loadKelSekolah(provSelect.value, kabSelect.value, kecSelect.value);
-
-  selectOptionByText(provSelect, defProv);
-  await loadKabSekolah(provSelect.value, defKab);
+  await initWilayahDropdownsCascade('periksaProvinsi', 'periksaKabKota', 'periksaKecamatan', 'periksaKelurahan', initialProv, initialKab, initialKec, initialKel);
 }
 
 // ==========================================================================
@@ -19307,9 +19378,308 @@ async function savePemeriksaanSiswa(event) {
 // Ã¢Å¾â€¢ TAMBAH SISWA BARU (LANGSUNG KE CLOUD DATABASE)
 // --------------------------------------------------------------------------
 
+let isTambahSiswaBankDataChecked = false;
+let isTambahSiswaFromBankData = false;
+
+function setTambahSiswaFieldsLockState(isLocked, isFromBankData = false) {
+  const fields = [
+    'tambahSiswaNama',
+    'tambahSiswaJk',
+    'tambahSiswaTglLahir',
+    'tambahSiswaProvinsi',
+    'tambahSiswaKabKota',
+    'tambahSiswaKecamatan',
+    'tambahSiswaKelurahan',
+    'tambahSiswaAlamat'
+  ];
+
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = isLocked;
+    if (isLocked) {
+      el.style.backgroundColor = '#f1f5f9';
+      el.style.color = '#334155';
+      el.style.cursor = 'not-allowed';
+      if (isFromBankData) {
+        el.title = 'Terkunci: Data resmi terverifikasi dari Bank Data';
+      } else {
+        el.title = 'Terkunci: Harap lakukan Cek NIK terlebih dahulu';
+      }
+    } else {
+      el.style.backgroundColor = '';
+      el.style.color = '';
+      el.style.cursor = '';
+      el.removeAttribute('title');
+    }
+  });
+
+  // Sekolah: jika login sekolah, tetap terkunci pada nama sekolah akunnya
+  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
+  const schoolAccountName = (sessionStorage.getItem('ckg_user_name') || '').trim();
+  const sekolahEl = document.getElementById('tambahSiswaSekolah');
+  if (sekolahEl) {
+    if (portalType === 'sekolah' && schoolAccountName) {
+      sekolahEl.disabled = true;
+      sekolahEl.style.backgroundColor = '#f1f5f9';
+      sekolahEl.style.cursor = 'not-allowed';
+    } else {
+      sekolahEl.disabled = isLocked;
+      sekolahEl.style.backgroundColor = isLocked ? '#f1f5f9' : '';
+      sekolahEl.style.cursor = isLocked ? 'not-allowed' : '';
+    }
+  }
+
+  // Kelas: terbuka jika NIK sudah dicek
+  const kelasEl = document.getElementById('tambahSiswaKelas');
+  if (kelasEl) {
+    kelasEl.disabled = isLocked;
+    kelasEl.style.backgroundColor = isLocked ? '#f1f5f9' : '';
+    kelasEl.style.cursor = isLocked ? 'not-allowed' : '';
+  }
+}
+
+function updateBankDataBadgeStatusTambah(inBankData, customText) {
+  const badge = document.getElementById('badgeBankDataStatusTambah');
+  if (!badge) return;
+
+  if (inBankData === true) {
+    badge.style.background = '#dcfce7';
+    badge.style.color = '#15803d';
+    badge.style.borderColor = '#86efac';
+    badge.innerHTML = `<i class="bi bi-patch-check-fill" style="color: #10b981;"></i> ${escapeHtml(customText || 'Data Terdaftar di Bank Data')}`;
+  } else if (inBankData === false) {
+    badge.style.background = '#e0f2fe';
+    badge.style.color = '#0369a1';
+    badge.style.borderColor = '#7dd3fc';
+    badge.innerHTML = `<i class="bi bi-pencil-square" style="color: #0284c7;"></i> ${escapeHtml(customText || 'Belum Terdaftar (Silakan Daftarkan)')}`;
+  } else {
+    badge.style.background = '#fee2e2';
+    badge.style.color = '#b91c1c';
+    badge.style.borderColor = '#fca5a5';
+    badge.innerHTML = `<i class="bi bi-shield-lock-fill" style="color: #ef4444;"></i> ${escapeHtml(customText || 'Wajib Cek NIK Dulu')}`;
+  }
+}
+
+function onTambahSiswaNikInputChange() {
+  isTambahSiswaBankDataChecked = false;
+  isTambahSiswaFromBankData = false;
+  setTambahSiswaFieldsLockState(true, false);
+  updateBankDataBadgeStatusTambah(null, 'Wajib Cek NIK Dulu');
+}
+
+function calculateTambahSiswaAge() {
+  const dobInput = document.getElementById('tambahSiswaTglLahir');
+  const usiaInput = document.getElementById('tambahSiswaUsia');
+  if (!dobInput || !usiaInput) return;
+
+  const dobVal = dobInput.value;
+  if (!dobVal) {
+    usiaInput.value = '';
+    return;
+  }
+
+  const birthDate = new Date(dobVal);
+  if (isNaN(birthDate.getTime())) {
+    usiaInput.value = '';
+    return;
+  }
+
+  const today = new Date();
+  let years = today.getFullYear() - birthDate.getFullYear();
+  let months = today.getMonth() - birthDate.getMonth();
+  if (today.getDate() < birthDate.getDate()) {
+    months--;
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  if (years < 0) {
+    usiaInput.value = 'Tanggal belum lewat';
+    return;
+  }
+
+  usiaInput.value = `${years} Tahun ${months} Bulan`;
+}
+
+async function cekNikTambahSiswaBankData() {
+  const nikInput = document.getElementById('tambahSiswaNik');
+  const rawNik = nikInput ? nikInput.value.trim() : '';
+  const cleanNik = rawNik.replace(/\D/g, '');
+
+  if (cleanNik.length !== 16) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'NIK Tidak Valid',
+      text: `NIK harus terdiri dari 16 digit angka (saat ini ${cleanNik.length} digit). Harap masukkan NIK 16 digit terlebih dahulu.`,
+      confirmButtonColor: '#059669'
+    });
+    return;
+  }
+
+  const btn = document.getElementById('btnCekNikTambahSiswa');
+  const origBtnText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Memeriksa...';
+  }
+
+  Swal.fire({
+    title: 'Mengecek Bank Data...',
+    html: `<div style="font-size: 13.5px; color: #475569; margin-top: 8px;">Sedang mencari NIK <strong>${cleanNik}</strong> di Bank Data CKG & ASIK...</div>`,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  let foundData = null;
+  let source = '';
+
+  // 1. Cek local dataset ckgGratisRecords
+  if (Array.isArray(ckgGratisRecords) && ckgGratisRecords.length > 0) {
+    const match = ckgGratisRecords.find(r => String(r.nik || '').replace(/\D/g, '') === cleanNik);
+    if (match) { foundData = match; source = 'Cek Kesehatan Gratis'; }
+  }
+
+  // 2. Cek local dataset records
+  if (!foundData && Array.isArray(records) && records.length > 0) {
+    const match = records.find(r => String(r.nik || '').replace(/\D/g, '') === cleanNik);
+    if (match) { foundData = match; source = 'Database Pasien CKG'; }
+  }
+
+  // 3. Cek API /api/enco/lookup-nik
+  if (!foundData) {
+    try {
+      const res = await fetch(`/api/enco/lookup-nik?nik=${encodeURIComponent(cleanNik)}`);
+      if (res.ok) {
+        const j = await res.json();
+        if (j && j.success && j.found && j.data) {
+          foundData = j.data;
+          source = 'Bank Data ASIK';
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 4. Cek fallback search /api/enco/records
+  if (!foundData) {
+    try {
+      const resSearch = await fetch(`/api/enco/records?search=${encodeURIComponent(cleanNik)}&limit=10`);
+      if (resSearch.ok) {
+        const jSearch = await resSearch.json();
+        if (jSearch && jSearch.success && Array.isArray(jSearch.data)) {
+          const match = jSearch.data.find(item => String(item.nik || '').replace(/\D/g, '') === cleanNik);
+          if (match) { foundData = match; source = 'Bank Data ASIK'; }
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 5. Cek API /api/ckg-gratis
+  if (!foundData) {
+    try {
+      const res = await fetch('/api/ckg-gratis');
+      if (res.ok) {
+        const j = await res.json();
+        if (j && j.success && Array.isArray(j.data)) {
+          const match = j.data.find(r => String(r.nik || '').replace(/\D/g, '') === cleanNik);
+          if (match) { foundData = match; source = 'Cek Kesehatan Gratis'; }
+        }
+      }
+    } catch (_) {}
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = origBtnText || '<i class="bi bi-search"></i> Cek NIK';
+  }
+
+  if (foundData) {
+    isTambahSiswaBankDataChecked = true;
+    isTambahSiswaFromBankData = true;
+
+    const rawNama = foundData.nama || foundData.nama_pasien || '';
+    const rawDob = foundData.tanggal_lahir || foundData.tgl_lahir || '';
+    let rawJk = foundData.jenis_kelamin || foundData.jk || 'L';
+    if (String(rawJk).toUpperCase().startsWith('P') || String(rawJk).toLowerCase() === 'perempuan') rawJk = 'P';
+    else rawJk = 'L';
+    const rawProv = foundData.provinsi || 'Jawa Barat';
+    const rawKab = foundData.kab_kota || 'Kabupaten Bandung';
+    const rawKec = foundData.kecamatan || 'Banjaran';
+    const rawKel = foundData.kelurahan || '';
+    const rawAlamat = foundData.alamat || '';
+
+    await Swal.fire({
+      icon: 'success',
+      title: 'Data Ditemukan di Bank Data!',
+      html: `
+        <div style="text-align: left; background: #f0fdf4; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 14px 16px; margin-top: 10px; font-size: 13px;">
+          <div style="font-weight: 800; color: #065f46; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <i class="bi bi-patch-check-fill" style="color: #10b981; font-size: 18px;"></i>
+            <span>Data Terverifikasi (${escapeHtml(source)})</span>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; line-height: 1.6; font-size: 12.5px;">
+            <tr><td style="width: 105px; color: #64748b;">NIK:</td><td style="font-weight: 700; font-family: monospace;">${escapeHtml(cleanNik)}</td></tr>
+            <tr><td style="color: #64748b;">Nama:</td><td style="font-weight: 800; color: #047857;">${escapeHtml(rawNama)}</td></tr>
+            <tr><td style="color: #64748b;">Jenis Kelamin:</td><td style="font-weight: 700;">${rawJk === 'P' ? 'Perempuan (P)' : 'Laki-laki (L)'}</td></tr>
+            <tr><td style="color: #64748b;">Tanggal Lahir:</td><td>${escapeHtml(rawDob || '-')}</td></tr>
+            <tr><td style="color: #64748b;">Wilayah:</td><td>${escapeHtml([rawKel, rawKec, rawKab, rawProv].filter(Boolean).join(', ') || '-')}</td></tr>
+            <tr><td style="color: #64748b;">Alamat:</td><td>${escapeHtml(rawAlamat || '-')}</td></tr>
+          </table>
+          <div style="margin-top: 10px; font-size: 12px; color: #047857; font-weight: 700;">
+            <i class="bi bi-info-circle-fill"></i> Data identitas otomatis disesuaikan dengan data resmi Bank Data dan terkunci. Silakan pilih kelas siswa.
+          </div>
+        </div>
+      `,
+      confirmButtonText: '<i class="bi bi-check2-circle"></i> Gunakan Data Bank Data',
+      confirmButtonColor: '#059669'
+    });
+
+    if (rawNama) document.getElementById('tambahSiswaNama').value = rawNama.toUpperCase();
+    document.getElementById('tambahSiswaJk').value = rawJk;
+    if (rawDob) document.getElementById('tambahSiswaTglLahir').value = rawDob;
+    if (rawAlamat) document.getElementById('tambahSiswaAlamat').value = rawAlamat;
+    calculateTambahSiswaAge();
+
+    initWilayahDropdownsCascade('tambahSiswaProvinsi', 'tambahSiswaKabKota', 'tambahSiswaKecamatan', 'tambahSiswaKelurahan', rawProv, rawKab, rawKec, rawKel);
+
+    setTambahSiswaFieldsLockState(true, true);
+    updateBankDataBadgeStatusTambah(true, 'Data Terdaftar di Bank Data');
+    document.getElementById('tambahSiswaKelas')?.focus();
+  } else {
+    isTambahSiswaBankDataChecked = true;
+    isTambahSiswaFromBankData = false;
+
+    await Swal.fire({
+      icon: 'info',
+      title: 'NIK Belum Terdaftar di Bank Data',
+      html: `
+        <div style="text-align: left; font-size: 13.5px; line-height: 1.6; color: #334155;">
+          NIK <strong>${escapeHtml(cleanNik)}</strong> belum ditemukan di Bank Data CKG / ASIK.
+          <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 12px 14px; margin-top: 10px; color: #1e40af; font-weight: 700;">
+            <i class="bi bi-unlock-fill" style="color: #2563eb;"></i> Kolom pendaftaran telah terbuka. Silakan lengkapi seluruh data identitas siswa untuk mendaftarkan.
+          </div>
+        </div>
+      `,
+      confirmButtonText: '<i class="bi bi-pencil-square"></i> Lengkapi Identitas Siswa',
+      confirmButtonColor: '#2563eb'
+    });
+
+    setTambahSiswaFieldsLockState(false, false);
+    updateBankDataBadgeStatusTambah(false, 'Belum Terdaftar (Silakan Daftarkan)');
+    document.getElementById('tambahSiswaNama')?.focus();
+  }
+}
+
 function openTambahSiswaModal() {
   const form = document.getElementById('formTambahSiswa');
   if (form) form.reset();
+
+  isTambahSiswaBankDataChecked = false;
+  isTambahSiswaFromBankData = false;
 
   populateSchoolSelectElement('tambahSiswaSekolah');
 
@@ -19330,14 +19700,21 @@ function openTambahSiswaModal() {
       tambahSekolahEl.style.backgroundColor = '#f1f5f9';
       tambahSekolahEl.style.cursor = 'not-allowed';
     } else {
-      tambahSekolahEl.disabled = false;
-      tambahSekolahEl.style.backgroundColor = '';
-      tambahSekolahEl.style.cursor = '';
+      tambahSekolahEl.disabled = true;
+      tambahSekolahEl.style.backgroundColor = '#f1f5f9';
+      tambahSekolahEl.style.cursor = 'not-allowed';
     }
   }
 
   updateTambahSiswaKelasDropdown();
   if (currentKelasFilter) document.getElementById('tambahSiswaKelas').value = currentKelasFilter;
+
+  // Initial Lock State: All demographic fields locked until Cek NIK is pressed
+  setTambahSiswaFieldsLockState(true, false);
+  updateBankDataBadgeStatusTambah(null, 'Wajib Cek NIK Dulu');
+
+  // Initialize wilayah dropdowns with Puskesmas default
+  initWilayahDropdownsCascade('tambahSiswaProvinsi', 'tambahSiswaKabKota', 'tambahSiswaKecamatan', 'tambahSiswaKelurahan', 'Jawa Barat', 'Kabupaten Bandung', 'Banjaran', 'Tarajusari');
 
   const modal = document.getElementById('modalTambahSiswa');
   if (modal) {
@@ -19354,6 +19731,8 @@ function closeTambahSiswaModal() {
     modal.classList.remove('open');
     modal.style.display = 'none';
   }
+  isTambahSiswaBankDataChecked = false;
+  isTambahSiswaFromBankData = false;
 }
 
 let isSavingTambahSiswa = false;
@@ -19368,15 +19747,42 @@ async function saveTambahSiswa(event) {
   const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
   const schoolAccountName = (sessionStorage.getItem('ckg_user_name') || '').trim();
 
-  const nama = document.getElementById('tambahSiswaNama').value.trim().toUpperCase();
-  let sekolah = document.getElementById('tambahSiswaSekolah').value.trim().toUpperCase();
+  // 1. Validasi NIK sudah dicek di Bank Data
+  const rawNik = (document.getElementById('tambahSiswaNik')?.value || '').trim();
+  const cleanNik = rawNik.replace(/\D/g, '');
+
+  if (!isTambahSiswaBankDataChecked || cleanNik.length !== 16) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Harap Cek NIK Terlebih Dahulu',
+      text: 'Kolom identitas masih terkunci. Harap masukkan 16 digit NIK Siswa dan klik tombol "Cek NIK" untuk memverifikasi ke Bank Data CKG sebelum menyimpan data.',
+      confirmButtonColor: '#059669'
+    });
+    return;
+  }
+
+  const nama = (document.getElementById('tambahSiswaNama')?.value || '').trim().toUpperCase();
+  const jk = (document.getElementById('tambahSiswaJk')?.value || 'L').trim();
+  let sekolah = (document.getElementById('tambahSiswaSekolah')?.value || '').trim().toUpperCase();
   if (portalType === 'sekolah' && schoolAccountName) {
     sekolah = schoolAccountName.toUpperCase();
   }
-  const kelas = document.getElementById('tambahSiswaKelas').value.trim().toUpperCase();
+  const kelas = (document.getElementById('tambahSiswaKelas')?.value || '').trim().toUpperCase();
+  const tglLahir = (document.getElementById('tambahSiswaTglLahir')?.value || '').trim();
+  const prov = (document.getElementById('tambahSiswaProvinsi')?.value || '').trim();
+  const kab = (document.getElementById('tambahSiswaKabKota')?.value || '').trim();
+  const kec = (document.getElementById('tambahSiswaKecamatan')?.value || '').trim();
+  const kel = (document.getElementById('tambahSiswaKelurahan')?.value || '').trim();
+  const alamat = (document.getElementById('tambahSiswaAlamat')?.value || '').trim().toUpperCase();
 
-  if (!nama || !sekolah || !kelas) {
-    showToast('Harap lengkapi Nama, Sekolah, dan Kelas.', 'warning');
+  // 2. Validasi kelengkapan semua identitas
+  if (!nama || !sekolah || !kelas || !tglLahir || !prov || !kab || !kec || !kel || !alamat) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Identitas Belum Lengkap',
+      text: 'Semua kolom identitas (Nama Lengkap, NIK 16 digit, Jenis Kelamin, Asal Sekolah, Kelas, Tanggal Lahir, Provinsi, Kab/Kota, Kecamatan, Desa/Kelurahan, dan Alamat) wajib diisi lengkap!',
+      confirmButtonColor: '#059669'
+    });
     return;
   }
 
@@ -19433,8 +19839,7 @@ async function saveTambahSiswa(event) {
     const currentUserName = sessionStorage.getItem('ckg_user_name') || 'Admin';
 
     const cleanNik = nikInput.replace(/\D/g, '');
-    const tglLahir = document.getElementById('tambahSiswaTglLahir')?.value || '';
-    const isIdLengkap = !!(nama && cleanNik.length === 16 && tglLahir && sekolah && kelas);
+    const isIdLengkap = !!(nama && cleanNik.length === 16 && tglLahir && sekolah && kelas && prov && kab && kec && kel && alamat);
 
     const newSiswa = {
       id: `SCH-${Date.now()}`,
@@ -19445,12 +19850,11 @@ async function saveTambahSiswa(event) {
       sekolah: sekolah,
       kelas: kelas,
       tanggal_lahir: tglLahir,
-      no_whatsapp: document.getElementById('tambahSiswaWa')?.value.trim() || '',
-      alamat: document.getElementById('tambahSiswaAlamat')?.value.trim().toUpperCase() || '',
-      provinsi: 'Jawa Barat',
-      kab_kota: 'Kab. Bandung',
-      kecamatan: 'Banjaran',
-      kelurahan: 'Tarajusari',
+      alamat: alamat,
+      provinsi: prov,
+      kab_kota: kab,
+      kecamatan: kec,
+      kelurahan: kel,
       bb: 0,
       tb: 0,
       lp: 0,
@@ -19478,6 +19882,8 @@ async function saveTambahSiswa(event) {
       organ_done: 0,
       kesimpulan_done: 0,
       identitas_done: isIdLengkap ? 1 : 0,
+      is_bank_data: isTambahSiswaFromBankData ? 1 : 0,
+      from_bank_data: isTambahSiswaFromBankData ? 1 : 0,
       ttd_logs: '[]',
       is_examined: false,
       petugas_entry: currentUserName,
@@ -27850,6 +28256,25 @@ window.clearSearchInputLoginSekolah = clearSearchInputLoginSekolah;
 window.selectLoginSekolahOption = selectLoginSekolahOption;
 window.clearLoginSekolahSelection = clearLoginSekolahSelection;
 window.handleSekolahLogin = handleSekolahLogin;
+
+// Searchable Wilayah Dropdowns (Cek Kesehatan Gratis & CKG Sekolah)
+window.toggleWilayahSearchDropdown = toggleWilayahSearchDropdown;
+window.closeAllWilayahSearchDropdowns = closeAllWilayahSearchDropdowns;
+window.filterWilayahSearchOptions = filterWilayahSearchOptions;
+window.clearWilayahSearchInput = clearWilayahSearchInput;
+window.selectWilayahSearchOption = selectWilayahSearchOption;
+window.syncWilayahComboboxUI = syncWilayahComboboxUI;
+window.syncWilayahComboboxLabels = syncWilayahComboboxLabels;
+
+// Tambah Siswa Form & Bank Data
+window.openTambahSiswaModal = openTambahSiswaModal;
+window.closeTambahSiswaModal = closeTambahSiswaModal;
+window.saveTambahSiswa = saveTambahSiswa;
+window.onTambahSiswaNikInputChange = onTambahSiswaNikInputChange;
+window.cekNikTambahSiswaBankData = cekNikTambahSiswaBankData;
+window.calculateTambahSiswaAge = calculateTambahSiswaAge;
+window.setTambahSiswaFieldsLockState = setTambahSiswaFieldsLockState;
+window.updateBankDataBadgeStatusTambah = updateBankDataBadgeStatusTambah;
 
 document.addEventListener('click', (e) => {
   const wrapper = document.getElementById('comboboxLoginSekolahWrapper');
