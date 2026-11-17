@@ -1,4 +1,4 @@
-﻿// Main Application Logic for Pencatatan CKG Puskesmas Banjaran Kota
+// Main Application Logic for Pencatatan CKG Puskesmas Banjaran Kota
 
 // Quota & Storage Optimization: Clean up oversized/obsolete localStorage keys immediately
 (function cleanupStorageQuota() {
@@ -1406,12 +1406,20 @@ function showLoadingOverlay(text = 'Memuat Data...', subtext = 'Menghubungkan ke
   const subtextEl = document.getElementById('loadingSubtext');
   if (textEl) textEl.textContent = text;
   if (subtextEl) subtextEl.textContent = subtext;
-  if (overlay) overlay.classList.add('active');
+  if (overlay) {
+    overlay.style.removeProperty('display');
+    overlay.style.removeProperty('pointer-events');
+    overlay.classList.add('active');
+  }
 }
 
 function hideLoadingOverlay() {
   const overlay = document.getElementById('loadingOverlay');
-  if (overlay) overlay.classList.remove('active');
+  if (overlay) {
+    overlay.classList.remove('active');
+    overlay.style.setProperty('display', 'none', 'important');
+    overlay.style.setProperty('pointer-events', 'none', 'important');
+  }
 }
 
 /* ==========================================================================
