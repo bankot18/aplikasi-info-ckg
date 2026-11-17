@@ -2104,20 +2104,20 @@
               <div class="metric-card-icon"><i class="bi bi-check-circle-fill"></i></div>
             </div>
 
-            <div class="metric-card-solid bg-cyan clickable-card" id="cardFilterBelum" onclick="setSekolahStatusFilter('belum')" role="button" tabindex="0" title="Klik untuk filter: Belum Diperiksa Saja">
-              <div class="metric-card-info">
-                <span class="metric-card-title">BELUM DIPERIKSA</span>
-                <span class="metric-card-value" id="metricSekolahBelum">0</span>
-              </div>
-              <div class="metric-card-icon"><i class="bi bi-clock-history"></i></div>
-            </div>
-
             <div class="metric-card-solid bg-blue clickable-card" id="cardFilterSebagian" onclick="setSekolahStatusFilter('sebagian')" role="button" tabindex="0" title="Klik untuk filter: Periksa Sebagian">
               <div class="metric-card-info">
                 <span class="metric-card-title">PERIKSA SEBAGIAN</span>
                 <span class="metric-card-value" id="metricSekolahSebagian">0</span>
               </div>
               <div class="metric-card-icon"><i class="bi bi-pie-chart-fill"></i></div>
+            </div>
+
+            <div class="metric-card-solid bg-cyan clickable-card" id="cardFilterBelum" onclick="setSekolahStatusFilter('belum')" role="button" tabindex="0" title="Klik untuk filter: Belum Diperiksa Saja">
+              <div class="metric-card-info">
+                <span class="metric-card-title">BELUM DIPERIKSA</span>
+                <span class="metric-card-value" id="metricSekolahBelum">0</span>
+              </div>
+              <div class="metric-card-icon"><i class="bi bi-clock-history"></i></div>
             </div>
           </div>
 
@@ -2135,11 +2135,11 @@
                 <button type="button" class="status-pill pill-sudah" data-status="sudah" onclick="setSekolahStatusFilter('sudah')" title="Filter: Siswa yang Sudah Diperiksa">
                   <i class="bi bi-check-circle-fill"></i> Sudah Diperiksa (<span id="pillCountSudah">0</span>)
                 </button>
-                <button type="button" class="status-pill pill-belum" data-status="belum" onclick="setSekolahStatusFilter('belum')" title="Filter: Siswa yang Belum Diperiksa">
-                  <i class="bi bi-clock-history"></i> Belum Diperiksa (<span id="pillCountBelum">0</span>)
-                </button>
                 <button type="button" class="status-pill pill-sebagian" data-status="sebagian" onclick="setSekolahStatusFilter('sebagian')" title="Filter: Periksa Sebagian">
                   <i class="bi bi-pie-chart-fill"></i> Periksa Sebagian (<span id="pillCountSebagian">0</span>)
+                </button>
+                <button type="button" class="status-pill pill-belum" data-status="belum" onclick="setSekolahStatusFilter('belum')" title="Filter: Siswa yang Belum Diperiksa">
+                  <i class="bi bi-clock-history"></i> Belum Diperiksa (<span id="pillCountBelum">0</span>)
                 </button>
               </div>
             </div>
@@ -4943,18 +4943,39 @@
             </button>
           </div>
 
-          <div class="sekolah-grid-3"
-            style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <!-- BOX VERIFIKASI NIK KE BANK DATA CKG / ASIK -->
+          <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 13px 16px; margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+              <label class="form-label" for="periksaNik" style="margin-bottom: 0; font-weight: 800; font-size: 13px; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                <i class="bi bi-person-vcard-fill" style="color: #059669; font-size: 16px;"></i> NIK Siswa (16 Digit) <span class="required" style="color: #e11d48;">*</span>
+              </label>
+              <span id="badgeBankDataStatus" class="badge" style="font-size: 11px; padding: 3px 9px; border-radius: 6px; font-weight: 800; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5;">
+                <i class="bi bi-shield-lock-fill"></i> Wajib Cek NIK Dulu
+              </span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+              <input type="text" id="periksaNik" class="form-control" inputmode="numeric"
+                placeholder="Masukkan 16 Digit NIK Siswa..." maxlength="16"
+                oninput="onPeriksaNikInputChange()"
+                style="font-family: monospace; font-weight: 800; font-size: 14px; letter-spacing: 0.5px; flex: 1;">
+              <button type="button" class="btn" id="btnCekNikSiswaBankData" onclick="cekNikSiswaBankData()"
+                style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; font-weight: 800; font-size: 12.5px; padding: 7px 16px; border-radius: 8px; border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(5,150,105,0.25); cursor: pointer;">
+                <i class="bi bi-search"></i> Cek NIK
+              </button>
+            </div>
+            <div id="hintCekNikSiswa" style="font-size: 11.5px; color: #64748b; margin-top: 6px; display: flex; align-items: center; gap: 5px;">
+              <i class="bi bi-info-circle-fill" style="color: #0284c7;"></i>
+              <span>Harap klik <strong>Cek NIK</strong> terlebih dahulu. Kolom identitas lainnya terkunci sampai NIK dicek di Bank Data CKG.</span>
+            </div>
+          </div>
+
+          <div class="sekolah-grid-2"
+            style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
               <label class="form-label" for="periksaNama">Nama Lengkap Siswa <span class="required"
                   style="color: #059669;">*</span></label>
               <input type="text" id="periksaNama" class="form-control" required
                 style="font-weight: 700; text-transform: uppercase;">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="periksaNik">NIK Siswa (16 Digit)</label>
-              <input type="text" id="periksaNik" class="form-control" inputmode="numeric"
-                placeholder="16 Digit NIK" maxlength="16" style="font-family: monospace; font-weight: 700;">
             </div>
             <div class="form-group">
               <label class="form-label" for="periksaJk">Jenis Kelamin <span class="required"
@@ -7198,7 +7219,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=4.5"></script>
+  <script src="app.js?v=4.6"></script>
   <script src="alat-bnhp.js"></script>
 </body>
 

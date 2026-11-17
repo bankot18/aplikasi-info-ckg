@@ -16226,6 +16226,328 @@ async function initWilayahDropdownsSekolah(initialProv, initialKab, initialKec, 
   await loadKabSekolah(provSelect.value, defKab);
 }
 
+// ==========================================================================
+// 🔍 INTEGRASI BANK DATA CKG / ASIK UNTUK SISWA SEKOLAH
+// ==========================================================================
+
+function isStudentInBankData(r) {
+  if (!r) return false;
+  if (Number(r.is_bank_data) === 1 || Number(r.from_bank_data) === 1) return true;
+  const cleanNik = String(r.nik || '').replace(/\D/g, '');
+  if (cleanNik.length !== 16) return false;
+  if (Array.isArray(ckgGratisRecords) && ckgGratisRecords.some(cg => String(cg.nik || '').replace(/\D/g, '') === cleanNik)) return true;
+  if (Array.isArray(records) && records.some(rec => String(rec.nik || '').replace(/\D/g, '') === cleanNik)) return true;
+  if (typeof encoState !== 'undefined' && Array.isArray(encoState.cachedRecords) && encoState.cachedRecords.some(ep => String(ep.nik || '').replace(/\D/g, '') === cleanNik)) return true;
+  return false;
+}
+
+function setIdentitasFieldsLockState(isLocked, isFromBankData = false) {
+  const fields = [
+    { id: 'periksaNama', type: 'input' },
+    { id: 'periksaJk', type: 'select' },
+    { id: 'periksaTglLahir', type: 'input' },
+    { id: 'periksaProvinsi', type: 'select' },
+    { id: 'periksaKabKota', type: 'select' },
+    { id: 'periksaKecamatan', type: 'select' },
+    { id: 'periksaKelurahan', type: 'select' },
+    { id: 'periksaAlamat', type: 'input' }
+  ];
+
+  fields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (!el) return;
+    if (isLocked) {
+      if (f.type === 'select') {
+        el.disabled = true;
+      } else {
+        el.readOnly = true;
+      }
+      el.style.backgroundColor = isFromBankData ? '#f0fdf4' : '#f1f5f9';
+      el.style.borderColor = isFromBankData ? '#a7f3d0' : '#cbd5e1';
+      el.style.color = isFromBankData ? '#065f46' : '#64748b';
+      el.style.cursor = 'not-allowed';
+      el.title = isFromBankData 
+        ? 'Data resmi terverifikasi dari Bank Data CKG / ASIK (Terkunci)' 
+        : 'Terkunci: Wajib klik Cek NIK terlebih dahulu!';
+    } else {
+      if (f.type === 'select') {
+        el.disabled = false;
+      } else {
+        el.readOnly = false;
+      }
+      el.style.backgroundColor = '#ffffff';
+      el.style.borderColor = '';
+      el.style.color = '';
+      el.style.cursor = '';
+      el.title = '';
+    }
+  });
+}
+
+function updateBankDataBadgeStatus(isFound, customText) {
+  const badge = document.getElementById('badgeBankDataStatus');
+  const hint = document.getElementById('hintCekNikSiswa');
+  if (!badge) return;
+
+  if (isFound === true) {
+    badge.style.background = '#d1fae5';
+    badge.style.color = '#065f46';
+    badge.style.border = '1px solid #a7f3d0';
+    badge.innerHTML = `<i class="bi bi-patch-check-fill" style="color: #10b981;"></i> ${customText || 'Terdaftar di Bank Data'}`;
+    if (hint) {
+      hint.innerHTML = `<span style="color: #047857; font-weight: 700;"><i class="bi bi-check-circle-fill"></i> Data NIK terdaftar di Bank Data CKG/ASIK. Identitas terkunci menggunakan data resmi bank data.</span>`;
+    }
+  } else if (isFound === false) {
+    badge.style.background = '#e0f2fe';
+    badge.style.color = '#0369a1';
+    badge.style.border = '1px solid #bae6fd';
+    badge.innerHTML = `<i class="bi bi-pencil-fill" style="color: #0284c7;"></i> ${customText || 'Belum Terdaftar (Silakan Daftarkan)'}`;
+    if (hint) {
+      hint.innerHTML = `<span style="color: #0369a1; font-weight: 700;"><i class="bi bi-unlock-fill"></i> NIK belum ada di Bank Data. Kolom telah dibuka, silakan lengkapi data untuk mendaftarkan.</span>`;
+    }
+  } else {
+    badge.style.background = '#fee2e2';
+    badge.style.color = '#b91c1c';
+    badge.style.border = '1px solid #fca5a5';
+    badge.innerHTML = `<i class="bi bi-shield-lock-fill"></i> ${customText || 'Wajib Cek NIK Dulu'}`;
+    if (hint) {
+      hint.innerHTML = `<i class="bi bi-info-circle-fill" style="color: #0284c7;"></i> <span>Klik <strong>Cek NIK</strong> terlebih dahulu. Kolom identitas lainnya terkunci sampai NIK dicek di Bank Data CKG.</span>`;
+    }
+  }
+}
+
+function onPeriksaNikInputChange() {
+  const clean = document.getElementById('periksaNik')?.value.replace(/\D/g, '') || '';
+  const siswaId = document.getElementById('periksaSiswaId')?.value;
+  const siswa = sekolahRecords.find(r => String(r.id) === String(siswaId));
+  if (siswa) {
+    siswa.is_bank_data_checked = false;
+  }
+  setIdentitasFieldsLockState(true, false);
+  updateBankDataBadgeStatus(null, 'Wajib Cek NIK Dulu');
+}
+
+function applyBankDataStateToIdentitas(siswa) {
+  if (!siswa) return;
+  const cleanNik = String(siswa.nik || '').replace(/\D/g, '');
+  const inBankData = isStudentInBankData(siswa);
+
+  if (inBankData) {
+    siswa.is_bank_data = 1;
+    siswa.from_bank_data = 1;
+    siswa.is_bank_data_checked = true;
+    setIdentitasFieldsLockState(true, true);
+    updateBankDataBadgeStatus(true, 'Data Terdaftar di Bank Data');
+  } else if (siswa.is_bank_data_checked) {
+    setIdentitasFieldsLockState(false, false);
+    updateBankDataBadgeStatus(false, 'Belum Terdaftar (Silakan Daftarkan)');
+  } else if (cleanNik.length === 16 && Number(siswa.identitas_done) === 1) {
+    siswa.is_bank_data_checked = true;
+    setIdentitasFieldsLockState(false, false);
+    updateBankDataBadgeStatus(false, 'Data Manual Tersimpan');
+  } else {
+    setIdentitasFieldsLockState(true, false);
+    updateBankDataBadgeStatus(null, 'Wajib Cek NIK Dulu');
+  }
+}
+
+async function cekNikSiswaBankData() {
+  const nikInput = document.getElementById('periksaNik');
+  const rawNik = nikInput ? nikInput.value.trim() : '';
+  const cleanNik = rawNik.replace(/\D/g, '');
+
+  if (cleanNik.length !== 16) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'NIK Tidak Valid',
+      text: `NIK harus terdiri dari 16 digit angka (saat ini ${cleanNik.length} digit). Harap masukkan NIK 16 digit terlebih dahulu.`
+    });
+    return;
+  }
+
+  const btn = document.getElementById('btnCekNikSiswaBankData');
+  const origBtnText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Memeriksa...';
+  }
+
+  Swal.fire({
+    title: 'Mengecek Bank Data...',
+    html: `<div style="font-size: 13.5px; color: #475569; margin-top: 8px;">Sedang mencari NIK <strong>${cleanNik}</strong> di Bank Data CKG & ASIK...</div>`,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  let foundData = null;
+  let source = '';
+
+  // 1. Cek local dataset ckgGratisRecords (Cek Kesehatan Gratis)
+  if (Array.isArray(ckgGratisRecords) && ckgGratisRecords.length > 0) {
+    const match = ckgGratisRecords.find(r => String(r.nik || '').replace(/\D/g, '') === cleanNik);
+    if (match) {
+      foundData = match;
+      source = 'Cek Kesehatan Gratis';
+    }
+  }
+
+  // 2. Cek local dataset records (Database Pasien CKG)
+  if (!foundData && Array.isArray(records) && records.length > 0) {
+    const match = records.find(r => String(r.nik || '').replace(/\D/g, '') === cleanNik);
+    if (match) {
+      foundData = match;
+      source = 'Database Pasien CKG';
+    }
+  }
+
+  // 3. Cek API /api/enco/lookup-nik
+  if (!foundData) {
+    try {
+      const res = await fetch(`/api/enco/lookup-nik?nik=${encodeURIComponent(cleanNik)}`);
+      if (res.ok) {
+        const j = await res.json();
+        if (j && j.success && j.found && j.data) {
+          foundData = j.data;
+          source = 'Bank Data ASIK';
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 4. Cek fallback search /api/enco/records
+  if (!foundData) {
+    try {
+      const resSearch = await fetch(`/api/enco/records?search=${encodeURIComponent(cleanNik)}&limit=10`);
+      if (resSearch.ok) {
+        const jSearch = await resSearch.json();
+        if (jSearch && jSearch.success && Array.isArray(jSearch.data)) {
+          const match = jSearch.data.find(item => String(item.nik || '').replace(/\D/g, '') === cleanNik);
+          if (match) {
+            foundData = match;
+            source = 'Bank Data ASIK';
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 5. Cek API /api/ckg-gratis jika dataset belum loaded
+  if (!foundData) {
+    try {
+      const res = await fetch('/api/ckg-gratis');
+      if (res.ok) {
+        const j = await res.json();
+        if (j && j.success && Array.isArray(j.data)) {
+          const match = j.data.find(r => String(r.nik || '').replace(/\D/g, '') === cleanNik);
+          if (match) {
+            foundData = match;
+            source = 'Cek Kesehatan Gratis';
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = origBtnText || '<i class="bi bi-search"></i> Cek NIK';
+  }
+
+  const siswaId = document.getElementById('periksaSiswaId')?.value;
+  const siswa = sekolahRecords.find(r => String(r.id) === String(siswaId));
+
+  if (foundData) {
+    // KASUS A: DATA DITEMUKAN DI BANK DATA
+    const rawNama = foundData.nama || foundData.nama_pasien || '';
+    const rawDob = foundData.tanggal_lahir || foundData.tgl_lahir || '';
+    let rawJk = foundData.jenis_kelamin || foundData.jk || 'L';
+    if (String(rawJk).toUpperCase().startsWith('P') || String(rawJk).toLowerCase() === 'perempuan') rawJk = 'P';
+    else rawJk = 'L';
+    const rawProv = foundData.provinsi || 'Jawa Barat';
+    const rawKab = foundData.kab_kota || 'Kabupaten Bandung';
+    const rawKec = foundData.kecamatan || 'Banjaran';
+    const rawKel = foundData.kelurahan || '';
+    const rawAlamat = foundData.alamat || '';
+
+    await Swal.fire({
+      icon: 'success',
+      title: 'Data Ditemukan di Bank Data!',
+      html: `
+        <div style="text-align: left; background: #f0fdf4; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 14px 16px; margin-top: 10px; font-size: 13px;">
+          <div style="font-weight: 800; color: #065f46; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <i class="bi bi-patch-check-fill" style="color: #10b981; font-size: 18px;"></i>
+            <span>Data Terverifikasi (${escapeHtml(source)})</span>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; line-height: 1.6; font-size: 12.5px;">
+            <tr><td style="width: 105px; color: #64748b;">NIK:</td><td style="font-weight: 700; font-family: monospace;">${escapeHtml(cleanNik)}</td></tr>
+            <tr><td style="color: #64748b;">Nama:</td><td style="font-weight: 800; color: #047857;">${escapeHtml(rawNama)}</td></tr>
+            <tr><td style="color: #64748b;">Jenis Kelamin:</td><td style="font-weight: 700;">${rawJk === 'P' ? 'Perempuan (P)' : 'Laki-laki (L)'}</td></tr>
+            <tr><td style="color: #64748b;">Tanggal Lahir:</td><td>${escapeHtml(rawDob || '-')}</td></tr>
+            <tr><td style="color: #64748b;">Wilayah:</td><td>${escapeHtml([rawKel, rawKec, rawKab, rawProv].filter(Boolean).join(', ') || '-')}</td></tr>
+            <tr><td style="color: #64748b;">Alamat:</td><td>${escapeHtml(rawAlamat || '-')}</td></tr>
+          </table>
+          <div style="margin-top: 10px; font-size: 12px; color: #047857; font-weight: 700;">
+            <i class="bi bi-info-circle-fill"></i> Data identitas otomatis disesuaikan dengan data resmi Bank Data dan terkunci.
+          </div>
+        </div>
+      `,
+      confirmButtonText: '<i class="bi bi-check2-circle"></i> Gunakan Data Bank Data',
+      confirmButtonColor: '#059669'
+    });
+
+    if (rawNama) document.getElementById('periksaNama').value = rawNama.toUpperCase();
+    document.getElementById('periksaJk').value = rawJk;
+    if (rawDob) document.getElementById('periksaTglLahir').value = rawDob;
+    if (rawAlamat) document.getElementById('periksaAlamat').value = rawAlamat;
+    calculateSiswaAge();
+
+    initWilayahDropdownsSekolah(rawProv, rawKab, rawKec, rawKel);
+
+    if (siswa) {
+      siswa.is_bank_data = 1;
+      siswa.from_bank_data = 1;
+      siswa.is_bank_data_checked = true;
+      siswa.nama = rawNama ? rawNama.toUpperCase() : siswa.nama;
+      siswa.jk = rawJk;
+      if (rawDob) siswa.tanggal_lahir = rawDob;
+      if (rawAlamat) siswa.alamat = rawAlamat;
+      siswa.provinsi = rawProv;
+      siswa.kab_kota = rawKab;
+      siswa.kecamatan = rawKec;
+      siswa.kelurahan = rawKel;
+    }
+    setIdentitasFieldsLockState(true, true);
+    updateBankDataBadgeStatus(true, 'Data Terdaftar di Bank Data');
+  } else {
+    // KASUS B: DATA TIDAK ADA DI BANK DATA
+    await Swal.fire({
+      icon: 'info',
+      title: 'NIK Belum Terdaftar di Bank Data',
+      html: `
+        <div style="text-align: left; font-size: 13.5px; line-height: 1.6; color: #334155;">
+          NIK <strong>${escapeHtml(cleanNik)}</strong> belum ditemukan di Bank Data CKG / ASIK.
+          <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 12px 14px; margin-top: 10px; color: #1e40af; font-weight: 700;">
+            <i class="bi bi-unlock-fill" style="color: #2563eb;"></i> Kolom pendaftaran telah terbuka. Silakan lengkapi identitas siswa untuk mendaftarkan.
+          </div>
+        </div>
+      `,
+      confirmButtonText: '<i class="bi bi-pencil-square"></i> Lengkapi Identitas',
+      confirmButtonColor: '#2563eb'
+    });
+
+    if (siswa) {
+      siswa.is_bank_data = 0;
+      siswa.from_bank_data = 0;
+      siswa.is_bank_data_checked = true;
+    }
+    setIdentitasFieldsLockState(false, false);
+    updateBankDataBadgeStatus(false, 'Belum Terdaftar (Silakan Daftarkan)');
+    document.getElementById('periksaNama')?.focus();
+  }
+}
+
 function setSelectKelasValue(selectEl, targetVal) {
   if (!selectEl || !targetVal) return;
   const rawTarget = String(targetVal).trim();
@@ -16872,6 +17194,7 @@ function renderSekolahView() {
           <div style="font-size: 14.5px; font-weight: 800; color: #4f46e5; display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
             <i class="bi bi-person-fill" style="color: ${jkColor}; font-size: 16px;"></i>
             <span>${safeNama}</span>
+            ${isStudentInBankData(r) ? `<i class="bi bi-check-circle-fill" style="color: #10b981; font-size: 14px; line-height: 1; flex-shrink: 0;" title="Terdaftar di Bank Data (Cek Kesehatan Gratis / ASIK)"></i>` : ''}
             <i class="bi bi-box-arrow-up-right" style="font-size: 11px; color: #94a3b8; margin-left: 2px;"></i>
           </div>
           <div style="font-size: 11.5px; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
@@ -17026,6 +17349,7 @@ function openFormPosPopup(posKey) {
       siswa.kecamatan || 'Banjaran',
       siswa.kelurahan || 'Tarajusari'
     );
+    applyBankDataStateToIdentitas(siswa);
   }
 
   const titleMap = {
@@ -17115,6 +17439,17 @@ function updateSekolahMenuBadges(siswa) {
   // 1. Identitas (Wajib Lengkap Sebelum Pemeriksaan Fisik)
   const bIdentitas = document.getElementById('badgePosMenuIdentitas');
   const btnIdentitas = document.getElementById('btnPosMenuIdentitas');
+  const bAntro = document.getElementById('badgePosMenuAntro');
+  const btnAntro = document.getElementById('btnPosMenuAntro');
+  const bVital = document.getElementById('badgePosMenuVital');
+  const btnVital = document.getElementById('btnPosMenuVital');
+  const bLab = document.getElementById('badgePosMenuLab');
+  const btnLab = document.getElementById('btnPosMenuLab');
+  const bOrgan = document.getElementById('badgePosMenuOrgan');
+  const btnOrgan = document.getElementById('btnPosMenuOrgan');
+  const bKesimpulan = document.getElementById('badgePosMenuKesimpulan');
+  const btnKesimpulan = document.getElementById('btnPosMenuKesimpulan');
+
   if (bIdentitas) {
     if (isIdComplete) {
       bIdentitas.innerHTML = `<span class="badge badge-pos-done"><i class="bi bi-check-circle-fill"></i> Lengkap</span>`;
@@ -17272,6 +17607,13 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
     return;
   }
 
+  // Buka modal segera agar pengguna langsung melihat tampilan pemeriksaan
+  const modal = document.getElementById('modalPemeriksaanSiswa');
+  if (modal) {
+    modal.classList.add('active', 'open');
+    modal.style.display = 'flex';
+  }
+
   document.getElementById('periksaSiswaId').value = siswa.id;
   document.getElementById('displayNamaSiswa').textContent = siswa.nama || 'Nama Siswa';
   document.getElementById('displaySekolahSiswa').textContent = siswa.sekolah || 'Nama Sekolah';
@@ -17350,6 +17692,7 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
     siswa.kecamatan || 'Banjaran',
     siswa.kelurahan || 'Tarajusari'
   );
+  applyBankDataStateToIdentitas(siswa);
 
   // Populate Section 2: Fisik & Klinis
   document.getElementById('periksaBb').value = siswa.bb || '';
@@ -18447,6 +18790,9 @@ async function saveSekolahCategory(categoryKey, triggerBtn) {
       fieldsToUpdate.kelurahan = kelVal;
       fieldsToUpdate.alamat = alamatVal;
       fieldsToUpdate.identitas_done = 1;
+      const isBankRecord = Number(existing.is_bank_data) === 1 || isStudentInBankData({ nik: cleanNik });
+      fieldsToUpdate.is_bank_data = isBankRecord ? 1 : 0;
+      fieldsToUpdate.from_bank_data = isBankRecord ? 1 : 0;
       categoryName = 'Identitas Siswa';
       titleMsg = 'Data Identitas Siswa Berhasil Disimpan & Lengkap!';
     } else {
@@ -27468,6 +27814,12 @@ window.renderAbsensiTtdTable = renderAbsensiTtdTable;
 window.toggleSelectAllTtd = toggleSelectAllTtd;
 window.bulkAbsenMinumTtd = bulkAbsenMinumTtd;
 window.exportTtdToExcel = exportTtdToExcel;
+window.isStudentInBankData = isStudentInBankData;
+window.setIdentitasFieldsLockState = setIdentitasFieldsLockState;
+window.updateBankDataBadgeStatus = updateBankDataBadgeStatus;
+window.onPeriksaNikInputChange = onPeriksaNikInputChange;
+window.applyBankDataStateToIdentitas = applyBankDataStateToIdentitas;
+window.cekNikSiswaBankData = cekNikSiswaBankData;
 
 
 // Window Bindings untuk Searchable Dropdown & Popup Login Sekolah

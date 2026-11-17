@@ -783,6 +783,8 @@ export default {
             organ_done INTEGER DEFAULT 0,
             kesimpulan_done INTEGER DEFAULT 0,
             identitas_done INTEGER DEFAULT 0,
+            is_bank_data INTEGER DEFAULT 0,
+            from_bank_data INTEGER DEFAULT 0,
             raw_json TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )
@@ -795,6 +797,8 @@ export default {
       try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN organ_done INTEGER DEFAULT 0').run(); } catch (_) { }
       try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN kesimpulan_done INTEGER DEFAULT 0').run(); } catch (_) { }
       try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN identitas_done INTEGER DEFAULT 0').run(); } catch (_) { }
+      try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN is_bank_data INTEGER DEFAULT 0').run(); } catch (_) { }
+      try { await env.DB.prepare('ALTER TABLE ckg_sekolah_records ADD COLUMN from_bank_data INTEGER DEFAULT 0').run(); } catch (_) { }
       try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN kuku TEXT DEFAULT 'Pendek Bersih'").run(); } catch (_) { }
       try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN merokok TEXT DEFAULT 'Tidak'").run(); } catch (_) { }
       try { await env.DB.prepare("ALTER TABLE ckg_sekolah_records ADD COLUMN jenis_rokok TEXT DEFAULT '-'").run(); } catch (_) { }
@@ -869,6 +873,7 @@ export default {
               'status_kesehatan', 'catatan_rujukan',
               'is_examined', 'petugas_entry', 'tanggal_entry', 'tahun_skrining',
               'antro_done', 'vital_done', 'lab_done', 'organ_done', 'kesimpulan_done', 'identitas_done',
+              'is_bank_data', 'from_bank_data',
               'ttd_logs'
             ];
 
