@@ -16299,7 +16299,6 @@ function renderSekolahView() {
     return;
   }
 
-  const portalType = (sessionStorage.getItem('ckg_portal_type') || '').toLowerCase();
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
   const isSekolahUser = (portalType === 'sekolah' || role === 'sekolah');
 
@@ -18393,7 +18392,6 @@ async function savePemeriksaanSiswa(event) {
       else statusImt = 'Obesitas';
     }
 
-    const curJk = document.getElementById('periksaJk')?.value || 'L';
     const statusKesehatan = document.getElementById('periksaStatusKesehatan')?.value || 'Sehat';
     const catatanRujukan = document.getElementById('periksaCatatanRujukan')?.value.trim() || '-';
     const kebugaran = document.getElementById('periksaKebugaran')?.value || 'Baik';
