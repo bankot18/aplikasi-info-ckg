@@ -1728,8 +1728,13 @@ body.role-koordinator .admin-only {
 /* ==========================================================================
    🏫 RESTRIKSI KHUSUS AKUN SEKOLAH
    ========================================================================== */
-/* Toolbar Atas: HANYA tombol Tambah Siswa yang ditampilkan */
-body.role-sekolah #view-sekolah .action-buttons-group > button:not(#btnTambahSiswaSekolah) {
+/* Toolbar Atas: Tombol yang disembunyikan untuk Akun Sekolah (hanya admin/bot/import yang disembunyikan) */
+body.role-sekolah #view-sekolah .action-buttons-group > button.admin-only,
+body.role-sekolah #view-sekolah .action-buttons-group > button.admin-koordinator-only,
+body.role-sekolah #view-sekolah .action-buttons-group > button[onclick*="openBotQueueModal"],
+body.role-sekolah #view-sekolah .action-buttons-group > button[onclick*="sendCurrentSekolahToBotQueue"],
+body.role-sekolah #view-sekolah .action-buttons-group > button[onclick*="openImportSekolahModal"],
+body.role-sekolah #view-sekolah .action-buttons-group > button[onclick*="openKelolaSekolahModal"] {
   display: none !important;
 }
 
