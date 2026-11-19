@@ -1802,92 +1802,260 @@ export default {
 
 
 
+    // --- SHARED DUKCAPIL & NIK PARSER HELPERS ---
+    const PROV_MAP = {
+      '11': 'ACEH', '12': 'SUMATERA UTARA', '13': 'SUMATERA BARAT', '14': 'RIAU',
+      '15': 'JAMBI', '16': 'SUMATERA SELATAN', '17': 'BENGKULU', '18': 'LAMPUNG',
+      '19': 'KEP. BANGKA BELITUNG', '21': 'KEP. RIAU',
+      '31': 'DKI JAKARTA', '32': 'JAWA BARAT', '33': 'JAWA TENGAH',
+      '34': 'DI YOGYAKARTA', '35': 'JAWA TIMUR', '36': 'BANTEN',
+      '51': 'BALI', '52': 'NUSA TENGGARA BARAT', '53': 'NUSA TENGGARA TIMUR',
+      '61': 'KALIMANTAN BARAT', '62': 'KALIMANTAN TENGAH', '63': 'KALIMANTAN SELATAN',
+      '64': 'KALIMANTAN TIMUR', '65': 'KALIMANTAN UTARA',
+      '71': 'SULAWESI UTARA', '72': 'SULAWESI TENGAH', '73': 'SULAWESI SELATAN',
+      '74': 'SULAWESI TENGGARA', '75': 'GORONTALO', '76': 'SULAWESI BARAT',
+      '81': 'MALUKU', '82': 'MALUKU UTARA', '91': 'PAPUA', '92': 'PAPUA BARAT'
+    };
+
+    const KAB_JABAR = {
+      '01': 'KAB. BOGOR', '02': 'KAB. SUKABUMI', '03': 'KAB. CIANJUR',
+      '04': 'KAB. BANDUNG', '05': 'KAB. GARUT', '06': 'KAB. TASIKMALAYA',
+      '07': 'KAB. CIAMIS', '08': 'KAB. KUNINGAN', '09': 'KAB. CIREBON',
+      '10': 'KAB. MAJALENGKA', '11': 'KAB. SUMEDANG', '12': 'KAB. INDRAMAYU',
+      '13': 'KAB. SUBANG', '14': 'KAB. PURWAKARTA', '15': 'KAB. KARAWANG',
+      '16': 'KAB. BEKASI', '17': 'KAB. BANDUNG BARAT', '18': 'KAB. PANGANDARAN',
+      '71': 'KOTA BOGOR', '72': 'KOTA SUKABUMI', '73': 'KOTA BANDUNG',
+      '74': 'KOTA CIREBON', '75': 'KOTA BEKASI', '76': 'KOTA DEPOK',
+      '77': 'KOTA CIMAHI', '78': 'KOTA TASIKMALAYA', '79': 'KOTA BANJAR'
+    };
+
+    function parseNik(nik, nama) {
+      if (!nik || nik.length !== 16 || isNaN(nik)) {
+        return { valid: false, message: 'Format NIK tidak valid (harus 16 digit angka)' };
+      }
+      const provCode = nik.substring(0, 2);
+      const kabCode = nik.substring(2, 4);
+      const kecCode = nik.substring(4, 6);
+      let dobDay = parseInt(nik.substring(6, 8));
+      const dobMonth = parseInt(nik.substring(8, 10));
+      let dobYear = parseInt(nik.substring(10, 12));
+
+      let jenisKelamin = 'Laki-laki';
+      if (dobDay > 40) { jenisKelamin = 'Perempuan'; dobDay -= 40; }
+
+      if (dobMonth < 1 || dobMonth > 12 || dobDay < 1 || dobDay > 31) {
+        return { valid: false, message: 'Data tanggal lahir dalam NIK tidak valid' };
+      }
+
+      const now = new Date();
+      const cur2 = parseInt(now.getFullYear().toString().substring(2));
+      const fullYear = (dobYear <= cur2) ? (2000 + dobYear) : (1900 + dobYear);
+      const fDay = String(dobDay).padStart(2, '0');
+      const fMonth = String(dobMonth).padStart(2, '0');
+      const tanggalLahir = `${fDay}/${fMonth}/${fullYear}`;
+
+      const bd = new Date(fullYear, dobMonth - 1, dobDay);
+      let usia = now.getFullYear() - bd.getFullYear();
+      const md = now.getMonth() - bd.getMonth();
+      if (md < 0 || (md === 0 && now.getDate() < bd.getDate())) usia--;
+
+      const provinsi = PROV_MAP[provCode] || `PROVINSI (KODE ${provCode})`;
+      let kabupaten = (provCode === '32' && KAB_JABAR[kabCode]) ? KAB_JABAR[kabCode] : `KABUPATEN (KODE ${kabCode})`;
+      const KEC_BANDUNG = {
+        '05': 'Banjaran', '13': 'Banjaran', '11': 'Arjasari', '12': 'Pameungpeuk',
+        '14': 'Cangkuang', '15': 'Soreang', '16': 'Katapang', '17': 'Cimaung',
+        '28': 'Baleendah', '29': 'Dayeuhkolot', '30': 'Margahayu', '31': 'Margaasih'
+      };
+      let kecamatan = `KECAMATAN (KODE ${kecCode})`;
+      if (provCode === '32' && kabCode === '04' && KEC_BANDUNG[kecCode]) {
+        kecamatan = KEC_BANDUNG[kecCode];
+      }
+
+      return {
+        valid: true,
+        nik,
+        namaLengkap: nama ? nama.toUpperCase() : 'DATA DUKCAPIL VERIFIED',
+        tempatLahir: kabupaten,
+        tanggalLahir,
+        usia,
+        jenisKelamin,
+        alamat: `${kecamatan}, ${kabupaten}, ${provinsi}`,
+        kecamatan,
+        kelurahan: '-',
+        provinsi,
+        kabupaten
+      };
+    }
+
+    function parseKtpTextRegex(rawText) {
+      if (!rawText || typeof rawText !== 'string') return {};
+      const text = rawText.replace(/\r/g, '');
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+      let nik = '';
+      let nama = '';
+      let tempatLahir = '';
+      let tanggalLahir = '';
+      let jenisKelamin = '';
+      let golDarah = '-';
+      let alamat = '';
+      let rt = '';
+      let rw = '';
+      let kelurahan = '';
+      let kecamatan = '';
+      let kabupaten = '';
+      let provinsi = '';
+      let agama = '';
+      let statusPerkawinan = '';
+      let pekerjaan = '';
+
+      for (const line of lines) {
+        if (/NIK|N1K|N!K|Nomor|NO\./i.test(line) || /^\s*\d{14,18}\s*$/.test(line)) {
+          const candidate = line.replace(/NIK|N1K|N!K|Nomor|NO\.?|[:;\-]/gi, '').trim();
+          const cleaned = candidate
+            .replace(/[OoD]/g, '0')
+            .replace(/[Ili|]/g, '1')
+            .replace(/[B]/g, '8')
+            .replace(/[Ss]/g, '5')
+            .replace(/[Zz]/g, '2')
+            .replace(/\D/g, '');
+          if (cleaned.length === 16) {
+            nik = cleaned;
+            break;
+          }
+        }
+      }
+      if (!nik) {
+        const rawMatches = text.match(/\b\d{16}\b/);
+        if (rawMatches) {
+          nik = rawMatches[0];
+        } else {
+          const noSpace = text.replace(/[\s\.:\-_]+/g, '');
+          const match16 = noSpace.match(/\d{16}/);
+          if (match16) nik = match16[0];
+        }
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (/^(?:Nama|Narna|Name)\s*[:;]?\s*(.*)$/i.test(line)) {
+          const m = line.match(/^(?:Nama|Narna|Name)\s*[:;]?\s*(.*)$/i);
+          if (m && m[1]) nama = m[1].replace(/[:;\-_]/g, '').trim();
+        } else if (!nama && nik && i > 0 && lines[i - 1].includes('NIK') && !lines[i].includes(':') && /^[A-Z\s\.,'\`]{3,40}$/.test(line)) {
+          nama = line.trim();
+        }
+
+        if (/Tempat|Tgl\s*Lahir|Tanggal\s*Lahir/i.test(line)) {
+          const content = line.replace(/.*(?:Lahir)\s*[:;]?\s*/i, '').trim();
+          const parts = content.split(/[,:]/);
+          if (parts.length >= 2) {
+            tempatLahir = parts[0].trim();
+            tanggalLahir = parts.slice(1).join(' ').trim();
+          } else {
+            tempatLahir = content;
+          }
+        }
+
+        if (/Jenis\s*Kelamin|Gender/i.test(line)) {
+          if (/PEREMPUAN|WANITA/i.test(line)) jenisKelamin = 'Perempuan';
+          else if (/LAKI|PRIA/i.test(line)) jenisKelamin = 'Laki-laki';
+
+          if (/Gol\.?\s*Darah\s*[:;]?\s*([ABO\+\-]+)/i.test(line)) {
+            const gm = line.match(/Gol\.?\s*Darah\s*[:;]?\s*([ABO\+\-]+)/i);
+            if (gm) golDarah = gm[1].trim();
+          }
+        }
+
+        if (/^Alamat\s*[:;]?\s*(.*)$/i.test(line)) {
+          const am = line.match(/^Alamat\s*[:;]?\s*(.*)$/i);
+          if (am && am[1]) alamat = am[1].replace(/[:;\-_]/g, '').trim();
+        }
+
+        if (/RT\s*[\/\.]?\s*RW/i.test(line)) {
+          const rtm = line.match(/(\d{1,3})\s*[\/\-]\s*(\d{1,3})/);
+          if (rtm) {
+            rt = rtm[1].padStart(2, '0');
+            rw = rtm[2].padStart(2, '0');
+          }
+        }
+
+        if (/Kel|Desa/i.test(line)) {
+          const km = line.replace(/.*(?:Kel\/Desa|Kelurahan|Desa)\s*[:;]?\s*/i, '').trim();
+          if (km) kelurahan = km.replace(/[:;\-_]/g, '').trim();
+        }
+
+        if (/Kecamatan|Kec\./i.test(line)) {
+          const kecm = line.replace(/.*(?:Kecamatan|Kec\.)\s*[:;]?\s*/i, '').trim();
+          if (kecm) kecamatan = kecm.replace(/[:;\-_]/g, '').trim();
+        }
+
+        if (/Agama/i.test(line)) {
+          const agm = line.replace(/.*(?:Agama)\s*[:;]?\s*/i, '').trim();
+          if (agm) agama = agm.replace(/[:;\-_]/g, '').trim();
+        }
+
+        if (/Status\s*Perkawinan|Status/i.test(line)) {
+          const stm = line.replace(/.*(?:Status\s*Perkawinan|Status)\s*[:;]?\s*/i, '').trim();
+          if (stm) statusPerkawinan = stm.replace(/[:;\-_]/g, '').trim();
+        }
+
+        if (/Pekerjaan/i.test(line)) {
+          const pkm = line.replace(/.*(?:Pekerjaan)\s*[:;]?\s*/i, '').trim();
+          if (pkm) pekerjaan = pkm.replace(/[:;\-_]/g, '').trim();
+        }
+
+        if (/PROVINSI/i.test(line)) {
+          provinsi = line.replace(/.*PROVINSI\s*/i, '').trim();
+        }
+        if (/KABUPATEN|KOTA/i.test(line)) {
+          kabupaten = line.replace(/.*(?:KABUPATEN|KOTA)\s*/i, '').trim();
+        }
+      }
+
+      let normalizedDob = '';
+      if (tanggalLahir) {
+        const dobMatch = tanggalLahir.match(/(\d{1,2})[\s\-\/\.](\d{1,2}|[A-Za-z]+)[\s\-\/\.](\d{4})/);
+        if (dobMatch) {
+          const d = dobMatch[1].padStart(2, '0');
+          let m = dobMatch[2];
+          const y = dobMatch[3];
+          const monthNames = {
+            jan: '01', januari: '01', feb: '02', februari: '02', mar: '03', maret: '03',
+            apr: '04', april: '04', mei: '05', may: '05', jun: '06', juni: '06',
+            jul: '07', juli: '07', agu: '08', agustus: '08', aug: '08', sep: '09', september: '09',
+            okt: '10', oktober: '10', oct: '10', nov: '11', november: '11', des: '12', desember: '12', dec: '12'
+          };
+          if (isNaN(m)) {
+            m = monthNames[m.toLowerCase().substring(0, 3)] || '01';
+          } else {
+            m = m.padStart(2, '0');
+          }
+          normalizedDob = `${y}-${m}-${d}`;
+        }
+      }
+
+      return {
+        nik,
+        nama,
+        tempat_lahir: tempatLahir,
+        tanggal_lahir: normalizedDob || tanggalLahir,
+        jenis_kelamin: jenisKelamin,
+        golongan_darah: golDarah,
+        alamat,
+        rt,
+        rw,
+        kelurahan,
+        kecamatan,
+        kabupaten,
+        provinsi,
+        agama,
+        status_perkawinan: statusPerkawinan,
+        pekerjaan
+      };
+    }
+
     // 8. ROUTE: /api/dukcapil (KTP Verification Service - Built-in NIK Parser)
     if (url.pathname.startsWith('/api/dukcapil')) {
-      // Province code dictionary (Kemendagri standard)
-      const PROV_MAP = {
-        '11': 'ACEH', '12': 'SUMATERA UTARA', '13': 'SUMATERA BARAT', '14': 'RIAU',
-        '15': 'JAMBI', '16': 'SUMATERA SELATAN', '17': 'BENGKULU', '18': 'LAMPUNG',
-        '19': 'KEP. BANGKA BELITUNG', '21': 'KEP. RIAU',
-        '31': 'DKI JAKARTA', '32': 'JAWA BARAT', '33': 'JAWA TENGAH',
-        '34': 'DI YOGYAKARTA', '35': 'JAWA TIMUR', '36': 'BANTEN',
-        '51': 'BALI', '52': 'NUSA TENGGARA BARAT', '53': 'NUSA TENGGARA TIMUR',
-        '61': 'KALIMANTAN BARAT', '62': 'KALIMANTAN TENGAH', '63': 'KALIMANTAN SELATAN',
-        '64': 'KALIMANTAN TIMUR', '65': 'KALIMANTAN UTARA',
-        '71': 'SULAWESI UTARA', '72': 'SULAWESI TENGAH', '73': 'SULAWESI SELATAN',
-        '74': 'SULAWESI TENGGARA', '75': 'GORONTALO', '76': 'SULAWESI BARAT',
-        '81': 'MALUKU', '82': 'MALUKU UTARA', '91': 'PAPUA', '92': 'PAPUA BARAT'
-      };
-      // Kab/Kota codes for Jawa Barat (32)
-      const KAB_JABAR = {
-        '01': 'KAB. BOGOR', '02': 'KAB. SUKABUMI', '03': 'KAB. CIANJUR',
-        '04': 'KAB. BANDUNG', '05': 'KAB. GARUT', '06': 'KAB. TASIKMALAYA',
-        '07': 'KAB. CIAMIS', '08': 'KAB. KUNINGAN', '09': 'KAB. CIREBON',
-        '10': 'KAB. MAJALENGKA', '11': 'KAB. SUMEDANG', '12': 'KAB. INDRAMAYU',
-        '13': 'KAB. SUBANG', '14': 'KAB. PURWAKARTA', '15': 'KAB. KARAWANG',
-        '16': 'KAB. BEKASI', '17': 'KAB. BANDUNG BARAT', '18': 'KAB. PANGANDARAN',
-        '71': 'KOTA BOGOR', '72': 'KOTA SUKABUMI', '73': 'KOTA BANDUNG',
-        '74': 'KOTA CIREBON', '75': 'KOTA BEKASI', '76': 'KOTA DEPOK',
-        '77': 'KOTA CIMAHI', '78': 'KOTA TASIKMALAYA', '79': 'KOTA BANJAR'
-      };
-
-      function parseNik(nik, nama) {
-        if (!nik || nik.length !== 16 || isNaN(nik)) {
-          return { valid: false, message: 'Format NIK tidak valid (harus 16 digit angka)' };
-        }
-        const provCode = nik.substring(0, 2);
-        const kabCode = nik.substring(2, 4);
-        const kecCode = nik.substring(4, 6);
-        let dobDay = parseInt(nik.substring(6, 8));
-        const dobMonth = parseInt(nik.substring(8, 10));
-        let dobYear = parseInt(nik.substring(10, 12));
-
-        let jenisKelamin = 'Laki-laki';
-        if (dobDay > 40) { jenisKelamin = 'Perempuan'; dobDay -= 40; }
-
-        if (dobMonth < 1 || dobMonth > 12 || dobDay < 1 || dobDay > 31) {
-          return { valid: false, message: 'Data tanggal lahir dalam NIK tidak valid' };
-        }
-
-        const now = new Date();
-        const cur2 = parseInt(now.getFullYear().toString().substring(2));
-        const fullYear = (dobYear <= cur2) ? (2000 + dobYear) : (1900 + dobYear);
-        const fDay = String(dobDay).padStart(2, '0');
-        const fMonth = String(dobMonth).padStart(2, '0');
-        const tanggalLahir = `${fDay}/${fMonth}/${fullYear}`;
-
-        const bd = new Date(fullYear, dobMonth - 1, dobDay);
-        let usia = now.getFullYear() - bd.getFullYear();
-        const md = now.getMonth() - bd.getMonth();
-        if (md < 0 || (md === 0 && now.getDate() < bd.getDate())) usia--;
-
-        const provinsi = PROV_MAP[provCode] || `PROVINSI (KODE ${provCode})`;
-        let kabupaten;
-        const KEC_BANDUNG = {
-          '05': 'Banjaran', '13': 'Banjaran', '11': 'Arjasari', '12': 'Pameungpeuk',
-          '14': 'Cangkuang', '15': 'Soreang', '16': 'Katapang', '17': 'Cimaung',
-          '28': 'Baleendah', '29': 'Dayeuhkolot', '30': 'Margahayu', '31': 'Margaasih'
-        };
-        let kecamatan = `KECAMATAN (KODE ${kecCode})`;
-        if (provCode === '32' && kabCode === '04' && KEC_BANDUNG[kecCode]) {
-          kecamatan = KEC_BANDUNG[kecCode];
-        }
-
-        return {
-          valid: true,
-          nik,
-          namaLengkap: nama ? nama.toUpperCase() : 'DATA DUKCAPIL VERIFIED',
-          tempatLahir: kabupaten,
-          tanggalLahir,
-          usia,
-          jenisKelamin,
-          alamat: `${kecamatan}, ${kabupaten}, ${provinsi}`,
-          kecamatan,
-          kelurahan: '-',
-          provinsi,
-          kabupaten
-        };
-      }
 
       // /api/dukcapil/health
       if (url.pathname === '/api/dukcapil/health' || url.pathname === '/api/dukcapil/ping') {
@@ -2196,6 +2364,229 @@ Saran Medis:`;
           }
 
           return new Response(JSON.stringify({ success: true, recommendation }), { headers: corsHeaders });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
+        }
+      }
+
+      // Endpoint 3: /api/ai/ocr-ktp (OCR Identitas KTP/KK/KIA & Auto-Lookup Bank Data)
+      if (url.pathname === '/api/ai/ocr-ktp' && request.method === 'POST') {
+        try {
+          const body = await request.json();
+          let imageBase64 = String(body.image || '').trim();
+          let rawText = String(body.text || '').trim();
+          let extracted = null;
+
+          if (imageBase64 && imageBase64.includes('base64,')) {
+            imageBase64 = imageBase64.split('base64,')[1];
+          }
+
+          // 1. Eksekusi Cloudflare Workers AI Vision Model jika ada data gambar dan env.AI aktif
+          if (imageBase64 && env.AI) {
+            try {
+              const binStr = atob(imageBase64);
+              const len = binStr.length;
+              const bytes = new Uint8Array(len);
+              for (let i = 0; i < len; i++) {
+                bytes[i] = binStr.charCodeAt(i);
+              }
+
+              const visionPrompt = `Anda adalah sistem OCR e-KTP / KIA / KK Indonesia berakurasi tinggi.
+Ekstrak data identitas dari foto kartu identitas ini dan format HANYA dalam JSON murni valid (tanpa markdown, tanpa kata pembuka/penutup):
+{
+  "nik": "16 digit angka NIK tanpa spasi",
+  "nama": "Nama Lengkap sesuai kartu",
+  "tempat_lahir": "Tempat Lahir",
+  "tanggal_lahir": "YYYY-MM-DD",
+  "jenis_kelamin": "Laki-laki / Perempuan",
+  "golongan_darah": "-",
+  "alamat": "Alamat Jalan / Kp / Dusun",
+  "rt": "Nomor RT",
+  "rw": "Nomor RW",
+  "kelurahan": "Desa / Kelurahan",
+  "kecamatan": "Kecamatan",
+  "kabupaten": "Kabupaten / Kota",
+  "provinsi": "Provinsi",
+  "agama": "Agama",
+  "status_perkawinan": "Status Perkawinan",
+  "pekerjaan": "Pekerjaan"
+}`;
+
+              const aiVisionResp = await env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
+                prompt: visionPrompt,
+                image: [...bytes],
+                max_tokens: 512,
+                temperature: 0.1
+              });
+
+              if (aiVisionResp && aiVisionResp.response) {
+                const match = aiVisionResp.response.match(/\{[\s\S]*\}/);
+                if (match) {
+                  extracted = JSON.parse(match[0]);
+                  extracted.ocr_engine = 'Cloudflare Workers AI Llama 3.2 Vision';
+                }
+              }
+            } catch (visErr) {
+              console.log('Workers AI Vision attempt note:', visErr.message);
+            }
+          }
+
+          // 2. Jika Vision belum mengembalikan JSON atau ada rawText, gunakan Llama 3.1 Text Parser atau Regex
+          if (!extracted && rawText) {
+            if (env.AI) {
+              try {
+                const textPrompt = `Ekstrak data e-KTP/KIA/KK dari teks mentah ini ke JSON murni valid:
+{
+  "nik": "16 digit NIK",
+  "nama": "Nama Lengkap",
+  "tempat_lahir": "Tempat Lahir",
+  "tanggal_lahir": "YYYY-MM-DD",
+  "jenis_kelamin": "Laki-laki / Perempuan",
+  "alamat": "Jalan/Kp",
+  "rt": "",
+  "rw": "",
+  "kelurahan": "",
+  "kecamatan": "",
+  "kabupaten": "",
+  "provinsi": ""
+}
+Teks mentah:
+${rawText}`;
+                const textResp = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+                  messages: [{ role: 'user', content: textPrompt }],
+                  max_tokens: 400,
+                  temperature: 0.1
+                });
+                if (textResp && textResp.response) {
+                  const match = textResp.response.match(/\{[\s\S]*\}/);
+                  if (match) {
+                    extracted = JSON.parse(match[0]);
+                    extracted.ocr_engine = 'Workers AI Llama 3.1 Text Parser';
+                  }
+                }
+              } catch (_) { }
+            }
+
+            if (!extracted) {
+              extracted = parseKtpTextRegex(rawText);
+              extracted.ocr_engine = 'Smart Indonesian KTP Regex Parser';
+            }
+          }
+
+          // Fallback jika belum ada data yang terekstrak
+          if (!extracted) {
+            extracted = {
+              nik: '',
+              nama: '',
+              tempat_lahir: '',
+              tanggal_lahir: '',
+              jenis_kelamin: '',
+              alamat: '',
+              rt: '',
+              rw: '',
+              kelurahan: '',
+              kecamatan: '',
+              kabupaten: '',
+              provinsi: '',
+              ocr_engine: 'Manual / Standby'
+            };
+          }
+
+          // 3. Normalisasi NIK dan validasi 16 digit
+          let cleanNik = String(extracted.nik || '').replace(/\D/g, '').trim();
+          if (cleanNik.length !== 16 && rawText) {
+            const rawMatch = rawText.match(/\b\d{16}\b/);
+            if (rawMatch) cleanNik = rawMatch[0];
+          }
+          extracted.nik = cleanNik;
+
+          // 4. Verifikasi dan lengkapi dengan Dukcapil mathematical parseNik
+          if (cleanNik.length === 16) {
+            try {
+              const meta = parseNik(cleanNik, extracted.nama);
+              if (meta && meta.valid) {
+                if (!extracted.jenis_kelamin || extracted.jenis_kelamin === '-' || extracted.jenis_kelamin === '') {
+                  extracted.jenis_kelamin = meta.jenisKelamin;
+                }
+                if (!extracted.tanggal_lahir || extracted.tanggal_lahir === '-') {
+                  const parts = meta.tanggalLahir.split('/');
+                  if (parts.length === 3) {
+                    extracted.tanggal_lahir = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                  }
+                }
+                if (!extracted.kabupaten || extracted.kabupaten === '-') {
+                  extracted.kabupaten = meta.kabupaten;
+                }
+                if (!extracted.provinsi || extracted.provinsi === '-') {
+                  extracted.provinsi = meta.provinsi;
+                }
+                if (!extracted.kecamatan || extracted.kecamatan.startsWith('KECAMATAN (KODE')) {
+                  if (meta.kecamatan && !meta.kecamatan.startsWith('KECAMATAN (KODE')) {
+                    extracted.kecamatan = meta.kecamatan;
+                  }
+                }
+                extracted.usia = meta.usia;
+              }
+            } catch (_) { }
+          }
+
+          // 5. Cek Otomatis ke Seluruh BANK DATA D1 (enco_pasien, ckg_gratis_records, records, ckg_sekolah_records)
+          let foundInBankData = false;
+          let bankDataSource = '';
+          let bankDataRecord = null;
+
+          if (cleanNik && cleanNik.length === 16 && env.DB) {
+            try {
+              const p1 = await env.DB.prepare('SELECT * FROM enco_pasien WHERE TRIM(nik) = ? ORDER BY updated_at DESC LIMIT 1').bind(cleanNik).first();
+              if (p1) {
+                foundInBankData = true;
+                bankDataSource = 'Bank Data ASIK (ENCO)';
+                bankDataRecord = p1;
+              }
+            } catch (_) { }
+
+            if (!foundInBankData) {
+              try {
+                const p2 = await env.DB.prepare('SELECT * FROM ckg_gratis_records WHERE TRIM(nik) = ? ORDER BY created_at DESC LIMIT 1').bind(cleanNik).first();
+                if (p2) {
+                  foundInBankData = true;
+                  bankDataSource = 'Cek Kesehatan Gratis';
+                  bankDataRecord = p2;
+                }
+              } catch (_) { }
+            }
+
+            if (!foundInBankData) {
+              try {
+                const p3 = await env.DB.prepare('SELECT * FROM records WHERE TRIM(nik) = ? ORDER BY created_at DESC LIMIT 1').bind(cleanNik).first();
+                if (p3) {
+                  foundInBankData = true;
+                  bankDataSource = 'Database Pasien CKG';
+                  bankDataRecord = p3;
+                }
+              } catch (_) { }
+            }
+
+            if (!foundInBankData) {
+              try {
+                const p4 = await env.DB.prepare('SELECT * FROM ckg_sekolah_records WHERE TRIM(nik) = ? ORDER BY updated_at DESC LIMIT 1').bind(cleanNik).first();
+                if (p4) {
+                  foundInBankData = true;
+                  bankDataSource = 'Bank Data Skrining Sekolah';
+                  bankDataRecord = p4;
+                }
+              } catch (_) { }
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            found_in_bank_data: foundInBankData,
+            bank_data_source: bankDataSource,
+            bank_data: bankDataRecord,
+            extracted_data: extracted,
+            nik_valid: cleanNik.length === 16
+          }), { headers: corsHeaders });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: corsHeaders });
         }

@@ -29,7 +29,7 @@
 
   <!-- Application Stylesheet & SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-  <link rel="stylesheet" href="index.css?v=5.2">
+  <link rel="stylesheet" href="index.css?v=5.3">
 
   <!-- Chart.js, SweetAlert2 & SheetJS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -3657,14 +3657,18 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label" for="nik">NIK Pasien (Wajib 16 Digit) <span class="required">*</span></label>
-                <div style="display: flex; gap: 6px; align-items: stretch;">
+                <div style="display: flex; gap: 6px; align-items: stretch; flex-wrap: wrap;">
                   <input type="text" id="nik" class="form-control" maxlength="16" inputmode="numeric"
                     placeholder="Masukkan 16 Digit NIK" required
-                    style="flex: 1; font-family: monospace; letter-spacing: 1px;">
+                    style="flex: 1; min-width: 140px; font-family: monospace; letter-spacing: 1px;">
                   <button type="button" id="btnCekNikPasien" onclick="triggerCekNikEnco('pasien')"
                     title="Cek NIK Pasien di Bank Data ASIK (Menu ENCO)"
                     style="padding: 8px 14px; border-radius: var(--radius-sm); background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: #fff; border: none; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; box-shadow: 0 2px 8px rgba(37,99,235,0.25); transition: all 0.2s;">
                     <i class="bi bi-search"></i> Cek NIK
+                  </button>
+                  <button type="button" id="btnOcrNikPasien" class="btn-ocr-scan" onclick="triggerOcrIdentityScan('pasien')"
+                    title="Scan e-KTP / KK / KIA dengan Kamera atau Galeri">
+                    <i class="bi bi-camera-fill"></i> Scan KTP
                   </button>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
@@ -3875,12 +3879,16 @@
                   <label class="form-label" for="nik_wali">
                     NIK Wali <span class="required" id="reqNikWali" style="color: #dc2626;">*</span>
                   </label>
-                  <div style="display: flex; gap: 6px; align-items: stretch;">
-                    <input type="text" id="nik_wali" name="nik_wali" class="form-control" maxlength="16" inputmode="numeric" placeholder="Masukkan NIK Wali" style="flex: 1; font-family: monospace; letter-spacing: 1px;">
+                  <div style="display: flex; gap: 6px; align-items: stretch; flex-wrap: wrap;">
+                    <input type="text" id="nik_wali" name="nik_wali" class="form-control" maxlength="16" inputmode="numeric" placeholder="Masukkan NIK Wali" style="flex: 1; min-width: 140px; font-family: monospace; letter-spacing: 1px;">
                     <button type="button" id="btnCekNikWali" onclick="triggerCekNikEnco('wali')"
                       title="Cek NIK Wali di Bank Data ASIK (Menu ENCO)"
                       style="padding: 8px 14px; border-radius: var(--radius-sm); background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: #fff; border: none; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; box-shadow: 0 2px 8px rgba(37,99,235,0.25); transition: all 0.2s;">
                       <i class="bi bi-search"></i> Cek NIK
+                    </button>
+                    <button type="button" id="btnOcrNikWali" class="btn-ocr-scan" onclick="triggerOcrIdentityScan('wali')"
+                      title="Scan e-KTP / KK Wali dengan Kamera atau Galeri">
+                      <i class="bi bi-camera-fill"></i> Scan KTP
                     </button>
                   </div>
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
@@ -5044,14 +5052,18 @@
                 <i class="bi bi-shield-lock-fill"></i> Wajib Cek NIK Dulu
               </span>
             </div>
-            <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+            <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
               <input type="text" id="periksaNik" class="form-control" inputmode="numeric"
                 placeholder="Masukkan 16 Digit NIK Siswa..." maxlength="16"
                 oninput="onPeriksaNikInputChange()"
-                style="font-family: monospace; font-weight: 800; font-size: 14px; letter-spacing: 0.5px; flex: 1;">
+                style="font-family: monospace; font-weight: 800; font-size: 14px; letter-spacing: 0.5px; flex: 1; min-width: 140px;">
               <button type="button" class="btn" id="btnCekNikSiswaBankData" onclick="cekNikSiswaBankData()"
                 style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; font-weight: 800; font-size: 12.5px; padding: 7px 16px; border-radius: 8px; border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(5,150,105,0.25); cursor: pointer;">
                 <i class="bi bi-search"></i> Cek NIK
+              </button>
+              <button type="button" class="btn btn-ocr-scan" id="btnOcrPeriksaNikSiswa" onclick="triggerOcrIdentityScan('periksa_siswa')"
+                title="Scan KTP / KIA / KK Siswa">
+                <i class="bi bi-camera-fill"></i> Scan KTP/KIA
               </button>
             </div>
             <div id="hintCekNikSiswa" style="font-size: 11.5px; color: #64748b; margin-top: 6px; display: flex; align-items: center; gap: 5px;">
@@ -5725,14 +5737,18 @@
                 <i class="bi bi-shield-lock-fill"></i> Wajib Cek NIK Dulu
               </span>
             </div>
-            <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+            <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
               <input type="text" id="tambahSiswaNik" class="form-control" inputmode="numeric"
                 placeholder="Masukkan 16 Digit NIK Siswa..." maxlength="16"
                 oninput="onTambahSiswaNikInputChange()"
-                style="font-family: monospace; font-weight: 800; font-size: 14px; letter-spacing: 0.5px; flex: 1;">
+                style="font-family: monospace; font-weight: 800; font-size: 14px; letter-spacing: 0.5px; flex: 1; min-width: 140px;">
               <button type="button" class="btn" id="btnCekNikTambahSiswa" onclick="cekNikTambahSiswaBankData()"
                 style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; font-weight: 800; font-size: 12.5px; padding: 7px 16px; border-radius: 8px; border: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(5,150,105,0.25); cursor: pointer;">
                 <i class="bi bi-search"></i> Cek NIK
+              </button>
+              <button type="button" class="btn btn-ocr-scan" id="btnOcrTambahSiswaNik" onclick="triggerOcrIdentityScan('tambah_siswa')"
+                title="Scan KTP / KIA / KK Siswa">
+                <i class="bi bi-camera-fill"></i> Scan KTP/KIA
               </button>
             </div>
             <div id="hintCekNikTambahSiswa" style="font-size: 11.5px; color: #64748b; margin-top: 6px; display: flex; align-items: center; gap: 5px;">
@@ -7357,10 +7373,14 @@
     <div class="loading-subtext" id="loadingSubtext">Menghubungkan ke Database Cloudflare D1</div>
   </div>
 
+  <!-- Hidden Inputs for OCR Identity Scanning (Camera & Gallery) -->
+  <input type="file" id="ocrCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleOcrFileSelected(event)">
+  <input type="file" id="ocrGalleryInput" accept="image/*" style="display:none;" onchange="handleOcrFileSelected(event)">
+
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=5.2"></script>
+  <script src="app.js?v=5.3"></script>
   <script src="alat-bnhp.js"></script>
 </body>
 

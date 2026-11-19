@@ -8027,3 +8027,99 @@ input[type="submit"],
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ---------------------------------------------------- */
+/* 5. OCR KTP / KIA / KK IDENTITY SCANNER STYLES       */
+/* ---------------------------------------------------- */
+.btn-ocr-scan {
+  background: linear-gradient(135deg, #7c3aed, #9333ea) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  padding: 8px 14px !important;
+  border-radius: var(--radius-sm, 8px) !important;
+  border: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  min-height: 38px !important;
+  user-select: none !important;
+  touch-action: manipulation !important;
+}
+
+.btn-ocr-scan:hover {
+  background: linear-gradient(135deg, #6d28d9, #7e22ce) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35) !important;
+}
+
+.btn-ocr-scan:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 1px 4px rgba(124, 58, 237, 0.2) !important;
+}
+
+.btn-ocr-scan i {
+  font-size: 14px !important;
+}
+
+/* OCR Results Card in SweetAlert Popup */
+.ocr-modal-result-card {
+  text-align: left;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 10px;
+}
+
+.ocr-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 20px;
+  margin-bottom: 10px;
+}
+
+.ocr-status-pill.status-found {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.ocr-status-pill.status-new {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.ocr-meta-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.ocr-meta-table td {
+  padding: 4px 0;
+  vertical-align: top;
+}
+
+.ocr-meta-label {
+  width: 105px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.ocr-meta-val {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+
