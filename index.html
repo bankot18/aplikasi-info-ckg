@@ -68,6 +68,77 @@
 <body>
 
   <!-- ==========================================================================
+       APK CHECK UPDATE SCREEN (LAYAR PEMERIKSAAN PEMBARUAN KHUSUS APK ANDROID)
+       ========================================================================== -->
+  <div id="apkCheckUpdateScreen" class="apk-update-screen" style="display: none;">
+    <div class="apk-update-backdrop"></div>
+    <div class="apk-update-content">
+      <!-- Logo & Branding -->
+      <div class="apk-update-branding">
+        <div class="apk-update-logo-wrapper">
+          <img src="logo.png" alt="Logo CKG" class="apk-update-logo" onerror="this.style.display='none'">
+          <div class="apk-update-radar"></div>
+        </div>
+        <h1 class="apk-update-title">CKG Mobile</h1>
+        <p class="apk-update-subtitle">Puskesmas Banjaran Kota</p>
+      </div>
+
+      <!-- State Card -->
+      <div id="apkUpdateCard" class="apk-update-card">
+        <!-- Checking State -->
+        <div id="apkUpdateChecking" class="apk-update-state-box">
+          <div class="apk-update-spinner-ring">
+            <i class="bi bi-arrow-repeat apk-update-spin-icon"></i>
+          </div>
+          <div class="apk-update-msg-title">Memeriksa Pembaruan...</div>
+          <div class="apk-update-msg-desc">Menghubungkan ke server sistem CKG</div>
+          <div class="apk-update-progress-bar">
+            <div class="apk-update-progress-fill"></div>
+          </div>
+          <span class="apk-update-ver-tag">Versi Saat Ini: v1.0.0</span>
+        </div>
+
+        <!-- Latest Version State -->
+        <div id="apkUpdateLatest" class="apk-update-state-box" style="display: none;">
+          <div class="apk-update-icon-success">
+            <i class="bi bi-check-circle-fill"></i>
+          </div>
+          <div class="apk-update-msg-title text-success">Aplikasi Versi Terbaru</div>
+          <div class="apk-update-msg-desc">Sistem CKG siap digunakan</div>
+          <span class="apk-update-ver-tag success">v1.0.0 (Terbaru)</span>
+        </div>
+
+        <!-- Update Available State -->
+        <div id="apkUpdateAvailable" class="apk-update-state-box" style="display: none;">
+          <div class="apk-update-icon-warn">
+            <i class="bi bi-cloud-arrow-down-fill"></i>
+          </div>
+          <div class="apk-update-msg-title text-primary">Pembaruan Tersedia!</div>
+          <div class="apk-update-msg-desc" id="apkUpdateReleaseNotes">Versi baru telah dirilis dengan perbaikan performa dan fitur baru.</div>
+          <div class="apk-update-badge-row">
+            <span class="apk-update-ver-tag old" id="apkUpdateOldVer">v1.0.0</span>
+            <i class="bi bi-arrow-right"></i>
+            <span class="apk-update-ver-tag new" id="apkUpdateNewVer">v1.1.0</span>
+          </div>
+          <div class="apk-update-actions">
+            <a href="#" id="btnDownloadApkUpdate" target="_blank" class="btn-apk-update-primary">
+              <i class="bi bi-download"></i> Unduh Pembaruan
+            </a>
+            <button type="button" class="btn-apk-update-secondary" onclick="skipApkUpdateCheck()">
+              Lanjut ke Portal
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skip / Proceed Button -->
+      <button type="button" class="apk-update-skip-btn" onclick="skipApkUpdateCheck()">
+        <span>Lewati & Masuk ke Portal</span> <i class="bi bi-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
        PORTAL SELECTION GATE CONTAINER (GERBANG UTAMA PILIH AKSES - MODERN REDESIGN)
        ========================================================================== -->
   <div id="portalSelectionContainer" class="portal-gate-container">
@@ -769,9 +840,6 @@
           <span class="apk-pulse-dot" id="apkHeaderPulseDot"></span>
           <span id="apkHeaderStatusLabel">Online</span>
         </div>
-        <button type="button" class="apk-user-btn" onclick="openApkUserSheet(event)" title="Menu Profil">
-          <span id="apkHeaderAvatarText">MF</span>
-        </button>
         <button type="button" class="apk-header-logout-btn" onclick="handleLogout()" title="Keluar Akun (Logout)">
           <i class="bi bi-box-arrow-right"></i>
         </button>

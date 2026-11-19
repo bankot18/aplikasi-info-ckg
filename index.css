@@ -9066,5 +9066,590 @@ body.dark-mode .apk-portal-footer-badge,
   background: rgba(5, 150, 105, 0.12);
 }
 
+/* ==========================================================================
+   7. KHUSUS APK: SEMBUNYIKAN TOMBOL USER/AVATAR DI SEBELAH KIRI LOGOUT
+   ========================================================================== */
+.apk-native-header .apk-user-btn,
+#apkNativeHeader .apk-user-btn {
+  display: none !important;
+}
+
+/* ==========================================================================
+   8. ENHANCED DARK MODE: COMBOBOX SEKOLAH & HASIL PEMERIKSAAN KONTRAST TINGGI
+   (Berlaku untuk Versi Web Desktop, Web Mobile, dan Native APK)
+   ========================================================================== */
+
+/* A. Searchable Combobox Sekolah & Dropdown Filter di Mode Gelap */
+body.dark-mode .combobox-trigger,
+.dark-mode .combobox-trigger,
+html.dark-mode .combobox-trigger,
+body.dark-mode #comboboxSekolahTrigger,
+.dark-mode #comboboxSekolahTrigger {
+  background: #1e293b !important;
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.dark-mode .combobox-label-text,
+.dark-mode .combobox-label-text,
+html.dark-mode .combobox-label-text,
+body.dark-mode #comboboxSekolahLabel,
+.dark-mode #comboboxSekolahLabel {
+  color: #f8fafc !important;
+}
+
+body.dark-mode .combobox-trigger .combobox-icon-search,
+.dark-mode .combobox-trigger .combobox-icon-search {
+  color: #818cf8 !important;
+}
+
+body.dark-mode .combobox-dropdown-panel,
+.dark-mode .combobox-dropdown-panel,
+html.dark-mode .combobox-dropdown-panel {
+  background: #1e293b !important;
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55) !important;
+}
+
+body.dark-mode .combobox-search-box,
+.dark-mode .combobox-search-box {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+body.dark-mode .combobox-search-input,
+.dark-mode .combobox-search-input,
+body.dark-mode #inputSearchSekolahDropdown,
+.dark-mode #inputSearchSekolahDropdown {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #ffffff !important;
+}
+
+body.dark-mode .combobox-search-input::placeholder,
+.dark-mode .combobox-search-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+body.dark-mode .combobox-option-item,
+.dark-mode .combobox-option-item {
+  background: transparent !important;
+  color: #cbd5e1 !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+body.dark-mode .combobox-option-item:hover,
+body.dark-mode .combobox-option-item.highlighted,
+.dark-mode .combobox-option-item:hover,
+.dark-mode .combobox-option-item.highlighted {
+  background: #334155 !important;
+  color: #ffffff !important;
+}
+
+body.dark-mode .combobox-option-item.selected,
+.dark-mode .combobox-option-item.selected {
+  background: #312e81 !important;
+  color: #c7d2fe !important;
+}
+
+body.dark-mode .combobox-group-header,
+.dark-mode .combobox-group-header {
+  background: #0f172a !important;
+  color: #94a3b8 !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+/* B. Hasil Pemeriksaan Siswa & Pasien (Antro, TD, Lab, Gula, Mata, Gigi, Telinga, Kuku, Kebugaran, Merokok, Rujukan) */
+body.dark-mode #sekolahDataTable tbody tr td:nth-child(5) span,
+body.dark-mode .simpus-table-wrapper td span[style*="border-radius: 6px"],
+body.dark-mode .simpus-table-wrapper td span[style*="border-radius:6px"],
+.dark-mode #sekolahDataTable tbody tr td:nth-child(5) span,
+.dark-mode .simpus-table-wrapper td span[style*="border-radius: 6px"],
+.dark-mode .simpus-table-wrapper td span[style*="border-radius:6px"] {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+}
+
+body.dark-mode #sekolahDataTable tbody tr td:nth-child(5) span strong,
+.dark-mode #sekolahDataTable tbody tr td:nth-child(5) span strong {
+  color: #38bdf8 !important;
+}
+
+/* Spesifik Kategori Warna di Mode Gelap */
+body.dark-mode span[style*="background: #ecfdf5"],
+body.dark-mode span[style*="background:#ecfdf5"],
+.dark-mode span[style*="background: #ecfdf5"],
+.dark-mode span[style*="background:#ecfdf5"] {
+  background: rgba(16, 185, 129, 0.22) !important;
+  border: 1px solid rgba(52, 211, 153, 0.5) !important;
+  color: #6ee7b7 !important;
+}
+body.dark-mode span[style*="background: #ecfdf5"] strong,
+.dark-mode span[style*="background: #ecfdf5"] strong {
+  color: #34d399 !important;
+}
+
+body.dark-mode span[style*="background: #eff6ff"],
+body.dark-mode span[style*="background:#eff6ff"],
+.dark-mode span[style*="background: #eff6ff"],
+.dark-mode span[style*="background:#eff6ff"] {
+  background: rgba(59, 130, 246, 0.22) !important;
+  border: 1px solid rgba(96, 165, 250, 0.5) !important;
+  color: #93c5fd !important;
+}
+body.dark-mode span[style*="background: #eff6ff"] strong,
+.dark-mode span[style*="background: #eff6ff"] strong {
+  color: #60a5fa !important;
+}
+
+body.dark-mode span[style*="background: #fdf2f8"],
+body.dark-mode span[style*="background:#fdf2f8"],
+body.dark-mode span[style*="background: #fdf4ff"],
+body.dark-mode span[style*="background:#fdf4ff"],
+.dark-mode span[style*="background: #fdf2f8"],
+.dark-mode span[style*="background:#fdf2f8"],
+.dark-mode span[style*="background: #fdf4ff"],
+.dark-mode span[style*="background:#fdf4ff"] {
+  background: rgba(236, 72, 153, 0.22) !important;
+  border: 1px solid rgba(244, 114, 182, 0.5) !important;
+  color: #fbcfe8 !important;
+}
+body.dark-mode span[style*="background: #fdf2f8"] strong,
+body.dark-mode span[style*="background: #fdf4ff"] strong,
+.dark-mode span[style*="background: #fdf2f8"] strong,
+.dark-mode span[style*="background: #fdf4ff"] strong {
+  color: #f472b6 !important;
+}
+
+body.dark-mode span[style*="background: #fffbeb"],
+body.dark-mode span[style*="background:#fffbeb"],
+body.dark-mode span[style*="background: #fefce8"],
+body.dark-mode span[style*="background:#fefce8"],
+.dark-mode span[style*="background: #fffbeb"],
+.dark-mode span[style*="background:#fffbeb"],
+.dark-mode span[style*="background: #fefce8"],
+.dark-mode span[style*="background:#fefce8"] {
+  background: rgba(245, 158, 11, 0.22) !important;
+  border: 1px solid rgba(251, 191, 36, 0.5) !important;
+  color: #fef08a !important;
+}
+body.dark-mode span[style*="background: #fffbeb"] strong,
+body.dark-mode span[style*="background: #fefce8"] strong,
+.dark-mode span[style*="background: #fffbeb"] strong,
+.dark-mode span[style*="background: #fefce8"] strong {
+  color: #fbbf24 !important;
+}
+
+body.dark-mode span[style*="background: #f0fdfa"],
+body.dark-mode span[style*="background:#f0fdfa"],
+.dark-mode span[style*="background: #f0fdfa"],
+.dark-mode span[style*="background:#f0fdfa"] {
+  background: rgba(13, 148, 136, 0.22) !important;
+  border: 1px solid rgba(45, 212, 191, 0.5) !important;
+  color: #99f6e4 !important;
+}
+body.dark-mode span[style*="background: #f0fdfa"] strong,
+.dark-mode span[style*="background: #f0fdfa"] strong {
+  color: #2dd4bf !important;
+}
+
+body.dark-mode span[style*="background: #fef2f2"],
+body.dark-mode span[style*="background:#fef2f2"],
+body.dark-mode span[style*="background: #fff1f2"],
+body.dark-mode span[style*="background:#fff1f2"],
+.dark-mode span[style*="background: #fef2f2"],
+.dark-mode span[style*="background:#fef2f2"],
+.dark-mode span[style*="background: #fff1f2"],
+.dark-mode span[style*="background:#fff1f2"] {
+  background: rgba(239, 68, 68, 0.22) !important;
+  border: 1px solid rgba(248, 113, 113, 0.5) !important;
+  color: #fca5a5 !important;
+}
+body.dark-mode span[style*="background: #fef2f2"] strong,
+body.dark-mode span[style*="background: #fff1f2"] strong,
+.dark-mode span[style*="background: #fef2f2"] strong,
+.dark-mode span[style*="background: #fff1f2"] strong {
+  color: #f87171 !important;
+}
+
+body.dark-mode span[style*="background: #fff7ed"],
+body.dark-mode span[style*="background:#fff7ed"],
+.dark-mode span[style*="background: #fff7ed"],
+.dark-mode span[style*="background:#fff7ed"] {
+  background: rgba(234, 88, 12, 0.22) !important;
+  border: 1px solid rgba(251, 146, 60, 0.5) !important;
+  color: #fed7aa !important;
+}
+
+/* Checklist Status Badges (Antro, Vital, Lab, Organ) Dark Mode */
+body.dark-mode .status-check-badge.antro, .dark-mode .status-check-badge.antro {
+  background: rgba(16, 185, 129, 0.25) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+}
+body.dark-mode .status-check-badge.vital, .dark-mode .status-check-badge.vital {
+  background: rgba(59, 130, 246, 0.25) !important;
+  color: #60a5fa !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
+}
+body.dark-mode .status-check-badge.lab, .dark-mode .status-check-badge.lab {
+  background: rgba(236, 72, 153, 0.25) !important;
+  color: #f472b6 !important;
+  border-color: rgba(236, 72, 153, 0.5) !important;
+}
+body.dark-mode .status-check-badge.organ, .dark-mode .status-check-badge.organ {
+  background: rgba(13, 148, 136, 0.25) !important;
+  color: #2dd4bf !important;
+  border-color: rgba(13, 148, 136, 0.5) !important;
+}
+body.dark-mode .status-check-badge.kesimpulan, .dark-mode .status-check-badge.kesimpulan {
+  background: rgba(245, 158, 11, 0.25) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+}
+
+/* Status Utama di Dark Mode */
+body.dark-mode .badge[style*="#d1fae5"], .dark-mode .badge[style*="#d1fae5"] {
+  background: rgba(16, 185, 129, 0.25) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+}
+body.dark-mode .badge[style*="#dbeafe"], .dark-mode .badge[style*="#dbeafe"] {
+  background: rgba(59, 130, 246, 0.25) !important;
+  color: #60a5fa !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
+}
+
+/* Tombol Load More Pagination Mobile */
+.mobile-load-more-card {
+  text-align: center;
+  padding: 14px 10px;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+  margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+body.dark-mode .mobile-load-more-card,
+.dark-mode .mobile-load-more-card {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+/* Modal Manajemen Menu Responsive Mobile */
+#modalMenuConfigOverlay .modal-container {
+  width: 95vw !important;
+  max-width: 900px !important;
+}
+
+@media (max-width: 768px) {
+  #modalMenuConfigOverlay .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  #modalMenuConfigOverlay .data-table {
+    min-width: 620px !important;
+  }
+}
+
+/* ==========================================================================
+   APK CHECK UPDATE SCREEN (MODERN MOBILE SPLASH / UPDATE CHECKER)
+   ========================================================================== */
+.apk-update-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: radial-gradient(circle at 50% 20%, #064e3b 0%, #0f172a 65%, #020617 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: #f8fafc;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.apk-update-screen.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.apk-update-backdrop {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(16, 185, 129, 0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+.apk-update-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.apk-update-branding {
+  margin-bottom: 28px;
+}
+
+.apk-update-logo-wrapper {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.apk-update-logo {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  object-fit: contain;
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
+  position: relative;
+  z-index: 3;
+}
+
+.apk-update-radar {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  border: 2px solid rgba(16, 185, 129, 0.4);
+  animation: apkRadarPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes apkRadarPulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.18); opacity: 0.3; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+.apk-update-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #ffffff 40%, #6ee7b7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.apk-update-subtitle {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  margin: 4px 0 0;
+  font-weight: 500;
+}
+
+.apk-update-card {
+  width: 100%;
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 24px 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box;
+}
+
+.apk-update-state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.apk-update-spinner-ring {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.apk-update-spin-icon {
+  font-size: 1.8rem;
+  color: #10b981;
+  animation: apkSpin 1.4s linear infinite;
+}
+
+@keyframes apkSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.apk-update-icon-success {
+  font-size: 3rem;
+  color: #10b981;
+  margin-bottom: 10px;
+  animation: apkPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.apk-update-icon-warn {
+  font-size: 3rem;
+  color: #38bdf8;
+  margin-bottom: 10px;
+  animation: apkPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes apkPopIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.apk-update-msg-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #f1f5f9;
+}
+
+.apk-update-msg-desc {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin-bottom: 16px;
+  line-height: 1.4;
+  max-width: 280px;
+}
+
+.apk-update-progress-bar {
+  width: 80%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.apk-update-progress-fill {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, #10b981, #38bdf8);
+  border-radius: 99px;
+  animation: apkProgressIndeterminate 1.5s infinite ease-in-out;
+}
+
+@keyframes apkProgressIndeterminate {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(120%); }
+  100% { transform: translateX(250%); }
+}
+
+.apk-update-ver-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.apk-update-ver-tag.success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.apk-update-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.apk-update-ver-tag.old {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+  text-decoration: line-through;
+}
+
+.apk-update-ver-tag.new {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.apk-update-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.btn-apk-update-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff !important;
+  font-size: 0.92rem;
+  font-weight: 700;
+  border-radius: 12px;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+  box-sizing: border-box;
+}
+
+.btn-apk-update-secondary {
+  width: 100%;
+  padding: 11px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.apk-update-skip-btn {
+  margin-top: 24px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.apk-update-skip-btn:hover,
+.apk-update-skip-btn:active {
+  color: #cbd5e1;
+}
+
+
+
 
 

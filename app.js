@@ -961,6 +961,10 @@ function setupUserSessionUI() {
   if (avatarEl) {
     const initials = savedName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     avatarEl.textContent = initials;
+    const apkAvatarEl = document.getElementById('apkHeaderAvatarText');
+    if (apkAvatarEl) apkAvatarEl.textContent = initials;
+    const apkSubEl = document.getElementById('apkHeaderSubText');
+    if (apkSubEl) apkSubEl.textContent = savedName || 'Puskesmas Banjaran Kota';
   }
 
   // Multi-Portal Menu Scoping & Empty State Handling
@@ -3331,6 +3335,10 @@ function switchView(viewId) {
   }
 
   document.querySelectorAll('.nav-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-view') === viewId);
+  });
+
+  document.querySelectorAll('.apk-nav-btn').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-view') === viewId);
   });
 
@@ -28392,6 +28400,14 @@ window.handleAndroidBackButton = function () {
       }
     }
 
+    // G. Jika dalam mode APK dan sedang di tab lain (selain Beranda), kembali ke Beranda dulu
+    const activeNavBtn = document.querySelector('.apk-nav-btn.active, .nav-tab-btn.active');
+    const currentViewName = activeNavBtn ? activeNavBtn.getAttribute('data-view') : '';
+    if (currentViewName && currentViewName !== 'dashboard') {
+      switchView('dashboard');
+      return 'handled';
+    }
+
     return 'unhandled';
   } catch (err) {
     console.warn('[AndroidBackButton] Error handling back button:', err);
@@ -28552,9 +28568,9 @@ let currentOcrTarget = 'pasien';
  * 1. Pemicu Scan OCR Identitas (Pasien, Wali, Siswa, dsb)
  * Menampilkan dialog pilihan Kamera Langsung atau Galeri/File
  */
-window.triggerOcrIdentityScan = function(target = 'pasien') {
+window.triggerOcrIdentityScan = function (target = 'pasien') {
   currentOcrTarget = target;
-  
+
   let targetLabel = 'Pasien';
   if (target === 'wali') targetLabel = 'Wali';
   else if (target === 'periksa_siswa') targetLabel = 'Siswa (Pemeriksaan)';
@@ -28621,7 +28637,7 @@ window.triggerOcrIdentityScan = function(target = 'pasien') {
 /**
  * 2. Handler Saat Berkas Foto Dipilih (dari Kamera atau Galeri)
  */
-window.handleOcrFileSelected = function(event) {
+window.handleOcrFileSelected = function (event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
   processOcrIdentity(file, currentOcrTarget);
@@ -29045,7 +29061,7 @@ function applyOcrDataToForm(ocrResponse, target, finalNik) {
 /**
  * 7. Preview Gambar Hasil Scan
  */
-window.viewOcrCapturedImage = function(encodedDataUrl) {
+window.viewOcrCapturedImage = function (encodedDataUrl) {
   const url = decodeURIComponent(encodedDataUrl);
   Swal.fire({
     title: 'Foto Kartu Identitas',
@@ -29054,5 +29070,130 @@ window.viewOcrCapturedImage = function(encodedDataUrl) {
     confirmButtonText: 'Tutup',
     confirmButtonColor: '#7c3aed',
     customClass: { popup: 'rounded-2xl' }
+  });
+};
+
+// =========================================================================
+// 5. NATIVE MOBILE APK CONTROLLER & BOTTOM NAVIGATION LOGIC
+// =========================================================================
+
+/**
+ * Deteksi dan aktifkan layout Native Mobile APK
+ */
+(function initApkModeDetection() {
+  const isCapacitor = Boolean(
+    (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+    window.location.protocol === 'capacitor:' ||
+    window.location.hostname === 'localhost' ||
+    (navigator.userAgent && navigator.userAgent.includes('Capacitor')) ||
+    window.location.search.includes('apk=1') ||
+    window.location.search.includes('native=1') ||
+    window.location.search.includes('mobile=1')
+  );
+
+  if (isCapacitor) {
+    document.documentElement.classList.add('is-native-apk');
+    document.body.classList.add('is-native-apk');
+    window.IS_NATIVE_APK = true;
+    console.log('[NativeAPK] Mode Native Mobile APK Aktif');
+  }
+
+  // Update status online / offline di header APK
+  function updateApkNetworkBadge() {
+    const dot = document.getElementById('apkHeaderPulseDot');
+    const label = document.getElementById('apkHeaderStatusLabel');
+    const chip = document.getElementById('apkHeaderOnlineChip');
+    if (!dot || !label) return;
+
+    if (navigator.onLine) {
+      dot.className = 'apk-pulse-dot';
+      label.textContent = 'Online';
+      if (chip) chip.style.background = '#f0fdf4';
+    } else {
+      dot.className = 'apk-pulse-dot offline';
+      label.textContent = 'Offline';
+      if (chip) chip.style.background = '#fef2f2';
+    }
+  }
+
+  window.addEventListener('online', updateApkNetworkBadge);
+  window.addEventListener('offline', updateApkNetworkBadge);
+  document.addEventListener('DOMContentLoaded', updateApkNetworkBadge);
+})();
+
+/**
+ * Handler Klik Item Navigasi Bawah APK
+ */
+window.handleApkNavClick = function (viewId) {
+  if (window.navigator?.vibrate) {
+    try { window.navigator.vibrate(20); } catch (_) { }
+  }
+  if (typeof switchView === 'function') {
+    switchView(viewId);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+/**
+ * Bottom Sheet / Dialog Menu Petugas untuk APK
+ */
+window.openApkUserSheet = function (e) {
+  if (e) e.stopPropagation();
+  const userName = sessionStorage.getItem('ckg_user_name') || 'Petugas CKG';
+  const userRole = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toUpperCase();
+  const isDark = document.body.classList.contains('dark-mode');
+
+  if (!window.Swal) return;
+
+  const initials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+  Swal.fire({
+    title: '',
+    html: `
+      <div style="text-align: left; padding: 4px;">
+        <div style="display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #e2e8f0; margin-bottom: 14px;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 4px 10px rgba(37,99,235,0.3);">
+            ${escapeHtml(initials)}
+          </div>
+          <div style="overflow: hidden;">
+            <div style="font-weight: 800; font-size: 15px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(userName)}</div>
+            <div style="display: flex; gap: 6px; align-items: center; margin-top: 3px;">
+              <span class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 12px;">${escapeHtml(userRole)}</span>
+              <span style="font-size: 11px; color: #64748b;">Puskesmas Banjaran</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Menu Tambahan</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+          <button type="button" class="btn" onclick="Swal.close(); switchView('data-records');" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; font-size: 12px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 8px; justify-content: flex-start;">
+            <i class="bi bi-folder-symlink-fill" style="color: #2563eb; font-size: 15px;"></i> Records
+          </button>
+          <button type="button" class="btn" onclick="Swal.close(); switchView('alat-bnhp');" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; font-size: 12px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 8px; justify-content: flex-start;">
+            <i class="bi bi-box-seam-fill" style="color: #059669; font-size: 15px;"></i> Alat & BNHP
+          </button>
+          <button type="button" class="btn" onclick="Swal.close(); switchView('laporan');" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; font-size: 12px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 8px; justify-content: flex-start;">
+            <i class="bi bi-file-earmark-bar-graph" style="color: #d97706; font-size: 15px;"></i> Laporan
+          </button>
+          <button type="button" class="btn" onclick="Swal.close(); openAccountSettingsModal();" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; font-size: 12px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 8px; justify-content: flex-start;">
+            <i class="bi bi-gear-fill" style="color: #64748b; font-size: 15px;"></i> Pengaturan
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn" onclick="Swal.close(); toggleDarkMode();" style="flex: 1; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px; font-size: 12.5px; font-weight: 700; color: #334155;">
+            <i class="bi bi-moon-stars-fill" style="color: #f59e0b;"></i> ${isDark ? 'Mode Terang' : 'Mode Gelap'}
+          </button>
+          <button type="button" class="btn" onclick="Swal.close(); handleLogout();" style="flex: 1; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px; font-size: 12.5px; font-weight: 700; color: #dc2626;">
+            <i class="bi bi-power"></i> Keluar
+          </button>
+        </div>
+      </div>
+    `,
+    showConfirmButton: false,
+    showCancelButton: true,
+    cancelButtonText: 'Tutup',
+    cancelButtonColor: '#94a3b8',
+    customClass: { popup: 'rounded-2xl shadow-2xl' }
   });
 };

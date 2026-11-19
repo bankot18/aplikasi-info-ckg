@@ -137,7 +137,7 @@
     // Filter menu berdasarkan izin role
     const allowedMenus = masterMenus.filter(m => window.isMenuAllowedForCurrentRole(m.id));
 
-    listEl.innerHTML = allowedMenus.map(m => {
+    let menuHtml = allowedMenus.map(m => {
       const isActive = (m.id === activeViewId);
       const badgeHtml = m.badge
         ? `<span class="badge" style="background: linear-gradient(135deg, #06b6d4, #2563eb); font-size: 9px; padding: 2px 6px; border-radius: 8px; color: #fff; margin-left: auto;">${m.badge}</span>`
@@ -150,6 +150,23 @@
         </button>
       `;
     }).join('');
+
+    // Khusus Admin di APK: Sediakan Menu Management untuk Mengaktifkan/Menonaktifkan Menu
+    const isAdmin = (userRole.toLowerCase() === 'admin');
+    if (isAdmin) {
+      menuHtml += `
+        <div style="margin: 14px 4px 6px 4px; padding-top: 10px; border-top: 1.5px dashed #cbd5e1;">
+          <div style="font-size: 11px; font-weight: 800; color: #7c3aed; margin-bottom: 6px; letter-spacing: 0.3px;">PENGATURAN MENU ADMIN</div>
+          <button type="button" class="apk-sidebar-item" onclick="window.closeApkSidebar(); if(typeof openMenuConfigModal === 'function') openMenuConfigModal();" style="background: rgba(124, 58, 237, 0.08); border: 1.5px solid rgba(124, 58, 237, 0.25); border-radius: 12px; margin-bottom: 4px;">
+            <i class="bi bi-sliders2-vertical" style="color: #7c3aed; font-size: 18px;"></i>
+            <span style="font-weight: 800; color: #6d28d9;">Kelola Menu (Aktif/Nonaktif)</span>
+            <span class="badge" style="background: #7c3aed; color: #fff; font-size: 8.5px; padding: 2px 6px; border-radius: 6px; margin-left: auto;">ADMIN</span>
+          </button>
+        </div>
+      `;
+    }
+
+    listEl.innerHTML = menuHtml;
   };
 
   /* ==========================================================================
@@ -244,7 +261,7 @@
           </div>
           <label style="display: flex; align-items: center; gap: 8px; justify-content: center; font-size: 13px; font-weight: 600; color: ${isDark ? '#cbd5e1' : '#334155'}; cursor: pointer; user-select: none;">
             <input type="checkbox" id="chkRememberGatePass" checked style="width: 17px; height: 17px; accent-color: #059669; cursor: pointer;">
-            <span>Ingat Sandi di HP Ini (Ingat Saya)</span>
+            <span>Ingat Saya</span>
           </label>
         </div>
       `,
@@ -371,7 +388,7 @@
           </div>
           <label style="display: flex; align-items: center; gap: 8px; justify-content: center; font-size: 13px; font-weight: 600; color: ${isDark ? '#cbd5e1' : '#334155'}; cursor: pointer; user-select: none;">
             <input type="checkbox" id="chkRememberUserPass" ${savedPass ? 'checked' : 'checked'} style="width: 17px; height: 17px; accent-color: #2563eb; cursor: pointer;">
-            <span>Ingat Sandi Saya di HP Ini (Ingat Saya)</span>
+            <span>Ingat Saya</span>
           </label>
         </div>
       `,
@@ -700,11 +717,262 @@
     } catch (_) { }
   };
 
+  /* ==========================================================================
+     7. PAGINATION MOBILE & APK: DEFAULT 5 DATA SISWA & PASIEN (ANTI-LAG)
+     ========================================================================== */
+  window.sekolahMobileLimit = 5;
+  window.ckgMobileLimit = 5;
+
+  function isMobileOrApkView() {
+    return (window.innerWidth <= 768) ||
+           document.documentElement.classList.contains('is-native-apk') ||
+           (document.body && document.body.classList.contains('is-native-apk')) ||
+           Boolean(window.IS_NATIVE_APK);
+  }
+
+  // Hook renderSekolahView
+  const origRenderSekolahView = window.renderSekolahView;
+  window.renderSekolahView = function() {
+    if (typeof origRenderSekolahView === 'function') {
+      origRenderSekolahView();
+    }
+
+    if (!isMobileOrApkView()) return;
+
+    const tbody = document.getElementById('tableBodySekolah');
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr:not(.tr-load-more-mobile)'));
+    if (rows.length === 0) return;
+    if (rows.length === 1 && rows[0].querySelector('td[colspan]')) return;
+
+    const totalCount = rows.length;
+    const currentLimit = window.sekolahMobileLimit || 5;
+
+    rows.forEach((row, idx) => {
+      if (idx < currentLimit) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    const existingCard = document.getElementById('sekolahMobileLoadMoreWrapper');
+    if (existingCard) existingCard.remove();
+
+    if (totalCount > currentLimit) {
+      const loadMoreContainer = document.createElement('div');
+      loadMoreContainer.id = 'sekolahMobileLoadMoreWrapper';
+      loadMoreContainer.className = 'mobile-load-more-card';
+      loadMoreContainer.innerHTML = `
+        <div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 8px;">
+          Menampilkan <strong>${Math.min(currentLimit, totalCount)}</strong> dari <strong>${totalCount.toLocaleString('id-ID')}</strong> siswa
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="window.loadMoreSekolahRecords(5)" style="padding: 7px 16px; border-radius: 10px; font-weight: 700; background: linear-gradient(135deg, #4f46e5, #4338ca); color: #fff; border: none; box-shadow: 0 4px 10px rgba(79,70,229,0.25); cursor: pointer;">
+            <i class="bi bi-chevron-down"></i> Tampilkan 5 Lagi
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.loadMoreSekolahRecords(20)" style="padding: 7px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">
+            +20 Siswa
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.loadMoreSekolahRecords('all')" style="padding: 7px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">
+            Semua (${totalCount.toLocaleString('id-ID')})
+          </button>
+        </div>
+      `;
+      const tableWrapper = tbody.closest('.simpus-table-wrapper') || tbody.parentElement;
+      if (tableWrapper && tableWrapper.parentElement) {
+        tableWrapper.parentElement.appendChild(loadMoreContainer);
+      }
+    }
+  };
+
+  window.loadMoreSekolahRecords = function(amount) {
+    if (amount === 'all') {
+      window.sekolahMobileLimit = 999999;
+    } else {
+      window.sekolahMobileLimit = (window.sekolahMobileLimit || 5) + Number(amount);
+    }
+    if (typeof origRenderSekolahView === 'function') origRenderSekolahView();
+    window.renderSekolahView();
+  };
+
+  // Hook renderCkgGratisTable
+  const origRenderCkgGratisTable = window.renderCkgGratisTable;
+  window.renderCkgGratisTable = function() {
+    if (typeof origRenderCkgGratisTable === 'function') {
+      origRenderCkgGratisTable();
+    }
+
+    if (!isMobileOrApkView()) return;
+
+    const tbody = document.getElementById('tableBodyCkgGratis');
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll('tr:not(.tr-load-more-mobile)'));
+    if (rows.length === 0) return;
+    if (rows.length === 1 && rows[0].querySelector('td[colspan]')) return;
+
+    const totalCount = rows.length;
+    const currentLimit = window.ckgMobileLimit || 5;
+
+    rows.forEach((row, idx) => {
+      if (idx < currentLimit) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    const existingCard = document.getElementById('ckgMobileLoadMoreWrapper');
+    if (existingCard) existingCard.remove();
+
+    if (totalCount > currentLimit) {
+      const loadMoreContainer = document.createElement('div');
+      loadMoreContainer.id = 'ckgMobileLoadMoreWrapper';
+      loadMoreContainer.className = 'mobile-load-more-card';
+      loadMoreContainer.innerHTML = `
+        <div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 8px;">
+          Menampilkan <strong>${Math.min(currentLimit, totalCount)}</strong> dari <strong>${totalCount.toLocaleString('id-ID')}</strong> pasien
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="window.loadMoreCkgRecords(5)" style="padding: 7px 16px; border-radius: 10px; font-weight: 700; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; box-shadow: 0 4px 10px rgba(16,185,129,0.25); cursor: pointer;">
+            <i class="bi bi-chevron-down"></i> Tampilkan 5 Lagi
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.loadMoreCkgRecords(20)" style="padding: 7px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">
+            +20 Pasien
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.loadMoreCkgRecords('all')" style="padding: 7px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">
+            Semua (${totalCount.toLocaleString('id-ID')})
+          </button>
+        </div>
+      `;
+      const tableWrapper = tbody.closest('.simpus-table-wrapper') || tbody.parentElement;
+      if (tableWrapper && tableWrapper.parentElement) {
+        tableWrapper.parentElement.appendChild(loadMoreContainer);
+      }
+    }
+  };
+
+  window.loadMoreCkgRecords = function(amount) {
+    if (amount === 'all') {
+      window.ckgMobileLimit = 999999;
+    } else {
+      window.ckgMobileLimit = (window.ckgMobileLimit || 5) + Number(amount);
+    }
+    if (typeof origRenderCkgGratisTable === 'function') origRenderCkgGratisTable();
+    window.renderCkgGratisTable();
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
+    // Reset limit ke 5 saat filter sekolah diubah
+    ['filterSelectSekolah', 'filterSelectKelas', 'filterSelectTahun', 'searchSekolahRecords', 'filterSekolahNik'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => { window.sekolahMobileLimit = 5; });
+        if (id === 'searchSekolahRecords') {
+          el.addEventListener('input', () => { window.sekolahMobileLimit = 5; });
+        }
+      }
+    });
+
     setTimeout(() => {
       window.applyApkBottomNavRoleVisibility();
       window.renderApkSidebarMenu();
     }, 400);
+
+    // Inisialisasi Layar Check Update Khusus APK
+    if (isCapacitorEnv) {
+      window.initApkCheckUpdate();
+    }
   });
 
+  /* ==========================================================================
+     8. LAYAR PEMERIKSAAN PEMBARUAN (CHECK UPDATE) KHUSUS APK ANDROID
+     ========================================================================== */
+  const CURRENT_APK_VERSION = '1.0.0';
+
+  window.skipApkUpdateCheck = function() {
+    const screen = document.getElementById('apkCheckUpdateScreen');
+    const portal = document.getElementById('portalSelectionContainer');
+    if (screen) {
+      screen.classList.add('fade-out');
+      setTimeout(() => {
+        screen.style.display = 'none';
+        screen.classList.remove('fade-out');
+      }, 400);
+    }
+    if (portal) {
+      portal.style.display = '';
+      portal.classList.remove('hidden');
+    }
+    sessionStorage.setItem('apk_update_checked', 'true');
+  };
+
+  window.initApkCheckUpdate = function() {
+    // Jika sudah pernah cek dalam sesi aktif ini, langsung tampilkan portal
+    if (sessionStorage.getItem('apk_update_checked') === 'true') {
+      return;
+    }
+
+    const screen = document.getElementById('apkCheckUpdateScreen');
+    const portal = document.getElementById('portalSelectionContainer');
+    if (!screen) return;
+
+    // Sembunyikan portal sementara dan tampilkan layar check update
+    if (portal) portal.style.display = 'none';
+    screen.style.display = 'flex';
+
+    const boxChecking = document.getElementById('apkUpdateChecking');
+    const boxLatest = document.getElementById('apkUpdateLatest');
+    const boxAvailable = document.getElementById('apkUpdateAvailable');
+
+    if (boxChecking) boxChecking.style.display = 'flex';
+    if (boxLatest) boxLatest.style.display = 'none';
+    if (boxAvailable) boxAvailable.style.display = 'none';
+
+    // Fetch versi ke server dengan timeout 2500ms
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+    fetch('/api/apk/version', { signal: controller.signal, cache: 'no-store' })
+      .then(res => res.json())
+      .then(data => {
+        clearTimeout(timeoutId);
+        if (data && data.success && data.updateAvailable && data.latestVersion && data.latestVersion !== CURRENT_APK_VERSION) {
+          // Ada versi baru
+          if (boxChecking) boxChecking.style.display = 'none';
+          if (boxAvailable) {
+            boxAvailable.style.display = 'flex';
+            const oldEl = document.getElementById('apkUpdateOldVer');
+            const newEl = document.getElementById('apkUpdateNewVer');
+            const noteEl = document.getElementById('apkUpdateReleaseNotes');
+            const btnDl = document.getElementById('btnDownloadApkUpdate');
+            if (oldEl) oldEl.textContent = 'v' + CURRENT_APK_VERSION;
+            if (newEl) newEl.textContent = 'v' + data.latestVersion;
+            if (noteEl && data.releaseNotes) noteEl.textContent = data.releaseNotes;
+            if (btnDl && data.downloadUrl) btnDl.href = data.downloadUrl;
+          }
+        } else {
+          // Sudah versi terbaru
+          showLatestAndProceed();
+        }
+      })
+      .catch(err => {
+        console.log('[ApkCheckUpdate] Offline atau tidak dapat menghubungi server pembaruan:', err);
+        // Fallback anggap versi saat ini sudah aman dan lanjut
+        showLatestAndProceed();
+      });
+
+    function showLatestAndProceed() {
+      if (boxChecking) boxChecking.style.display = 'none';
+      if (boxLatest) boxLatest.style.display = 'flex';
+      // Berikan jeda sejenak agar user melihat tanda centang hijau
+      setTimeout(() => {
+        window.skipApkUpdateCheck();
+      }, 1200);
+    }
+  };
+
 })();
+

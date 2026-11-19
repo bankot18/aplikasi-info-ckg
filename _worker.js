@@ -20,6 +20,27 @@ export default {
       return new Response(JSON.stringify({ success: true, timestamp: Date.now() }), { headers: corsHeaders });
     }
 
+    // ROUTE: /api/apk/version (Pengecekan Pembaruan Aplikasi APK Mobile)
+    if (url.pathname === '/api/apk/version') {
+      return new Response(JSON.stringify({
+        success: true,
+        latestVersion: '1.0.0',
+        versionCode: 1,
+        minVersion: '1.0.0',
+        updateAvailable: false,
+        downloadUrl: 'https://ckgbankot.web.id/download/app-release.apk',
+        releaseNotes: 'Pembaruan stabilitas CKG Mobile, optimasi mode gelap, dan batasan 5 baris anti-lag.',
+        releaseDate: '2026-11-20',
+        timestamp: Date.now()
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, no-cache, must-revalidate'
+        }
+      });
+    }
+
     // 1. ROUTE: /api/users
     if (url.pathname === '/api/users' || url.pathname.startsWith('/api/users/')) {
       if (!env.DB) {
