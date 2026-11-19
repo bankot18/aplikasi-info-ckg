@@ -29,12 +29,40 @@
 
   <!-- Application Stylesheet & SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-  <link rel="stylesheet" href="index.css?v=5.3">
+  <link rel="stylesheet" href="index.css?v=5.4">
 
-  <!-- Chart.js, SweetAlert2 & SheetJS Libraries -->
+  <!-- Chart.js, SweetAlert2, SheetJS & Tesseract OCR Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <!-- Early Native Mobile APK Detector -->
+  <script>
+    (function() {
+      try {
+        var isApk = Boolean(
+          (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+          window.location.protocol === 'capacitor:' ||
+          window.location.hostname === 'localhost' ||
+          (navigator.userAgent && navigator.userAgent.indexOf('Capacitor') !== -1) ||
+          window.location.search.indexOf('apk=1') !== -1 ||
+          window.location.search.indexOf('native=1') !== -1 ||
+          (window.Capacitor && window.Capacitor.platform === 'android')
+        );
+        if (isApk) {
+          document.documentElement.classList.add('is-native-apk');
+          if (document.body) {
+            document.body.classList.add('is-native-apk');
+          } else {
+            document.addEventListener('DOMContentLoaded', function() {
+              if (document.body) document.body.classList.add('is-native-apk');
+            });
+          }
+        }
+      } catch(e) {}
+    })();
+  </script>
 </head>
 
 <body>
@@ -43,16 +71,100 @@
        PORTAL SELECTION GATE CONTAINER (GERBANG UTAMA PILIH AKSES - MODERN REDESIGN)
        ========================================================================== -->
   <div id="portalSelectionContainer" class="portal-gate-container">
-    <!-- Ambient Animated Background Glow Orbs & Technical Grid -->
-    <div class="portal-ambient-orbs" aria-hidden="true">
+    <!-- Ambient Animated Background Glow Orbs & Technical Grid (WEB ONLY) -->
+    <div class="portal-ambient-orbs portal-web-only" aria-hidden="true">
       <div class="ambient-orb ambient-orb-emerald"></div>
       <div class="ambient-orb ambient-orb-blue"></div>
       <div class="ambient-orb ambient-orb-rose"></div>
       <div class="portal-tech-grid"></div>
     </div>
 
-    <!-- Floating Glass Island Header Navbar -->
-    <header class="portal-gate-header">
+    <!-- ===== NATIVE APK PORTAL (Simpel & Mobile-First) ===== -->
+    <div class="apk-portal-view">
+      <div class="apk-portal-header">
+        <img src="logo.png" alt="Logo" class="apk-portal-logo" onerror="this.style.display='none'">
+        <div class="apk-portal-header-text">
+          <h1>CKG Puskesmas</h1>
+          <p>Banjaran Kota</p>
+        </div>
+        <button type="button" class="apk-portal-theme-btn" onclick="toggleDarkMode()" title="Ganti Tema">
+          <i class="bi bi-moon-stars-fill"></i>
+        </button>
+      </div>
+
+      <div class="apk-portal-greeting">
+        <div class="apk-portal-greeting-icon">
+          <i class="bi bi-shield-check"></i>
+        </div>
+        <div>
+          <h2>Portal CKG Mobile</h2>
+          <p>Pilih gerbang akses Anda</p>
+        </div>
+      </div>
+
+      <div class="apk-portal-cards">
+        <!-- Puskesmas -->
+        <button type="button" class="apk-portal-card apk-card-puskesmas" onclick="openPuskesmasGate()">
+          <div class="apk-portal-card-icon" style="background: linear-gradient(135deg, #059669, #10b981);">
+            <i class="bi bi-hospital-fill"></i>
+          </div>
+          <div class="apk-portal-card-info">
+            <span class="apk-portal-card-title">Puskesmas</span>
+            <span class="apk-portal-card-sub">Staf & Tenaga Kesehatan</span>
+          </div>
+          <i class="bi bi-chevron-right apk-portal-card-arrow"></i>
+        </button>
+
+        <!-- Sekolah -->
+        <button type="button" class="apk-portal-card apk-card-sekolah" onclick="openSekolahPortal()">
+          <div class="apk-portal-card-icon" style="background: linear-gradient(135deg, #2563eb, #3b82f6);">
+            <i class="bi bi-mortarboard-fill"></i>
+          </div>
+          <div class="apk-portal-card-info">
+            <span class="apk-portal-card-title">Sekolah</span>
+            <span class="apk-portal-card-sub">Guru UKS & Pembina</span>
+          </div>
+          <i class="bi bi-chevron-right apk-portal-card-arrow"></i>
+        </button>
+
+        <!-- Posyandu -->
+        <button type="button" class="apk-portal-card apk-card-posyandu" onclick="openPosyanduPortal()">
+          <div class="apk-portal-card-icon" style="background: linear-gradient(135deg, #e11d48, #f43f5e);">
+            <i class="bi bi-heart-pulse-fill"></i>
+          </div>
+          <div class="apk-portal-card-info">
+            <span class="apk-portal-card-title">Posyandu</span>
+            <span class="apk-portal-card-sub">Kader Kesehatan Wilayah</span>
+          </div>
+          <i class="bi bi-chevron-right apk-portal-card-arrow"></i>
+        </button>
+      </div>
+
+      <div class="apk-portal-stats">
+        <div class="apk-portal-stat-item">
+          <i class="bi bi-hospital"></i>
+          <span>1 Puskesmas</span>
+        </div>
+        <div class="apk-portal-stat-divider"></div>
+        <div class="apk-portal-stat-item">
+          <i class="bi bi-mortarboard"></i>
+          <span>39+ Sekolah</span>
+        </div>
+        <div class="apk-portal-stat-divider"></div>
+        <div class="apk-portal-stat-item">
+          <i class="bi bi-geo-alt"></i>
+          <span>60+ Posyandu</span>
+        </div>
+      </div>
+
+      <div class="apk-portal-footer">
+        <span>© 2026 Puskesmas Banjaran Kota</span>
+        <span class="apk-portal-footer-badge"><i class="bi bi-shield-check"></i> Standar ILP Kemenkes</span>
+      </div>
+    </div>
+
+    <!-- ===== WEB PORTAL (Original Desktop/Mobile Web View) ===== -->
+    <header class="portal-gate-header portal-web-only">
       <div class="portal-gate-brand">
         <div class="portal-brand-logo-wrap">
           <img src="logo.png" alt="Logo Puskesmas Banjaran Kota" onerror="this.style.display='none'">
@@ -80,9 +192,7 @@
       </div>
     </header>
 
-    <!-- Main Hero & Selection Grid -->
-    <main class="portal-gate-main">
-      <!-- Hero Top Showcase -->
+    <main class="portal-gate-main portal-web-only">
       <div class="portal-hero-top">
         <div class="portal-hero-tag">
           <i class="bi bi-shield-check"></i>
@@ -106,10 +216,8 @@
         </p>
       </div>
 
-      <!-- 3 Modern Interactive Portal Cards -->
       <div class="portal-cards-grid">
 
-        <!-- CARD 1: PUSKESMAS BANJARAN KOTA (INTERNAL) -->
         <div class="portal-card card-puskesmas" onclick="openPuskesmasGate()">
           <div class="card-accent-bar"></div>
           <div class="card-glow-layer"></div>
@@ -149,7 +257,6 @@
           </div>
         </div>
 
-        <!-- CARD 2: SEKOLAH (UKS / GURU) -->
         <div class="portal-card card-sekolah" onclick="openSekolahPortal()">
           <div class="card-accent-bar"></div>
           <div class="card-glow-layer"></div>
@@ -189,7 +296,6 @@
           </div>
         </div>
 
-        <!-- CARD 3: POSYANDU / KADER -->
         <div class="portal-card card-posyandu" onclick="openPosyanduPortal()">
           <div class="card-accent-bar"></div>
           <div class="card-glow-layer"></div>
@@ -231,7 +337,6 @@
 
       </div>
 
-      <!-- Scope & Coverage Metrics Bar -->
       <div class="portal-trust-strip">
         <div class="trust-item">
           <div class="trust-icon"><i class="bi bi-hospital"></i></div>
@@ -267,8 +372,7 @@
       </div>
     </main>
 
-    <!-- Modern Glass Footer -->
-    <footer class="portal-gate-footer">
+    <footer class="portal-gate-footer portal-web-only">
       <div class="portal-footer-left">
         <span>© 2026 Puskesmas Banjaran Kota • Sistem Informasi CKG (BNBA)</span>
       </div>
@@ -645,6 +749,69 @@
 
   <!-- MAIN APPLICATION CONTAINER (Hidden until Logged In) -->
   <div id="appMainContainer" style="display: none;">
+
+    <!-- DEDICATED NATIVE MOBILE APK TOP APP BAR (Active in APK mode) -->
+    <header id="apkNativeHeader" class="apk-native-header">
+      <div class="apk-header-left">
+        <button type="button" class="apk-hamburger-btn" onclick="toggleApkSidebar()" title="Buka Menu Samping">
+          <i class="bi bi-list"></i>
+        </button>
+        <img src="logo.png" alt="Logo Puskesmas" class="apk-header-logo">
+        <div class="apk-header-info">
+          <div class="apk-header-app-name">CKG BANJARAN KOTA</div>
+          <div class="apk-header-sub" id="apkHeaderSubText">
+            <span id="apkHeaderRolePill" class="badge" style="background: #eff6ff; color: #1e40af; font-size: 9px; padding: 1px 6px; border-radius: 8px; font-weight: 800;">PETUGAS</span>
+          </div>
+        </div>
+      </div>
+      <div class="apk-header-right">
+        <div class="apk-header-online-chip" id="apkHeaderOnlineChip" title="Status Jaringan">
+          <span class="apk-pulse-dot" id="apkHeaderPulseDot"></span>
+          <span id="apkHeaderStatusLabel">Online</span>
+        </div>
+        <button type="button" class="apk-user-btn" onclick="openApkUserSheet(event)" title="Menu Profil">
+          <span id="apkHeaderAvatarText">MF</span>
+        </button>
+        <button type="button" class="apk-header-logout-btn" onclick="handleLogout()" title="Keluar Akun (Logout)">
+          <i class="bi bi-box-arrow-right"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- APK SIDEBAR OVERLAY & DRAWER -->
+    <div id="apkSidebarOverlay" class="apk-sidebar-overlay" onclick="closeApkSidebar()"></div>
+    <aside id="apkSidebarDrawer" class="apk-sidebar-drawer">
+      <div class="apk-sidebar-header">
+        <div class="apk-sidebar-profile">
+          <div class="apk-sidebar-avatar" id="apkSidebarAvatar">MF</div>
+          <div class="apk-sidebar-info">
+            <h3 id="apkSidebarUserName">Nama Petugas</h3>
+            <span class="apk-sidebar-badge" id="apkSidebarRoleBadge">Petugas</span>
+          </div>
+        </div>
+        <button type="button" class="apk-sidebar-close" onclick="closeApkSidebar()" aria-label="Tutup Menu">&times;</button>
+      </div>
+
+      <div class="apk-sidebar-section-title">Menu Sesuai Role Anda</div>
+      <div class="apk-sidebar-menu-list" id="apkSidebarMenuList">
+        <!-- Dinamis dirender sesuai permission role user -->
+      </div>
+
+      <div class="apk-sidebar-footer">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDarkMode();" style="width: 100%; justify-content: flex-start; padding: 10px 14px; font-size: 13px; font-weight: 700; border-radius: 10px;">
+          <i id="apkSidebarThemeIcon" class="bi bi-moon-stars-fill" style="color: #f59e0b; margin-right: 8px;"></i>
+          <span id="apkSidebarThemeText">Mode Gelap</span>
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="openAccountSettingsModal(); closeApkSidebar();" style="width: 100%; justify-content: flex-start; padding: 10px 14px; font-size: 13px; font-weight: 700; border-radius: 10px;">
+          <i class="bi bi-gear-fill" style="color: #64748b; margin-right: 8px;"></i>
+          <span>Pengaturan Akun</span>
+        </button>
+        <button type="button" class="apk-sidebar-logout-btn" onclick="handleLogout(); closeApkSidebar();">
+          <i class="bi bi-power"></i>
+          <span>Keluar Akun (Logout)</span>
+        </button>
+      </div>
+    </aside>
 
     <!-- Top App Header Bar -->
     <header class="app-header">
@@ -7373,6 +7540,39 @@
     <div class="loading-subtext" id="loadingSubtext">Menghubungkan ke Database Cloudflare D1</div>
   </div>
 
+  <!-- DEDICATED NATIVE MOBILE APK BOTTOM NAVIGATION BAR (Active in APK mode) -->
+  <nav id="apkBottomNav" class="apk-bottom-navigation">
+    <button type="button" class="apk-nav-btn active" data-view="dashboard" onclick="handleApkNavClick('dashboard')">
+      <i class="bi bi-grid-1x2-fill"></i>
+      <span>Beranda</span>
+    </button>
+
+    <button type="button" class="apk-nav-btn" data-view="ckg-gratis" onclick="handleApkNavClick('ckg-gratis')">
+      <i class="bi bi-heart-pulse-fill"></i>
+      <span>Skrining</span>
+    </button>
+
+    <!-- Center Elevated Button: Instant OCR Scan -->
+    <div class="apk-nav-center-wrapper">
+      <button type="button" class="apk-center-ocr-btn" onclick="triggerOcrIdentityScan('pasien')" title="Scan KTP / KK / KIA">
+        <div class="apk-center-ocr-icon">
+          <i class="bi bi-camera-fill"></i>
+        </div>
+        <span class="apk-center-ocr-label">SCAN</span>
+      </button>
+    </div>
+
+    <button type="button" class="apk-nav-btn" data-view="sekolah" onclick="handleApkNavClick('sekolah')">
+      <i class="bi bi-mortarboard-fill"></i>
+      <span>Sekolah</span>
+    </button>
+
+    <button type="button" class="apk-nav-btn" data-view="enco" onclick="handleApkNavClick('enco')">
+      <i class="bi bi-database-fill-check"></i>
+      <span>Bank Data</span>
+    </button>
+  </nav>
+
   <!-- Hidden Inputs for OCR Identity Scanning (Camera & Gallery) -->
   <input type="file" id="ocrCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleOcrFileSelected(event)">
   <input type="file" id="ocrGalleryInput" accept="image/*" style="display:none;" onchange="handleOcrFileSelected(event)">
@@ -7380,8 +7580,9 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=5.3"></script>
+  <script src="app.js?v=5.4"></script>
   <script src="alat-bnhp.js"></script>
+  <script src="apk-bridge.js"></script>
 </body>
 
 </html>

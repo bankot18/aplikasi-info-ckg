@@ -2414,16 +2414,30 @@ Ekstrak data identitas dari foto kartu identitas ini dan format HANYA dalam JSON
 
               const aiVisionResp = await env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
                 prompt: visionPrompt,
-                image: [...bytes],
+                image: Array.from(bytes),
                 max_tokens: 512,
                 temperature: 0.1
               });
 
               if (aiVisionResp && aiVisionResp.response) {
-                const match = aiVisionResp.response.match(/\{[\s\S]*\}/);
+                const rawResp = aiVisionResp.response;
+                const match = rawResp.match(/\{[\s\S]*\}/);
                 if (match) {
-                  extracted = JSON.parse(match[0]);
-                  extracted.ocr_engine = 'Cloudflare Workers AI Llama 3.2 Vision';
+                  try {
+                    extracted = JSON.parse(match[0]);
+                    extracted.ocr_engine = 'Cloudflare Workers AI Llama 3.2 Vision';
+                  } catch (_) { }
+                }
+                if (!extracted) {
+                  // Fallback: ekstrak NIK langsung dari teks respon vision
+                  const nikRegexMatch = rawResp.match(/\b\d{16}\b/);
+                  if (nikRegexMatch) {
+                    extracted = {
+                      nik: nikRegexMatch[0],
+                      nama: '',
+                      ocr_engine: 'Workers AI Vision Text'
+                    };
+                  }
                 }
               }
             } catch (visErr) {
@@ -2577,6 +2591,13 @@ ${rawText}`;
                 }
               } catch (_) { }
             }
+          }
+
+          if (!foundInBankData && cleanNik.length !== 16 && (!extracted.nama || extracted.nama.length < 3)) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Data identitas (NIK / Nama) tidak terbaca dari foto kartu. Pastikan e-KTP / KK / KIA diposisikan lurus, pencahayaan merata, dan angka terlihat jelas tanpa pantulan silau.'
+            }), { headers: corsHeaders });
           }
 
           return new Response(JSON.stringify({
