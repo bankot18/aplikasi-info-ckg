@@ -718,156 +718,298 @@
   };
 
   /* ==========================================================================
-     7. PAGINATION MOBILE & APK: DEFAULT 5 DATA SISWA & PASIEN (ANTI-LAG)
+     7. PAGINATION KHUSUS APK: SISTEM PAGING 5 DATA PER BAGIAN (ANTI-LAG)
+        Menampilkan 5 data per halaman (Bagian 1: 5 data, Bagian 2: 5 data berikutnya)
+        Hanya aktif di lingkungan APK Android. Web Desktop tetap normal.
      ========================================================================== */
-  window.sekolahMobileLimit = 5;
-  window.ckgMobileLimit = 5;
+  window.sekolahApkCurrentPage = 1;
+  window.ckgApkCurrentPage = 1;
 
-  function isMobileOrApkView() {
-    return (window.innerWidth <= 768) ||
-           document.documentElement.classList.contains('is-native-apk') ||
-           (document.body && document.body.classList.contains('is-native-apk')) ||
-           Boolean(window.IS_NATIVE_APK);
+  function isApkOnlyMode() {
+    return Boolean(
+      window.IS_NATIVE_APK ||
+      (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+      window.location.protocol === 'capacitor:' ||
+      window.location.hostname === 'localhost' ||
+      (navigator.userAgent && navigator.userAgent.includes('Capacitor')) ||
+      window.location.search.includes('apk=1') ||
+      window.location.search.includes('native=1') ||
+      document.documentElement.classList.contains('is-native-apk') ||
+      (document.body && document.body.classList.contains('is-native-apk'))
+    );
   }
 
-  // Hook renderSekolahView
+  // --- A. PAGING MENU SEKOLAH (DATA SISWA) ---
   const origRenderSekolahView = window.renderSekolahView;
   window.renderSekolahView = function() {
     if (typeof origRenderSekolahView === 'function') {
       origRenderSekolahView();
     }
 
-    if (!isMobileOrApkView()) return;
+    if (!isApkOnlyMode()) return;
 
     const tbody = document.getElementById('tableBodySekolah');
     if (!tbody) return;
 
-    const rows = Array.from(tbody.querySelectorAll('tr:not(.tr-load-more-mobile)'));
-    if (rows.length === 0) return;
-    if (rows.length === 1 && rows[0].querySelector('td[colspan]')) return;
+    const allRows = Array.from(tbody.querySelectorAll('tr:not(.apk-paging-dummy)'));
+    if (allRows.length === 0) return;
+    if (allRows.length === 1 && allRows[0].querySelector('td[colspan]')) {
+      const existing = document.getElementById('sekolahApkPaginationBar');
+      if (existing) existing.remove();
+      return;
+    }
 
-    const totalCount = rows.length;
-    const currentLimit = window.sekolahMobileLimit || 5;
+    // Simpan seluruh baris siswa di memori JS
+    window._allSekolahRows = allRows;
+    const totalCount = allRows.length;
+    const pageSize = 5;
+    const totalPages = Math.ceil(totalCount / pageSize) || 1;
 
-    rows.forEach((row, idx) => {
-      if (idx < currentLimit) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
-    });
+    let curPage = window.sekolahApkCurrentPage || 1;
+    if (curPage > totalPages) curPage = totalPages;
+    if (curPage < 1) curPage = 1;
+    window.sekolahApkCurrentPage = curPage;
 
-    const existingCard = document.getElementById('sekolahMobileLoadMoreWrapper');
-    if (existingCard) existingCard.remove();
+    const startIdx = (curPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalCount);
 
-    if (totalCount > currentLimit) {
-      const loadMoreContainer = document.createElement('div');
-      loadMoreContainer.id = 'sekolahMobileLoadMoreWrapper';
-      loadMoreContainer.className = 'mobile-load-more-card';
-      loadMoreContainer.innerHTML = `
-        <div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 8px;">
-          Menampilkan <strong>${Math.min(currentLimit, totalCount)}</strong> dari <strong>${totalCount.toLocaleString('id-ID')}</strong> siswa
-        </div>
-        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-          <button type="button" class="btn btn-primary btn-sm" onclick="window.loadMoreSekolahRecords(5)" style="padding: 7px 16px; border-radius: 10px; font-weight: 700; background: linear-gradient(135deg, #4f46e5, #4338ca); color: #fff; border: none; box-shadow: 0 4px 10px rgba(79,70,229,0.25); cursor: pointer;">
-            <i class="bi bi-chevron-down"></i> Tampilkan 5 Lagi
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.loadMoreSekolahRecords(20)" style="padding: 7px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">
-            +20 Siswa
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.loadMoreSekolahRecords('all')" style="padding: 7px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">
-            Semua (${totalCount.toLocaleString('id-ID')})
-          </button>
-        </div>
-      `;
-      const tableWrapper = tbody.closest('.simpus-table-wrapper') || tbody.parentElement;
-      if (tableWrapper && tableWrapper.parentElement) {
-        tableWrapper.parentElement.appendChild(loadMoreContainer);
-      }
+    // KOSONGKAN DOM TBODY DAN HANYA MASUKKAN 5 DATA
+    tbody.innerHTML = '';
+    for (let i = startIdx; i < endIdx; i++) {
+      allRows[i].style.display = '';
+      tbody.appendChild(allRows[i]);
+    }
+
+    renderSekolahPagingControls(curPage, totalPages, startIdx + 1, endIdx, totalCount);
+  };
+
+  window.goToSekolahApkPage = function(targetPage) {
+    if (!window._allSekolahRows || window._allSekolahRows.length === 0) return;
+    const tbody = document.getElementById('tableBodySekolah');
+    if (!tbody) return;
+
+    const totalCount = window._allSekolahRows.length;
+    const pageSize = 5;
+    const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+    let curPage = targetPage;
+    if (curPage > totalPages) curPage = totalPages;
+    if (curPage < 1) curPage = 1;
+    window.sekolahApkCurrentPage = curPage;
+
+    const startIdx = (curPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalCount);
+
+    tbody.innerHTML = '';
+    for (let i = startIdx; i < endIdx; i++) {
+      window._allSekolahRows[i].style.display = '';
+      tbody.appendChild(window._allSekolahRows[i]);
+    }
+
+    renderSekolahPagingControls(curPage, totalPages, startIdx + 1, endIdx, totalCount);
+
+    // Scroll halus ke atas tabel
+    const targetScroll = document.getElementById('tableSekolah') || tbody.closest('.simpus-table-wrapper') || tbody;
+    if (targetScroll) {
+      targetScroll.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
-  window.loadMoreSekolahRecords = function(amount) {
-    if (amount === 'all') {
-      window.sekolahMobileLimit = 999999;
-    } else {
-      window.sekolahMobileLimit = (window.sekolahMobileLimit || 5) + Number(amount);
-    }
-    if (typeof origRenderSekolahView === 'function') origRenderSekolahView();
-    window.renderSekolahView();
-  };
+  function renderSekolahPagingControls(curPage, totalPages, startItem, endItem, totalCount) {
+    const existing = document.getElementById('sekolahApkPaginationBar');
+    if (existing) existing.remove();
 
-  // Hook renderCkgGratisTable
+    if (totalCount <= 5) return; // Tidak butuh paging jika data <= 5
+
+    const tbody = document.getElementById('tableBodySekolah');
+    if (!tbody) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'sekolahApkPaginationBar';
+    bar.className = 'apk-pagination-card';
+    bar.innerHTML = `
+      <div class="apk-page-info">
+        <span class="apk-page-badge"><i class="bi bi-mortarboard-fill"></i> Bagian ${curPage} dari ${totalPages}</span>
+        <span class="apk-page-text">Data <strong>${startItem} - ${endItem}</strong> dari total <strong>${totalCount.toLocaleString('id-ID')}</strong> siswa</span>
+      </div>
+      <div class="apk-page-nav-row">
+        <button type="button" class="btn-apk-nav" onclick="window.goToSekolahApkPage(1)" ${curPage === 1 ? 'disabled' : ''} title="Halaman Pertama">
+          <i class="bi bi-chevron-double-left"></i>
+        </button>
+        <button type="button" class="btn-apk-nav btn-apk-nav-main" onclick="window.goToSekolahApkPage(${curPage - 1})" ${curPage === 1 ? 'disabled' : ''}>
+          <i class="bi bi-chevron-left"></i> Sebelumnya
+        </button>
+        <div class="apk-page-pill">
+          ${curPage} / ${totalPages}
+        </div>
+        <button type="button" class="btn-apk-nav btn-apk-nav-main" onclick="window.goToSekolahApkPage(${curPage + 1})" ${curPage >= totalPages ? 'disabled' : ''}>
+          Selanjutnya <i class="bi bi-chevron-right"></i>
+        </button>
+        <button type="button" class="btn-apk-nav" onclick="window.goToSekolahApkPage(${totalPages})" ${curPage >= totalPages ? 'disabled' : ''} title="Halaman Terakhir">
+          <i class="bi bi-chevron-double-right"></i>
+        </button>
+      </div>
+      <div class="apk-page-quick-jump">
+        <span>Lompat ke bagian:</span>
+        <select onchange="window.goToSekolahApkPage(Number(this.value))">
+          ${Array.from({ length: totalPages }, (_, i) => i + 1).map(p => `
+            <option value="${p}" ${p === curPage ? 'selected' : ''}>Bagian ${p} (Data ${(p-1)*5 + 1}-${Math.min(p*5, totalCount)})</option>
+          `).join('')}
+        </select>
+      </div>
+    `;
+
+    const wrapper = tbody.closest('.simpus-table-wrapper') || tbody.parentElement;
+    if (wrapper && wrapper.parentElement) {
+      wrapper.parentElement.appendChild(bar);
+    }
+  }
+
+  // --- B. PAGING MENU SKRINING CKG (DATA PASIEN) ---
   const origRenderCkgGratisTable = window.renderCkgGratisTable;
   window.renderCkgGratisTable = function() {
     if (typeof origRenderCkgGratisTable === 'function') {
       origRenderCkgGratisTable();
     }
 
-    if (!isMobileOrApkView()) return;
+    if (!isApkOnlyMode()) return;
 
     const tbody = document.getElementById('tableBodyCkgGratis');
     if (!tbody) return;
 
-    const rows = Array.from(tbody.querySelectorAll('tr:not(.tr-load-more-mobile)'));
-    if (rows.length === 0) return;
-    if (rows.length === 1 && rows[0].querySelector('td[colspan]')) return;
+    const allRows = Array.from(tbody.querySelectorAll('tr:not(.apk-paging-dummy)'));
+    if (allRows.length === 0) return;
+    if (allRows.length === 1 && allRows[0].querySelector('td[colspan]')) {
+      const existing = document.getElementById('ckgApkPaginationBar');
+      if (existing) existing.remove();
+      return;
+    }
 
-    const totalCount = rows.length;
-    const currentLimit = window.ckgMobileLimit || 5;
+    window._allCkgRows = allRows;
+    const totalCount = allRows.length;
+    const pageSize = 5;
+    const totalPages = Math.ceil(totalCount / pageSize) || 1;
 
-    rows.forEach((row, idx) => {
-      if (idx < currentLimit) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
+    let curPage = window.ckgApkCurrentPage || 1;
+    if (curPage > totalPages) curPage = totalPages;
+    if (curPage < 1) curPage = 1;
+    window.ckgApkCurrentPage = curPage;
+
+    const startIdx = (curPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalCount);
+
+    tbody.innerHTML = '';
+    for (let i = startIdx; i < endIdx; i++) {
+      allRows[i].style.display = '';
+      tbody.appendChild(allRows[i]);
+    }
+
+    renderCkgPagingControls(curPage, totalPages, startIdx + 1, endIdx, totalCount);
+  };
+
+  window.goToCkgApkPage = function(targetPage) {
+    if (!window._allCkgRows || window._allCkgRows.length === 0) return;
+    const tbody = document.getElementById('tableBodyCkgGratis');
+    if (!tbody) return;
+
+    const totalCount = window._allCkgRows.length;
+    const pageSize = 5;
+    const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+    let curPage = targetPage;
+    if (curPage > totalPages) curPage = totalPages;
+    if (curPage < 1) curPage = 1;
+    window.ckgApkCurrentPage = curPage;
+
+    const startIdx = (curPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalCount);
+
+    tbody.innerHTML = '';
+    for (let i = startIdx; i < endIdx; i++) {
+      window._allCkgRows[i].style.display = '';
+      tbody.appendChild(window._allCkgRows[i]);
+    }
+
+    renderCkgPagingControls(curPage, totalPages, startIdx + 1, endIdx, totalCount);
+
+    const targetScroll = document.getElementById('tableCkgGratis') || tbody.closest('.simpus-table-wrapper') || tbody;
+    if (targetScroll) {
+      targetScroll.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  function renderCkgPagingControls(curPage, totalPages, startItem, endItem, totalCount) {
+    const existing = document.getElementById('ckgApkPaginationBar');
+    if (existing) existing.remove();
+
+    if (totalCount <= 5) return;
+
+    const tbody = document.getElementById('tableBodyCkgGratis');
+    if (!tbody) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'ckgApkPaginationBar';
+    bar.className = 'apk-pagination-card ckg-theme';
+    bar.innerHTML = `
+      <div class="apk-page-info">
+        <span class="apk-page-badge ckg"><i class="bi bi-heart-pulse-fill"></i> Bagian ${curPage} dari ${totalPages}</span>
+        <span class="apk-page-text">Data <strong>${startItem} - ${endItem}</strong> dari total <strong>${totalCount.toLocaleString('id-ID')}</strong> pasien</span>
+      </div>
+      <div class="apk-page-nav-row">
+        <button type="button" class="btn-apk-nav" onclick="window.goToCkgApkPage(1)" ${curPage === 1 ? 'disabled' : ''} title="Halaman Pertama">
+          <i class="bi bi-chevron-double-left"></i>
+        </button>
+        <button type="button" class="btn-apk-nav btn-apk-nav-main ckg" onclick="window.goToCkgApkPage(${curPage - 1})" ${curPage === 1 ? 'disabled' : ''}>
+          <i class="bi bi-chevron-left"></i> Sebelumnya
+        </button>
+        <div class="apk-page-pill ckg">
+          ${curPage} / ${totalPages}
+        </div>
+        <button type="button" class="btn-apk-nav btn-apk-nav-main ckg" onclick="window.goToCkgApkPage(${curPage + 1})" ${curPage >= totalPages ? 'disabled' : ''}>
+          Selanjutnya <i class="bi bi-chevron-right"></i>
+        </button>
+        <button type="button" class="btn-apk-nav" onclick="window.goToCkgApkPage(${totalPages})" ${curPage >= totalPages ? 'disabled' : ''} title="Halaman Terakhir">
+          <i class="bi bi-chevron-double-right"></i>
+        </button>
+      </div>
+      <div class="apk-page-quick-jump">
+        <span>Lompat ke bagian:</span>
+        <select onchange="window.goToCkgApkPage(Number(this.value))">
+          ${Array.from({ length: totalPages }, (_, i) => i + 1).map(p => `
+            <option value="${p}" ${p === curPage ? 'selected' : ''}>Bagian ${p} (Data ${(p-1)*5 + 1}-${Math.min(p*5, totalCount)})</option>
+          `).join('')}
+        </select>
+      </div>
+    `;
+
+    const wrapper = tbody.closest('.simpus-table-wrapper') || tbody.parentElement;
+    if (wrapper && wrapper.parentElement) {
+      wrapper.parentElement.appendChild(bar);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Reset halaman ke 1 saat filter sekolah diubah
+    ['filterSelectSekolah', 'filterSelectKelas', 'filterSelectTahun', 'searchSekolahRecords', 'filterSekolahNik'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => { window.sekolahApkCurrentPage = 1; });
+        if (id === 'searchSekolahRecords') {
+          el.addEventListener('input', () => { window.sekolahApkCurrentPage = 1; });
+        }
       }
     });
 
-    const existingCard = document.getElementById('ckgMobileLoadMoreWrapper');
-    if (existingCard) existingCard.remove();
-
-    if (totalCount > currentLimit) {
-      const loadMoreContainer = document.createElement('div');
-      loadMoreContainer.id = 'ckgMobileLoadMoreWrapper';
-      loadMoreContainer.className = 'mobile-load-more-card';
-      loadMoreContainer.innerHTML = `
-        <div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 8px;">
-          Menampilkan <strong>${Math.min(currentLimit, totalCount)}</strong> dari <strong>${totalCount.toLocaleString('id-ID')}</strong> pasien
-        </div>
-        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-          <button type="button" class="btn btn-primary btn-sm" onclick="window.loadMoreCkgRecords(5)" style="padding: 7px 16px; border-radius: 10px; font-weight: 700; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; box-shadow: 0 4px 10px rgba(16,185,129,0.25); cursor: pointer;">
-            <i class="bi bi-chevron-down"></i> Tampilkan 5 Lagi
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.loadMoreCkgRecords(20)" style="padding: 7px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">
-            +20 Pasien
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.loadMoreCkgRecords('all')" style="padding: 7px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;">
-            Semua (${totalCount.toLocaleString('id-ID')})
-          </button>
-        </div>
-      `;
-      const tableWrapper = tbody.closest('.simpus-table-wrapper') || tbody.parentElement;
-      if (tableWrapper && tableWrapper.parentElement) {
-        tableWrapper.parentElement.appendChild(loadMoreContainer);
-      }
-    }
-  };
-
-  window.loadMoreCkgRecords = function(amount) {
-    if (amount === 'all') {
-      window.ckgMobileLimit = 999999;
-    } else {
-      window.ckgMobileLimit = (window.ckgMobileLimit || 5) + Number(amount);
-    }
-    if (typeof origRenderCkgGratisTable === 'function') origRenderCkgGratisTable();
-    window.renderCkgGratisTable();
-  };
-
-  document.addEventListener('DOMContentLoaded', () => {
-    // Reset limit ke 5 saat filter sekolah diubah
-    ['filterSelectSekolah', 'filterSelectKelas', 'filterSelectTahun', 'searchSekolahRecords', 'filterSekolahNik'].forEach(id => {
+    // Reset halaman ke 1 saat filter CKG diubah
+    ['filterCkgGratisUsia', 'filterCkgGratisMinAge', 'filterCkgGratisMaxAge', 'filterCkgGratisJk', 'filterCkgGratisBulan', 'filterCkgGratisTahun', 'filterCkgGratisPetugas', 'searchCkgGratis'].forEach(id => {
       const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', () => { window.ckgApkCurrentPage = 1; });
+        if (id === 'searchCkgGratis') {
+          el.addEventListener('input', () => { window.ckgApkCurrentPage = 1; });
+        }
+      }
+    });
       if (el) {
         el.addEventListener('change', () => { window.sekolahMobileLimit = 5; });
         if (id === 'searchSekolahRecords') {
