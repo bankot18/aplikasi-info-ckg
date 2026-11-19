@@ -5,7 +5,7 @@
   try {
     localStorage.removeItem('ckg_sekolah_records_v1'); // Migrated to IndexedDB to eliminate 5MB quota crash
     localStorage.removeItem('ckg_records_db'); // Obsolete duplicate of ckg_records
-  } catch (_) {}
+  } catch (_) { }
 })();
 
 // Robust, high-capacity IndexedDB storage layer for large datasets (no 5MB quota limit)
@@ -105,7 +105,7 @@ function safeLocalStorageSet(key, value) {
 // Utility: Escape HTML to prevent XSS
 function escapeHtml(str) {
   if (!str) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // Initial User Database matching user specifications
@@ -153,7 +153,7 @@ async function sendUserHeartbeat(status = 'active') {
 
   try {
     localStorage.setItem('ckg_active_user_sessions', JSON.stringify(activeSessionsMap));
-  } catch (_) {}
+  } catch (_) { }
 
   try {
     await fetch('/api/sessions', {
@@ -161,7 +161,7 @@ async function sendUserHeartbeat(status = 'active') {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nama_user: loggedUser, status: status })
     });
-  } catch (_) {}
+  } catch (_) { }
 }
 
 async function fetchLiveSessions() {
@@ -180,7 +180,7 @@ async function fetchLiveSessions() {
         });
       }
     }
-  } catch (_) {}
+  } catch (_) { }
 
   try {
     const local = JSON.parse(localStorage.getItem('ckg_active_user_sessions') || '{}');
@@ -189,7 +189,7 @@ async function fetchLiveSessions() {
         activeSessionsMap[uName] = local[uName];
       }
     }
-  } catch (_) {}
+  } catch (_) { }
 }
 
 async function manualRefreshLiveSessions() {
@@ -337,7 +337,7 @@ function populateUserDropdowns() {
   const filterSimpusSelect = document.getElementById('filterSimpusPetugas');
   const importTargetSelect = document.getElementById('importTargetPetugas');
 
-   if (loginSelect) {
+  if (loginSelect) {
     const prevVal = loginSelect.value;
     loginSelect.innerHTML = '<option value="">-- Pilih Nama Pegawai --</option>';
     usersDb.forEach((u) => {
@@ -499,10 +499,10 @@ async function fetchCloudRecords() {
             tanggal_entry: r.tanggal_entry || r.created_at || new Date().toISOString().substring(0, 10)
           }));
           records = newRecords;
-          
+
           // Non-blocking background save to local storage cache
           setTimeout(() => {
-            try { localStorage.setItem('ckg_records', JSON.stringify(records)); } catch (_) {}
+            try { localStorage.setItem('ckg_records', JSON.stringify(records)); } catch (_) { }
           }, 100);
 
           updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
@@ -566,7 +566,7 @@ function loadStoredCkgGratisRecords() {
         ckgGratisRecords = cached;
         if (typeof renderCkgGratisTable === 'function') renderCkgGratisTable();
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }
   fetchCkgGratisFromCloud(false);
 }
@@ -805,15 +805,15 @@ async function saveAnnouncementToCloud(data) {
 async function checkAndShowAnnouncement() {
   await loadStoredAnnouncement();
   if (!announcementData || !announcementData.content) return;
-  
+
   const isActive = Boolean(announcementData.active === true || announcementData.active === 1 || announcementData.active === '1' || announcementData.active === 'true');
   if (!isActive) return;
-  
+
   const titleEl = document.getElementById('announcementPopupTitle');
   const authorEl = document.getElementById('announcementPopupAuthor');
   const dateEl = document.getElementById('announcementPopupDate');
   const contentEl = document.getElementById('announcementPopupContent');
-  
+
   if (titleEl) {
     const titleText = (announcementData.title || 'HIMBAUAN PENTING SISTEM').toUpperCase();
     titleEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill" style="color: #dc2626; font-size: 20px;"></i> <span>${titleText}</span>`;
@@ -821,7 +821,7 @@ async function checkAndShowAnnouncement() {
   if (authorEl) authorEl.innerHTML = `<i class="bi bi-person-circle"></i> Oleh: ${announcementData.author || 'Admin'}`;
   if (dateEl) dateEl.innerHTML = `<i class="bi bi-calendar3"></i> Tanggal: ${announcementData.date || '-'}`;
   if (contentEl) contentEl.textContent = announcementData.content;
-  
+
   const modal = document.getElementById('announcementModal');
   if (modal) {
     modal.classList.add('open', 'active');
@@ -863,7 +863,7 @@ function openEditAnnouncementModal() {
       const title = document.getElementById('swalAnnTitle').value.trim();
       const content = document.getElementById('swalAnnContent').value.trim();
       const active = document.getElementById('swalAnnActive').checked;
-      
+
       if (!content) {
         Swal.showValidationMessage('Isi pengumuman tidak boleh kosong!');
         return false;
@@ -888,15 +888,15 @@ function openEditAnnouncementModal() {
 function getVisibleRecords(dataArray) {
   if (!Array.isArray(dataArray)) return [];
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
-  
+
   // Admin and Koordinator can see ALL records
   if (role === 'admin' || role === 'koordinator') {
     return dataArray;
   }
-  
+
   // Petugas can ONLY see their own records
   const loggedUser = (sessionStorage.getItem('ckg_user_name') || '').toLowerCase().trim();
-  
+
   return dataArray.filter(r => {
     const creator = (r.created_by || r.petugas_entry || r.petugas || r.assigned_to || '').toLowerCase().trim();
     return creator === loggedUser || creator === '' || creator.includes(loggedUser);
@@ -1045,23 +1045,23 @@ function setupUserSessionUI() {
       sekolahActionBtns.forEach(btn => {
         const text = btn.textContent.toLowerCase();
         const isAllowed = allowedSekolahIds.includes(btn.id) ||
-                          text.includes('tambah siswa') ||
-                          text.includes('nik') ||
-                          text.includes('ttd') ||
-                          text.includes('refresh');
+          text.includes('tambah siswa') ||
+          text.includes('nik') ||
+          text.includes('ttd') ||
+          text.includes('refresh');
         const isForbidden = btn.classList.contains('admin-only') ||
-                            btn.classList.contains('admin-koordinator-only') ||
-                            btn.id === 'btnExportSekolah' ||
-                            btn.id === 'btnLaporanSekolah' ||
-                            text.includes('cetak laporan') ||
-                            text.includes('eksport') ||
-                            text.includes('kelola sekolah') ||
-                            text.includes('naik kelas') ||
-                            text.includes('migrasi') ||
-                            text.includes('cek duplikat') ||
-                            text.includes('hapus semua') ||
-                            text.includes('antrean bot') ||
-                            text.includes('kirim kelas');
+          btn.classList.contains('admin-koordinator-only') ||
+          btn.id === 'btnExportSekolah' ||
+          btn.id === 'btnLaporanSekolah' ||
+          text.includes('cetak laporan') ||
+          text.includes('eksport') ||
+          text.includes('kelola sekolah') ||
+          text.includes('naik kelas') ||
+          text.includes('migrasi') ||
+          text.includes('cek duplikat') ||
+          text.includes('hapus semua') ||
+          text.includes('antrean bot') ||
+          text.includes('kirim kelas');
         if (isAllowed && !isForbidden) {
           btn.style.setProperty('display', 'inline-flex', 'important');
         } else {
@@ -1569,7 +1569,7 @@ function performLoginSuccess(user) {
     fetchLiveSessions();
 
     checkAuthSession();
-  fetchBotQueueCounts();
+    fetchBotQueueCounts();
     hideLoadingOverlay();
 
     // Background load maintenance settings and apply locks
@@ -1615,7 +1615,7 @@ function handleLogout() {
         sessionStorage.removeItem('ckg_allowed_menus');
         sessionStorage.removeItem('ckg_sekolah_filter');
         checkAuthSession();
-  fetchBotQueueCounts();
+        fetchBotQueueCounts();
         Swal.fire({
           icon: 'success',
           title: 'Berhasil Keluar',
@@ -1633,7 +1633,7 @@ function handleLogout() {
     sessionStorage.removeItem('ckg_allowed_menus');
     sessionStorage.removeItem('ckg_sekolah_filter');
     checkAuthSession();
-  fetchBotQueueCounts();
+    fetchBotQueueCounts();
     showToast('Anda telah keluar dari sistem CKG.', 'info');
   }
 }
@@ -2090,7 +2090,7 @@ function handlePosyanduLogin(e) {
   showLoadingOverlay('Memverifikasi Akun...', `Login sebagai ${posyandu.nama}`);
   setTimeout(() => {
     checkAuthSession();
-  fetchBotQueueCounts();
+    fetchBotQueueCounts();
     hideLoadingOverlay();
     Swal.fire({
       icon: 'success',
@@ -2143,7 +2143,7 @@ function loadLocalMenuConfig() {
         return currentMenuConfig;
       }
     }
-  } catch (_) {}
+  } catch (_) { }
   currentMenuConfig = JSON.parse(JSON.stringify(DEFAULT_MENU_CONFIG));
   return currentMenuConfig;
 }
@@ -2163,7 +2163,7 @@ async function syncMenuConfigFromCloud() {
           if (!merged.some(m => m.id === def.id)) merged.push({ ...def });
         });
         currentMenuConfig = merged;
-        try { localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig)); } catch (_) {}
+        try { localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig)); } catch (_) { }
         applyMenuConfiguration();
       }
     }
@@ -2206,14 +2206,14 @@ function applyMenuConfiguration() {
         try {
           const raw = sessionStorage.getItem('ckg_allowed_menus') || '[]';
           allowedArr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        } catch (_) {}
+        } catch (_) { }
         isAllowed = allowedArr.includes(item.id) && permittedRoles.includes('sekolah');
       } else if (portalType === 'posyandu') {
         let allowedArr = [];
         try {
           const raw = sessionStorage.getItem('ckg_allowed_menus') || '[]';
           allowedArr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        } catch (_) {}
+        } catch (_) { }
         isAllowed = allowedArr.includes(item.id) && permittedRoles.includes('posyandu');
       } else {
         isAllowed = permittedRoles.includes(role);
@@ -2389,7 +2389,7 @@ function moveMenuPosition(id, direction) {
   applyMenuConfiguration();
   renderAdminMenuTable();
   renderModalMenuTable();
-  try { localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig)); } catch (_) {}
+  try { localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig)); } catch (_) { }
 }
 
 function toggleMenuStatus(id) {
@@ -2403,7 +2403,7 @@ function toggleMenuStatus(id) {
   applyMenuConfiguration();
   renderAdminMenuTable();
   renderModalMenuTable();
-  try { localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig)); } catch (_) {}
+  try { localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig)); } catch (_) { }
   showToast(`Menu ${item.label} berhasil ${item.enabled ? 'diaktifkan' : 'dinonaktifkan'}!`, 'info');
 }
 
@@ -2426,7 +2426,7 @@ function toggleMenuRolePermission(id, role) {
   applyMenuConfiguration();
   renderAdminMenuTable();
   renderModalMenuTable();
-  try { localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig)); } catch (_) {}
+  try { localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig)); } catch (_) { }
 }
 
 function handleMenuDragStart(e, idx) {
@@ -2449,7 +2449,7 @@ function handleMenuDrop(e, targetIdx) {
   applyMenuConfiguration();
   renderAdminMenuTable();
   renderModalMenuTable();
-  try { localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig)); } catch (_) {}
+  try { localStorage.setItem('ckg_menu_config', JSON.stringify(currentMenuConfig)); } catch (_) { }
 }
 
 function handleMenuDragEnd(e) {
@@ -2474,7 +2474,7 @@ async function saveMenuConfigToCloud() {
     const userRole = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Admin').toLowerCase();
     const res = await fetch('/api/menu-config', {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'x-user-role': userRole
       },
@@ -2732,7 +2732,7 @@ async function handleSaveSekolahAkses(e) {
 
   try {
     localStorage.setItem('ckg_master_sekolah', JSON.stringify(MASTER_SARANA_SEKOLAH));
-  } catch (_) {}
+  } catch (_) { }
 
   closeEditSekolahAksesModal();
   renderAdminSekolahTable();
@@ -3115,7 +3115,7 @@ function setupEventListeners() {
       nikInput.dataset.fromBankData = '0';
       const val = nikInput.value.replace(/\D/g, '').slice(0, 16);
       nikInput.value = val; // strip non-digits and cap at exactly 16
-      
+
       const countSpan = document.getElementById('nikCharCount');
       const helpText = document.getElementById('nikHelpText');
       const badge = document.getElementById('nikCounterBadge');
@@ -3370,7 +3370,7 @@ function switchView(viewId) {
 
 function updateRoleUI() {
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || 'Petugas').toLowerCase();
-  
+
   document.body.classList.remove('role-admin', 'role-koordinator', 'role-petugas');
   document.body.classList.add('role-' + role);
 
@@ -3572,7 +3572,7 @@ function selectWilayahSearchOption(fieldKey, value, text) {
 }
 
 // Global outside-click listener for wilayah comboboxes
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
   ['provinsi', 'kab_kota', 'kecamatan', 'kelurahan'].forEach(f => {
     const ids = getWilayahComboboxIds(f);
     if (!ids) return;
@@ -3889,7 +3889,7 @@ function saveLearnedKampungKeyword(keyword, kel, kec = 'Banjaran', kab = 'Kabupa
   }
   try {
     localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(current));
-  } catch (e) {}
+  } catch (e) { }
 
   if (syncToCloud) {
     // Sync to D1 Cloud Server
@@ -4117,8 +4117,8 @@ async function handleExcelAddressUpload(event) {
           <p>Berhasil mengekstrak <strong>${itemsToSave.length}</strong> data kampung dari <strong>${rows.length}</strong> baris file Excel.</p>
           <div style="margin-top: 10px; padding: 10px 12px; background: ${d1Success ? '#f0fdf4' : '#fef2f2'}; border-radius: 8px; border: 1px solid ${d1Success ? '#bbf7d0' : '#fecaca'}; font-size: 12px;">
             ${d1Success
-              ? `<strong style="color: #15803d;">Ã¢ËœÂÃ¯Â¸Â Cloud D1 Database:</strong> ${d1Count} data berhasil disimpan/diperbarui ke cloud.`
-              : `<strong style="color: #b91c1c;">Ã¢Å¡Â Ã¯Â¸Â Error Cloud D1:</strong> ${d1ErrorMsg}`}
+          ? `<strong style="color: #15803d;">Ã¢ËœÂÃ¯Â¸Â Cloud D1 Database:</strong> ${d1Count} data berhasil disimpan/diperbarui ke cloud.`
+          : `<strong style="color: #b91c1c;">Ã¢Å¡Â Ã¯Â¸Â Error Cloud D1:</strong> ${d1ErrorMsg}`}
           </div>
         </div>
       `,
@@ -4138,7 +4138,7 @@ function refreshAdminKamusStats() {
   const learnedMap = getLearnedKampungMap();
   const staticCount = BANJARAN_KAMPUNG_MAP.length;
   const learnedCount = learnedMap.length;
-  
+
   let totalKeywords = 0;
   BANJARAN_KAMPUNG_MAP.forEach(m => totalKeywords += m.keywords.length);
   learnedMap.forEach(m => totalKeywords += m.keywords.length);
@@ -4521,7 +4521,7 @@ async function autoDetectRegionalFromAddressText(addressText) {
     if (!targetVal || !selectEl) return null;
     const targetClean = targetVal.toLowerCase().replace(/^(kab\.|kota|kabupaten|kecamatan|kelurahan|desa)\s*/i, '').trim();
     const options = Array.from(selectEl.options).filter(o => o.value);
-    
+
     // Direct exact match
     let match = options.find(o => o.value.toLowerCase() === targetVal.toLowerCase());
     if (match) return match;
@@ -5124,7 +5124,7 @@ function checkDobKategoriCompatibility(isManual = false) {
 function switchKategoriToCorrect() {
   const btnAutoSwitch = document.getElementById('btnAutoSwitchKategori');
   let targetRadioId = btnAutoSwitch?.getAttribute('data-target-radio');
-  
+
   if (!targetRadioId) {
     const dobVal = document.getElementById('tanggal_lahir')?.value;
     if (dobVal) {
@@ -5301,7 +5301,7 @@ function extractCleanNik16(val) {
       if (!isNaN(num)) {
         s = BigInt(Math.round(num)).toString();
       }
-    } catch (_) {}
+    } catch (_) { }
   }
   return s.replace(/\D/g, '');
 }
@@ -5359,7 +5359,7 @@ function renderSimpusView() {
   }
 
   const belumBagiCount = simpusRecords.filter(r => !r.is_divided).length;
-  
+
   let sudahBagiRecords = simpusRecords.filter(r => Boolean(r.is_divided));
   if (!isPrivileged && loggedUser) {
     sudahBagiRecords = sudahBagiRecords.filter(r => {
@@ -5627,7 +5627,7 @@ async function executeSimpusBulkAction(actionType) {
         const targetId = item.id || item.nik;
         try {
           await fetch(`/api/simpus?tab=${deleteTab}&id=${encodeURIComponent(targetId)}`, { method: 'DELETE' });
-        } catch (_) {}
+        } catch (_) { }
       }
 
       // Remove from local simpusRecords
@@ -5703,7 +5703,7 @@ async function executeSimpusBulkAction(actionType) {
         const targetId = item.id || item.nik;
         try {
           await fetch(`/api/simpus?tab=${deleteTab}&id=${encodeURIComponent(targetId)}`, { method: 'DELETE' });
-        } catch (_) {}
+        } catch (_) { }
 
         item.deleted_at = nowStr;
         item.deleted_by = currentUser;
@@ -6040,7 +6040,7 @@ function copyToClipboard(text, label = 'Data') {
     showToast(`Tidak ada data ${label} untuk disalin.`, 'warning');
     return;
   }
-  
+
   const cleanText = String(text).trim();
 
   if (navigator.clipboard && window.isSecureContext) {
@@ -6824,7 +6824,7 @@ async function handleBagiPetugasSubmit(e) {
       body: JSON.stringify({ ids: idsToMove, petugas: targetPetugas })
     });
     if (res.ok) {
-      fetchCloudSimpusRecords(true).catch(() => {});
+      fetchCloudSimpusRecords(true).catch(() => { });
     }
   } catch (err) {
     console.warn('Backend API /api/simpus/bagi sync notice:', err);
@@ -7037,7 +7037,7 @@ async function deleteAllSimpusData() {
           });
 
           simpusRecords = simpusRecords.filter(r => isNik16Digit(r.nik));
-          try { localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords)); } catch (_) {}
+          try { localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords)); } catch (_) { }
           hideLoadingOverlay();
           renderSimpusView();
 
@@ -7269,7 +7269,7 @@ function processImportFromModal() {
 
   const file = pendingImportFile;
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = async function (e) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
@@ -7438,13 +7438,13 @@ function processImportFromModal() {
             } else {
               const errBody = await res.text();
               lastError = `HTTP ${res.status}: ${errBody.substring(0, 200)}`;
-              console.error(`[Import SIMPUS] Chunk ${i}-${i+chunk.length} failed (attempt ${attempt+1}):`, lastError);
+              console.error(`[Import SIMPUS] Chunk ${i}-${i + chunk.length} failed (attempt ${attempt + 1}):`, lastError);
               // Wait before retry
               await new Promise(r => setTimeout(r, 500));
             }
           } catch (err) {
             lastError = err.message;
-            console.error(`[Import SIMPUS] Network error chunk ${i} (attempt ${attempt+1}):`, err.message);
+            console.error(`[Import SIMPUS] Network error chunk ${i} (attempt ${attempt + 1}):`, err.message);
             await new Promise(r => setTimeout(r, 500));
           }
         }
@@ -7546,8 +7546,8 @@ function openEksporPerPetugasModal() {
 
       <div style="display: flex; flex-direction: column; gap: 10px;">
         ${petugasList.map(petugas => {
-          const count = petugasMap[petugas].length;
-          return `
+      const count = petugasMap[petugas].length;
+      return `
             <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-subtle); padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
               <div>
                 <div style="font-weight: 800; color: var(--text-main); font-size: 14px;">
@@ -7562,7 +7562,7 @@ function openEksporPerPetugasModal() {
               </button>
             </div>
           `;
-        }).join('')}
+    }).join('')}
       </div>
     `;
   }
@@ -7630,7 +7630,7 @@ function exportSinglePetugasXlsx(petugasName) {
   XLSX.utils.book_append_sheet(wb, ws, 'Data Petugas');
 
   const safeName = petugasName.replace(/[^a-zA-Z0-9]/g, '_');
-  saveXlsxFile(wb, `Data_SIMPUS_${safeName}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  saveXlsxFile(wb, `Data_SIMPUS_${safeName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   showToast(`File XLSX untuk ${petugasName} berhasil diunduh! (${records.length} data)`, 'success');
 }
 
@@ -7701,7 +7701,7 @@ function exportAllPetugasXlsx() {
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
 
-  saveXlsxFile(wb, `Data_SIMPUS_Semua_Petugas_${new Date().toISOString().slice(0,10)}.xlsx`);
+  saveXlsxFile(wb, `Data_SIMPUS_Semua_Petugas_${new Date().toISOString().slice(0, 10)}.xlsx`);
   showToast(`File XLSX untuk semua petugas berhasil diunduh! (${divided.length} total data)`, 'success');
   closeEksporPerPetugasModal();
 }
@@ -7762,7 +7762,7 @@ function exportSimpusXlsx() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data SIMPUS');
 
-  saveXlsxFile(wb, `Data_SIMPUS_CKG_${new Date().toISOString().slice(0,10)}.xlsx`);
+  saveXlsxFile(wb, `Data_SIMPUS_CKG_${new Date().toISOString().slice(0, 10)}.xlsx`);
   showToast(`File XLSX seluruh data SIMPUS berhasil diunduh! (${simpusRecords.length} data)`, 'success');
 }
 
@@ -8043,7 +8043,7 @@ function goToStep(targetStep) {
     updateWizardUI();
     return;
   }
-  
+
   for (let s = currentWizardStep; s < targetStep; s++) {
     if (!validateCurrentStep(s)) return;
   }
@@ -8125,7 +8125,7 @@ function openInputModal(kategori = 'Luar Gedung', isEdit = false, target = 'reco
     btnNext.style.cursor = 'pointer';
     btnNext.removeAttribute('title');
   }
-  
+
   if (kategori === 'Dalam Gedung') {
     const el = document.getElementById('kegiatan_dalam');
     if (el) el.checked = true;
@@ -8836,7 +8836,7 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
     if (!item) return '<div style="flex: 1;"></div>';
 
     const initials = (item.nama || 'P').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-    
+
     // Config based on Rank Number (1 = Gold, 2 = Silver, 3 = Bronze)
     const isRank1 = rankNum === 1;
     const isRank2 = rankNum === 2;
@@ -9103,7 +9103,7 @@ function renderUserDatabaseTable() {
 
   tbody.innerHTML = usersDb.map((u, i) => {
     const isCurrentActive = activeUser === u.nama_user;
-    
+
     let roleBadge = `<span class="badge badge-emerald">${u.role}</span>`;
     if (u.role === 'Admin') roleBadge = `<span class="badge badge-rose">Admin</span>`;
     if (u.role === 'Koordinator') roleBadge = `<span class="badge badge-amber">Koordinator</span>`;
@@ -9156,7 +9156,7 @@ function renderUserDatabaseTable() {
               <i class="bi bi-pencil-square"></i> Edit
             </button>
             ${u.nama_user !== "Mochamad Fauzie, S.Gz" ? (
-              u.is_banned ? `
+        u.is_banned ? `
                 <button class="btn btn-emerald btn-sm" onclick="unbanUser('${safeNama}')" title="Buka Blokir">
                   <i class="bi bi-unlock-fill"></i> Unban
                 </button>
@@ -9165,7 +9165,7 @@ function renderUserDatabaseTable() {
                   <i class="bi bi-slash-circle-fill"></i> Blokir
                 </button>
               `
-            ) : ''}
+      ) : ''}
             ${u.nama_user !== "Mochamad Fauzie, S.Gz" ? `
               <button class="btn btn-danger btn-sm" onclick="deleteUser('${safeNama}')" title="Hapus User">
                 <i class="bi bi-trash"></i> Hapus
@@ -9549,9 +9549,9 @@ function buildTableRowsHtml(data) {
             ${isPernahRec ? `<span class="badge" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px;"><i class="bi bi-clock-history"></i> Pernah Input</span>` : ''}
           </div><br>
           ${isNik16Digit(r.nik)
-            ? `<span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${r.nik}</span>`
-            : `<span style="font-size: 11px; color: #dc2626; font-weight: 700; font-family: monospace;">${r.nik || '-'} <span class="badge badge-rose" style="font-size: 9px; padding: 1px 5px;" title="NIK bukan 16 digit"><i class="bi bi-exclamation-triangle-fill"></i> ${String(r.nik || '').replace(/\D/g, '').length ? String(r.nik || '').replace(/\D/g, '').length + ' Digit' : 'NIK Kosong'}</span></span>`
-          }
+        ? `<span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${r.nik}</span>`
+        : `<span style="font-size: 11px; color: #dc2626; font-weight: 700; font-family: monospace;">${r.nik || '-'} <span class="badge badge-rose" style="font-size: 9px; padding: 1px 5px;" title="NIK bukan 16 digit"><i class="bi bi-exclamation-triangle-fill"></i> ${String(r.nik || '').replace(/\D/g, '').length ? String(r.nik || '').replace(/\D/g, '').length + ' Digit' : 'NIK Kosong'}</span></span>`
+      }
         </td>
         <td>${formatDateToYYYYMMDD(r.tanggal_lahir)}<br><span style="font-size: 11px; color: var(--text-muted);">${r.usia} th (${r.jenis_kelamin})</span></td>
         <td>${r.alamat}<br><span style="font-size: 11px; color: var(--text-muted);">${r.kelurahan}, ${r.kecamatan}</span></td>
@@ -9823,8 +9823,8 @@ async function openBotQueueModal(jenis = 'UMUM') {
   const petugas = sessionStorage.getItem('ckg_user_name') || '';
 
   try {
-    const url = petugas 
-      ? `/api/enco/queue?jenis=${jenis}&petugas=${encodeURIComponent(petugas)}` 
+    const url = petugas
+      ? `/api/enco/queue?jenis=${jenis}&petugas=${encodeURIComponent(petugas)}`
       : `/api/enco/queue?jenis=${jenis}`;
     const res = await fetch(url);
     const json = await res.json();
@@ -9850,9 +9850,9 @@ async function openBotQueueModal(jenis = 'UMUM') {
         ? `<span class="badge" style="background: #fee2e2; color: #dc2626; font-weight: 700; font-size: 10.5px;"><i class="bi bi-x-circle-fill"></i> Gagal</span>`
         : `<span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 10.5px;"><i class="bi bi-hourglass-split"></i> Antre</span>`;
 
-    const isPernah = q.status_pelayanan === 'Pernah Input' || 
-                     q.status_pelayanan === 'already-screened' || 
-                     (q.keterangan && q.keterangan.toLowerCase().includes('pernah'));
+    const isPernah = q.status_pelayanan === 'Pernah Input' ||
+      q.status_pelayanan === 'already-screened' ||
+      (q.keterangan && q.keterangan.toLowerCase().includes('pernah'));
 
     const isSelesai = q.status_pelayanan === 'selesai' || q.status_pelayanan === 'Selesai Pelayanan';
 
@@ -10269,11 +10269,11 @@ function buildCkgGratisRowsHtml(list) {
           </div>
           <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 4px;">
             ${is16
-              ? `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-family: monospace; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-card-text"></i> ${cleanNik}</span>`
-              : isBelumPunyaNik
-                ? `<span class="badge" style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-person-slash"></i> Belum Ada NIK</span>`
-                : `<span class="badge" style="background: #fee2e2; color: #dc2626; font-family: monospace; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-exclamation-triangle"></i> ${cleanNik || '-'}</span>`
-            }
+        ? `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-family: monospace; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-card-text"></i> ${cleanNik}</span>`
+        : isBelumPunyaNik
+          ? `<span class="badge" style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-person-slash"></i> Belum Ada NIK</span>`
+          : `<span class="badge" style="background: #fee2e2; color: #dc2626; font-family: monospace; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-exclamation-triangle"></i> ${cleanNik || '-'}</span>`
+      }
             <span class="badge ${jk === 'P' ? 'badge-rose' : 'badge-cyan'}" style="font-weight: 800; font-size: 10.5px; padding: 2px 7px;">${jk === 'P' ? 'â™€ P' : 'â™‚ L'}</span>
             <span class="badge badge-slate" style="font-weight: 700; font-size: 10.5px; padding: 2px 7px;">${r.usia || 0} th</span>
           </div>
@@ -10293,9 +10293,9 @@ function buildCkgGratisRowsHtml(list) {
           </div>
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
             ${wa && wa !== '-'
-              ? `<span style="font-family: monospace; font-size: 11px; color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-whatsapp"></i> ${wa}</span>`
-              : `<span style="font-size: 11px; color: #94a3b8;">-</span>`
-            }
+        ? `<span style="font-family: monospace; font-size: 11px; color: #059669; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-whatsapp"></i> ${wa}</span>`
+        : `<span style="font-size: 11px; color: #94a3b8;">-</span>`
+      }
             <span class="badge badge-slate" style="font-size: 10px; padding: 1px 6px;">${statusNikah}</span>
             ${pekerjaan && pekerjaan !== 'Lainnya' ? `<span class="badge badge-slate" style="font-size: 10px; padding: 1px 6px;">${pekerjaan}</span>` : ''}
           </div>
@@ -10323,9 +10323,9 @@ function buildCkgGratisRowsHtml(list) {
               HB: ${r.hb || '-'}
             </span>
             ${String(r.katarak || '').toLowerCase().includes('ya')
-              ? `<span class="badge badge-rose" style="font-size: 10px; font-weight: 800; padding: 2px 7px;"><i class="bi bi-eye"></i> Katarak</span>`
-              : `<span class="badge badge-slate" style="font-size: 10px; padding: 2px 6px;"><i class="bi bi-eye"></i> Mata Normal</span>`
-            }
+          ? `<span class="badge badge-rose" style="font-size: 10px; font-weight: 800; padding: 2px 7px;"><i class="bi bi-eye"></i> Katarak</span>`
+          : `<span class="badge badge-slate" style="font-size: 10px; padding: 2px 6px;"><i class="bi bi-eye"></i> Mata Normal</span>`
+        }
           </div>
           ` : `
           <div style="display: flex; align-items: center; gap: 6px;">
@@ -11071,10 +11071,10 @@ function confirmDeleteAllCkgRecords() {
               </span>
             </div>
             <div style="font-size:12px; color:#64748b; line-height:1.4;">
-              ${invalidCount > 0 
-                ? `Hanya menghapus <b>${invalidCount} data</b> yang NIK-nya tidak 16 digit. Sebanyak <b>${validCount} data</b> ber-NIK valid tetap <span style="color:#059669; font-weight:600;">AMAN</span>.` 
-                : 'Semua data sudah ber-NIK 16 digit valid (tidak ada data NIK yang salah/rusak).'
-              }
+              ${invalidCount > 0
+        ? `Hanya menghapus <b>${invalidCount} data</b> yang NIK-nya tidak 16 digit. Sebanyak <b>${validCount} data</b> ber-NIK valid tetap <span style="color:#059669; font-weight:600;">AMAN</span>.`
+        : 'Semua data sudah ber-NIK 16 digit valid (tidak ada data NIK yang salah/rusak).'
+      }
             </div>
           </div>
         </label>
@@ -11224,7 +11224,7 @@ function confirmDeleteAllCkgRecords() {
           }
 
           records = records.filter(r => isNik16Digit(r.nik));
-          try { localStorage.setItem('ckg_records', JSON.stringify(records)); } catch (_) {}
+          try { localStorage.setItem('ckg_records', JSON.stringify(records)); } catch (_) { }
           renderApp();
           updateCloudSyncPill(true, `D1 Online (${records.length} Rec)`);
 
@@ -11489,9 +11489,9 @@ function getFilteredRecycleBin() {
 
   // Filter Petugas
   if (filterPetugasVal) {
-    dataset = dataset.filter(r => 
-      r.deleted_by === filterPetugasVal || 
-      r.created_by === filterPetugasVal || 
+    dataset = dataset.filter(r =>
+      r.deleted_by === filterPetugasVal ||
+      r.created_by === filterPetugasVal ||
       r.petugas_entry === filterPetugasVal
     );
   }
@@ -12100,8 +12100,8 @@ function exportToXLSX() {
   }
 
   const disabledPetugasAttr = isPrivileged ? '' : 'disabled="disabled"';
-  const petugasLockNote = isPrivileged 
-    ? '' 
+  const petugasLockNote = isPrivileged
+    ? ''
     : `<div style="font-size: 11.5px; color: #0284c7; margin-top: 4px; font-weight: 600;"><i class="bi bi-lock-fill"></i> Terkunci: Petugas hanya dapat mengunduh data miliknya sendiri.</div>`;
 
   let exportYearOptionsHtml = '<option value="">-- Semua Tahun --</option>';
@@ -12159,8 +12159,8 @@ function exportToXLSX() {
     preConfirm: () => {
       const bulanVal = document.getElementById('swalExportBulan')?.value || '';
       const tahunVal = document.getElementById('swalExportTahun')?.value || '';
-      const petugasVal = isPrivileged 
-        ? (document.getElementById('swalExportPetugas')?.value || '') 
+      const petugasVal = isPrivileged
+        ? (document.getElementById('swalExportPetugas')?.value || '')
         : loggedUser;
 
       return { bulanVal, tahunVal, petugasVal };
@@ -12319,8 +12319,8 @@ function exportToBotEncoXLSX(source = 'records') {
   }
 
   const disabledPetugasAttr = isPrivileged ? '' : 'disabled="disabled"';
-  const petugasLockNote = isPrivileged 
-    ? '' 
+  const petugasLockNote = isPrivileged
+    ? ''
     : `<div style="font-size: 11.5px; color: #0284c7; margin-top: 4px; font-weight: 600;"><i class="bi bi-lock-fill"></i> Terkunci: Petugas hanya dapat mengunduh data miliknya sendiri.</div>`;
 
   let exportYearOptionsHtml = '<option value="">-- Semua Tahun --</option>';
@@ -12391,8 +12391,8 @@ function exportToBotEncoXLSX(source = 'records') {
       const kategoriVal = document.getElementById('swalEncoKategori')?.value || 'umum';
       const bulanVal = document.getElementById('swalEncoBulan')?.value || '';
       const tahunVal = document.getElementById('swalEncoTahun')?.value || '';
-      const petugasVal = isPrivileged 
-        ? (document.getElementById('swalEncoPetugas')?.value || '') 
+      const petugasVal = isPrivileged
+        ? (document.getElementById('swalEncoPetugas')?.value || '')
         : loggedUser;
 
       return { kategoriVal, bulanVal, tahunVal, petugasVal };
@@ -12644,7 +12644,7 @@ function openImportModal(target = 'records') {
 
   if (targetSelect) {
     targetSelect.innerHTML = '';
-    
+
     // Get list of registered users sorted by role hierarchy (Admin -> Koordinator -> Petugas)
     sortUsersDbByRoleHierarchy();
 
@@ -12652,14 +12652,14 @@ function openImportModal(target = 'records') {
     if (Array.isArray(usersDb) && usersDb.length > 0) {
       userList = usersDb.map(u => (u.nama_user || u.nama || '').trim()).filter(Boolean);
     }
-    
+
     if (userList.length === 0) {
       try {
         const stored = JSON.parse(localStorage.getItem('ckg_user_db') || '[]');
         if (Array.isArray(stored) && stored.length > 0) {
           userList = stored.map(u => (u.nama_user || u.nama || '').trim()).filter(Boolean);
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Deduplicate user list while preserving sorted role order
@@ -12706,7 +12706,7 @@ function closeImportModal() {
 function openAccountSettingsModal() {
   const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Mochamad Fauzie, S.Gz';
   const role = sessionStorage.getItem('ckg_user_role') || 'Admin';
-  
+
   const namaInput = document.getElementById('accountSettingNamaUser');
   const roleBadge = document.getElementById('accountSettingRole');
   const passInput = document.getElementById('accountSettingNewPassword');
@@ -12728,7 +12728,7 @@ function closeAccountSettingsModal() {
 
 async function handleSaveAccountSettings(e) {
   if (e) e.preventDefault();
-  
+
   const loggedUser = sessionStorage.getItem('ckg_user_name') || 'Mochamad Fauzie, S.Gz';
   const newPass = (document.getElementById('accountSettingNewPassword')?.value || '').trim();
   const confirmPass = (document.getElementById('accountSettingConfirmPassword')?.value || '').trim();
@@ -12802,7 +12802,7 @@ function handleImportFileSelect(event) {
 
   // Read file to count valid 16-digit NIK rows
   const countReader = new FileReader();
-  countReader.onload = function(ev) {
+  countReader.onload = function (ev) {
     try {
       const d = new Uint8Array(ev.target.result);
       const wb = XLSX.read(d, { type: 'array' });
@@ -12826,14 +12826,14 @@ function handleImportFileSelect(event) {
         }
       });
       if (fileNameEl) {
-        let text = `<strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) Ã¢â‚¬â€ <span style="color:#059669;font-weight:700;">${valid16Count} NIK Valid (16 Digit)</span>`;
+        let text = `<strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB) Ã¢â‚¬â€ <span style="color:#059669;font-weight:700;">${valid16Count} NIK Valid (16 Digit)</span>`;
         if (invalidNikCount > 0) {
           text += ` <span style="color:#dc2626;font-size:12px;font-weight:600;">(${invalidNikCount} data NIK tidak 16 digit ditolak)</span>`;
         }
         fileNameEl.innerHTML = text;
       }
-    } catch(_) {
-      if (fileNameEl) fileNameEl.textContent = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+    } catch (_) {
+      if (fileNameEl) fileNameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
     }
   };
   countReader.readAsArrayBuffer(file);
@@ -12922,7 +12922,7 @@ function downloadAdminXLSXTemplate() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template CKG Multi Petugas");
     XLSX.writeFile(wb, `Template_Import_Admin_MultiPetugas_CKG_${new Date().toISOString().substring(0, 10)}.xlsx`);
-    
+
     showToast('Template Excel Khusus Admin Berhasil Diunduh!', 'success');
   } catch (err) {
     console.error('Download admin template error:', err);
@@ -12943,7 +12943,7 @@ function handleAdminImportFileSelect(event) {
   const loggedAdmin = sessionStorage.getItem('ckg_user_name') || 'Admin';
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
@@ -13002,7 +13002,7 @@ function handleAdminImportFileSelect(event) {
         const dobStr = formatDateToYYYYMMDD(getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB')) || '1990-01-01';
         let age = parseInt(getVal('Usia', 'Umur')) || 30;
         if (isNaN(age) || age <= 0) {
-          try { const bd = new Date(dobStr); if (!isNaN(bd.getTime())) age = new Date().getFullYear() - bd.getFullYear(); } catch(_){}
+          try { const bd = new Date(dobStr); if (!isNaN(bd.getTime())) age = new Date().getFullYear() - bd.getFullYear(); } catch (_) { }
         }
 
         const jkRaw = getVal('Jenis Kelamin', 'JK') || 'L';
@@ -13010,7 +13010,7 @@ function handleAdminImportFileSelect(event) {
         const bb = parseFloat(getVal('BB (kg)', 'BB', 'Berat Badan')) || 60;
         const tb = parseFloat(getVal('TB (cm)', 'TB', 'Tinggi Badan')) || 165;
         const lp = parseFloat(getVal('LP (cm)', 'LP', 'Lingkar Perut')) || 80;
-        const imtVal = (tb > 0) ? (bb / ((tb/100)*(tb/100))).toFixed(2) : '22.0';
+        const imtVal = (tb > 0) ? (bb / ((tb / 100) * (tb / 100))).toFixed(2) : '22.0';
         const rawRowDate = getVal('Tanggal Entry', 'Tanggal Skrining', 'Tanggal', 'Tgl Entry');
         const rowDate = formatDateToYYYYMMDD(rawRowDate) || fallbackTanggal;
 
@@ -13075,7 +13075,7 @@ function handleAdminImportFileSelect(event) {
       }
 
       const officerCount = Object.keys(groupedSummary).length;
-      
+
       let badgesHtml = Object.entries(groupedSummary).map(([pName, count]) => {
         return `<div style="background:#f3e8ff; border:1px solid #c084fc; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:700; color:#6b21a8; display:flex; align-items:center; gap:8px;">
                   <i class="bi bi-person-badge-fill" style="color:#7c3aed;"></i>
@@ -13111,7 +13111,7 @@ function handleAdminImportFileSelect(event) {
                 <i class="bi bi-eye-fill"></i> PREVIEW REKAPITULASI MULTI-PETUGAS
               </div>
               <div style="font-size:12px; color:#6b21a8; margin-top:2px;">
-                File: <strong>${file.name}</strong> (${(file.size/1024).toFixed(1)} KB) Ã¢â‚¬â€ Total <strong>${parsedAdminRecords.length} Data Pasien Valid (NIK 16 Digit)</strong> untuk <strong>${officerCount} Petugas Entry</strong>
+                File: <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB) Ã¢â‚¬â€ Total <strong>${parsedAdminRecords.length} Data Pasien Valid (NIK 16 Digit)</strong> untuk <strong>${officerCount} Petugas Entry</strong>
               </div>
             </div>
             <span class="badge badge-emerald" style="font-size:12px; padding:6px 12px;"><i class="bi bi-check-circle-fill"></i> Ready Import</span>
@@ -13327,7 +13327,7 @@ function downloadSimpusAdminXLSXTemplate() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template SIMPUS Multi Petugas");
     XLSX.writeFile(wb, `Template_Import_SIMPUS_MultiPetugas_${new Date().toISOString().substring(0, 10)}.xlsx`);
-    
+
     showToast('Template Excel SIMPUS Multi-Petugas Berhasil Diunduh!', 'success');
   } catch (err) {
     console.error('Download SIMPUS admin template error:', err);
@@ -13347,7 +13347,7 @@ function handleSimpusAdminImportFileSelect(event) {
   const loggedAdmin = sessionStorage.getItem('ckg_user_name') || 'Admin';
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
@@ -13471,7 +13471,7 @@ function handleSimpusAdminImportFileSelect(event) {
       }
 
       const officerCount = Object.keys(groupedSummary).length;
-      
+
       let badgesHtml = Object.entries(groupedSummary).map(([pName, count]) => {
         return `<div style="background:#f3e8ff; border:1px solid #c084fc; padding:8px 14px; border-radius:10px; font-size:12.5px; font-weight:700; color:#6b21a8; display:flex; align-items:center; gap:8px;">
                   <i class="bi bi-person-badge-fill" style="color:#7c3aed;"></i>
@@ -13750,7 +13750,7 @@ function executeXLSXImport() {
         const dobStr = formatDateToYYYYMMDD(getVal('Tanggal Lahir', 'Tgl Lahir', 'DOB')) || '1990-01-01';
         let age = parseInt(getVal('Usia', 'Umur')) || 30;
         if (isNaN(age) || age <= 0) {
-          try { const bd = new Date(dobStr); if (!isNaN(bd.getTime())) age = new Date().getFullYear() - bd.getFullYear(); } catch(_){}
+          try { const bd = new Date(dobStr); if (!isNaN(bd.getTime())) age = new Date().getFullYear() - bd.getFullYear(); } catch (_) { }
         }
 
         const jkRaw = getVal('Jenis Kelamin', 'JK') || 'L';
@@ -13758,7 +13758,7 @@ function executeXLSXImport() {
         const bb = parseFloat(getVal('BB (kg)', 'BB', 'Berat Badan')) || 60;
         const tb = parseFloat(getVal('TB (cm)', 'TB', 'Tinggi Badan')) || 165;
         const lp = parseFloat(getVal('LP (cm)', 'LP', 'Lingkar Perut')) || 80;
-        const imtVal = (tb > 0) ? (bb / ((tb/100)*(tb/100))).toFixed(2) : '22.0';
+        const imtVal = (tb > 0) ? (bb / ((tb / 100) * (tb / 100))).toFixed(2) : '22.0';
         const rawRowDate = getVal('Tanggal Entry', 'Tanggal Skrining', 'Tanggal', 'Tgl Entry');
         const rowDate = formatDateToYYYYMMDD(rawRowDate) || selectedTanggal;
 
@@ -13920,7 +13920,7 @@ function showToast(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    
+
     let iconClass = 'bi-info-circle-fill';
     if (type === 'success') iconClass = 'bi-check-circle-fill';
     if (type === 'error') iconClass = 'bi-exclamation-triangle-fill';
@@ -13955,7 +13955,7 @@ async function checkDukcapilHealth(showToastMsg = false) {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
-    
+
     const resp = await fetch(`${DUKCAPIL_API_BASE}/health`, { signal: controller.signal });
     clearTimeout(timeoutId);
 
@@ -14190,7 +14190,7 @@ function renderDukcapilResultCard(data, isOfficial = false, isValid = true) {
     return;
   }
 
-  const badgeSource = isOfficial 
+  const badgeSource = isOfficial
     ? `<span class="badge badge-emerald" style="font-size: 11px;"><i class="bi bi-check-seal-fill"></i> Terverifikasi Server Dukcapil Official</span>`
     : `<span class="badge badge-amber" style="font-size: 11px;"><i class="bi bi-cpu-fill"></i> Validasi Parser NIK Standar Dukcapil</span>`;
 
@@ -14641,7 +14641,7 @@ async function fetchCloudSimpusRecords(silent = false) {
 
       // Non-blocking background save to local storage cache (prevents UI freeze for ~9000 records)
       setTimeout(() => {
-        try { localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords)); } catch (_) {}
+        try { localStorage.setItem('ckg_simpus_records', JSON.stringify(simpusRecords)); } catch (_) { }
       }, 100);
 
       const countVal = (typeof result.count === 'number') ? result.count : simpusRecords.length;
@@ -14766,7 +14766,7 @@ async function checkCloudPing() {
         }
       }
     }
-  } catch (_) {}
+  } catch (_) { }
 }
 
 setInterval(checkCloudPing, 10000);
@@ -14844,15 +14844,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   Promise.all([
-    fetchCloudUsers().catch(() => {}),
-    fetchCloudRecords().catch(() => {})
+    fetchCloudUsers().catch(() => { }),
+    fetchCloudRecords().catch(() => { })
   ]).finally(() => {
     if (isLoggedIn) {
       setTimeout(() => hideLoadingOverlay(), 250);
     }
     // Fetch SIMPUS in background without blocking UI
     setTimeout(() => {
-      fetchCloudSimpusRecords(true).catch(() => {});
+      fetchCloudSimpusRecords(true).catch(() => { });
     }, 500);
   });
 });
@@ -14904,7 +14904,7 @@ function openCustomLogoModal() {
       const fileInput = document.getElementById('customLogoFileInput');
       const previewBox = document.getElementById('logoPreviewBox');
       const previewImg = document.getElementById('logoPreviewImg');
-      
+
       fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -15468,7 +15468,7 @@ async function loadStoredSekolahRecords() {
         populateSekolahFilterDropdowns();
         renderSekolahView();
       }
-    } catch (_) {}
+    } catch (_) { }
   }
   fetchSekolahRecordsFromCloud(false);
 }
@@ -15589,7 +15589,7 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
         if (Array.isArray(cached) && cached.length > 0) {
           sekolahRecords = cached;
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     populateSekolahFilterDropdowns();
     renderSekolahView();
@@ -15720,7 +15720,7 @@ function saveMasterSekolahToStorage(newList) {
     console.warn('Error saving ckg_master_sekolah:', e);
   }
   if (typeof CkgIdb !== 'undefined') {
-    try { CkgIdb.set('master_sekolah', MASTER_SARANA_SEKOLAH); } catch (_) {}
+    try { CkgIdb.set('master_sekolah', MASTER_SARANA_SEKOLAH); } catch (_) { }
   }
   syncMasterSekolahToCloud(MASTER_SARANA_SEKOLAH);
   populateSekolahFilterDropdowns();
@@ -15756,7 +15756,7 @@ async function fetchMasterSekolahFromCloud() {
         }));
         try {
           localStorage.setItem('ckg_master_sekolah', JSON.stringify(MASTER_SARANA_SEKOLAH));
-        } catch (_) {}
+        } catch (_) { }
         populateSekolahFilterDropdowns();
         populateLoginSekolahDropdown();
         renderAdminSekolahTable();
@@ -16279,7 +16279,7 @@ function updateKelasDropdownOptions() {
 
   selectKelas.innerHTML = '<option value="">-- Semua Kelas --</option>' +
     sortedKelas.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
-  
+
   if (savedKelas && kelasSet.has(savedKelas.toUpperCase())) selectKelas.value = savedKelas;
 
   // Sync Kelas Combobox Label
@@ -16349,8 +16349,8 @@ function setIdentitasFieldsLockState(isLocked, isFromBankData = false) {
       el.style.borderColor = isFromBankData ? '#a7f3d0' : '#cbd5e1';
       el.style.color = isFromBankData ? '#065f46' : '#64748b';
       el.style.cursor = 'not-allowed';
-      el.title = isFromBankData 
-        ? 'Data resmi terverifikasi dari Bank Data CKG / ASIK (Terkunci)' 
+      el.title = isFromBankData
+        ? 'Data resmi terverifikasi dari Bank Data CKG / ASIK (Terkunci)'
         : 'Terkunci: Wajib klik Cek NIK terlebih dahulu!';
     } else {
       if (f.type === 'select') {
@@ -16496,7 +16496,7 @@ async function cekNikSiswaBankData() {
           source = 'Bank Data ASIK';
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // 4. Cek fallback search /api/enco/records
@@ -16513,7 +16513,7 @@ async function cekNikSiswaBankData() {
           }
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // 5. Cek API /api/ckg-gratis jika dataset belum loaded
@@ -16530,7 +16530,7 @@ async function cekNikSiswaBankData() {
           }
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   if (btn) {
@@ -16921,10 +16921,10 @@ function renderSekolahView() {
   if (!chosenSekolah) {
     // Reset KPI Summary Metrics & Pill Counts ke 0
     ['metricSekolahTotal', 'metricSekolahSudah', 'metricSekolahBelum', 'metricSekolahSebagian',
-     'pillCountTotal', 'pillCountSudah', 'pillCountBelum', 'pillCountSebagian'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = '0';
-    });
+      'pillCountTotal', 'pillCountSudah', 'pillCountBelum', 'pillCountSebagian'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0';
+      });
 
     tbody.innerHTML = `
       <tr>
@@ -17271,8 +17271,8 @@ function renderSekolahView() {
     const hasilContent = hasilChips.length > 0
       ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; font-size: 11px;">${hasilChips.join('')}</div>`
       : (hasPastHistory
-          ? `<span style="font-size: 11px; color: #1e40af; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-clock-history"></i> Belum diperiksa <span style="font-size: 10px; color: #64748b;">(ada ${r.riwayat_pemeriksaan.length} riwayat arsip)</span></span>`
-          : `<span style="font-size: 11.5px; color: #94a3b8; font-style: italic;">Belum ada pemeriksaan</span>`);
+        ? `<span style="font-size: 11px; color: #1e40af; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-clock-history"></i> Belum diperiksa <span style="font-size: 10px; color: #64748b;">(ada ${r.riwayat_pemeriksaan.length} riwayat arsip)</span></span>`
+        : `<span style="font-size: 11.5px; color: #94a3b8; font-style: italic;">Belum ada pemeriksaan</span>`);
 
     return `
       <tr style="cursor: pointer; transition: background 0.15s ease;">
@@ -17291,18 +17291,18 @@ function renderSekolahView() {
           </div>
           <div style="font-size: 11.5px; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
             <span><strong style="color: #475569;">NIK:</strong> ${safeNik || '-'} ${(() => {
-              const nikStat = getNikAnomalyStatus(r.nik);
-              if (nikStat.type !== 'valid') {
-                return `<span class="badge" style="font-size: 9px; padding: 1.5px 5px; background: ${nikStat.bg}; color: ${nikStat.color}; border: 1px solid ${nikStat.border}; font-weight: 700;" title="${nikStat.label}"><i class="bi bi-exclamation-triangle-fill"></i> ${nikStat.label}</span>`;
-              }
-              return '';
-            })()}</span>
+        const nikStat = getNikAnomalyStatus(r.nik);
+        if (nikStat.type !== 'valid') {
+          return `<span class="badge" style="font-size: 9px; padding: 1.5px 5px; background: ${nikStat.bg}; color: ${nikStat.color}; border: 1px solid ${nikStat.border}; font-weight: 700;" title="${nikStat.label}"><i class="bi bi-exclamation-triangle-fill"></i> ${nikStat.label}</span>`;
+        }
+        return '';
+      })()}</span>
             <span>&bull;</span>
             <span style="color: ${jkColor}; font-weight: 700;">${safeJk}</span>
             ${(() => {
-              const a = calculateRealtimeAge(r.tanggal_lahir);
-              return a ? `<span>&bull;</span><span style="font-weight: 700; color: #047857;">${a.years} Th</span>` : '';
-            })()}
+        const a = calculateRealtimeAge(r.tanggal_lahir);
+        return a ? `<span>&bull;</span><span style="font-weight: 700; color: #047857;">${a.years} Th</span>` : '';
+      })()}
           </div>
         </td>
 
@@ -17312,18 +17312,18 @@ function renderSekolahView() {
             ${safeSekolah}
           </div>
           ${safeKelas.toUpperCase() === 'LULUS'
-            ? `<span class="badge badge-emerald" style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0;"><i class="bi bi-mortarboard-fill"></i> LULUS</span>`
-            : `<span class="badge badge-purple" style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">${safeKelas}</span>`
-          }
+        ? `<span class="badge badge-emerald" style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0;"><i class="bi bi-mortarboard-fill"></i> LULUS</span>`
+        : `<span class="badge badge-purple" style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">${safeKelas}</span>`
+      }
           <span class="badge" style="font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; margin-left: 3px;" title="Tahun CKG Skrining"><i class="bi bi-calendar-check"></i> ${escapeHtml(r.tahun_skrining || '2026')}</span>
           ${hasPastHistory
-            ? `<div style="margin-top: 3px;">
+        ? `<div style="margin-top: 3px;">
                 <span style="font-size: 10px; font-weight: 700; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;" title="${r.riwayat_pemeriksaan.length} riwayat skrining tersimpan">
                   <i class="bi bi-clock-history"></i> ${r.riwayat_pemeriksaan.length} Riwayat
                 </span>
                </div>`
-            : ''
-          }
+        : ''
+      }
         </td>
 
         <!-- Column 4: Status Skrining (Checklist) -->
@@ -17523,7 +17523,7 @@ function switchSekolahModalTab(tabKey) {
 
 function updateSekolahMenuBadges(siswa) {
   if (!siswa) return;
-  
+
   const stations = getSekolahRecordExamStations(siswa);
   const { hasAntro, hasVital, hasLab, isLabTidakDiperiksa, hasOrgan, hasKesimpulan } = stations;
   const isIdComplete = isSiswaIdentitasComplete(siswa);
@@ -17686,7 +17686,7 @@ function updateSekolahMenuBadges(siswa) {
     }
     if (hasOrgan) chips.push(`<span class="status-check-badge organ"><i class="bi bi-check-circle-fill" style="color:#0d9488;"></i> Organ Indera (Selesai)</span>`);
 
-    elRingkasan.innerHTML = chips.length > 0 
+    elRingkasan.innerHTML = chips.length > 0
       ? `<div style="display: flex; gap: 6px; flex-wrap: wrap;">${chips.join('')}</div>`
       : `<span style="color: #94a3b8; font-style: italic;">Belum ada pos pemeriksaan yang diisi.</span>`;
   }
@@ -17793,7 +17793,7 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
   document.getElementById('periksaSistol').value = siswa.td_sistolik || '';
   document.getElementById('periksaDiastol').value = siswa.td_diastolik || '';
   calculateSiswaVitalCategory();
-  
+
   // Set status checkbox Tidak Diperiksa Lab
   const isLabTidak = !!(
     Number(siswa.lab_tidak_diperiksa) === 1 ||
@@ -17881,7 +17881,7 @@ function openPemeriksaanModal(siswaId, defaultTab = 'menu') {
         }
       }
     })
-    .catch(_ => {});
+    .catch(_ => { });
 }
 
 async function refreshCurrentSiswaModal(btn) {
@@ -18003,9 +18003,9 @@ function renderRiwayatPemeriksaanSiswa(siswa) {
           </div>
         </div>
         <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: #334155;">
-          ${chips.length > 0 
-            ? chips.map(c => `<span style="background:#f8fafc; border:1px solid #e2e8f0; padding:2px 7px; border-radius:6px;">${c}</span>`).join('') 
-            : '<span style="color:#94a3b8; font-style:italic;">Tidak ada catatan klinis khusus</span>'}
+          ${chips.length > 0
+        ? chips.map(c => `<span style="background:#f8fafc; border:1px solid #e2e8f0; padding:2px 7px; border-radius:6px;">${c}</span>`).join('')
+        : '<span style="color:#94a3b8; font-style:italic;">Tidak ada catatan klinis khusus</span>'}
         </div>
       </div>
     `;
@@ -18017,11 +18017,11 @@ function calculateRealtimeAge(dobString) {
   const birthDate = new Date(dobString);
   if (isNaN(birthDate.getTime())) return null;
   const today = new Date();
-  
+
   let years = today.getFullYear() - birthDate.getFullYear();
   let months = today.getMonth() - birthDate.getMonth();
   let days = today.getDate() - birthDate.getDate();
-  
+
   if (days < 0) {
     months--;
   }
@@ -18029,9 +18029,9 @@ function calculateRealtimeAge(dobString) {
     years--;
     months += 12;
   }
-  
+
   if (years < 0) return { years: 0, months: 0, text: '0 Tahun', totalYears: 0 };
-  
+
   let text = `${years} Tahun`;
   if (months > 0) {
     text += ` ${months} Bulan`;
@@ -18150,7 +18150,7 @@ function getKategoriHb(hb, age, jk) {
   if (hb === undefined || hb === null || hb === '' || hb === '-') return '';
   const val = parseFloat(hb);
   if (isNaN(val) || val <= 0) return '';
-  
+
   let cutoffNormal = 12.0;
   if (age !== undefined && age !== null && age < 12) cutoffNormal = 11.5;
   else if (age !== undefined && age !== null && age >= 15 && jk === 'L') cutoffNormal = 13.0;
@@ -18323,10 +18323,10 @@ function calculateSiswaIMT() {
  */
 const ANTRO_NORMAL_RANGES = {
   // Umur: { bb: [min, max], tb: [min, max], lp: [min, max] }
-  6:  { bb: [18, 24], tb: [110, 122], lp: [50, 56] },
-  7:  { bb: [20, 27], tb: [115, 127], lp: [51, 58] },
-  8:  { bb: [22, 30], tb: [120, 133], lp: [52, 60] },
-  9:  { bb: [24, 33], tb: [124, 138], lp: [53, 62] },
+  6: { bb: [18, 24], tb: [110, 122], lp: [50, 56] },
+  7: { bb: [20, 27], tb: [115, 127], lp: [51, 58] },
+  8: { bb: [22, 30], tb: [120, 133], lp: [52, 60] },
+  9: { bb: [24, 33], tb: [124, 138], lp: [53, 62] },
   10: { bb: [26, 37], tb: [128, 143], lp: [54, 64] },
   11: { bb: [28, 41], tb: [133, 150], lp: [55, 66] },
   12: { bb: [31, 46], tb: [138, 156], lp: [56, 68] },
@@ -19561,7 +19561,7 @@ async function cekNikTambahSiswaBankData() {
           source = 'Bank Data ASIK';
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // 4. Cek fallback search /api/enco/records
@@ -19575,7 +19575,7 @@ async function cekNikTambahSiswaBankData() {
           if (match) { foundData = match; source = 'Bank Data ASIK'; }
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   // 5. Cek API /api/ckg-gratis
@@ -19589,7 +19589,7 @@ async function cekNikTambahSiswaBankData() {
           if (match) { foundData = match; source = 'Cek Kesehatan Gratis'; }
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
   if (btn) {
@@ -20086,7 +20086,7 @@ function onHapusSekolahChange() {
     });
   } else {
     ['Kelas 1', 'Kelas 2', 'Kelas 3', 'Kelas 4', 'Kelas 5', 'Kelas 6',
-     'Kelas 7', 'Kelas 8', 'Kelas 9', 'Kelas 10', 'Kelas 11', 'Kelas 12', 'Lulus'].forEach(k => kelasSet.add(k.toUpperCase()));
+      'Kelas 7', 'Kelas 8', 'Kelas 9', 'Kelas 10', 'Kelas 11', 'Kelas 12', 'Lulus'].forEach(k => kelasSet.add(k.toUpperCase()));
     sekolahRecords.forEach(r => {
       if (r.kelas && r.kelas.trim()) kelasSet.add(r.kelas.trim().toUpperCase());
     });
@@ -20371,7 +20371,7 @@ async function executeHapusDataSekolah(event) {
     const idSet = new Set(matchedIds);
     sekolahRecords = sekolahRecords.filter(r => !idSet.has(r.id));
     if (typeof CkgIdb !== 'undefined') {
-      try { await CkgIdb.set('sekolah_records', sekolahRecords); } catch (_) {}
+      try { await CkgIdb.set('sekolah_records', sekolahRecords); } catch (_) { }
     }
 
     closeHapusDataSekolahModal();
@@ -20790,7 +20790,7 @@ function openKelolaSekolahModal() {
 
   resetFormKelolaSekolah();
   currentKelolaLevelFilter = 'ALL';
-  
+
   const searchInput = document.getElementById('inputSearchKelolaSekolah');
   if (searchInput) searchInput.value = '';
 
@@ -22292,7 +22292,7 @@ function handleSekolahImportFileSelect(event) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
@@ -22809,7 +22809,7 @@ function openLaporanSekolahModal() {
       if (r.tahun_skrining) yearsSet.add(String(r.tahun_skrining).trim());
     });
     let thHtml = '';
-    Array.from(yearsSet).sort((a,b) => b.localeCompare(a)).forEach(y => {
+    Array.from(yearsSet).sort((a, b) => b.localeCompare(a)).forEach(y => {
       thHtml += `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`;
     });
     thHtml += `<option value="all">Semua Tahun</option>`;
@@ -22981,7 +22981,7 @@ function renderPrintableLaporanSekolah(dataset, schoolName, kelasName, tahunVal)
 
       // Antro
       const antroStr = (r.bb && r.tb) ? `${r.bb}kg / ${r.tb}cm<br><span style="font-size: 10px; color: #475569;">IMT: ${r.imt || '-'} (${r.status_imt || 'Normal'})</span>` : '-';
-      
+
       // TD
       const tdStr = (r.td_sistolik && r.td_diastolik) ? `${r.td_sistolik}/${r.td_diastolik} mmHg` : '-';
 
@@ -23442,17 +23442,17 @@ function renderPrintableHasilIndividu(r) {
           </td>
           <td>
             ${(() => {
-              const notes = [];
-              if (r.hb && r.hb !== '-') {
-                const hbKat = getKategoriHb(r.hb, ageObj?.years || 12, r.jk);
-                if (hbKat) notes.push(`Hb: ${hbKat}`);
-              }
-              if (r.gula_darah && r.gula_darah !== '-') {
-                const gdsKat = getKategoriGulaDarah(r.gula_darah, ageObj?.years || 12);
-                if (gdsKat) notes.push(`GDS: ${gdsKat}`);
-              }
-              return notes.length > 0 ? notes.join(', ') : 'Dalam Batas Normal';
-            })()}
+      const notes = [];
+      if (r.hb && r.hb !== '-') {
+        const hbKat = getKategoriHb(r.hb, ageObj?.years || 12, r.jk);
+        if (hbKat) notes.push(`Hb: ${hbKat}`);
+      }
+      if (r.gula_darah && r.gula_darah !== '-') {
+        const gdsKat = getKategoriGulaDarah(r.gula_darah, ageObj?.years || 12);
+        if (gdsKat) notes.push(`GDS: ${gdsKat}`);
+      }
+      return notes.length > 0 ? notes.join(', ') : 'Dalam Batas Normal';
+    })()}
           </td>
         </tr>
         <tr>
@@ -23561,7 +23561,7 @@ const ACCURATE_KAMPUNG_DIRECTORY = {
   'BANJARAN KOTA': { kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   'ALUN-ALUN BANJARAN': { kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   'BAROS BANJARAN': { kel: 'Banjaran Kulon', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
-  
+
   'BANJARAN WETAN': { kel: 'Banjaran Wetan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   'MUARA': { kel: 'Banjaran Wetan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
   'SINDANGLENGO': { kel: 'Banjaran Wetan', kec: 'Banjaran', kab: 'Kabupaten Bandung', prov: 'Jawa Barat' },
@@ -23931,7 +23931,7 @@ async function saveLearnedKampungKeyword(kw, kel, kec, kab = 'Kabupaten Bandung'
   const finalProv = prov || '';
 
   const list = getLearnedKampungMap();
-  
+
   // Match uniqueness by: Kampung Name + Kelurahan + Kecamatan (So identical names in different villages are kept!)
   const existingIndex = list.findIndex(item => {
     const itemKw = (Array.isArray(item.keywords) ? item.keywords[0] : item.keywords) || '';
@@ -25619,7 +25619,7 @@ function deleteAddressPin(kw) {
             return String(item.keywords).toUpperCase().trim() !== cleanKw;
           });
           localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(filtered));
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // 3. Delete from Cloudflare D1 Cloud Server
@@ -25785,7 +25785,7 @@ function attachGoogleMapsAddressAutocomplete(kwInput, kelInput, kecSelect, latIn
               }
             });
           }
-        } catch (err) {}
+        } catch (err) { }
       }
 
       if (suggestions.length === 0) {
@@ -25869,7 +25869,7 @@ function initDarkMode() {
   const savedTheme = localStorage.getItem('ckg_theme_mode');
   // Default is clean Light Mode (Official Medical SatuSehat Theme)
   const isDark = (savedTheme === 'dark');
-  
+
   if (isDark) {
     document.body.classList.add('dark-mode');
   } else {
@@ -26156,7 +26156,7 @@ function renderEncoRecordsTable(records, offset) {
   uniqueRecords.forEach((r, idx) => {
     const no = offset + idx + 1;
     const isTerdaftar = (r.status_pendaftaran || '').toLowerCase().includes('terdaftar');
-    const badgeDaftar = isTerdaftar 
+    const badgeDaftar = isTerdaftar
       ? `<span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-weight:700;"><i class="bi bi-check2"></i> ${escapeHtml(r.status_pendaftaran || 'Sudah Terdaftar')}</span>`
       : `<span class="badge" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; font-weight:700;"><i class="bi bi-person-check"></i> ${escapeHtml(r.status_pendaftaran || 'Berhasil')}</span>`;
 
@@ -26244,7 +26244,7 @@ function viewEncoPatientDetail(nik) {
   if (patient.raw_details) {
     try {
       rawObj = typeof patient.raw_details === 'string' ? JSON.parse(patient.raw_details) : patient.raw_details;
-    } catch (_) {}
+    } catch (_) { }
   }
 
   const statusNikah = patient.status_pernikahan || rawObj?.statuspernikahan || rawObj?.status_pernikahan || rawObj?.statusnikah || rawObj?.nikah || '-';
@@ -26396,7 +26396,7 @@ async function deleteSingleEncoLog(id, r2Key, sessionId, petugas) {
     if (sessionId || r2Key) {
       try {
         await fetch(`/api/enco/sessions?id=${encodeURIComponent(sessionId || '')}&petugas=${encodeURIComponent(petugas || '')}&key=${encodeURIComponent(r2Key || '')}`, { method: 'DELETE' });
-      } catch (_) {}
+      } catch (_) { }
     }
 
     if (data.success) {
@@ -26677,7 +26677,7 @@ async function exportEncoToExcel() {
     const rows = uniqueData.map((r, idx) => {
       let rawObj = null;
       if (r.raw_details) {
-        try { rawObj = typeof r.raw_details === 'string' ? JSON.parse(r.raw_details) : r.raw_details; } catch (_) {}
+        try { rawObj = typeof r.raw_details === 'string' ? JSON.parse(r.raw_details) : r.raw_details; } catch (_) { }
       }
       const statusNikah = r.status_pernikahan || rawObj?.statuspernikahan || rawObj?.status_pernikahan || rawObj?.statusnikah || rawObj?.nikah || '';
       const pekerjaanVal = r.pekerjaan || rawObj?.pekerjaan || rawObj?.job || '';
@@ -26750,7 +26750,7 @@ async function loadEncoReportsWeb() {
         if (uData.success && Array.isArray(uData.data)) {
           usersList = uData.data.map(u => u.nama_user).filter(Boolean);
         }
-      } catch (_) {}
+      } catch (_) { }
 
       if (!usersList.length) {
         usersList = ['Mochamad Fauzie, S.Gz', 'Petugas'];
@@ -27642,10 +27642,10 @@ function renderAnomaliNikTable() {
         </td>
         <td style="padding: 10px 12px;">
           ${cleanNik.length > 0
-            ? `<div style="font-family: monospace; font-size: 13px; font-weight: 700; color: #1e293b; letter-spacing: 0.5px;">${safeNik}</div>
+        ? `<div style="font-family: monospace; font-size: 13px; font-weight: 700; color: #1e293b; letter-spacing: 0.5px;">${safeNik}</div>
                <div style="font-size: 10.5px; color: #64748b; margin-top: 1px;">Jumlah: <strong>${cleanNik.length} digit</strong> (wajib 16 digit)</div>`
-            : `<span style="font-style: italic; color: #94a3b8; font-size: 12px;">(Belum diisi / Kosong)</span>`
-          }
+        : `<span style="font-style: italic; color: #94a3b8; font-size: 12px;">(Belum diisi / Kosong)</span>`
+      }
         </td>
         <td style="padding: 10px 12px; text-align: center;">
           <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
@@ -28006,9 +28006,9 @@ function renderAbsensiTtdTable() {
           <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
             <span>NIK: ${safeNik}</span>
             ${(() => {
-              const a = calculateRealtimeAge(r.tanggal_lahir);
-              return a ? ` â€¢ <span style="font-weight: 600; color: #047857;">${a.years} Th</span>` : '';
-            })()}
+        const a = calculateRealtimeAge(r.tanggal_lahir);
+        return a ? ` â€¢ <span style="font-weight: 600; color: #047857;">${a.years} Th</span>` : '';
+      })()}
           </div>
         </td>
         <td style="padding: 10px 12px; text-align: center;">
@@ -28283,3 +28283,262 @@ document.addEventListener('click', (e) => {
     panel.style.display = 'none';
   }
 });
+
+/* ==========================================================================
+   ANDROID MOBILE APK OPTIMIZATIONS & HARDWARE INTERACTION
+   ========================================================================== */
+
+/**
+ * 1. Penanganan Tombol Back HP Android (Hardware Back Button)
+ * Dipanggil langsung oleh MainActivity.java Android atau event Capacitor App.
+ * Return 'handled' jika ada aksi yang ditangani (modal tertutup, dropdown ditutup).
+ * Return 'unhandled' jika pengguna sudah berada di beranda/dashboard utama
+ * (sehingga Android memunculkan konfirmasi keluar).
+ */
+window.handleAndroidBackButton = function () {
+  try {
+    // A. Cek jika SweetAlert2 sedang terbuka
+    if (window.Swal && typeof Swal.isVisible === 'function' && Swal.isVisible()) {
+      Swal.close();
+      return 'handled';
+    }
+
+    // B. Cek jika searchable dropdown combobox sedang terbuka
+    const openPanels = [
+      'comboboxLoginSekolahPanel',
+      'comboboxPegawaiDropdown',
+      'comboboxSekolahPanel',
+      'comboboxKelasPanel',
+      'comboboxFilterSekolahPanel',
+      'comboboxFilterKelasPanel'
+    ];
+    for (const panelId of openPanels) {
+      const panel = document.getElementById(panelId);
+      if (panel && (panel.style.display === 'block' || panel.style.display === 'flex' || panel.classList.contains('show'))) {
+        panel.style.display = 'none';
+        return 'handled';
+      }
+    }
+    if (typeof closeAllWilayahSearchDropdowns === 'function') {
+      const wilayahOpen = document.querySelector('.searchable-combobox-panel[style*="block"], .combobox-dropdown-panel[style*="block"]');
+      if (wilayahOpen) {
+        closeAllWilayahSearchDropdowns();
+        return 'handled';
+      }
+    }
+
+    // C. Cek jika Format Pengisian Pos (Vital, Lab, Fisik, dll) sedang terbuka
+    const posPilihan = document.getElementById('modalFormPosPilihan');
+    if (posPilihan && (posPilihan.style.display === 'flex' || posPilihan.style.display === 'block' || posPilihan.classList.contains('active'))) {
+      if (typeof closeFormPosPopup === 'function') {
+        closeFormPosPopup();
+        return 'handled';
+      }
+    }
+
+    // D. Cek modal-modal spesifik CKG Sekolah & Posyandu (urutan prioritas popup)
+    const modalClosers = [
+      { id: 'tambahSiswaModal', fn: typeof closeTambahSiswaModal === 'function' ? closeTambahSiswaModal : null },
+      { id: 'modalPemeriksaanSiswa', fn: typeof closePemeriksaanModal === 'function' ? closePemeriksaanModal : null },
+      { id: 'modalCkgGratisPemeriksaan', fn: typeof closePemeriksaanCkgGratisModal === 'function' ? closePemeriksaanCkgGratisModal : null },
+      { id: 'modalAbsensiTtd', fn: typeof closeModalAbsensiTtd === 'function' ? closeModalAbsensiTtd : null },
+      { id: 'modalAnomaliNik', fn: typeof closeAnomaliNikModal === 'function' ? closeAnomaliNikModal : null },
+      { id: 'dukcapilModal', fn: typeof closeDukcapilModal === 'function' ? closeDukcapilModal : null },
+      { id: 'modalHasilIndividu', fn: typeof closeHasilIndividuModal === 'function' ? closeHasilIndividuModal : null },
+      { id: 'modalLaporanSekolah', fn: typeof closeLaporanSekolahModal === 'function' ? closeLaporanSekolahModal : null },
+      { id: 'modalImportSekolah', fn: typeof closeImportSekolahModal === 'function' ? closeImportSekolahModal : null },
+      { id: 'modalKelolaSekolah', fn: typeof closeKelolaSekolahModal === 'function' ? closeKelolaSekolahModal : null },
+      { id: 'modalHapusDataSekolah', fn: typeof closeHapusDataSekolahModal === 'function' ? closeHapusDataSekolahModal : null },
+      { id: 'modalNaikKelas', fn: typeof closeNaikKelasModal === 'function' ? closeNaikKelasModal : null },
+      { id: 'modalMigrasiSekolah', fn: typeof closeMigrasiSekolahModal === 'function' ? closeMigrasiSekolahModal : null },
+      { id: 'modalDuplicateFinder', fn: typeof closeDuplicateFinderModal === 'function' ? closeDuplicateFinderModal : null },
+      { id: 'modalDetailPeserta', fn: typeof closeDetailModal === 'function' ? closeDetailModal : null },
+      { id: 'modalInputData', fn: typeof closeInputModal === 'function' ? closeInputModal : null },
+      { id: 'modalReturSisaBnhp', fn: () => { const m = document.getElementById('modalReturSisaBnhp'); if (m) m.style.display = 'none'; } },
+      { id: 'modalMutasiAlatBnhp', fn: () => { const m = document.getElementById('modalMutasiAlatBnhp'); if (m) m.style.display = 'none'; } },
+      { id: 'modalRestockBnhp', fn: () => { const m = document.getElementById('modalRestockBnhp'); if (m) m.style.display = 'none'; } },
+      { id: 'modalTambahAlatBnhp', fn: () => { const m = document.getElementById('modalTambahAlatBnhp'); if (m) m.style.display = 'none'; } }
+    ];
+
+    for (const item of modalClosers) {
+      const el = document.getElementById(item.id);
+      if (el && (el.style.display === 'flex' || el.style.display === 'block' || el.classList.contains('active') || el.classList.contains('show'))) {
+        if (item.fn) {
+          item.fn();
+        } else {
+          el.style.display = 'none';
+          el.classList.remove('active', 'show');
+        }
+        return 'handled';
+      }
+    }
+
+    // E. Cek overlay modal umum yang sedang terlihat
+    const activeGenericModal = document.querySelector('.modal-overlay.active, .modal.show, .modal-overlay[style*="display: flex"], .modal-overlay[style*="display: block"]');
+    if (activeGenericModal) {
+      activeGenericModal.style.display = 'none';
+      activeGenericModal.classList.remove('active', 'show');
+      return 'handled';
+    }
+
+    // F. Cek jika berada di portal/view turunan yang memiliki tombol kembali ke portal utama
+    const portalContainer = document.getElementById('portalSelectionContainer');
+    const mainViewContainer = document.getElementById('mainViewContainer');
+    if (portalContainer && portalContainer.style.display === 'none' && mainViewContainer && mainViewContainer.style.display !== 'none') {
+      const btnBackPortal = document.getElementById('btnKembaliKePortalUtama');
+      if (btnBackPortal && typeof btnBackPortal.onclick === 'function') {
+        btnBackPortal.click();
+        return 'handled';
+      }
+    }
+
+    return 'unhandled';
+  } catch (err) {
+    console.warn('[AndroidBackButton] Error handling back button:', err);
+    return 'unhandled';
+  }
+};
+
+/**
+ * 2. Floating Offline & Online Connection Detector
+ * Menampilkan status jaringan secara elegan di bagian atas layar HP
+ */
+(function setupAndroidNetworkMonitor() {
+  function getOrCreateBanner() {
+    let banner = document.getElementById('android-offline-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'android-offline-banner';
+      document.body.appendChild(banner);
+    }
+    return banner;
+  }
+
+  function showNetworkStatus(isOnline) {
+    const banner = getOrCreateBanner();
+    if (!isOnline) {
+      banner.className = 'banner-offline is-visible';
+      banner.innerHTML = '<i class="bi bi-wifi-off" style="font-size: 15px;"></i> Koneksi internet HP terputus. Pastikan paket data / Wi-Fi aktif.';
+    } else {
+      banner.className = 'banner-online is-visible';
+      banner.innerHTML = '<i class="bi bi-wifi" style="font-size: 15px;"></i> Koneksi tersambung kembali ke server.';
+      setTimeout(() => {
+        banner.classList.remove('is-visible');
+      }, 2500);
+    }
+  }
+
+  window.addEventListener('offline', () => showNetworkStatus(false));
+  window.addEventListener('online', () => showNetworkStatus(true));
+
+  // Cek koneksi awal saat start
+  if (!navigator.onLine) {
+    setTimeout(() => showNetworkStatus(false), 1000);
+  }
+})();
+
+/**
+ * 3. Auto-save & Restore Form Draft (Pencegahan Kehilangan Data Isian di HP)
+ * Menyimpan isian form pemeriksaan dan tambah siswa secara realtime di LocalStorage
+ */
+(function setupAndroidFormDraftAutoSave() {
+  const DRAFT_FORMS = [
+    { formId: 'formTambahSiswa', modalId: 'tambahSiswaModal', storageKey: 'ckg_draft_tambah_siswa' },
+    { formId: 'formModalPemeriksaan', modalId: 'modalPemeriksaanSiswa', storageKey: 'ckg_draft_periksa_siswa' }
+  ];
+
+  DRAFT_FORMS.forEach(({ formId, modalId, storageKey }) => {
+    let saveTimeout = null;
+    document.addEventListener('input', (e) => {
+      const form = document.getElementById(formId);
+      if (form && form.contains(e.target)) {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+          try {
+            const formData = {};
+            const inputs = form.querySelectorAll('input:not([type="password"]):not([type="hidden"]), select, textarea');
+            inputs.forEach(input => {
+              if (input.id && input.value) {
+                if (input.type === 'checkbox') {
+                  formData[input.id] = input.checked;
+                } else if (input.type === 'radio') {
+                  if (input.checked) formData[input.name] = input.value;
+                } else {
+                  formData[input.id] = input.value;
+                }
+              }
+            });
+            if (Object.keys(formData).length > 1) {
+              formData._timestamp = Date.now();
+              localStorage.setItem(storageKey, JSON.stringify(formData));
+            }
+          } catch (err) {
+            console.warn('[AutoSaveDraft] Error saving:', err);
+          }
+        }, 600);
+      }
+    });
+
+    const form = document.getElementById(formId);
+    if (form) {
+      form.addEventListener('submit', () => {
+        setTimeout(() => {
+          localStorage.removeItem(storageKey);
+          const banner = document.getElementById('draftBanner_' + formId);
+          if (banner) banner.remove();
+        }, 1200);
+      });
+    }
+  });
+
+  window.restoreFormDraft = function (formId, storageKey) {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      const form = document.getElementById(formId);
+      if (!form) return;
+
+      Object.entries(data).forEach(([key, val]) => {
+        if (key.startsWith('_')) return;
+        const input = form.querySelector('#' + key) || form.querySelector(`[name="${key}"][value="${val}"]`);
+        if (input) {
+          if (input.type === 'checkbox') {
+            input.checked = Boolean(val);
+            input.dispatchEvent(new Event('change'));
+          } else if (input.type === 'radio') {
+            input.checked = true;
+            input.dispatchEvent(new Event('change'));
+          } else {
+            input.value = val;
+            input.dispatchEvent(new Event('input'));
+            input.dispatchEvent(new Event('change'));
+          }
+        }
+      });
+
+      const banner = document.getElementById('draftBanner_' + formId);
+      if (banner) banner.remove();
+
+      if (window.Swal) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Draft Dipulihkan',
+          text: 'Data isian sebelumnya berhasil dimuat kembali.',
+          timer: 1600,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end'
+        });
+      }
+    } catch (e) {
+      console.warn('[RestoreDraft] Error:', e);
+    }
+  };
+
+  window.discardFormDraft = function (formId, storageKey) {
+    localStorage.removeItem(storageKey);
+    const banner = document.getElementById('draftBanner_' + formId);
+    if (banner) banner.remove();
+  };
+})();

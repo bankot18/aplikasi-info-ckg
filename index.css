@@ -1222,18 +1222,19 @@ body.dark-mode .metric-card-solid.clickable-card.active-filter {
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(5px);
   z-index: 200;
-  display: flex;
+  display: none !important;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: none !important;
   transition: opacity 0.3s ease;
 }
 
 .modal-overlay.open,
 .modal-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .modal-container {
@@ -1990,7 +1991,8 @@ html {
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  display: flex;
+  display: none !important;
+  pointer-events: none !important;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -2001,8 +2003,15 @@ html {
 }
 
 .loading-overlay.active {
-  opacity: 1;
-  visibility: visible;
+  display: flex !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.swal2-container:not(.swal2-shown) {
+  display: none !important;
+  pointer-events: none !important;
 }
 
 .loading-spinner-ring {
@@ -7882,5 +7891,139 @@ body.dark-mode .ckg-gratis-mode .pill-card-subtext {
 body.dark-mode .ckg-gratis-mode .pill-option input:checked + .pill-card-label {
   background: linear-gradient(135deg, #1e3a8a, #3b82f6) !important;
   border-color: #60a5fa !important;
+}
+
+/* ==========================================================================
+   ANDROID MOBILE APK OPTIMIZATIONS (Kenyamanan Penggunaan di HP)
+   ========================================================================== */
+
+/* 1. Cegah delay tap & optimize touch feedback */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+.btn,
+.clickable-card,
+.combobox-trigger,
+.simpus-pill-btn,
+.pos-menu-button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(5, 150, 105, 0.18);
+}
+
+/* 2. Ukuran input & tombol ramah jempol (Minimum touch target 44px di HP) */
+@media (max-width: 768px) {
+  /* Input teks & select minimal tinggi 44px agar mudah disentuh */
+  .form-control,
+  .filter-control,
+  select.form-control {
+    min-height: 44px !important;
+    font-size: 15px !important;
+  }
+
+  /* Pastikan gerbang portal bisa di-scroll dengan lancar di layar sentuh HP */
+  .portal-gate-container {
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    overflow-y: auto !important;
+  }
+
+  /* Tombol aksi modal & panel footer */
+  .panel-action-footer .btn,
+  .modal-footer .btn,
+  .btn-sekolah-primary,
+  .btn-sekolah-secondary,
+  .btn-sekolah-next {
+    min-height: 46px !important;
+    font-size: 13.5px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Modal scrolling lebih mulus di Android */
+  .modal-overlay,
+  .modal-dialog,
+  .modal-content,
+  .sekolah-form-panel {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Tabel data di HP lebih responsif */
+  .table-responsive,
+  .simpus-table-wrapper {
+    -webkit-overflow-scrolling: touch;
+    border-radius: 10px;
+    box-shadow: inset -6px 0 8px -4px rgba(0,0,0,0.06);
+  }
+
+  /* Hero banner responsive di portal mobile */
+  .portal-hero-banner {
+    max-height: 180px;
+    object-fit: cover;
+    border-radius: 12px;
+  }
+}
+
+/* 3. Floating Network Status Banner (Indikator Koneksi HP) */
+#android-offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#android-offline-banner.is-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#android-offline-banner.banner-offline {
+  background: linear-gradient(135deg, #b91c1c, #dc2626);
+  color: #ffffff;
+}
+
+#android-offline-banner.banner-online {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #ffffff;
+}
+
+/* 4. Indikator Pulihkan Draft Form */
+.draft-restore-banner {
+  background: #f0fdf4;
+  border: 1.5px dashed #10b981;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: #065f46;
+  font-weight: 600;
+  animation: fadeInDraft 0.3s ease-out;
+}
+
+@keyframes fadeInDraft {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 

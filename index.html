@@ -3,9 +3,16 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
   <title>Pencatatan CKG Puskesmas Banjaran Kota - Sistem Informasi BNBA</title>
   <meta name="description" content="Aplikasi Pencatatan CKG Puskesmas - Monitoring Produktivitas & Entry Data Skrining">
+
+  <!-- Mobile APK & PWA Meta Tags -->
+  <meta name="theme-color" content="#059669">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
 
   <!-- Google Fonts & Bootstrap Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,7 +29,7 @@
 
   <!-- Application Stylesheet & SweetAlert2 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-  <link rel="stylesheet" href="index.css?v=4.9">
+  <link rel="stylesheet" href="index.css?v=5.1">
 
   <!-- Chart.js, SweetAlert2 & SheetJS Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -83,7 +90,7 @@
         </div>
 
         <div class="portal-banner-container">
-          <img src="banner_ckg.png" alt="CKG Puskesmas Banjaran Kota" class="portal-hero-banner">
+          <img src="banner_ckg.jpg" alt="CKG Puskesmas Banjaran Kota" class="portal-hero-banner" loading="eager" decoding="async">
         </div>
 
         <h1 class="portal-headline-title">
@@ -4121,15 +4128,15 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
               <div class="form-group">
                 <label class="form-label" for="pemeriksaan_bb">Berat Badan (BB) <span style="font-weight: normal; color: #64748b;">(kg)</span></label>
-                <input type="number" step="0.1" id="pemeriksaan_bb" class="form-control" placeholder="Contoh: 55" oninput="calculatePemeriksaanIMT()">
+                <input type="number" step="0.1" id="pemeriksaan_bb" class="form-control" inputmode="decimal" placeholder="Contoh: 55" oninput="calculatePemeriksaanIMT()">
               </div>
               <div class="form-group">
                 <label class="form-label" for="pemeriksaan_tb">Tinggi Badan (TB) <span style="font-weight: normal; color: #64748b;">(cm)</span></label>
-                <input type="number" step="0.1" id="pemeriksaan_tb" class="form-control" placeholder="Contoh: 157" oninput="calculatePemeriksaanIMT()">
+                <input type="number" step="0.1" id="pemeriksaan_tb" class="form-control" inputmode="decimal" placeholder="Contoh: 157" oninput="calculatePemeriksaanIMT()">
               </div>
               <div class="form-group">
                 <label class="form-label" for="pemeriksaan_lp">Lingkar Perut (LP) <span style="font-weight: normal; color: #64748b;">(cm)</span></label>
-                <input type="number" step="0.1" id="pemeriksaan_lp" class="form-control" placeholder="Contoh: 81">
+                <input type="number" step="0.1" id="pemeriksaan_lp" class="form-control" inputmode="decimal" placeholder="Contoh: 81">
               </div>
               <div class="form-group">
                 <label class="form-label" for="pemeriksaan_imt">IMT & Status</label>
@@ -4149,23 +4156,23 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;">
               <div class="form-group">
                 <label class="form-label" for="pemeriksaan_td_sistolik">TD Sistolik <span style="font-weight: normal; color: #64748b;">(mmHg)</span></label>
-                <input type="number" id="pemeriksaan_td_sistolik" class="form-control" placeholder="Contoh: 120">
+                <input type="number" id="pemeriksaan_td_sistolik" class="form-control" inputmode="numeric" placeholder="Contoh: 120">
               </div>
               <div class="form-group">
                 <label class="form-label" for="pemeriksaan_td_diastolik">TD Diastolik <span style="font-weight: normal; color: #64748b;">(mmHg)</span></label>
-                <input type="number" id="pemeriksaan_td_diastolik" class="form-control" placeholder="Contoh: 80">
+                <input type="number" id="pemeriksaan_td_diastolik" class="form-control" inputmode="numeric" placeholder="Contoh: 80">
               </div>
               <div class="form-group">
                 <label class="form-label" for="pemeriksaan_gds">Gula Darah (GDS) <span style="font-weight: normal; color: #64748b;">(mg/dL)</span></label>
-                <input type="number" id="pemeriksaan_gds" class="form-control" placeholder="Contoh: 110">
+                <input type="number" id="pemeriksaan_gds" class="form-control" inputmode="numeric" placeholder="Contoh: 110">
               </div>
               <div class="form-group">
                 <label class="form-label" for="pemeriksaan_kolesterol">Kolesterol <span style="font-weight: normal; color: #64748b;">(mg/dL)</span></label>
-                <input type="number" id="pemeriksaan_kolesterol" class="form-control" placeholder="Contoh: 170">
+                <input type="number" id="pemeriksaan_kolesterol" class="form-control" inputmode="numeric" placeholder="Contoh: 170">
               </div>
               <div class="form-group">
                 <label class="form-label" for="pemeriksaan_hb">Hemoglobin (HB) <span style="font-weight: normal; color: #64748b;">(g/dL)</span></label>
-                <input type="number" step="0.1" id="pemeriksaan_hb" class="form-control" placeholder="Contoh: 13.5">
+                <input type="number" step="0.1" id="pemeriksaan_hb" class="form-control" inputmode="decimal" placeholder="Contoh: 13.5">
               </div>
             </div>
           </div>
@@ -4401,7 +4408,7 @@
             <div>
               <label class="form-label" style="font-weight: 700;">NIK Pasien (16 Digit) <span
                   style="color: var(--rose);">*</span></label>
-              <input type="text" id="dukcapilInputNik" class="form-control" placeholder="Contoh: 3204131234567890"
+              <input type="text" id="dukcapilInputNik" class="form-control" inputmode="numeric" placeholder="Contoh: 3204131234567890"
                 maxlength="16" required style="letter-spacing: 1px; font-family: monospace; font-size: 14px;">
             </div>
             <div>
@@ -5588,7 +5595,7 @@
                     <i class="bi bi-hash"></i> Berapa Batang?
                   </label>
                   <div class="input-group" style="display: flex;">
-                    <input type="number" id="periksaJumlahBatang" class="form-control" placeholder="Contoh: 4" min="1" max="100" style="font-weight: 700; border-color: #fdba74; border-top-right-radius: 0; border-bottom-right-radius: 0;">
+                    <input type="number" id="periksaJumlahBatang" class="form-control" inputmode="numeric" placeholder="Contoh: 4" min="1" max="100" style="font-weight: 700; border-color: #fdba74; border-top-right-radius: 0; border-bottom-right-radius: 0;">
                     <span class="input-group-text" style="background: #fed7aa; border: 1px solid #fdba74; border-left: none; font-weight: 700; color: #9a3412; border-top-right-radius: 8px; border-bottom-right-radius: 8px; padding: 6px 12px; font-size: 13px;">Batang</span>
                   </div>
                 </div>
@@ -6615,14 +6622,14 @@
             <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Stok Saat Ini <span style="color: #ef4444;">*</span>
             </label>
-            <input type="number" id="inputItemStok" class="filter-control" style="width: 100%; font-weight: 800; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" min="0" value="0">
+            <input type="number" id="inputItemStok" class="filter-control" inputmode="numeric" style="width: 100%; font-weight: 800; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1;" min="0" value="0">
           </div>
 
           <div>
             <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Batas Min (Alert)
             </label>
-            <input type="number" id="inputItemStokMin" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;" min="0" value="10">
+            <input type="number" id="inputItemStokMin" class="filter-control" inputmode="numeric" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 600;" min="0" value="10">
           </div>
         </div>
 
@@ -6698,7 +6705,7 @@
           <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Jumlah Penambahan Stok (+) <span style="color: #ef4444;">*</span>
           </label>
-          <input type="number" id="inputRestockQty" class="filter-control" style="width: 100%; font-size: 16px; font-weight: 800; color: #059669; background: #fff; border: 1.5px solid #cbd5e1;" min="1" placeholder="Masukkan jumlah...">
+          <input type="number" id="inputRestockQty" class="filter-control" inputmode="numeric" style="width: 100%; font-size: 16px; font-weight: 800; color: #059669; background: #fff; border: 1.5px solid #cbd5e1;" min="1" placeholder="Masukkan jumlah...">
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
@@ -6804,7 +6811,7 @@
             <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
               Jumlah Sasaran
             </label>
-            <input type="number" id="inputPemakaianSasaran" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 700;" min="0" placeholder="Jml sasaran / siswa...">
+            <input type="number" id="inputPemakaianSasaran" class="filter-control" inputmode="numeric" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 700;" min="0" placeholder="Jml sasaran / siswa...">
             <div id="hintPemakaianSasaran" style="font-size: 11px; margin-top: 4px; color: #0284c7; line-height: 1.3;"></div>
           </div>
         </div>
@@ -7077,7 +7084,7 @@
           <label style="font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 5px; display: block;">
             Realisasi Jumlah Sasaran Diperiksa (Siswa / Pasien)
           </label>
-          <input type="number" id="inputReturSasaran" class="filter-control" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 700;" min="0" placeholder="Jumlah riil sasaran terperiksa...">
+          <input type="number" id="inputReturSasaran" class="filter-control" inputmode="numeric" style="width: 100%; background: #fff; color: #0f172a; border: 1.5px solid #cbd5e1; font-weight: 700;" min="0" placeholder="Jumlah riil sasaran terperiksa...">
         </div>
 
         <div style="margin-bottom: 8px;">
@@ -7353,7 +7360,7 @@
   <!-- Script Modules -->
   <script src="wilayah-data.js"></script>
   <script src="charts.js"></script>
-  <script src="app.js?v=4.9"></script>
+  <script src="app.js?v=5.1"></script>
   <script src="alat-bnhp.js"></script>
 </body>
 
