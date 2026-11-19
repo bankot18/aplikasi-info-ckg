@@ -2009,7 +2009,7 @@ html {
   visibility: visible !important;
 }
 
-.swal2-container:not(.swal2-shown) {
+body:not(.swal2-shown) .swal2-container {
   display: none !important;
   pointer-events: none !important;
 }
