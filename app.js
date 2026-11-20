@@ -204,12 +204,12 @@ function toggleTablePasswordVisibility(index, realPass) {
   const codeEl = document.getElementById(`passCode_${index}`);
   const iconEl = document.getElementById(`eyeIcon_${index}`);
   if (!codeEl || !iconEl) return;
-  if (codeEl.textContent === 'Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢') {
+  if (codeEl.textContent === '••••••••') {
     codeEl.textContent = realPass;
     iconEl.className = 'bi bi-eye-fill';
     iconEl.style.color = '#2563eb';
   } else {
-    codeEl.textContent = 'Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢';
+    codeEl.textContent = '••••••••';
     iconEl.className = 'bi bi-eye-slash-fill';
     iconEl.style.color = '#64748b';
   }
@@ -547,7 +547,7 @@ async function syncRecordsToCloud(dataToSync) {
 }
 
 // ==========================================================================
-// ðŸŒ¿ DATA CEK KESEHATAN GRATIS (STANDALONE CLOUD D1 DATASET - FORMAT BOT ENCO)
+// 🌿 DATA CEK KESEHATAN GRATIS (STANDALONE CLOUD D1 DATASET - FORMAT BOT ENCO)
 // ==========================================================================
 function loadStoredCkgGratisRecords() {
   const saved = localStorage.getItem('ckg_gratis_records');
@@ -1232,7 +1232,7 @@ function setupAuthFormEvents() {
 }
 
 function updatePasswordVisibility() {
-  // Removed Ã¢â‚¬â€ password is now handled via SweetAlert2 popup
+  // Removed - password is now handled via SweetAlert2 popup
 }
 
 function selectPegawaiQuick(namaPegawai) {
@@ -1258,7 +1258,7 @@ function selectPegawaiQuick(namaPegawai) {
 }
 
 // ==========================================================================
-// Ã°Å¸â€Â SEARCHABLE COMBOBOX LOGIC UNTUK LOGIN PEGAWAI
+// 🔍 SEARCHABLE COMBOBOX LOGIC UNTUK LOGIN PEGAWAI
 // ==========================================================================
 function togglePegawaiDropdown(event) {
   if (event) event.stopPropagation();
@@ -1401,7 +1401,7 @@ document.addEventListener('click', function (e) {
 });
 
 /* ==========================================================================
-   Ã°Å¸â€œÅ  LOADING OVERLAY HELPERS
+   📊 LOADING OVERLAY HELPERS
    ========================================================================== */
 
 function showLoadingOverlay(text = 'Memuat Data...', subtext = 'Menghubungkan ke Database Cloudflare D1') {
@@ -1427,7 +1427,7 @@ function hideLoadingOverlay() {
 }
 
 /* ==========================================================================
-   Ã°Å¸â€Â LOGIN HANDLER WITH SWEETALERT2 PASSWORD POPUP
+   🔑 LOGIN HANDLER WITH SWEETALERT2 PASSWORD POPUP
    ========================================================================== */
 
 function handleLogin(e) {
@@ -1504,13 +1504,13 @@ function handleLogin(e) {
 
   const dbPassword = (user.password || '').trim();
 
-  // If user has NO password Ã¢â€ â€™ login directly
+  // If user has NO password ➔ login directly
   if (dbPassword === '') {
     performLoginSuccess(user);
     return;
   }
 
-  // If user HAS a password Ã¢â€ â€™ show SweetAlert2 password popup
+  // If user HAS a password ➔ show SweetAlert2 password popup
   Swal.fire({
     title: 'Masukkan Kata Sandi',
     html: `<div style="text-align:center; margin-bottom: 8px;">
@@ -1643,7 +1643,7 @@ function handleLogout() {
 }
 
 /* ==========================================================================
-   Ã°Å¸Å¡Âª MULTI-PORTAL ACCESS GATE & AUTHENTICATION HANDLERS
+   🚪 MULTI-PORTAL ACCESS GATE & AUTHENTICATION HANDLERS
    ========================================================================== */
 
 function returnToPortalPicker() {
@@ -2107,11 +2107,11 @@ function handlePosyanduLogin(e) {
 }
 
 /* ==========================================================================
-   Ã°Å¸ÂÂ¢ ADMIN PANEL: MULTI-PORTAL MANAGEMENT (SEKOLAH, POSYANDU, GATE)
+   🏢 ADMIN PANEL: MULTI-PORTAL MANAGEMENT (SEKOLAH, POSYANDU, GATE)
    ========================================================================== */
 
 /* ==========================================================================
-   ðŸ§­ DYNAMIC MENU CONFIGURATION ENGINE (GESER POSISI, PERMISSION, STATUS)
+   🧭 DYNAMIC MENU CONFIGURATION ENGINE (GESER POSISI, PERMISSION, STATUS)
    ========================================================================== */
 
 const DEFAULT_MENU_CONFIG = [
@@ -2845,7 +2845,7 @@ function openEditPosyanduAksesModal(id) {
 
   document.getElementById('editAksesPosyanduId').value = posyandu.id;
   document.getElementById('editAksesPosyanduLabel').textContent = posyandu.nama;
-  document.getElementById('editAksesPosyanduDesaBadge').textContent = `Desa: ${posyandu.desa || '-'} Ã¢â‚¬Â¢ RW: ${posyandu.rw || '-'}`;
+  document.getElementById('editAksesPosyanduDesaBadge').textContent = `Desa: ${posyandu.desa || '-'} • RW: ${posyandu.rw || '-'}`;
   document.getElementById('editAksesPosyanduPassword').value = posyandu.password || '';
   document.getElementById('editAksesPosyanduStatus').value = (posyandu.is_active !== undefined) ? String(posyandu.is_active) : (posyandu.password ? '1' : '0');
 
@@ -3808,19 +3808,19 @@ function addToDeletedBlacklist(keyword) {
 
 async function syncKamusFromCloudServer() {
   try {
-    console.log('Ã¢ËœÂÃ¯Â¸Â [Kamus Sync] Fetching /api/kamus (GET)...');
+    console.log('☁️ [Kamus Sync] Fetching /api/kamus (GET)...');
     const res = await fetch('/api/kamus');
-    console.log('Ã¢ËœÂÃ¯Â¸Â [Kamus Sync] Response status:', res.status);
+    console.log('☁️ [Kamus Sync] Response status:', res.status);
     if (res.ok) {
       const json = await res.json();
-      console.log('Ã¢ËœÂÃ¯Â¸Â [Kamus Sync] D1 returned:', json.success, 'items:', (json.data || []).length);
+      console.log('☁️ [Kamus Sync] D1 returned:', json.success, 'items:', (json.data || []).length);
       if (json.success && Array.isArray(json.data)) {
         const deletedList = getDeletedKampungList();
         // Replace local with D1 cloud data as authoritative source
         const cloudMap = [];
         json.data.forEach(item => {
           const kw = String(item.keyword).toUpperCase().trim();
-          if (!kw || deletedList.includes(kw)) return; // Ã°Å¸Å¡Â« Skip deleted keywords!
+          if (!kw || deletedList.includes(kw)) return; // 🚫 Skip deleted keywords!
 
           const existing = cloudMap.find(m => m.keywords.includes(kw));
           if (existing) {
@@ -3849,7 +3849,7 @@ async function syncKamusFromCloudServer() {
           if (!localItem.keywords || !Array.isArray(localItem.keywords)) return;
           localItem.keywords.forEach(lkw => {
             const cleanLkw = String(lkw).toUpperCase().trim();
-            if (deletedList.includes(cleanLkw)) return; // Ã°Å¸Å¡Â« Skip deleted keywords!
+            if (deletedList.includes(cleanLkw)) return; // 🚫 Skip deleted keywords!
             const inCloud = cloudMap.find(m => m.keywords.includes(cleanLkw));
             if (!inCloud) {
               cloudMap.push(localItem);
@@ -3858,15 +3858,15 @@ async function syncKamusFromCloudServer() {
         });
 
         localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(cloudMap));
-        console.log('Ã¢ËœÂÃ¯Â¸Â [Kamus Sync] Local storage updated, total entries:', cloudMap.length);
+        console.log('☁️ [Kamus Sync] Local storage updated, total entries:', cloudMap.length);
         refreshAdminKamusStats();
         if (typeof renderMapMarkers === 'function') renderMapMarkers();
       }
     } else {
-      console.warn('Ã¢ËœÂÃ¯Â¸Â [Kamus Sync] Non-OK response:', res.status);
+      console.warn('☁️ [Kamus Sync] Non-OK response:', res.status);
     }
   } catch (err) {
-    console.warn('Ã¢ËœÂÃ¯Â¸Â [Kamus Sync] Error:', err);
+    console.warn('☁️ [Kamus Sync] Error:', err);
   }
 }
 
@@ -4002,7 +4002,7 @@ async function handleExcelAddressUpload(event) {
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
 
-    console.log('Ã°Å¸â€œÅ  [Kamus Import] Sheet parsed, total rows:', rows.length);
+    console.log('📊 [Kamus Import] Sheet parsed, total rows:', rows.length);
     if (!rows || rows.length === 0) {
       Swal.fire('File Kosong', 'Tidak ada data ditemukan dalam file Excel tersebut.', 'warning');
       return;
@@ -4125,8 +4125,8 @@ async function handleExcelAddressUpload(event) {
           <p>Berhasil mengekstrak <strong>${itemsToSave.length}</strong> data kampung dari <strong>${rows.length}</strong> baris file Excel.</p>
           <div style="margin-top: 10px; padding: 10px 12px; background: ${d1Success ? '#f0fdf4' : '#fef2f2'}; border-radius: 8px; border: 1px solid ${d1Success ? '#bbf7d0' : '#fecaca'}; font-size: 12px;">
             ${d1Success
-          ? `<strong style="color: #15803d;">Ã¢ËœÂÃ¯Â¸Â Cloud D1 Database:</strong> ${d1Count} data berhasil disimpan/diperbarui ke cloud.`
-          : `<strong style="color: #b91c1c;">Ã¢Å¡Â Ã¯Â¸Â Error Cloud D1:</strong> ${d1ErrorMsg}`}
+          ? `<strong style="color: #15803d;">☁️ Cloud D1 Database:</strong> ${d1Count} data berhasil disimpan/diperbarui ke cloud.`
+          : `<strong style="color: #b91c1c;">⚠️ Error Cloud D1:</strong> ${d1ErrorMsg}`}
           </div>
         </div>
       `,
@@ -4135,7 +4135,7 @@ async function handleExcelAddressUpload(event) {
 
   } catch (err) {
     event.target.value = '';
-    console.error('Ã¢ÂÅ’ Error handling Excel import:', err);
+    console.error('❌ Error handling Excel import:', err);
     Swal.fire('Gagal Membaca File', `Terjadi kesalahan saat memproses file Excel: ${err.message}`, 'error');
   }
 }
@@ -4152,9 +4152,9 @@ function refreshAdminKamusStats() {
   learnedMap.forEach(m => totalKeywords += m.keywords.length);
 
   statEl.innerHTML = `
-    Ã°Å¸Å¸Â¢ <strong>Kamus Bawaan (Banjaran):</strong> ${staticCount} Wilayah Kelurahan (${totalKeywords - learnedCount} Kata Kunci)<br>
-    Ã¢ËœÂÃ¯Â¸Â <strong>Kamus Cloud Database (D1 Cloud Sync & Excel Import):</strong> ${learnedCount} Kata Kunci Tersinkronisasi Seluruh Device<br>
-    Ã¢Å“Â¨ <strong>Total Bank Data Wilayah Siap Pakai:</strong> <strong>${staticCount + learnedCount} Wilayah / Entry</strong>
+    🟢 <strong>Kamus Bawaan (Banjaran):</strong> ${staticCount} Wilayah Kelurahan (${totalKeywords - learnedCount} Kata Kunci)<br>
+    ☁️ <strong>Kamus Cloud Database (D1 Cloud Sync & Excel Import):</strong> ${learnedCount} Kata Kunci Tersinkronisasi Seluruh Device<br>
+    ✨ <strong>Total Bank Data Wilayah Siap Pakai:</strong> <strong>${staticCount + learnedCount} Wilayah / Entry</strong>
   `;
 
   renderKamusAlamatTable();
@@ -4172,7 +4172,7 @@ function renderKamusAlamatTable() {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" style="text-align: center; padding: 16px; color: #94a3b8;">
-          Ã¢ËœÂÃ¯Â¸Â Belum ada kata kunci tersimpan di Kamus Cloud D1. Silakan unduh Template & impor file Excel.
+          ☁️ Belum ada kata kunci tersimpan di Kamus Cloud D1. Silakan unduh Template & impor file Excel.
         </td>
       </tr>`;
     return;
@@ -4240,11 +4240,11 @@ async function clearLearnedKampungMap() {
           Tindakan ini akan <strong>MENGHAPUS PERMANEN</strong> seluruh <strong>${totalCount} data kata kunci alamat/kampung</strong> dari:
         </p>
         <ul style="padding-left: 20px; color: #0f172a; margin-bottom: 12px; font-weight: 600;">
-          <li>Ã¢ËœÂÃ¯Â¸Â Cloud Database D1 Cloudflare</li>
-          <li>Ã°Å¸â€™Â¾ LocalStorage Penyimpanan Browser</li>
+          <li>☁️ Cloud Database D1 Cloudflare</li>
+          <li>💾 LocalStorage Penyimpanan Browser</li>
         </ul>
         <div style="padding: 10px 12px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; color: #be123c; font-weight: 700; font-size: 12px;">
-          Ã¢Å¡Â Ã¯Â¸Â PERINGATAN: Tindakan ini tidak dapat dibatalkan!
+          ⚠️ PERINGATAN: Tindakan ini tidak dapat dibatalkan!
         </div>
       </div>
     `,
@@ -4262,7 +4262,7 @@ async function clearLearnedKampungMap() {
   const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
   Swal.fire({
-    title: 'Ã°Å¸â€â€ž Menghapus Seluruh Data Alamat...',
+    title: '🔄 Menghapus Seluruh Data Alamat...',
     html: `
       <div id="clearKamusProgressContainer" style="text-align: left; font-size: 13px; padding-top: 6px;">
         <div id="clearKamusProgressStep" style="font-weight: 700; color: #0284c7; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
@@ -4273,7 +4273,7 @@ async function clearLearnedKampungMap() {
           <div id="clearKamusProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #f43f5e, #be123c); border-radius: 6px; transition: width 0.4s ease;"></div>
         </div>
         <div id="clearKamusProgressLog" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 11.5px; color: #475569; max-height: 160px; overflow-y: auto; line-height: 1.7;">
-          <div>Ã¢ÂÂ³ Menghubungkan ke server D1...</div>
+          <div>⏳ Menghubungkan ke server D1...</div>
         </div>
       </div>
     `,
@@ -4297,7 +4297,7 @@ async function clearLearnedKampungMap() {
 
   try {
     // --- STEP 1: Count initial cloud items ---
-    updateProgress(15, 'Ã°Å¸â€Â Mengecek data Cloud D1 Database...', 'Ã°Å¸â€Â Menghitung data di Cloud D1 Database Server...');
+    updateProgress(15, '🔍 Mengecek data Cloud D1 Database...', '🔍 Menghitung data di Cloud D1 Database Server...');
     await delay(400);
 
     let initialCloudCount = 0;
@@ -4310,7 +4310,7 @@ async function clearLearnedKampungMap() {
     } catch (e) {
       initialCloudCount = 'Error';
     }
-    updateProgress(30, 'Ã¢ËœÂÃ¯Â¸Â Mengirim perintah DELETE ke Cloud D1...', `Ã¢ËœÂÃ¯Â¸Â Ditemukan ${initialCloudCount} data di Cloud D1. Mengirim permohonan hapus...`);
+    updateProgress(30, '☁️ Mengirim perintah DELETE ke Cloud D1...', `☁️ Ditemukan ${initialCloudCount} data di Cloud D1. Mengirim permohonan hapus...`);
     await delay(400);
 
     // --- STEP 2: Execute DELETE command on Cloud D1 ---
@@ -4322,17 +4322,17 @@ async function clearLearnedKampungMap() {
         const delJson = await delRes.json();
         cloudDeleted = delJson.success === true;
         serverMessage = delJson.message || 'OK';
-        updateProgress(60, 'Ã¢Å“â€¦ Respon diterima dari Cloud D1...', `Ã¢Å“â€¦ Cloud D1 Respon: ${serverMessage}`);
+        updateProgress(60, '✅ Respon diterima dari Cloud D1...', `✅ Cloud D1 Respon: ${serverMessage}`);
       } else {
-        updateProgress(60, 'Ã¢Å¡Â Ã¯Â¸Â Respon HTTP server non-200...', `Ã¢Å¡Â Ã¯Â¸Â Cloud D1 Respon status: ${delRes.status}`);
+        updateProgress(60, '⚠️ Respon HTTP server non-200...', `⚠️ Cloud D1 Respon status: ${delRes.status}`);
       }
     } catch (netErr) {
-      updateProgress(60, 'Ã¢ÂÅ’ Kesalahan jaringan ke Cloud D1...', `Ã¢ÂÅ’ Error koneksi: ${netErr.message}`);
+      updateProgress(60, '❌ Kesalahan jaringan ke Cloud D1...', `❌ Error koneksi: ${netErr.message}`);
     }
     await delay(500);
 
     // --- STEP 3: Verify deletion on Cloud D1 ---
-    updateProgress(75, 'Ã°Å¸â€Â Memverifikasi status akhir Cloud D1...', 'Ã°Å¸â€Â Verifikasi ulang data di Cloud D1...');
+    updateProgress(75, '🔍 Memverifikasi status akhir Cloud D1...', '🔍 Verifikasi ulang data di Cloud D1...');
     let remainingCloudCount = 0;
     try {
       const vRes = await fetch('/api/kamus');
@@ -4342,7 +4342,7 @@ async function clearLearnedKampungMap() {
       }
     } catch (e) { remainingCloudCount = 0; }
 
-    updateProgress(85, 'Ã°Å¸â€™Â¾ Membersihkan Storage Browser (LocalStorage)...', `Ã¢Å“â€¦ Verifikasi Cloud D1 selesai (sisa record: ${remainingCloudCount}).`);
+    updateProgress(85, '💾 Membersihkan Storage Browser (LocalStorage)...', `✅ Verifikasi Cloud D1 selesai (sisa record: ${remainingCloudCount}).`);
     await delay(400);
 
     // --- STEP 4: Clear LocalStorage ---
@@ -4350,13 +4350,13 @@ async function clearLearnedKampungMap() {
     localStorage.removeItem('ckg_deleted_kampung_list');
     localStorage.removeItem('ckg_deleted_kampungs_blacklist');
     localStorage.setItem('ckg_dictionary_is_reset', 'true');
-    updateProgress(95, 'Ã°Å¸â€â€ž Memperbarui Tampilan UI...', 'Ã°Å¸â€™Â¾ LocalStorage browser berhasil dibersihkan.');
+    updateProgress(95, '🔄 Memperbarui Tampilan UI...', '💾 LocalStorage browser berhasil dibersihkan.');
     await delay(400);
 
     // --- STEP 5: Refresh UI ---
     refreshAdminKamusStats();
     renderKamusAlamatTable();
-    updateProgress(100, 'Ã¢Å“Â¨ Penghapusan Selesai!', 'Ã¢Å“Â¨ Seluruh data alamat berhasil dihapus!');
+    updateProgress(100, '✨ Penghapusan Selesai!', '✨ Seluruh data alamat berhasil dihapus!');
     await delay(500);
 
     Swal.fire({
@@ -4365,11 +4365,11 @@ async function clearLearnedKampungMap() {
       html: `
         <div style="text-align: left; font-size: 13px; line-height: 1.7;">
           <p style="color: #059669; font-weight: 700; margin-bottom: 6px;">
-            Ã°Å¸Å½â€° Pembersihan data Kamus Alamat berhasil dilaksanakan.
+            🎉 Pembersihan data Kamus Alamat berhasil dilaksanakan.
           </p>
           <ul style="padding-left: 20px; color: #475569; font-size: 12px;">
-            <li>Ã¢ËœÂÃ¯Â¸Â <strong>Cloud D1 Database:</strong> ${cloudDeleted ? 'Terhapus total (0 Record)' : 'Respon diproses'}</li>
-            <li>Ã°Å¸â€™Â¾ <strong>LocalStorage Browser:</strong> Terhapus bersih</li>
+            <li>☁️ <strong>Cloud D1 Database:</strong> ${cloudDeleted ? 'Terhapus total (0 Record)' : 'Respon diproses'}</li>
+            <li>💾 <strong>LocalStorage Browser:</strong> Terhapus bersih</li>
           </ul>
         </div>
       `,
@@ -4378,7 +4378,7 @@ async function clearLearnedKampungMap() {
     });
 
   } catch (fatalErr) {
-    console.error('Ã¢ÂÅ’ Fatal clear kamus error:', fatalErr);
+    console.error('❌ Fatal clear kamus error:', fatalErr);
     Swal.fire('Gagal Menghapus', `Terjadi kesalahan: ${fatalErr.message}`, 'error');
   }
 }
@@ -4459,7 +4459,7 @@ async function scanExistingRecordsForAddressDictionary() {
           Manajemen Kamus Alamat sekarang dipusatkan secara resmi melalui <strong>File Excel</strong> untuk menjamin akurasi dan keselarasan database Cloud D1.
         </p>
         <p style="margin-bottom: 10px; color: #0f172a; font-weight: 700;">
-          Ã°Å¸â€œÂ¥ Cara Menambahkan Data Kamus Alamat:
+          📥 Cara Menambahkan Data Kamus Alamat:
         </p>
         <ol style="padding-left: 20px; color: #0369a1; font-weight: 600;">
           <li>Klik <strong>"Download Template Excel"</strong> di menu Admin.</li>
@@ -4947,11 +4947,11 @@ function toggleTanpaWaliInputs(checked) {
 
 function getKategoriLabel(key) {
   switch (key) {
-    case 'bayi_balita': return 'Bayi & Balita (0 â€“ 59 Bulan / 0 â€“ 5 Th)';
-    case 'prasekolah': return 'Anak Prasekolah (60 â€“ 72 Bulan / 5 â€“ 6 Th)';
-    case 'sekolah_remaja': return 'Sekolah & Remaja (6 â€“ 18 Tahun)';
-    case 'dewasa': return 'Dewasa (18 â€“ 59 Tahun)';
-    case 'lansia': return 'Lanjut Usia (Lansia) (â‰¥ 60 Tahun)';
+    case 'bayi_balita': return 'Bayi & Balita (0 - 59 Bulan / 0 - 5 Th)';
+    case 'prasekolah': return 'Anak Prasekolah (60 - 72 Bulan / 5 - 6 Th)';
+    case 'sekolah_remaja': return 'Sekolah & Remaja (6 - 18 Tahun)';
+    case 'dewasa': return 'Dewasa (18 - 59 Tahun)';
+    case 'lansia': return 'Lanjut Usia (Lansia) (>= 60 Tahun)';
     default: return key || 'Umum';
   }
 }
@@ -4981,61 +4981,61 @@ function determineKategoriSasaran(dob, age) {
   if (isNaN(finalAge)) finalAge = 0;
 
   let key = 'dewasa';
-  let label = 'Dewasa (18 â€“ 59 Tahun)';
+  let label = 'Dewasa (18 - 59 Tahun)';
   let shortLabel = 'Dewasa';
   let radioId = 'kat_dewasa';
 
   if (months !== null) {
     if (months <= 59) {
       key = 'bayi_balita';
-      label = 'Bayi & Balita (0 â€“ 59 Bulan / 0 â€“ 5 Th)';
+      label = 'Bayi & Balita (0 - 59 Bulan / 0 - 5 Th)';
       shortLabel = 'Bayi & Balita';
       radioId = 'kat_bayi_balita';
     } else if (months <= 72 || finalAge <= 6) {
       key = 'prasekolah';
-      label = 'Anak Prasekolah (60 â€“ 72 Bulan / 5 â€“ 6 Th)';
+      label = 'Anak Prasekolah (60 - 72 Bulan / 5 - 6 Th)';
       shortLabel = 'Anak Prasekolah';
       radioId = 'kat_prasekolah';
     } else if (finalAge < 18) {
       key = 'sekolah_remaja';
-      label = 'Sekolah & Remaja (6 â€“ 18 Tahun)';
+      label = 'Sekolah & Remaja (6 - 18 Tahun)';
       shortLabel = 'Sekolah & Remaja';
       radioId = 'kat_sekolah_remaja';
     } else if (finalAge >= 60) {
       key = 'lansia';
-      label = 'Lanjut Usia (Lansia) (â‰¥ 60 Tahun)';
+      label = 'Lanjut Usia (Lansia) (>= 60 Tahun)';
       shortLabel = 'Lansia';
       radioId = 'kat_lansia';
     } else {
       key = 'dewasa';
-      label = 'Dewasa (18 â€“ 59 Tahun)';
+      label = 'Dewasa (18 - 59 Tahun)';
       shortLabel = 'Dewasa';
       radioId = 'kat_dewasa';
     }
   } else {
     if (finalAge < 5) {
       key = 'bayi_balita';
-      label = 'Bayi & Balita (0 â€“ 5 Tahun)';
+      label = 'Bayi & Balita (0 - 5 Tahun)';
       shortLabel = 'Bayi & Balita';
       radioId = 'kat_bayi_balita';
     } else if (finalAge >= 5 && finalAge <= 6) {
       key = 'prasekolah';
-      label = 'Anak Prasekolah (5 â€“ 6 Tahun)';
+      label = 'Anak Prasekolah (5 - 6 Tahun)';
       shortLabel = 'Anak Prasekolah';
       radioId = 'kat_prasekolah';
     } else if (finalAge >= 7 && finalAge < 18) {
       key = 'sekolah_remaja';
-      label = 'Sekolah & Remaja (6 â€“ 18 Tahun)';
+      label = 'Sekolah & Remaja (6 - 18 Tahun)';
       shortLabel = 'Sekolah & Remaja';
       radioId = 'kat_sekolah_remaja';
     } else if (finalAge >= 60) {
       key = 'lansia';
-      label = 'Lanjut Usia (Lansia) (â‰¥ 60 Tahun)';
+      label = 'Lanjut Usia (Lansia) (>= 60 Tahun)';
       shortLabel = 'Lansia';
       radioId = 'kat_lansia';
     } else {
       key = 'dewasa';
-      label = 'Dewasa (18 â€“ 59 Tahun)';
+      label = 'Dewasa (18 - 59 Tahun)';
       shortLabel = 'Dewasa';
       radioId = 'kat_dewasa';
     }
@@ -5206,7 +5206,7 @@ function calculateAgeFromDOB(isFromCekNik = false) {
 }
 
 // ==========================================================================
-// Ã°Å¸â€˜Â¶ AGE CATEGORY ENGINE (STANDAR INTEGRASI LAYANAN PRIMER / KEMENKES RI)
+// 👶 AGE CATEGORY ENGINE (STANDAR INTEGRASI LAYANAN PRIMER / KEMENKES RI)
 // ==========================================================================
 
 function getRecordAgeMonths(r) {
@@ -5242,11 +5242,11 @@ function getKategoriUmur(usia, dob) {
   }
 
   // Standar Siklus Hidup ILP Kemenkes:
-  // 1. Bayi dan Balita (0Ã¢â‚¬â€œ59 bulan / 0Ã¢â‚¬â€œ5 tahun)
-  // 2. Anak Prasekolah (60Ã¢â‚¬â€œ72 bulan / 5Ã¢â‚¬â€œ6 tahun)
-  // 3. Usia Sekolah dan Remaja (6Ã¢â‚¬â€œ18 tahun / > 72 bulan s/d < 18 tahun)
-  // 4. Dewasa (18Ã¢â‚¬â€œ59 tahun)
-  // 5. Lanjut Usia (Lansia) (Ã¢â€°Â¥ 60 tahun)
+  // 1. Bayi dan Balita (0-59 bulan / 0-5 tahun)
+  // 2. Anak Prasekolah (60-72 bulan / 5-6 tahun)
+  // 3. Usia Sekolah dan Remaja (6-18 tahun / > 72 bulan s/d < 18 tahun)
+  // 4. Dewasa (18-59 tahun)
+  // 5. Lanjut Usia (Lansia) (>= 60 tahun)
   if (months !== null) {
     if (months <= 59) return 'Bayi dan Balita';
     if (months <= 72) return 'Anak Prasekolah';
@@ -5267,23 +5267,23 @@ function isRecordInAgeCategory(r, categoryKey) {
   const months = getRecordAgeMonths(r);
   const key = String(categoryKey).toLowerCase().trim();
 
-  // 1. Bayi dan Balita (0Ã¢â‚¬â€œ59 bulan / 0Ã¢â‚¬â€œ5 tahun)
+  // 1. Bayi dan Balita (0-59 bulan / 0-5 tahun)
   if (key === 'bayi_balita' || key === 'bayi dan balita' || key === 'balita') {
     return months !== null ? (months <= 59) : (age < 5);
   }
-  // 2. Anak Prasekolah (60Ã¢â‚¬â€œ72 bulan / 5Ã¢â‚¬â€œ6 tahun)
+  // 2. Anak Prasekolah (60-72 bulan / 5-6 tahun)
   if (key === 'prasekolah' || key === 'anak prasekolah') {
     return months !== null ? (months >= 60 && months <= 72) : (age >= 5 && age <= 6);
   }
-  // 3. Usia Sekolah dan Remaja (6Ã¢â‚¬â€œ18 tahun)
+  // 3. Usia Sekolah dan Remaja (6-18 tahun)
   if (key === 'sekolah_remaja' || key === 'usia sekolah dan remaja' || key === 'remaja') {
     return months !== null ? (months > 72 && age < 18) : (age >= 6 && age < 18);
   }
-  // 4. Dewasa (18Ã¢â‚¬â€œ59 tahun)
+  // 4. Dewasa (18-59 tahun)
   if (key === 'dewasa') {
     return age >= 18 && age < 60;
   }
-  // 5. Lanjut Usia (Lansia) (Ã¢â€°Â¥ 60 tahun / 60 tahun ke atas)
+  // 5. Lanjut Usia (Lansia) (>= 60 tahun / 60 tahun ke atas)
   if (key === 'lansia' || key === 'lanjut usia' || key === 'lanjut usia (lansia)') {
     return age >= 60;
   }
@@ -5295,7 +5295,7 @@ function isRecordInAgeCategory(r, categoryKey) {
 }
 
 // ==========================================================================
-// Ã°Å¸â€ â€ NIK 16 DIGIT VALIDATION & EXTRACTION ENGINE
+// 🆕 NIK 16 DIGIT VALIDATION & EXTRACTION ENGINE
 // ==========================================================================
 
 function extractCleanNik16(val) {
@@ -5336,7 +5336,7 @@ function calculateIMT() {
     if (rounded < 18.5) { badgeText = 'Kurus (<18.5)'; badgeClass = 'badge-amber'; }
     else if (rounded <= 24.9) { badgeText = 'Normal (18.5-24.9)'; badgeClass = 'badge-emerald'; }
     else if (rounded <= 29.9) { badgeText = 'Gemuk (25-29.9)'; badgeClass = 'badge-amber'; }
-    else { badgeText = 'Obesitas (Ã¢â€°Â¥30)'; badgeClass = 'badge-rose'; }
+    else { badgeText = 'Obesitas (>=30)'; badgeClass = 'badge-rose'; }
 
     if (imtBadge) {
       imtBadge.className = `badge ${badgeClass}`;
@@ -5536,8 +5536,8 @@ async function executeSimpusBulkAction(actionType) {
               <i class="bi bi-geo-alt-fill" style="color: #2563eb;"></i> Pilih Kategori / Lokasi Entry CKG:
             </label>
             <select id="swalBulkTargetKategori" class="custom-input" style="width: 100%; padding: 9px 12px; border-radius: 6px; font-weight: 600; font-size: 13.5px;">
-              <option value="Luar Gedung" selected>Ã°Å¸â€œÂ CKG Luar Gedung</option>
-              <option value="Dalam Gedung">Ã°Å¸ÂÂ¥ CKG Dalam Gedung</option>
+              <option value="Luar Gedung" selected>📋 CKG Luar Gedung</option>
+              <option value="Dalam Gedung">🏥 CKG Dalam Gedung</option>
             </select>
           </div>
 
@@ -5825,7 +5825,10 @@ function renderSimpusTableRecords() {
     if (totEl) totEl.textContent = totalCount.toLocaleString('id-ID');
 
     if (!containerTable) return;
-    if (dataset.length === 0) {
+    const pagContainerEmpty = document.getElementById('sekolahPaginationContainer');
+    if (pagContainerEmpty) pagContainerEmpty.style.display = 'none';
+
+  if (dataset.length === 0) {
       containerTable.innerHTML = `
         <tr>
           <td colspan="18" style="text-align: center; padding: 40px; color: var(--text-muted);">
@@ -6053,7 +6056,7 @@ function copyToClipboard(text, label = 'Data') {
 
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(cleanText).then(() => {
-      showToast(`Ã¢Å“â€œ ${label} ("${cleanText}") Berhasil Disalin!`, 'success');
+      showToast(`✓ ${label} ("${cleanText}") Berhasil Disalin!`, 'success');
     }).catch(() => {
       fallbackCopyToClipboard(cleanText, label);
     });
@@ -6071,7 +6074,7 @@ function fallbackCopyToClipboard(text, label) {
   ta.select();
   try {
     document.execCommand('copy');
-    showToast(`Ã¢Å“â€œ ${label} ("${text}") Berhasil Disalin!`, 'success');
+    showToast(`✓ ${label} ("${text}") Berhasil Disalin!`, 'success');
   } catch (err) {
     showToast(`Gagal menyalin ${label}`, 'error');
   }
@@ -6409,8 +6412,8 @@ async function handleSimpusActionBerhasil(id) {
             <i class="bi bi-geo-alt-fill" style="color: #2563eb;"></i> Pilih Kategori / Lokasi Entry CKG:
           </label>
           <select id="swalTargetKategori" class="custom-input" style="width: 100%; padding: 9px 12px; border-radius: 6px; font-weight: 600; font-size: 13.5px;">
-            <option value="Luar Gedung" selected>Ã°Å¸â€œÂ CKG Luar Gedung</option>
-            <option value="Dalam Gedung">Ã°Å¸ÂÂ¥ CKG Dalam Gedung</option>
+            <option value="Luar Gedung" selected>📋 CKG Luar Gedung</option>
+            <option value="Dalam Gedung">🏥 CKG Dalam Gedung</option>
           </select>
         </div>
 
@@ -7379,7 +7382,7 @@ function processImportFromModal() {
       if (parsedRecords.length === 0) {
         if (typeof Swal !== 'undefined') {
           if (skippedInvalidNik > 0) {
-            const sampleList = sampleInvalidNik.map(s => `Ã¢â‚¬Â¢ <b>${s.nama}</b>: NIK "${s.nik}" (${s.len} digit)`).join('<br>');
+            const sampleList = sampleInvalidNik.map(s => `• <b>${s.nama}</b>: NIK "${s.nik}" (${s.len} digit)`).join('<br>');
             Swal.fire({
               icon: 'warning',
               title: 'Semua Data Ditolak (NIK Tidak 16 Digit)',
@@ -7485,7 +7488,7 @@ function processImportFromModal() {
           let skippedNotice = '';
           if (skippedInvalidNik > 0) {
             skippedNotice = `<div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; margin-top:10px; font-size:12.5px; color:#92400e;">
-              Ã¢Å¡Â Ã¯Â¸Â <strong>${skippedInvalidNik} data pasien dilewati / ditolak</strong> karena NIK tidak persis 16 digit.
+              ⚠️ <strong>${skippedInvalidNik} data pasien dilewati / ditolak</strong> karena NIK tidak persis 16 digit.
             </div>`;
           }
           Swal.fire({
@@ -8851,7 +8854,7 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
 
     const theme = isRank1 ? {
       pillBg: 'linear-gradient(135deg, #d97706, #b45309)',
-      pillText: 'Ã°Å¸Ââ€  JUARA 1 (RANK 1)',
+      pillText: '🏆 JUARA 1 (RANK 1)',
       medalBadge: '1',
       medalBg: '#fef3c7',
       medalBorder: '#f59e0b',
@@ -8872,7 +8875,7 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
       offset: '-16px'
     } : isRank2 ? {
       pillBg: 'linear-gradient(135deg, #64748b, #475569)',
-      pillText: 'Ã°Å¸Â¥Ë† JUARA 2 (RANK 2)',
+      pillText: '🥈 JUARA 2 (RANK 2)',
       medalBadge: '2',
       medalBg: '#f1f5f9',
       medalBorder: '#94a3b8',
@@ -8893,7 +8896,7 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
       offset: '0px'
     } : {
       pillBg: 'linear-gradient(135deg, #ea580c, #c2410c)',
-      pillText: 'Ã°Å¸Â¥â€° JUARA 3 (RANK 3)',
+      pillText: '🥉 JUARA 3 (RANK 3)',
       medalBadge: '3',
       medalBg: '#ffedd5',
       medalBorder: '#fdba74',
@@ -8973,8 +8976,8 @@ function renderTop3Leaderboard(officersData = getOfficerPerformanceData()) {
             </div>
 
             <div style="font-size: 11px; color: #475569; display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
-              <span>Ã°Å¸â€œÂ Luar: <strong>${item.luarCount}</strong></span>
-              <span>Ã°Å¸ÂÂ¢ Dalam: <strong>${item.dalamCount}</strong></span>
+              <span>📋 Luar: <strong>${item.luarCount}</strong></span>
+              <span>🏢 Dalam: <strong>${item.dalamCount}</strong></span>
             </div>
           </div>
 
@@ -9144,7 +9147,7 @@ function renderUserDatabaseTable() {
 
     const passwordDisplayHtml = hasPassword ? `
       <div style="display: inline-flex; align-items: center; gap: 6px; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">
-        <code id="passCode_${i}" style="color: #dc2626; font-weight: 800; font-family: monospace; font-size: 13px; letter-spacing: 2px;">Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢</code>
+        <code id="passCode_${i}" style="color: #dc2626; font-weight: 800; font-family: monospace; font-size: 13px; letter-spacing: 2px;">••••••••</code>
         <button type="button" onclick="toggleTablePasswordVisibility('${i}', '${safePassword}')" style="border: none; background: transparent; cursor: pointer; color: #64748b; padding: 0 2px; font-size: 13px; display: inline-flex; align-items: center;" title="Lihat/Sembunyikan Password">
           <i id="eyeIcon_${i}" class="bi bi-eye-slash-fill"></i>
         </button>
@@ -9577,7 +9580,7 @@ function buildTableRowsHtml(data) {
 }
 
 /* ==========================================================================
-   ðŸ¤– FITUR INTEGRASI ANTREAN BOT ENCO (CKG UMUM & CKG SEKOLAH)
+   🤖 FITUR INTEGRASI ANTREAN BOT ENCO (CKG UMUM & CKG SEKOLAH)
    ========================================================================== */
 
 let botQueueData = {
@@ -9781,7 +9784,7 @@ async function sendCurrentSekolahToBotQueue() {
         html: `
           <div style="font-size: 13.5px; color: #334155; line-height: 1.5;">
             <strong>${json.count || dataset.length} siswa</strong> berhasil ditambahkan ke antrean <strong>CKG Sekolah</strong>.<br><br>
-            Buka ekstensi <strong>Bot ENCO</strong>, lalu klik <strong>"Ambil Data dari CKG Bankot" âž” Pilih CKG Sekolah</strong>.
+            Buka ekstensi <strong>Bot ENCO</strong>, lalu klik <strong>"Ambil Data dari CKG Bankot" ➔ Pilih CKG Sekolah</strong>.
           </div>
         `,
         confirmButtonColor: '#4f46e5'
@@ -10055,7 +10058,7 @@ async function clearAllBotQueue(jenis) {
 }
 
 /* ==========================================================================
-   ðŸ¥ VIEW: CEK KESEHATAN GRATIS (FORMAT TEMPLATE BOT ENCO)
+   🏥 VIEW: CEK KESEHATAN GRATIS (FORMAT TEMPLATE BOT ENCO)
    ========================================================================== */
 
 function renderCkgGratisTable() {
@@ -10155,18 +10158,41 @@ function renderCkgGratisTable() {
     totalBadge.textContent = `Total: ${filtered.length} Pasien`;
   }
 
-  // Apply Limit
-  const limitVal = document.getElementById('filterCkgGratisLimit')?.value || '10';
-  let displayFiltered = filtered;
-  if (limitVal !== 'semua') {
-    const limitNum = parseInt(limitVal) || 10;
-    displayFiltered = filtered.slice(0, limitNum);
+  // Apply Responsive Pagination (Desktop: 10, Mobile/APK: 3, or dropdown limit)
+  const isMobile = isMobileOrApkView();
+  const defaultPageSize = isMobile ? 3 : 10;
+  const limitVal = document.getElementById('filterCkgGratisLimit')?.value || '';
+  let pageSize = defaultPageSize;
+  if (limitVal && limitVal !== 'semua') {
+    pageSize = parseInt(limitVal) || defaultPageSize;
   }
 
-  tbody.innerHTML = buildCkgGratisRowsHtml(displayFiltered);
+  const filterSig = `${filterUsiaVal}|${filterMinAgeVal}|${filterMaxAgeVal}|${filterJkVal}|${filterBulanVal}|${filterTahunVal}|${filterPetugasVal}|${searchQuery}|${limitVal}`;
+  if (lastCkgGratisFilterSignature !== filterSig) {
+    currentCkgGratisPage = 1;
+    lastCkgGratisFilterSignature = filterSig;
+  }
+
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  if (currentCkgGratisPage > totalPages) currentCkgGratisPage = totalPages;
+  if (currentCkgGratisPage < 1) currentCkgGratisPage = 1;
+
+  const startIndex = (currentCkgGratisPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const pagedList = limitVal === 'semua' ? filtered : filtered.slice(startIndex, endIndex);
+
+  tbody.innerHTML = buildCkgGratisRowsHtml(pagedList, startIndex);
+
+  if (limitVal === 'semua' || totalItems === 0) {
+    const pagContainer = document.getElementById('ckgGratisPaginationContainer');
+    if (pagContainer) pagContainer.style.display = 'none';
+  } else {
+    renderCkgGratisPagination(totalItems, pageSize, currentCkgGratisPage, totalPages);
+  }
 }
 
-function buildCkgGratisRowsHtml(list) {
+function buildCkgGratisRowsHtml(list, startIndex = 0) {
   if (!list || list.length === 0) {
     return `
       <tr>
@@ -10266,7 +10292,7 @@ function buildCkgGratisRowsHtml(list) {
     return `
       <tr>
         <td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="chk-ckg-gratis-row" value="${r.id}" style="cursor: pointer; width: 15px; height: 15px; accent-color: #0284c7;"></td>
-        <td style="text-align: center; font-weight: 700; color: #64748b; vertical-align: middle;">${i + 1}</td>
+        <td style="text-align: center; font-weight: 700; color: #64748b; vertical-align: middle;">${startIndex + i + 1}</td>
         
         <!-- KOLOM 2: NAMA PASIEN & IDENTITAS -->
         <td style="vertical-align: middle;">
@@ -10282,12 +10308,12 @@ function buildCkgGratisRowsHtml(list) {
           ? `<span class="badge" style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-person-slash"></i> Belum Ada NIK</span>`
           : `<span class="badge" style="background: #fee2e2; color: #dc2626; font-family: monospace; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px;"><i class="bi bi-exclamation-triangle"></i> ${cleanNik || '-'}</span>`
       }
-            <span class="badge ${jk === 'P' ? 'badge-rose' : 'badge-cyan'}" style="font-weight: 800; font-size: 10.5px; padding: 2px 7px;">${jk === 'P' ? 'â™€ P' : 'â™‚ L'}</span>
+            <span class="badge ${jk === 'P' ? 'badge-rose' : 'badge-cyan'}" style="font-weight: 800; font-size: 10.5px; padding: 2px 7px;">${jk === 'P' ? 'P' : 'L'}</span>
             <span class="badge badge-slate" style="font-weight: 700; font-size: 10.5px; padding: 2px 7px;">${r.usia || 0} th</span>
           </div>
           <div style="font-size: 11.5px; color: #64748b;">
             <i class="bi bi-calendar3"></i> Lahir: <strong>${formatDateToYYYYMMDD(r.tanggal_lahir)}</strong>
-            ${(r.nama_wali || r.nik_wali) ? `<span style="color: #b45309; margin-left: 5px;">â€¢ Wali: <strong>${r.nama_wali || r.nik_wali}</strong></span>` : ''}
+            ${(r.nama_wali || r.nik_wali) ? `<span style="color: #b45309; margin-left: 5px;">• Wali: <strong>${r.nama_wali || r.nik_wali}</strong></span>` : ''}
           </div>
         </td>
 
@@ -10505,7 +10531,7 @@ function editCkgGratisRecord(id) {
 }
 
 /* ==========================================================================
-   ðŸ©º MODAL & ENGINE PEMERIKSAAN MEDIS PASIEN CKG GRATIS (FORMAT BOT ENCO)
+   🩺 MODAL & ENGINE PEMERIKSAAN MEDIS PASIEN CKG GRATIS (FORMAT BOT ENCO)
    ========================================================================== */
 
 let currentPemeriksaanId = null;
@@ -10528,7 +10554,7 @@ function openPemeriksaanCkgGratisModal(recordId) {
 
   if (nameEl) nameEl.textContent = r.nama || '-';
   if (nikEl) nikEl.textContent = r.nik ? r.nik : (r.belum_punya_nik ? 'Belum Ada NIK' : '-');
-  if (jkUsiaEl) jkUsiaEl.textContent = `${r.jenis_kelamin === 'P' ? 'â™€ Perempuan' : 'â™‚ Laki-laki'} â€¢ ${r.usia || 0} Tahun`;
+  if (jkUsiaEl) jkUsiaEl.textContent = `${r.jenis_kelamin === 'P' ? 'Perempuan' : 'Laki-laki'} • ${r.usia || 0} Tahun`;
   if (katEl) katEl.textContent = getKategoriLabel(r.kategori_sasaran || determineKategoriSasaran(r.tanggal_lahir)?.category || 'dewasa');
   if (alamatEl) alamatEl.textContent = `${r.alamat || '-'}, ${r.kelurahan || '-'}, Kec. ${r.kecamatan || '-'}`;
 
@@ -10679,7 +10705,7 @@ async function savePemeriksaanCkgGratis() {
         showConfirmButton: false
       });
     } else {
-      showToast(`âœ“ Hasil pemeriksaan medis ${r.nama} berhasil disimpan!`, 'success');
+      showToast(`✓ Hasil pemeriksaan medis ${r.nama} berhasil disimpan!`, 'success');
     }
   } catch (err) {
     console.error('Failed saving pemeriksaan:', err);
@@ -10792,7 +10818,7 @@ function resetCkgGratisFilters() {
 }
 
 /* ==========================================================================
-   Ã°Å¸â€œâ€¦ DATE UPDATE ENGINE (SINGLE RECORD & BULK MONTHLY FOR ADMIN)
+   📅 DATE UPDATE ENGINE (SINGLE RECORD & BULK MONTHLY FOR ADMIN)
    ========================================================================== */
 
 function promptChangeSingleRecordDate(recordId) {
@@ -10841,7 +10867,7 @@ function promptChangeSingleRecordDate(recordId) {
 
       saveRecordsToStorage();
       renderTableRecords();
-      showToast(`Ã¢Å“â€œ Tanggal entry untuk ${item.nama} berhasil diubah ke ${formatDisplayDate(newDateVal)}!`, 'success');
+      showToast(`✓ Tanggal entry untuk ${item.nama} berhasil diubah ke ${formatDisplayDate(newDateVal)}!`, 'success');
     }
   });
 }
@@ -11636,10 +11662,10 @@ function restoreFilteredRecycle() {
         <p style="color: #475569; margin-bottom: 12px; line-height: 1.5;">Apakah Anda yakin ingin memulihkan <strong>${itemsToRestore.length} data</strong> yang saat ini muncul sesuai filter?</p>
         
         <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #065f46; line-height: 1.6;">
-          <div>Ã¢â‚¬Â¢ Jenis Kegiatan: <strong>${filterKegiatanVal || 'Semua Kegiatan'}</strong></div>
-          <div>Ã¢â‚¬Â¢ Sumber Data: <strong>${filterSourceVal || 'Semua Sumber'}</strong></div>
-          <div>Ã¢â‚¬Â¢ Petugas: <strong>${filterPetugasVal || 'Semua Petugas'}</strong></div>
-          ${searchQuery ? `<div>Ã¢â‚¬Â¢ Kata Kunci Cari: <strong>"${searchQuery}"</strong></div>` : ''}
+          <div>• Jenis Kegiatan: <strong>${filterKegiatanVal || 'Semua Kegiatan'}</strong></div>
+          <div>• Sumber Data: <strong>${filterSourceVal || 'Semua Sumber'}</strong></div>
+          <div>• Petugas: <strong>${filterPetugasVal || 'Semua Petugas'}</strong></div>
+          ${searchQuery ? `<div>• Kata Kunci Cari: <strong>"${searchQuery}"</strong></div>` : ''}
           <div style="margin-top: 6px; font-weight: 700; color: #047857;">Semua data terfilter di atas akan dikembalikan dari Tempat Sampah ke Database Aktif.</div>
         </div>
       </div>
@@ -11771,7 +11797,7 @@ function emptyRecycleBin() {
           <div style="display: flex; align-items: center; gap: 10px;">
             <input type="radio" name="emptyRecycleSource" value="ALL" checked style="accent-color: #0284c7; width: 18px; height: 18px;">
             <div>
-              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">Ã°Å¸Å’Â Kosongkan Semua Data</div>
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">🌐 Kosongkan Semua Data</div>
               <div style="font-size: 11.5px; color: #64748b;">Hapus seluruh isi tempat sampah secara total</div>
             </div>
           </div>
@@ -11784,7 +11810,7 @@ function emptyRecycleBin() {
           <div style="display: flex; align-items: center; gap: 10px;">
             <input type="radio" name="emptyRecycleSource" value="FILTERED" style="accent-color: #8b5cf6; width: 18px; height: 18px;">
             <div>
-              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">Ã°Å¸â€Â Hanya Data Terfilter Saat Ini</div>
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">🔍 Hanya Data Terfilter Saat Ini</div>
               <div style="font-size: 11.5px; color: #64748b;">Hapus data yang sesuai pencarian/filter di tabel</div>
             </div>
           </div>
@@ -11797,7 +11823,7 @@ function emptyRecycleBin() {
           <div style="display: flex; align-items: center; gap: 10px;">
             <input type="radio" name="emptyRecycleSource" value="SIMPUS" ${countSimpus === 0 ? 'disabled' : ''} style="accent-color: #f59e0b; width: 18px; height: 18px;">
             <div>
-              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">Ã°Å¸â€“Â¥Ã¯Â¸Â Hanya Data Sumber SIMPUS</div>
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">🖥️ Hanya Data Sumber SIMPUS</div>
               <div style="font-size: 11.5px; color: #64748b;">Hapus data yang berasal dari SIMPUS saja</div>
             </div>
           </div>
@@ -11809,7 +11835,7 @@ function emptyRecycleBin() {
           <div style="display: flex; align-items: center; gap: 10px;">
             <input type="radio" name="emptyRecycleSource" value="BNBA" ${countBnba === 0 ? 'disabled' : ''} style="accent-color: #06b6d4; width: 18px; height: 18px;">
             <div>
-              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">Ã°Å¸â€œÂ Hanya Data Sumber BNBA CKG</div>
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main, #0f172a);">📋 Hanya Data Sumber BNBA CKG</div>
               <div style="font-size: 11.5px; color: #64748b;">Hapus data yang berasal dari BNBA CKG saja</div>
             </div>
           </div>
@@ -12081,7 +12107,7 @@ function editRecord(id) {
 
 
 /* ==========================================================================
-   Ã°Å¸â€œÅ  EXPORT & IMPORT XLSX ENGINE (SheetJS)
+   📊 EXPORT & IMPORT XLSX ENGINE (SheetJS)
    ========================================================================== */
 
 function exportToXLSX() {
@@ -12284,7 +12310,7 @@ function processExportXLSX(bulanVal, tahunVal, petugasVal) {
       XLSX.writeFile(wb, filename);
 
       hideLoadingOverlay();
-      showToast(`Ã¢Å“â€œ Berhasil Mengunduh ${targetRecords.length} Data CKG!`, 'success');
+      showToast(`✓ Berhasil Mengunduh ${targetRecords.length} Data CKG!`, 'success');
     } catch (err) {
       hideLoadingOverlay();
       console.error('Export XLSX error:', err);
@@ -12350,7 +12376,7 @@ function exportToBotEncoXLSX(source = 'records') {
           <select id="swalEncoKategori" class="swal2-input" style="width: 100%; margin: 0; font-size: 13px; padding: 8px 12px; height: 42px; border-radius: 8px; font-weight: 600;">
             <option value="umum" selected>CKG Umum (Dewasa & Lansia) [Rekomendasi]</option>
             <option value="dewasa">Usia Dewasa Saja (18 - 59 tahun)</option>
-            <option value="lansia">Lansia Saja (â‰¥ 60 tahun)</option>
+            <option value="lansia">Lansia Saja (>= 60 tahun)</option>
             <option value="semua">Semua Kategori (Tanpa Filter Kategori)</option>
           </select>
         </div>
@@ -12616,7 +12642,7 @@ function processExportBotEncoXLSX(kategoriVal, bulanVal, tahunVal, petugasVal, s
       XLSX.writeFile(wb, filename);
 
       hideLoadingOverlay();
-      showToast(`âœ“ Berhasil Mengunduh ${targetRecords.length} Data CKG Format Bot ENCO!`, 'success');
+      showToast(`✓ Berhasil Mengunduh ${targetRecords.length} Data CKG Format Bot ENCO!`, 'success');
     } catch (err) {
       hideLoadingOverlay();
       console.error('Export Bot ENCO XLSX error:', err);
@@ -12834,7 +12860,7 @@ function handleImportFileSelect(event) {
         }
       });
       if (fileNameEl) {
-        let text = `<strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB) Ã¢â‚¬â€ <span style="color:#059669;font-weight:700;">${valid16Count} NIK Valid (16 Digit)</span>`;
+        let text = `<strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB) - <span style="color:#059669;font-weight:700;">${valid16Count} NIK Valid (16 Digit)</span>`;
         if (invalidNikCount > 0) {
           text += ` <span style="color:#dc2626;font-size:12px;font-weight:600;">(${invalidNikCount} data NIK tidak 16 digit ditolak)</span>`;
         }
@@ -12851,7 +12877,7 @@ function handleImportFileSelect(event) {
 }
 
 /* ==========================================================================
-   Ã°Å¸â€˜â€˜ FITUR IMPORT DATA KHUSUS ADMIN (MULTI-PETUGAS)
+   👑 FITUR IMPORT DATA KHUSUS ADMIN (MULTI-PETUGAS)
    ========================================================================== */
 
 let selectedAdminImportFile = null;
@@ -13061,7 +13087,7 @@ function handleAdminImportFileSelect(event) {
 
       if (parsedAdminRecords.length === 0) {
         if (skippedInvalidNik > 0) {
-          const sampleList = sampleInvalidNik.map(s => `Ã¢â‚¬Â¢ <b>${s.nama}</b>: NIK "${s.nik}" (${s.len} digit)`).join('<br>');
+          const sampleList = sampleInvalidNik.map(s => `• <b>${s.nama}</b>: NIK "${s.nik}" (${s.len} digit)`).join('<br>');
           Swal.fire({
             icon: 'warning',
             title: 'Semua Data Ditolak (NIK Tidak 16 Digit)',
@@ -13119,7 +13145,7 @@ function handleAdminImportFileSelect(event) {
                 <i class="bi bi-eye-fill"></i> PREVIEW REKAPITULASI MULTI-PETUGAS
               </div>
               <div style="font-size:12px; color:#6b21a8; margin-top:2px;">
-                File: <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB) Ã¢â‚¬â€ Total <strong>${parsedAdminRecords.length} Data Pasien Valid (NIK 16 Digit)</strong> untuk <strong>${officerCount} Petugas Entry</strong>
+                File: <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB) - Total <strong>${parsedAdminRecords.length} Data Pasien Valid (NIK 16 Digit)</strong> untuk <strong>${officerCount} Petugas Entry</strong>
               </div>
             </div>
             <span class="badge badge-emerald" style="font-size:12px; padding:6px 12px;"><i class="bi bi-check-circle-fill"></i> Ready Import</span>
@@ -13242,7 +13268,7 @@ async function executeAdminXLSXImport() {
   const skippedCount = window.__lastAdminImportSkippedNik || 0;
   if (skippedCount > 0) {
     skippedNotice = `<div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; margin-top:10px; font-size:12.5px; color:#92400e;">
-      Ã¢Å¡Â Ã¯Â¸Â <strong>${skippedCount} data pasien dilewati / ditolak</strong> karena NIK tidak persis 16 digit.
+      ⚠️ <strong>${skippedCount} data pasien dilewati / ditolak</strong> karena NIK tidak persis 16 digit.
     </div>`;
   }
 
@@ -13264,7 +13290,7 @@ async function executeAdminXLSXImport() {
 }
 
 /* ==========================================================================
-   Ã°Å¸â€˜â€˜ FITUR IMPORT DATA SIMPUS MULTI-PETUGAS KHUSUS ADMIN (SUDAH DI-BAGI)
+   👑 FITUR IMPORT DATA SIMPUS MULTI-PETUGAS KHUSUS ADMIN (SUDAH DI-BAGI)
    ========================================================================== */
 
 let selectedSimpusAdminImportFile = null;
@@ -13457,7 +13483,7 @@ function handleSimpusAdminImportFileSelect(event) {
 
       if (parsedSimpusAdminRecords.length === 0) {
         if (skippedInvalidNik > 0) {
-          const sampleList = sampleInvalidNik.map(s => `Ã¢â‚¬Â¢ <b>${s.nama}</b>: NIK "${s.nik}" (${s.len} digit)`).join('<br>');
+          const sampleList = sampleInvalidNik.map(s => `• <b>${s.nama}</b>: NIK "${s.nik}" (${s.len} digit)`).join('<br>');
           Swal.fire({
             icon: 'warning',
             title: 'Semua Data Ditolak (NIK Tidak 16 Digit)',
@@ -13515,7 +13541,7 @@ function handleSimpusAdminImportFileSelect(event) {
                 <i class="bi bi-eye-fill"></i> PREVIEW SIMPUS MULTI-PETUGAS (SUDAH DI-BAGI)
               </div>
               <div style="font-size:12px; color:#6b21a8; margin-top:2px;">
-                File: <strong>${file.name}</strong> Ã¢â‚¬â€ Total <strong>${parsedSimpusAdminRecords.length} Data Pasien Valid (NIK 16 Digit)</strong> untuk <strong>${officerCount} Petugas</strong>
+                File: <strong>${file.name}</strong> - Total <strong>${parsedSimpusAdminRecords.length} Data Pasien Valid (NIK 16 Digit)</strong> untuk <strong>${officerCount} Petugas</strong>
               </div>
             </div>
             <span class="badge badge-emerald" style="font-size:12px; padding:6px 12px;"><i class="bi bi-check-circle-fill"></i> Ready Sync D1</span>
@@ -13632,7 +13658,7 @@ async function executeSimpusAdminXLSXImport() {
   const skippedCount = window.__lastSimpusAdminImportSkippedNik || 0;
   if (skippedCount > 0) {
     skippedNotice = `<div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 12px; margin-top:10px; font-size:12.5px; color:#92400e;">
-      Ã¢Å¡Â Ã¯Â¸Â <strong>${skippedCount} data SIMPUS dilewati / ditolak</strong> karena NIK tidak persis 16 digit.
+      ⚠️ <strong>${skippedCount} data SIMPUS dilewati / ditolak</strong> karena NIK tidak persis 16 digit.
     </div>`;
   }
 
@@ -13803,7 +13829,7 @@ function executeXLSXImport() {
 
       if (newRecords.length === 0) {
         if (skippedInvalidNik > 0) {
-          const sampleList = sampleInvalidNik.map(s => `Ã¢â‚¬Â¢ <b>${s.nama}</b>: NIK "${s.nik}" (${s.len} digit)`).join('<br>');
+          const sampleList = sampleInvalidNik.map(s => `• <b>${s.nama}</b>: NIK "${s.nik}" (${s.len} digit)`).join('<br>');
           Swal.fire({
             icon: 'warning',
             title: 'Semua Data Ditolak (NIK Tidak 16 Digit)',
@@ -13873,7 +13899,7 @@ function executeXLSXImport() {
       let skippedNotice = '';
       if (skippedInvalidNik > 0) {
         skippedNotice = `<div style="background:#fffbeb;padding:10px 12px;border-radius:8px;border:1px solid #fde68a;margin-top:8px;font-size:12.5px;color:#92400e;text-align:left;">
-          Ã¢Å¡Â Ã¯Â¸Â <strong>${skippedInvalidNik} data pasien dilewati / ditolak</strong> karena NIK tidak persis 16 digit.
+          ⚠️ <strong>${skippedInvalidNik} data pasien dilewati / ditolak</strong> karena NIK tidak persis 16 digit.
         </div>`;
       }
       Swal.fire({
@@ -13949,7 +13975,7 @@ function showToast(message, type = 'info') {
 }
 
 /* ==========================================================================
-   Ã°Å¸Ââ€ºÃ¯Â¸Â DUKCAPIL KTP VERIFICATION SERVICE MODULE
+   🏛️ DUKCAPIL KTP VERIFICATION SERVICE MODULE
    ========================================================================== */
 
 const DUKCAPIL_API_BASE = '/api/dukcapil';
@@ -13970,7 +13996,7 @@ async function checkDukcapilHealth(showToastMsg = false) {
     if (resp.ok) {
       isDukcapilServiceOnline = true;
       if (statusIndicator) statusIndicator.style.background = '#22c55e';
-      if (statusText) statusText.innerHTML = 'Ã°Å¸Å¸Â¢ Layanan Dukcapil Aktif (Cloudflare Edge Engine)';
+      if (statusText) statusText.innerHTML = '🟢 Layanan Dukcapil Aktif (Cloudflare Edge Engine)';
       if (statusBanner) {
         statusBanner.style.background = '#f0fdf4';
         statusBanner.style.borderColor = '#86efac';
@@ -13985,7 +14011,7 @@ async function checkDukcapilHealth(showToastMsg = false) {
 
   isDukcapilServiceOnline = false;
   if (statusIndicator) statusIndicator.style.background = '#f59e0b';
-  if (statusText) statusText.innerHTML = 'Ã°Å¸Å¸Â¡ Mode Lokal: Validator & Parser NIK (Server Offline)';
+  if (statusText) statusText.innerHTML = '🟡 Mode Lokal: Validator & Parser NIK (Server Offline)';
   if (statusBanner) {
     statusBanner.style.background = '#fffbeb';
     statusBanner.style.borderColor = '#fde68a';
@@ -14089,7 +14115,7 @@ const NIK_PROVINSI_MAP = {
   '91': 'PAPUA', '92': 'PAPUA BARAT'
 };
 
-// Kab/Kota code for Jawa Barat (32xx) Ã¢â‚¬â€ most relevant for Puskesmas Banjaran Kota
+// Kab/Kota code for Jawa Barat (32xx) - most relevant for Puskesmas Banjaran Kota
 const NIK_KAB_JABAR_MAP = {
   '01': 'KAB. BOGOR', '02': 'KAB. SUKABUMI', '03': 'KAB. CIANJUR',
   '04': 'KAB. BANDUNG', '05': 'KAB. GARUT', '06': 'KAB. TASIKMALAYA',
@@ -14866,7 +14892,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ==========================================================================
-   Ã°Å¸â€“Â¼Ã¯Â¸Â CUSTOM PNG LOGO MANAGER
+   🖼️ CUSTOM PNG LOGO MANAGER
    ========================================================================== */
 
 function applyCustomLogo() {
@@ -14955,7 +14981,7 @@ function openCustomLogoModal() {
 }
 
 /* ==========================================================================
-   Ã°Å¸â€Â§ MAINTENANCE MODE SYSTEM (Web & Menu Lock)
+   🔧 MAINTENANCE MODE SYSTEM (Web & Menu Lock)
    ========================================================================== */
 
 let maintenanceState = {
@@ -15196,7 +15222,7 @@ function showMaintenanceScreen(message) {
       <div class="maintenance-icon-box">
         <i class="bi bi-tools"></i>
       </div>
-      <h1>Ã°Å¸â€Â§ Sistem Dalam Maintenance</h1>
+      <h1>🔧 Sistem Dalam Maintenance</h1>
       <p>${message || 'Sistem sedang dalam pemeliharaan oleh Administrator. Silakan coba beberapa saat lagi.'}</p>
       <div class="maint-badge">
         <i class="bi bi-clock-history"></i>
@@ -15245,7 +15271,7 @@ function exitMaintenanceToLogin() {
 }
 
 /* ==========================================================================
-   Ã°Å¸â€˜Â¤ USER PROFILE DROPDOWN MENU POPOVER
+   👤 USER PROFILE DROPDOWN MENU POPOVER
    ========================================================================== */
 
 function toggleUserProfileDropdown(e) {
@@ -15282,7 +15308,7 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 /* ==========================================================================
-   Ã°Å¸â€Â UNIVERSAL SEARCH & RENDERING LOGIC FOR LAPORAN & CKG SEKOLAH
+   🔍 UNIVERSAL SEARCH & RENDERING LOGIC FOR LAPORAN & CKG SEKOLAH
    ========================================================================== */
 
 function renderLaporanView() {
@@ -15418,7 +15444,7 @@ function resetLaporanFilters() {
 }
 
 // ==========================================================================
-// Ã°Å¸Å½â€œ MODUL TERPISAH: CKG SEKOLAH (ISOLATED CLOUD D1 DATABASE)
+// 🎓 MODUL TERPISAH: CKG SEKOLAH (ISOLATED CLOUD D1 DATABASE)
 // ==========================================================================
 
 // Utility: Escape HTML special characters to prevent XSS
@@ -15590,7 +15616,7 @@ async function fetchSekolahRecordsFromCloud(showFeedback = false) {
       }
     }
   } catch (err) {
-    console.warn('Ã¢Å¡Â¡ Fetch /api/sekolah notice (Offline/Fallback):', err);
+    console.warn('⚡ Fetch /api/sekolah notice (Offline/Fallback):', err);
     if (typeof CkgIdb !== 'undefined' && sekolahRecords.length === 0) {
       try {
         const cached = await CkgIdb.get('sekolah_records');
@@ -15628,7 +15654,7 @@ async function syncSekolahRecordsToCloud(dataList) {
       body: JSON.stringify(dataList)
     });
   } catch (err) {
-    console.warn('Ã¢Å¡Â¡ Sync /api/sekolah notice:', err);
+    console.warn('⚡ Sync /api/sekolah notice:', err);
   }
 }
 
@@ -15640,7 +15666,7 @@ function saveSekolahRecordsToStorage() {
 }
 
 // ==========================================================================
-// Ã°Å¸ÂÂ« MASTER SARANA SEKOLAH PUSKESMAS BANJARAN KOTA (Daftar_Sekolah.md)
+// 🏫 MASTER SARANA SEKOLAH PUSKESMAS BANJARAN KOTA (Daftar_Sekolah.md)
 // ==========================================================================
 const DEFAULT_MASTER_SARANA_SEKOLAH = [
   // --- 1. SD / MI (Kelas 1 - 6) ---
@@ -15825,17 +15851,17 @@ function populateSekolahFilterDropdowns() {
   if (selectSekolah) {
     const savedSekolah = selectSekolah.value;
     let html = '<option value="">-- Pilih Sekolah (Wajib) --</option>';
-    html += '<optgroup label="Ã°Å¸â€œÅ¡ SD / MI (Kelas 1 - 6)">';
+    html += '<optgroup label="📚 SD / MI (Kelas 1 - 6)">';
     html += sdList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
-    html += '<optgroup label="Ã°Å¸ÂÂ« SMP / MTs (Kelas 7 - 9)">';
+    html += '<optgroup label="🏫 SMP / MTs (Kelas 7 - 9)">';
     html += smpList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
-    html += '<optgroup label="Ã°Å¸Å½â€œ SMA / SMK / MA (Kelas 10 - 12)">';
+    html += '<optgroup label="🎓 SMA / SMK / MA (Kelas 10 - 12)">';
     html += smaList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
     if (extraSchools.length > 0) {
-      html += '<optgroup label="Ã°Å¸â€œÅ’ Sekolah Lainnya">';
+      html += '<optgroup label="📍 Sekolah Lainnya">';
       html += extraSchools.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
       html += '</optgroup>';
     }
@@ -15912,7 +15938,7 @@ function populateTahunFilterOptions() {
 }
 
 // ==========================================================================
-// Ã°Å¸â€Â SEARCHABLE COMBOBOX LOGIC UNTUK FILTER SEKOLAH
+// 🔍 SEARCHABLE COMBOBOX LOGIC UNTUK FILTER SEKOLAH
 // ==========================================================================
 function toggleSekolahDropdown(event) {
   if (event) event.stopPropagation();
@@ -16071,7 +16097,7 @@ function renderSearchableSekolahOptions(filterKeyword = '') {
 }
 
 // ==========================================================================
-// Ã°Å¸â€Â SEARCHABLE COMBOBOX LOGIC UNTUK FILTER KELAS
+// 🔍 SEARCHABLE COMBOBOX LOGIC UNTUK FILTER KELAS
 // ==========================================================================
 function toggleKelasDropdown(event) {
   if (event) event.stopPropagation();
@@ -16232,13 +16258,13 @@ function populateSchoolSelectElement(elementId) {
   const smaList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMA').map(s => s.nama);
 
   let html = '<option value="">-- Pilih Sekolah --</option>';
-  html += '<optgroup label="Ã°Å¸â€œÅ¡ SD / MI (Kelas 1 - 6)">';
+  html += '<optgroup label="📚 SD / MI (Kelas 1 - 6)">';
   html += sdList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
   html += '</optgroup>';
-  html += '<optgroup label="Ã°Å¸ÂÂ« SMP / MTs (Kelas 7 - 9)">';
+  html += '<optgroup label="🏫 SMP / MTs (Kelas 7 - 9)">';
   html += smpList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
   html += '</optgroup>';
-  html += '<optgroup label="Ã°Å¸Å½â€œ SMA / SMK / MA (Kelas 10 - 12)">';
+  html += '<optgroup label="🎓 SMA / SMK / MA (Kelas 10 - 12)">';
   html += smaList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
   html += '</optgroup>';
 
@@ -16836,7 +16862,7 @@ function toggleLabTidakDiperiksa(isChecked) {
         gulaInput.dataset.preVal = gulaInput.value;
       }
       gulaInput.value = '';
-      gulaInput.placeholder = 'Ã°Å¸Å¡Â« Tidak Diperiksa';
+      gulaInput.placeholder = '🚫 Tidak Diperiksa';
     }
     if (hbInput) {
       hbInput.disabled = true;
@@ -16844,7 +16870,7 @@ function toggleLabTidakDiperiksa(isChecked) {
         hbInput.dataset.preVal = hbInput.value;
       }
       hbInput.value = '';
-      hbInput.placeholder = 'Ã°Å¸Å¡Â« Tidak Diperiksa';
+      hbInput.placeholder = '🚫 Tidak Diperiksa';
     }
     if (katGula) katGula.value = 'Tidak Diperiksa';
     if (katHb) katHb.value = 'Tidak Diperiksa';
@@ -16903,6 +16929,258 @@ function applySekolahFilter() {
   renderSekolahView();
 }
 
+
+// ==========================================================================
+// 📱 RESPONSIVE PAGINATION ENGINE (DESKTOP: 10 DATA, MOBILE/APK: 3 DATA)
+// ==========================================================================
+
+let currentSekolahPage = 1;
+let lastSekolahFilterSignature = '';
+
+let currentCkgGratisPage = 1;
+let lastCkgGratisFilterSignature = '';
+
+function isMobileOrApkView() {
+  if (typeof window === 'undefined') return false;
+  if (window.IS_NATIVE_APK) return true;
+  if (typeof document !== 'undefined' && (
+      document.documentElement.classList.contains('is-native-apk') ||
+      document.body?.classList.contains('is-native-apk')
+  )) return true;
+  if (window.innerWidth <= 768) return true;
+  if (navigator && navigator.userAgent && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent)) {
+    return true;
+  }
+  return false;
+}
+
+function getSekolahPageSize() {
+  return isMobileOrApkView() ? 3 : 10;
+}
+
+function generatePaginationPages(currentPage, totalPages, isMobile = false) {
+  const pages = [];
+  const maxButtons = isMobile ? 5 : 7;
+  
+  if (totalPages <= maxButtons) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+    return pages;
+  }
+  
+  pages.push(1);
+  
+  let start = Math.max(2, currentPage - (isMobile ? 1 : 2));
+  let end = Math.min(totalPages - 1, currentPage + (isMobile ? 1 : 2));
+  
+  if (currentPage <= (isMobile ? 2 : 3)) {
+    end = Math.min(totalPages - 1, isMobile ? 3 : 5);
+  } else if (currentPage >= totalPages - (isMobile ? 1 : 2)) {
+    start = Math.max(2, totalPages - (isMobile ? 2 : 4));
+  }
+  
+  if (start > 2) pages.push('...');
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (end < totalPages - 1) pages.push('...');
+  pages.push(totalPages);
+  
+  return pages;
+}
+
+function renderSekolahPagination(totalItems, pageSize, currentPage, totalPages) {
+  const container = document.getElementById('sekolahPaginationContainer');
+  if (!container) return;
+
+  if (totalItems === 0 || totalPages <= 1) {
+    if (totalItems > 0 && totalPages <= 1) {
+      container.style.display = 'flex';
+      container.innerHTML = `
+        <div class="sekolah-pagination-info">
+          <i class="bi bi-info-circle-fill" style="color: #3b82f6;"></i>
+          <span>Menampilkan <strong>1 - ${totalItems}</strong> dari <strong>${totalItems.toLocaleString('id-ID')}</strong> siswa (Halaman <strong>1</strong> dari <strong>1</strong>)</span>
+        </div>
+        <div class="sekolah-pagination-nav">
+          <button type="button" class="sekolah-page-btn active">1</button>
+        </div>
+      `;
+    } else {
+      container.style.display = 'none';
+    }
+    return;
+  }
+
+  container.style.display = 'flex';
+
+  const startIndex = (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
+  const isMobile = isMobileOrApkView();
+
+  const pages = generatePaginationPages(currentPage, totalPages, isMobile);
+
+  let buttonsHtml = '';
+
+  // Tombol Sebelumnya
+  const prevDisabled = currentPage <= 1 ? 'disabled' : '';
+  buttonsHtml += `
+    <button type="button" class="sekolah-page-btn" ${prevDisabled} onclick="changeSekolahPage(${currentPage - 1})" title="Halaman Sebelumnya">
+      <i class="bi bi-chevron-left"></i> ${isMobile ? '' : 'Sebelumnya'}
+    </button>
+  `;
+
+  // Nomor Halaman
+  pages.forEach(p => {
+    if (p === '...') {
+      buttonsHtml += `<span class="sekolah-page-ellipsis">&hellip;</span>`;
+    } else {
+      const activeClass = p === currentPage ? 'active' : '';
+      buttonsHtml += `
+        <button type="button" class="sekolah-page-btn ${activeClass}" onclick="changeSekolahPage(${p})" title="Halaman ${p}">
+          ${p}
+        </button>
+      `;
+    }
+  });
+
+  // Tombol Selanjutnya
+  const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+  buttonsHtml += `
+    <button type="button" class="sekolah-page-btn" ${nextDisabled} onclick="changeSekolahPage(${currentPage + 1})" title="Halaman Selanjutnya">
+      ${isMobile ? '' : 'Selanjutnya'} <i class="bi bi-chevron-right"></i>
+    </button>
+  `;
+
+  container.innerHTML = `
+    <div class="sekolah-pagination-info">
+      <i class="bi bi-info-circle-fill" style="color: #3b82f6;"></i>
+      <span>Menampilkan <strong>${startIndex} - ${endIndex}</strong> dari <strong>${totalItems.toLocaleString('id-ID')}</strong> siswa (Halaman <strong>${currentPage}</strong> dari <strong>${totalPages}</strong>)</span>
+    </div>
+    <div class="sekolah-pagination-nav">
+      ${buttonsHtml}
+    </div>
+  `;
+}
+
+function changeSekolahPage(targetPage) {
+  currentSekolahPage = targetPage;
+  renderSekolahView();
+
+  // Scroll to top of table smoothly so user sees the new page
+  const tableEl = document.getElementById('sekolahDataTable');
+  if (tableEl) {
+    const rect = tableEl.getBoundingClientRect();
+    if (rect.top < 0) {
+      window.scrollTo({
+        top: window.pageYOffset + rect.top - 120,
+        behavior: 'smooth'
+      });
+    }
+  }
+}
+
+function renderCkgGratisPagination(totalItems, pageSize, currentPage, totalPages) {
+  const container = document.getElementById('ckgGratisPaginationContainer');
+  if (!container) return;
+
+  if (totalItems === 0 || totalPages <= 1) {
+    if (totalItems > 0 && totalPages <= 1) {
+      container.style.display = 'flex';
+      container.innerHTML = `
+        <div class="sekolah-pagination-info">
+          <i class="bi bi-info-circle-fill" style="color: #059669;"></i>
+          <span>Menampilkan <strong>1 - ${totalItems}</strong> dari <strong>${totalItems.toLocaleString('id-ID')}</strong> pasien (Halaman <strong>1</strong> dari <strong>1</strong>)</span>
+        </div>
+        <div class="sekolah-pagination-nav">
+          <button type="button" class="sekolah-page-btn active">1</button>
+        </div>
+      `;
+    } else {
+      container.style.display = 'none';
+    }
+    return;
+  }
+
+  container.style.display = 'flex';
+
+  const startIndex = (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
+  const isMobile = isMobileOrApkView();
+
+  const pages = generatePaginationPages(currentPage, totalPages, isMobile);
+
+  let buttonsHtml = '';
+
+  const prevDisabled = currentPage <= 1 ? 'disabled' : '';
+  buttonsHtml += `
+    <button type="button" class="sekolah-page-btn" ${prevDisabled} onclick="changeCkgGratisPage(${currentPage - 1})" title="Halaman Sebelumnya">
+      <i class="bi bi-chevron-left"></i> ${isMobile ? '' : 'Sebelumnya'}
+    </button>
+  `;
+
+  pages.forEach(p => {
+    if (p === '...') {
+      buttonsHtml += `<span class="sekolah-page-ellipsis">&hellip;</span>`;
+    } else {
+      const activeClass = p === currentPage ? 'active' : '';
+      buttonsHtml += `
+        <button type="button" class="sekolah-page-btn ${activeClass}" onclick="changeCkgGratisPage(${p})" title="Halaman ${p}">
+          ${p}
+        </button>
+      `;
+    }
+  });
+
+  const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+  buttonsHtml += `
+    <button type="button" class="sekolah-page-btn" ${nextDisabled} onclick="changeCkgGratisPage(${currentPage + 1})" title="Halaman Selanjutnya">
+      ${isMobile ? '' : 'Selanjutnya'} <i class="bi bi-chevron-right"></i>
+    </button>
+  `;
+
+  container.innerHTML = `
+    <div class="sekolah-pagination-info">
+      <i class="bi bi-info-circle-fill" style="color: #059669;"></i>
+      <span>Menampilkan <strong>${startIndex} - ${endIndex}</strong> dari <strong>${totalItems.toLocaleString('id-ID')}</strong> pasien (Halaman <strong>${currentPage}</strong> dari <strong>${totalPages}</strong>)</span>
+    </div>
+    <div class="sekolah-pagination-nav">
+      ${buttonsHtml}
+    </div>
+  `;
+}
+
+function changeCkgGratisPage(targetPage) {
+  currentCkgGratisPage = targetPage;
+  renderCkgGratisTable();
+
+  const tableEl = document.getElementById('tableBodyCkgGratis');
+  if (tableEl) {
+    const rect = tableEl.getBoundingClientRect();
+    if (rect.top < 0) {
+      window.scrollTo({
+        top: window.pageYOffset + rect.top - 120,
+        behavior: 'smooth'
+      });
+    }
+  }
+}
+
+// Window resize listener: automatically re-render with adapted page size if window crosses mobile breakpoint
+if (typeof window !== 'undefined') {
+  let lastIsMob = isMobileOrApkView();
+  window.addEventListener('resize', () => {
+    const currentIsMob = isMobileOrApkView();
+    if (currentIsMob !== lastIsMob) {
+      lastIsMob = currentIsMob;
+      currentSekolahPage = 1;
+      currentCkgGratisPage = 1;
+      if (document.getElementById('tableBodySekolah')) {
+        renderSekolahView();
+      }
+      if (document.getElementById('tableBodyCkgGratis')) {
+        renderCkgGratisTable();
+      }
+    }
+  });
+}
+
 function renderSekolahView() {
   const tbody = document.getElementById('tableBodySekolah');
   if (!tbody) return;
@@ -16933,6 +17211,9 @@ function renderSekolahView() {
         const el = document.getElementById(id);
         if (el) el.textContent = '0';
       });
+
+    const pagContainer = document.getElementById('sekolahPaginationContainer');
+    if (pagContainer) pagContainer.style.display = 'none';
 
     tbody.innerHTML = `
       <tr>
@@ -17049,11 +17330,11 @@ function renderSekolahView() {
       emptyMsg = `Dari <strong>${totalStudents}</strong> siswa pada kelas ini, belum ada yang menyelesaikan ke-5 stasiun pemeriksaan (identitas, antro, lab, vital, organ). Klik tombol <strong>"Periksa"</strong> untuk melengkapi skrining.`;
     } else if (currentSekolahStatusFilter === 'belum' && totalStudents > 0) {
       emptyIcon = 'bi-check-circle-fill';
-      emptyTitle = 'Semua Siswa Sudah Mulai Diperiksa! Ã°Å¸Å½â€°';
+      emptyTitle = 'Semua Siswa Sudah Mulai Diperiksa! 🎉';
       emptyMsg = `Hebat! Seluruh <strong>${totalStudents}</strong> siswa pada kelas ini sudah memiliki data skrining (tidak ada yang belum diperiksa sama sekali).`;
     } else if (currentSekolahStatusFilter === 'sebagian' && totalStudents > 0) {
       emptyIcon = 'bi-check-circle-fill';
-      emptyTitle = 'Tidak Ada Siswa yang Periksa Sebagian Ã°Å¸â€˜Â';
+      emptyTitle = 'Tidak Ada Siswa yang Periksa Sebagian 👍';
       emptyMsg = 'Semua siswa yang telah diperiksa sudah menyelesaikan seluruh pos pemeriksaan secara lengkap.';
     }
 
@@ -17071,10 +17352,29 @@ function renderSekolahView() {
     return;
   }
 
+  // Signature filter change check -> automatically reset to page 1 if any filter or search changed
+  const currentFilterSignature = `${chosenSekolah}|${chosenKelas}|${chosenTahun}|${currentSekolahStatusFilter}|${filterSekolahNikVal}|${searchQuery}`;
+  if (lastSekolahFilterSignature !== currentFilterSignature) {
+    currentSekolahPage = 1;
+    lastSekolahFilterSignature = currentFilterSignature;
+  }
+
+  const isMobileOrApk = isMobileOrApkView();
+  const pageSize = isMobileOrApk ? 3 : 10;
+  const totalItems = dataset.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  if (currentSekolahPage > totalPages) currentSekolahPage = totalPages;
+  if (currentSekolahPage < 1) currentSekolahPage = 1;
+
+  const startIndex = (currentSekolahPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const pagedDataset = dataset.slice(startIndex, endIndex);
+
   const role = (sessionStorage.getItem('ckg_user_role') || currentRole || '').toLowerCase();
   const isSekolahUser = (portalType === 'sekolah' || role === 'sekolah');
 
-  tbody.innerHTML = dataset.map((r, idx) => {
+  tbody.innerHTML = pagedDataset.map((r, idx) => {
     const stations = getSekolahRecordExamStations(r);
     const { hasAntro, hasVital, hasLab, isLabTidakDiperiksa, hasOrgan, isComplete, isPartial, isBelum, completedCount } = stations;
 
@@ -17239,7 +17539,7 @@ function renderSekolahView() {
           const lastLog = studentTtdLogs[0];
           hasilChips.push(`
             <span style="background: #fdf2f8; border: 1.5px solid #f472b6; padding: 2px 7px; border-radius: 6px; font-weight: 700; color: #9d174d; display: inline-flex; align-items: center; gap: 4px;" title="Terakhir minum TTD: ${escapeHtml(lastLog.tanggal || '')} ${escapeHtml(lastLog.waktu || '')}">
-              ðŸŒ¸ <strong>TTD:</strong> ${studentTtdLogs.length}x
+              🌸 <strong>TTD:</strong> ${studentTtdLogs.length}x
             </span>
           `);
         }
@@ -17286,7 +17586,7 @@ function renderSekolahView() {
       <tr style="cursor: pointer; transition: background 0.15s ease;">
         <!-- Column 1: No -->
         <td style="text-align: center; font-weight: 800; color: #64748b; font-size: 12px; vertical-align: middle;">
-          ${idx + 1}
+          ${startIndex + idx + 1}
         </td>
 
         <!-- Column 2: Nama Siswa (Clickable to open examination popup) -->
@@ -17373,10 +17673,12 @@ function renderSekolahView() {
       </tr>
     `;
   }).join('');
+
+  renderSekolahPagination(totalItems, pageSize, currentSekolahPage, totalPages);
 }
 
 // --------------------------------------------------------------------------
-// Ã°Å¸Â©Âº POP-UP PEMERIKSAAN & IDENTITAS SISWA (MULTI-USER ISOLATED)
+// 🩺 POP-UP PEMERIKSAAN & IDENTITAS SISWA (MULTI-USER ISOLATED)
 // --------------------------------------------------------------------------
 
 function openFormPosPopup(posKey) {
@@ -18095,7 +18397,7 @@ function updateGulaDarahLockState() {
     gulaInput.style.borderColor = '#cbd5e1';
     gulaInput.style.color = '#94a3b8';
     gulaInput.style.cursor = 'not-allowed';
-    gulaInput.placeholder = 'Ã°Å¸â€â€™ Terkunci (Khusus Usia Ã¢â€°Â¥ 15 Tahun)';
+    gulaInput.placeholder = '🔒 Terkunci (Khusus Usia >= 15 Tahun)';
     if (hint) hint.style.display = 'block';
   } else {
     gulaInput.disabled = false;
@@ -18321,7 +18623,7 @@ function calculateSiswaIMT() {
 }
 
 // ==========================================================================
-// Ã°Å¸Âªâ€ž AUTO-FILL ANTROPOMETRI BERDASARKAN UMUR SISWA (NILAI ACAK NORMAL)
+// 🪄 AUTO-FILL ANTROPOMETRI BERDASARKAN UMUR SISWA (NILAI ACAK NORMAL)
 // ==========================================================================
 
 /**
@@ -18425,7 +18727,7 @@ function autoFillAntroSiswa() {
   // Trigger kalkulasi IMT otomatis
   calculateSiswaIMT();
 
-  showToast(`Antropometri ${siswa.nama} terisi otomatis (Umur: ${age} th) Ã¢â€ â€™ BB: ${bb}kg, TB: ${tb}cm, LP: ${lp}cm`, 'success');
+  showToast(`Antropometri ${siswa.nama} terisi otomatis (Umur: ${age} th) ➔ BB: ${bb}kg, TB: ${tb}cm, LP: ${lp}cm`, 'success');
 }
 
 /**
@@ -18496,7 +18798,7 @@ function autoFillVitalSiswa() {
   if (diastolInput) diastolInput.value = vital.diastol;
   calculateSiswaVitalCategory();
 
-  showToast(`Tanda Vital ${siswa.nama} terisi otomatis (Umur: ${age} th, ${jk === 'P' ? 'Perempuan' : 'Laki-laki'}) Ã¢â€ â€™ TD: ${vital.sistol}/${vital.diastol} mmHg`, 'success');
+  showToast(`Tanda Vital ${siswa.nama} terisi otomatis (Umur: ${age} th, ${jk === 'P' ? 'Perempuan' : 'Laki-laki'}) ➔ TD: ${vital.sistol}/${vital.diastol} mmHg`, 'success');
 }
 
 /**
@@ -18562,11 +18864,11 @@ function autoFillLabSiswa() {
   if (age < 15) {
     if (gulaInput) gulaInput.value = '';
     calculateSiswaLabCategory();
-    showToast(`Laboratorium ${siswa.nama} terisi otomatis (Umur: ${age} th) Ã¢â€ â€™ Hb: ${lab.hb} g/dL (Normal). Gula darah terkunci karena usia < 15 tahun.`, 'info');
+    showToast(`Laboratorium ${siswa.nama} terisi otomatis (Umur: ${age} th) ➔ Hb: ${lab.hb} g/dL (Normal). Gula darah terkunci karena usia < 15 tahun.`, 'info');
   } else {
     if (gulaInput) gulaInput.value = lab.gds;
     calculateSiswaLabCategory();
-    showToast(`Laboratorium ${siswa.nama} terisi otomatis (Umur: ${age} th) Ã¢â€ â€™ Hb: ${lab.hb} g/dL, GDS: ${lab.gds} mg/dL (Normal)`, 'success');
+    showToast(`Laboratorium ${siswa.nama} terisi otomatis (Umur: ${age} th) ➔ Hb: ${lab.hb} g/dL, GDS: ${lab.gds} mg/dL (Normal)`, 'success');
   }
 }
 
@@ -18591,7 +18893,7 @@ async function bulkAutoFillAntroSekolah() {
   });
 
   if (targetRecords.length === 0) {
-    Swal.fire('Semua Data Sudah Terisi! Ã°Å¸â€˜Â', 'Tidak ada siswa yang BB/TB-nya masih kosong di sekolah ini.', 'info');
+    Swal.fire('Semua Data Sudah Terisi! 👍', 'Tidak ada siswa yang BB/TB-nya masih kosong di sekolah ini.', 'info');
     return;
   }
 
@@ -18689,7 +18991,7 @@ async function bulkSetLabTidakDiperiksa() {
   });
 
   if (targetRecords.length === 0) {
-    Swal.fire('Semua Data Sudah Lengkap! Ã°Å¸â€˜Â', 'Seluruh siswa di sekolah ini sudah memiliki data Lab atau sudah ditandai Tidak Diperiksa.', 'info');
+    Swal.fire('Semua Data Sudah Lengkap! 👍', 'Seluruh siswa di sekolah ini sudah memiliki data Lab atau sudah ditandai Tidak Diperiksa.', 'info');
     return;
   }
 
@@ -19383,7 +19685,7 @@ async function savePemeriksaanSiswa(event) {
 }
 
 // --------------------------------------------------------------------------
-// Ã¢Å¾â€¢ TAMBAH SISWA BARU (LANGSUNG KE CLOUD DATABASE)
+// • TAMBAH SISWA BARU (LANGSUNG KE CLOUD DATABASE)
 // --------------------------------------------------------------------------
 
 let isTambahSiswaBankDataChecked = false;
@@ -19801,12 +20103,12 @@ async function saveTambahSiswa(event) {
     const existingByNik = sekolahRecords.filter(r => isNikValidForDuplicate(r.nik) && String(r.nik).trim() === nikInput);
     if (existingByNik.length > 0) {
       const existList = existingByNik.map(r =>
-        `Ã¢â‚¬Â¢ <strong>${escapeHtml(r.nama)}</strong> Ã¢â‚¬â€ ${escapeHtml(r.sekolah || '-')} / ${escapeHtml(r.kelas || '-')}`
+        `• <strong>${escapeHtml(r.nama)}</strong> - ${escapeHtml(r.sekolah || '-')} / ${escapeHtml(r.kelas || '-')}`
       ).join('<br>');
 
       const dupResult = await Swal.fire({
         icon: 'warning',
-        title: 'Ã¢Å¡Â Ã¯Â¸Â NIK Sudah Terdaftar!',
+        title: '⚠️ NIK Sudah Terdaftar!',
         html: `
           <div style="text-align: left; font-size: 13px; line-height: 1.6;">
             <p>NIK <strong>${escapeHtml(nikInput)}</strong> sudah ditemukan pada data siswa berikut:</p>
@@ -19935,7 +20237,7 @@ async function saveTambahSiswa(event) {
 }
 
 // --------------------------------------------------------------------------
-// Ã°Å¸â€”â€˜Ã¯Â¸Â HAPUS SISWA (LANGSUNG DARI CLOUD DATABASE)
+// 🗑️ HAPUS SISWA (LANGSUNG DARI CLOUD DATABASE)
 // --------------------------------------------------------------------------
 
 async function deleteSiswaSekolah(id) {
@@ -19966,7 +20268,7 @@ async function deleteSiswaSekolah(id) {
 }
 
 // ==========================================================================
-// Ã°Å¸â€”â€˜Ã¯Â¸Â FITUR HAPUS DATA SISWA SPESIFIK & BULK (SEKOLAH, KELAS, TAHUN, STATUS)
+// 🗑️ FITUR HAPUS DATA SISWA SPESIFIK & BULK (SEKOLAH, KELAS, TAHUN, STATUS)
 // ==========================================================================
 
 function openHapusDataSekolahModal() {
@@ -19995,18 +20297,18 @@ function openHapusDataSekolahModal() {
     const smaList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMA').map(s => s.nama);
 
     let html = '<option value="">-- Pilih Sekolah Target --</option>';
-    html += '<option value="all" style="font-weight: 800; color: #dc2626;">Ã¢Å¡Â Ã¯Â¸Â [SEMUA SEKOLAH] (Hapus Seluruh Sekolah Terdaftar)</option>';
-    html += '<optgroup label="Ã°Å¸â€œÅ¡ SD / MI (Kelas 1 - 6)">';
+    html += '<option value="all" style="font-weight: 800; color: #dc2626;">⚠️ [SEMUA SEKOLAH] (Hapus Seluruh Sekolah Terdaftar)</option>';
+    html += '<optgroup label="📚 SD / MI (Kelas 1 - 6)">';
     html += sdList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
-    html += '<optgroup label="Ã°Å¸ÂÂ« SMP / MTs (Kelas 7 - 9)">';
+    html += '<optgroup label="🏫 SMP / MTs (Kelas 7 - 9)">';
     html += smpList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
-    html += '<optgroup label="Ã°Å¸Å½â€œ SMA / SMK / MA (Kelas 10 - 12)">';
+    html += '<optgroup label="🎓 SMA / SMK / MA (Kelas 10 - 12)">';
     html += smaList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
     if (extraSchools.length > 0) {
-      html += '<optgroup label="Ã°Å¸â€œÅ’ Sekolah Lainnya">';
+      html += '<optgroup label="📍 Sekolah Lainnya">';
       html += extraSchools.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
       html += '</optgroup>';
     }
@@ -20225,10 +20527,10 @@ function updateHapusSekolahPreview() {
     if (matchedCount === 0) {
       previewDetails.innerHTML = `
         <div style="color: #64748b; line-height: 1.6;">
-          <div>Ã¢â‚¬Â¢ <strong>Sekolah:</strong> ${chosenSekolah === 'all' ? '<span style="color:#dc2626; font-weight:700;">SEMUA SEKOLAH</span>' : escapeHtml(chosenSekolah)}</div>
-          <div>Ã¢â‚¬Â¢ <strong>Kelas:</strong> ${chosenKelas === 'all' ? 'Semua Kelas' : escapeHtml(chosenKelas)}</div>
-          <div>Ã¢â‚¬Â¢ <strong>Tahun Skrining:</strong> ${chosenTahun === 'all' ? 'Semua Tahun' : escapeHtml(chosenTahun)}</div>
-          <div>Ã¢â‚¬Â¢ <strong>Status:</strong> ${escapeHtml(statusText)}</div>
+          <div>• <strong>Sekolah:</strong> ${chosenSekolah === 'all' ? '<span style="color:#dc2626; font-weight:700;">SEMUA SEKOLAH</span>' : escapeHtml(chosenSekolah)}</div>
+          <div>• <strong>Kelas:</strong> ${chosenKelas === 'all' ? 'Semua Kelas' : escapeHtml(chosenKelas)}</div>
+          <div>• <strong>Tahun Skrining:</strong> ${chosenTahun === 'all' ? 'Semua Tahun' : escapeHtml(chosenTahun)}</div>
+          <div>• <strong>Status:</strong> ${escapeHtml(statusText)}</div>
           <div style="margin-top: 8px; padding: 8px 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; color: #64748b; font-weight: 600;">
             <i class="bi bi-info-circle"></i> Tidak ada data siswa yang cocok dengan kriteria filter di atas.
           </div>
@@ -20239,7 +20541,7 @@ function updateHapusSekolahPreview() {
         <div style="line-height: 1.7;">
           <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 4px; margin-bottom: 4px;">
             <span><i class="bi bi-building"></i> <strong>Sekolah Target:</strong></span>
-            <strong style="color: ${chosenSekolah === 'all' ? '#dc2626' : '#1e40af'};">${chosenSekolah === 'all' ? 'Ã¢Å¡Â Ã¯Â¸Â SEMUA SEKOLAH (Seluruh Database)' : escapeHtml(chosenSekolah)}</strong>
+            <strong style="color: ${chosenSekolah === 'all' ? '#dc2626' : '#1e40af'};">${chosenSekolah === 'all' ? '⚠️ SEMUA SEKOLAH (Seluruh Database)' : escapeHtml(chosenSekolah)}</strong>
           </div>
           <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 4px; margin-bottom: 4px;">
             <span><i class="bi bi-grid-fill"></i> <strong>Tingkat Kelas:</strong></span>
@@ -20325,13 +20627,13 @@ async function executeHapusDataSekolah(event) {
       <div style="text-align: left; font-size: 13px; color: #334155; line-height: 1.6;">
         <p>Apakah Anda benar-benar yakin ingin menghapus data siswa dengan rincian berikut?</p>
         <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;">
-          <div>Ã°Å¸ÂÂ« <strong>Sekolah:</strong> <span style="color: ${chosenSekolah === 'all' ? '#dc2626' : '#1e40af'}; font-weight: 700;">${escapeHtml(targetSekolahLabel)}</span></div>
-          <div>Ã°Å¸â€œÅ¡ <strong>Kelas:</strong> <span style="color: #0284c7; font-weight: 700;">${escapeHtml(targetKelasLabel)}</span></div>
-          <div>Ã°Å¸â€œâ€¦ <strong>Tahun Skrining:</strong> <span style="color: #1e40af; font-weight: 700;">${escapeHtml(targetTahunLabel)}</span></div>
-          <div style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1;">Ã°Å¸â€˜Â¥ <strong>Total Siswa Dihapus:</strong> <strong style="color: #be123c; font-size: 14px;">${matched.length.toLocaleString('id-ID')} Siswa</strong></div>
+          <div>🏫 <strong>Sekolah:</strong> <span style="color: ${chosenSekolah === 'all' ? '#dc2626' : '#1e40af'}; font-weight: 700;">${escapeHtml(targetSekolahLabel)}</span></div>
+          <div>📚 <strong>Kelas:</strong> <span style="color: #0284c7; font-weight: 700;">${escapeHtml(targetKelasLabel)}</span></div>
+          <div>📅 <strong>Tahun Skrining:</strong> <span style="color: #1e40af; font-weight: 700;">${escapeHtml(targetTahunLabel)}</span></div>
+          <div style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1;">👥 <strong>Total Siswa Dihapus:</strong> <strong style="color: #be123c; font-size: 14px;">${matched.length.toLocaleString('id-ID')} Siswa</strong></div>
         </div>
         <p style="color: #dc2626; font-weight: 700; margin-bottom: 0;">
-          Ã¢Å¡Â Ã¯Â¸Â PERINGATAN: Tindakan ini bersifat PERMANEN dan menghapus data langsung dari server Cloud Database D1!
+          ⚠️ PERINGATAN: Tindakan ini bersifat PERMANEN dan menghapus data langsung dari server Cloud Database D1!
         </p>
       </div>
     `,
@@ -20405,7 +20707,7 @@ async function confirmDeleteAllSekolahRecords() {
 }
 
 // ==========================================================================
-// Ã°Å¸â€Â DUPLICATE FINDER: PENGELOLA & PEMBERSIH DATA DUPLIKAT CKG SEKOLAH
+// 🔍 DUPLICATE FINDER: PENGELOLA & PEMBERSIH DATA DUPLIKAT CKG SEKOLAH
 // ==========================================================================
 
 let currentDuplicateGroups = [];
@@ -20456,7 +20758,7 @@ function openDuplicateFinderModal() {
             </div>
           </div>
           <div style="font-size: 12px; color: #64748b; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px dashed #cbd5e1;">
-            Ã°Å¸â€™Â¡ <em>Catatan: Data siswa yang NIK-nya kosong tidak dianggap sebagai duplikat.</em>
+            💡 <em>Catatan: Data siswa yang NIK-nya kosong tidak dianggap sebagai duplikat.</em>
           </div>
         </div>
       `,
@@ -20559,7 +20861,7 @@ function renderDuplicateFinderContent() {
         <i class="bi bi-exclamation-triangle-fill" style="color: #dc2626;"></i> Ditemukan Data Siswa Dengan NIK Sama
       </div>
       <div>
-        Data yang ditandai dengan badge <span style="background: #059669; color: #fff; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 700;">Ã¢Â­Â Disarankan Simpan</span> adalah data yang <strong>sudah diperiksa / paling lengkap</strong>. Anda dapat menghapus data duplikat satu per satu atau menggunakan tombol otomatis.
+        Data yang ditandai dengan badge <span style="background: #059669; color: #fff; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 700;">⭐ Disarankan Simpan</span> adalah data yang <strong>sudah diperiksa / paling lengkap</strong>. Anda dapat menghapus data duplikat satu per satu atau menggunakan tombol otomatis.
       </div>
     </div>
   `;
@@ -20610,7 +20912,7 @@ function renderDuplicateFinderContent() {
                 </span>
               ` : `
                 <span style="background: #ef4444; color: #ffffff; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 6px;">
-                  Ã¢Å¡Â Ã¯Â¸Â Duplikat / Redundan
+                  ⚠️ Duplikat / Redundan
                 </span>
               `}
             </div>
@@ -20777,7 +21079,7 @@ async function autoResolveAllDuplicates() {
 }
 
 /* ==========================================================================
-   Ã°Å¸ÂÂ« FITUR KELOLA MASTER SARANA SEKOLAH: TAMBAH & EDIT (KHUSUS ADMIN)
+   🏫 FITUR KELOLA MASTER SARANA SEKOLAH: TAMBAH & EDIT (KHUSUS ADMIN)
    ========================================================================== */
 
 let currentKelolaLevelFilter = 'ALL';
@@ -21200,7 +21502,7 @@ function renderKelolaSekolahTable() {
 }
 
 /* ==========================================================================
-   Ã°Å¸Å½â€œ FITUR NAIK KELAS & KELULUSAN (CKG SEKOLAH)
+   🎓 FITUR NAIK KELAS & KELULUSAN (CKG SEKOLAH)
    ========================================================================== */
 
 function openNaikKelasModal() {
@@ -21229,17 +21531,17 @@ function openNaikKelasModal() {
     const smaList = MASTER_SARANA_SEKOLAH.filter(s => s.level === 'SMA').map(s => s.nama);
 
     let html = '<option value="">-- Pilih Sekolah --</option>';
-    html += '<optgroup label="Ã°Å¸â€œÅ¡ SD / MI (Kelas 1 - 6)">';
+    html += '<optgroup label="📚 SD / MI (Kelas 1 - 6)">';
     html += sdList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
-    html += '<optgroup label="Ã°Å¸ÂÂ« SMP / MTs (Kelas 7 - 9)">';
+    html += '<optgroup label="🏫 SMP / MTs (Kelas 7 - 9)">';
     html += smpList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
-    html += '<optgroup label="Ã°Å¸Å½â€œ SMA / SMK / MA (Kelas 10 - 12)">';
+    html += '<optgroup label="🎓 SMA / SMK / MA (Kelas 10 - 12)">';
     html += smaList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
     if (extraSchools.length > 0) {
-      html += '<optgroup label="Ã°Å¸â€œÅ’ Sekolah Lainnya">';
+      html += '<optgroup label="📍 Sekolah Lainnya">';
       html += extraSchools.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
       html += '</optgroup>';
     }
@@ -21434,7 +21736,7 @@ function previewNaikKelasImpact() {
           <strong style="color:#1e293b;">${escapeHtml(asal)}</strong>
           <i class="bi bi-arrow-right" style="margin:0 6px; color:#2563eb;"></i>
           <strong style="color:${isLulus ? '#059669' : '#2563eb'};">${escapeHtml(tujuan)}</strong>
-          ${isLulus ? ' <span class="badge badge-emerald" style="font-size:10px; padding:2px 6px;">Ã°Å¸Å½â€œ LULUS</span>' : ''}
+          ${isLulus ? ' <span class="badge badge-emerald" style="font-size:10px; padding:2px 6px;">🎓 LULUS</span>' : ''}
         </div>
         <div style="font-weight:800; color:#1e40af;">${totalImpacted} Siswa</div>
       </div>
@@ -21473,7 +21775,7 @@ function previewNaikKelasImpact() {
             <span style="font-weight:700; color:#334155;">${escapeHtml(oldCls)}</span>
             <i class="bi bi-arrow-right" style="margin:0 6px; color:#3b82f6;"></i>
             <span style="font-weight:800; color:${isLulus ? '#059669' : '#1d4ed8'};">${escapeHtml(newCls)}</span>
-            ${isLulus ? ' <span class="badge badge-emerald" style="font-size:10px; padding:2px 6px;">Ã°Å¸Å½â€œ LULUS</span>' : ''}
+            ${isLulus ? ' <span class="badge badge-emerald" style="font-size:10px; padding:2px 6px;">🎓 LULUS</span>' : ''}
           </div>
           <span style="font-weight:800; color:#1e40af; background:#dbeafe; padding:2px 8px; border-radius:10px; font-size:11px;">
             ${count} siswa
@@ -21736,7 +22038,7 @@ async function executeNaikKelas(e) {
             <li><strong style="color: #2563eb;">${totalArchivedCount} pemeriksaan sebelumnya</strong> berhasil diarsipkan ke riwayat (Tahun: <strong>${escapeHtml(tahunArsip)}</strong>).</li>
           </ul>
           <div style="font-size: 12px; color: #047857; background: #ecfdf5; padding: 8px 12px; border-radius: 8px; border: 1px solid #a7f3d0; margin-top: 10px;">
-            Ã°Å¸â€™Â¡ Riwayat pemeriksaan kelas sebelumnya dapat dilihat kapan saja dengan mengklik tombol <strong>Periksa</strong> pada baris siswa.
+            💡 Riwayat pemeriksaan kelas sebelumnya dapat dilihat kapan saja dengan mengklik tombol <strong>Periksa</strong> pada baris siswa.
           </div>
         </div>
       `,
@@ -21754,7 +22056,7 @@ async function executeNaikKelas(e) {
 }
 
 /* ==========================================================================
-   Ã°Å¸â€â€ž FITUR MIGRASI / MUTASI SEKOLAH SISWA (CKG SEKOLAH)
+   🔄 FITUR MIGRASI / MUTASI SEKOLAH SISWA (CKG SEKOLAH)
    ========================================================================== */
 
 let migrasiCachedStudents = [];
@@ -21787,17 +22089,17 @@ function openMigrasiSekolahModal() {
 
   function buildOptions(placeholder) {
     let html = `<option value="">${placeholder}</option>`;
-    html += '<optgroup label="Ã°Å¸â€œÅ¡ SD / MI (Kelas 1 - 6)">';
+    html += '<optgroup label="📚 SD / MI (Kelas 1 - 6)">';
     html += sdList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
-    html += '<optgroup label="Ã°Å¸ÂÂ« SMP / MTs (Kelas 7 - 9)">';
+    html += '<optgroup label="🏫 SMP / MTs (Kelas 7 - 9)">';
     html += smpList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
-    html += '<optgroup label="Ã°Å¸Å½â€œ SMA / SMK / MA (Kelas 10 - 12)">';
+    html += '<optgroup label="🎓 SMA / SMK / MA (Kelas 10 - 12)">';
     html += smaList.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     html += '</optgroup>';
     if (extraSchools.length > 0) {
-      html += '<optgroup label="Ã°Å¸â€œÅ’ Sekolah Lainnya">';
+      html += '<optgroup label="📍 Sekolah Lainnya">';
       html += extraSchools.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
       html += '</optgroup>';
     }
@@ -22097,7 +22399,7 @@ async function executeMigrasiSekolah(e) {
 }
 
 // --------------------------------------------------------------------------
-// Ã°Å¸â€œÂ¥ EXPORT & IMPORT EXCEL CKG SEKOLAH
+// 📥 EXPORT & IMPORT EXCEL CKG SEKOLAH
 // --------------------------------------------------------------------------
 
 function exportSekolahToXLSX() {
@@ -22504,7 +22806,7 @@ function handleSekolahImportFileSelect(event) {
         previewArea.innerHTML = `
           <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; color: #166534; font-size: 13px; font-weight: 700;">
             <i class="bi bi-check-circle-fill" style="color: #22c55e;"></i> Berhasil membaca ${parsedItems.length} data siswa dari file Excel.
-            <span style="display: block; font-size: 11px; font-weight: 600; color: #15803d; margin-top: 4px;">Ã¢Å“â€¦ Tidak ada data duplikat ditemukan. Aman untuk diimport langsung.</span>
+            <span style="display: block; font-size: 11px; font-weight: 600; color: #15803d; margin-top: 4px;">✅ Tidak ada data duplikat ditemukan. Aman untuk diimport langsung.</span>
           </div>
         `;
         pendingSekolahImportSkipDuplicates = false;
@@ -22513,7 +22815,7 @@ function handleSekolahImportFileSelect(event) {
         // Duplicates found - show warning
         const dupList = duplicateItems.slice(0, 8).map(d => {
           const existInDb = sekolahRecords.find(r => isNikValidForDuplicate(r.nik) && String(r.nik).trim() === String(d.nik).trim());
-          return `<li style="margin-bottom: 4px;"><strong>${escapeHtml(d.nama)}</strong> (NIK: ${escapeHtml(d.nik)})${existInDb ? ' Ã¢â‚¬â€ sudah ada: <em>' + escapeHtml(existInDb.nama) + '</em> (' + escapeHtml(existInDb.sekolah || '') + ')' : ''}</li>`;
+          return `<li style="margin-bottom: 4px;"><strong>${escapeHtml(d.nama)}</strong> (NIK: ${escapeHtml(d.nik)})${existInDb ? ' - sudah ada: <em>' + escapeHtml(existInDb.nama) + '</em> (' + escapeHtml(existInDb.sekolah || '') + ')' : ''}</li>`;
         }).join('');
 
         let internalDupHtml = '';
@@ -22604,7 +22906,7 @@ async function executeSekolahXLSXImport() {
     const skippedNik = window.__lastSekolahImportSkippedNik || 0;
     if (skippedNik > 0) {
       skippedNotice = `<div style="margin-top:10px; font-size:12.5px; color:#92400e; background:#fffbeb; padding:8px 12px; border-radius:8px; border:1px solid #fde68a; text-align:left;">
-        Ã¢Å¡Â Ã¯Â¸Â <strong>${skippedNik} data siswa dilewati / ditolak</strong> karena NIK tidak persis 16 digit.
+        ⚠️ <strong>${skippedNik} data siswa dilewati / ditolak</strong> karena NIK tidak persis 16 digit.
       </div>`;
     }
 
@@ -22626,7 +22928,7 @@ async function executeSekolahXLSXImport() {
 }
 
 // ==========================================================================
-// Ã°Å¸â€œâ€¹ OUTPUT LAPORAN HASIL PEMERIKSAAN SEKOLAH BESERTA KETERANGANNYA
+// 📋 OUTPUT LAPORAN HASIL PEMERIKSAAN SEKOLAH BESERTA KETERANGANNYA
 // ==========================================================================
 
 /**
@@ -23060,7 +23362,7 @@ function renderPrintableLaporanSekolah(dataset, schoolName, kelasName, tahunVal)
       <div class="report-kop-instansi">PEMERINTAH KABUPATEN BANDUNG</div>
       <div class="report-kop-dinas">DINAS KESEHATAN</div>
       <div class="report-kop-puskesmas">UPTD PUSKESMAS BANJARAN KOTA</div>
-      <div class="report-kop-alamat">Jl. Raya Banjaran No. 58, Kec. Banjaran, Kabupaten Bandung, Jawa Barat 40377 Ã¢â‚¬Â¢ Telp. (022) 5940822 Ã¢â‚¬Â¢ Email: pkmbanjarankota@gmail.com</div>
+      <div class="report-kop-alamat">Jl. Raya Banjaran No. 58, Kec. Banjaran, Kabupaten Bandung, Jawa Barat 40377 • Telp. (022) 5940822 • Email: pkmbanjarankota@gmail.com</div>
     </div>
 
     <!-- JUDUL LAPORAN -->
@@ -23126,13 +23428,13 @@ function renderPrintableLaporanSekolah(dataset, schoolName, kelasName, tahunVal)
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 11.5px; line-height: 1.6;">
         <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">Detail Identifikasi Masalah Kesehatan Terbanyak:</div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px;">
-          <div>Ã°Å¸Â¦Â· Karies Gigi / Gigi Berlubang: <strong>${gigiCount} siswa</strong></div>
-          <div>Ã°Å¸â€˜â€œ Gangguan Penglihatan (Mata Minus): <strong>${mataCount} siswa</strong></div>
-          <div>Ã°Å¸â€˜â€š Serumen Telinga: <strong>${serumenCount} siswa</strong></div>
-          <div>Ã°Å¸Â¥â€” Masalah Gizi: Kurus <strong>${kurusCount}</strong>, Gemuk/Obes <strong>${obesitasCount}</strong></div>
-          <div>Ã°Å¸Â©Â¸ Anemia (Hb Rendah): <strong>${anemiaCount} siswa</strong></div>
-          <div>Ã°Å¸â€™â€œ Hipertensi / Prehipertensi: <strong>${hipertensiCount} siswa</strong></div>
-          <div>Ã°Å¸Å¡Â­ Skrining Rokok (Laki-laki): Aktif <strong>${rokokAktifCount}</strong>, Pasif <strong>${rokokPasifCount}</strong></div>
+          <div>🦷 Karies Gigi / Gigi Berlubang: <strong>${gigiCount} siswa</strong></div>
+          <div>👓 Gangguan Penglihatan (Mata Minus): <strong>${mataCount} siswa</strong></div>
+          <div>👂 Serumen Telinga: <strong>${serumenCount} siswa</strong></div>
+          <div>🥣 Masalah Gizi: Kurus <strong>${kurusCount}</strong>, Gemuk/Obes <strong>${obesitasCount}</strong></div>
+          <div>🩸 Anemia (Hb Rendah): <strong>${anemiaCount} siswa</strong></div>
+          <div>💓 Hipertensi / Prehipertensi: <strong>${hipertensiCount} siswa</strong></div>
+          <div>🚭 Skrining Rokok (Laki-laki): Aktif <strong>${rokokAktifCount}</strong>, Pasif <strong>${rokokPasifCount}</strong></div>
         </div>
       </div>
     </div>
@@ -23366,7 +23668,7 @@ function renderPrintableHasilIndividu(r) {
       <div class="report-kop-instansi">PEMERINTAH KABUPATEN BANDUNG</div>
       <div class="report-kop-dinas">DINAS KESEHATAN</div>
       <div class="report-kop-puskesmas">UPTD PUSKESMAS BANJARAN KOTA</div>
-      <div class="report-kop-alamat">Jl. Raya Banjaran No. 58, Kec. Banjaran, Kab. Bandung, Jawa Barat 40377 Ã¢â‚¬Â¢ Telp. (022) 5940822</div>
+      <div class="report-kop-alamat">Jl. Raya Banjaran No. 58, Kec. Banjaran, Kab. Bandung, Jawa Barat 40377 • Telp. (022) 5940822</div>
     </div>
 
     <!-- JUDUL SURAT -->
@@ -23550,7 +23852,7 @@ function renderPrintableHasilIndividu(r) {
 }
 
 // ==========================================================================
-// Ã°Å¸â€”ÂºÃ¯Â¸Â INTERACTIVE MAP & ADDRESS LEARNING (KABUPATEN BANDUNG, JAWA BARAT)
+// 🗺️ INTERACTIVE MAP & ADDRESS LEARNING (KABUPATEN BANDUNG, JAWA BARAT)
 // ==========================================================================
 
 let leafletMap = null;
@@ -23558,7 +23860,7 @@ let mapMarkersGroup = null;
 let currentAddingPinMarker = null;
 
 /* ==========================================================================
-   Ã°Å¸Å½Â¯ ACCURATE KAMPUNG & ADMINISTRATIVE DIRECTORY LOOKUP (KAB. BANDUNG)
+   🎯 ACCURATE KAMPUNG & ADMINISTRATIVE DIRECTORY LOOKUP (KAB. BANDUNG)
    ========================================================================== */
 
 const ACCURATE_KAMPUNG_DIRECTORY = {
@@ -23967,7 +24269,7 @@ async function saveLearnedKampungKeyword(kw, kel, kec, kab = 'Kabupaten Bandung'
   }
 
   localStorage.setItem('ckg_learned_kampung_map', JSON.stringify(list));
-  // Clear the reset flag since new data is being saved Ã¢â‚¬â€ auto-preseed can resume if ever needed
+  // Clear the reset flag since new data is being saved - auto-preseed can resume if ever needed
   localStorage.removeItem('ckg_dictionary_is_reset');
   updateAiDbSavedCounterUI();
 
@@ -24049,7 +24351,7 @@ const KAB_BANDUNG_COORDS_MAP = {
 };
 
 /* ==========================================================================
-   Ã°Å¸Â¤â€“ AI AUTONOMOUS ADDRESS EXPLORER & LIVE MAP RADAR ENGINE
+   🤖 AI AUTONOMOUS ADDRESS EXPLORER & LIVE MAP RADAR ENGINE
    ========================================================================== */
 
 let isAiExplorerActive = false;
@@ -24185,7 +24487,7 @@ let aiExplorerInitialDurationMinutes = 10;
 let isAiTimerUnlimited = false;
 
 function formatAiTimerDisplay(seconds) {
-  if (isAiTimerUnlimited) return 'Ã¢â„¢Â¾Ã¯Â¸Â Tanpa Batas';
+  if (isAiTimerUnlimited) return '♾️ Tanpa Batas';
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -24194,7 +24496,7 @@ function formatAiTimerDisplay(seconds) {
 function updateAiTimerUI() {
   const badgeEl = document.getElementById('aiTimerCountdownText');
   if (badgeEl) {
-    badgeEl.textContent = `Ã¢ÂÂ³ ${formatAiTimerDisplay(aiExplorerSecondsLeft)}`;
+    badgeEl.textContent = `⏳ ${formatAiTimerDisplay(aiExplorerSecondsLeft)}`;
   }
 }
 
@@ -24233,11 +24535,11 @@ function stopAiExplorerTimerExpired() {
     badge.innerHTML = `<i class="bi bi-stopwatch-fill"></i> WAKTU SELESAI`;
   }
 
-  updateAiLiveLog(`Ã¢ÂÂ±Ã¯Â¸Â WAKTU JELAJAH AI SELESAI (${aiExplorerInitialDurationMinutes} Menit). Penjelajahan dihentikan otomatis.`);
+  updateAiLiveLog(`⏱️ WAKTU JELAJAH AI SELESAI (${aiExplorerInitialDurationMinutes} Menit). Penjelajahan dihentikan otomatis.`);
 
   if (typeof Swal !== 'undefined') {
     Swal.fire({
-      title: 'Ã¢ÂÂ±Ã¯Â¸Â Waktu Jelajah AI Selesai!',
+      title: '⏱️ Waktu Jelajah AI Selesai!',
       text: `Sesi penjelajahan otomatis selama ${aiExplorerInitialDurationMinutes} menit telah selesai. Seluruh titik kampung baru yang ditemukan telah tersimpan di Cloud D1 Database.`,
       icon: 'info',
       confirmButtonText: '<i class="bi bi-play-circle-fill"></i> Mulai Sesi Baru',
@@ -24250,7 +24552,7 @@ function stopAiExplorerTimerExpired() {
       }
     });
   } else if (typeof showToast === 'function') {
-    showToast(`Ã¢ÂÂ±Ã¯Â¸Â Waktu Jelajah Selesai (${aiExplorerInitialDurationMinutes} Menit)!`, 'info');
+    showToast(`⏱️ Waktu Jelajah Selesai (${aiExplorerInitialDurationMinutes} Menit)!`, 'info');
   }
 }
 
@@ -24259,14 +24561,14 @@ function checkAdminRoleOnly(actionName = 'fitur ini') {
   if (currentUserRole !== 'Admin') {
     if (typeof Swal !== 'undefined') {
       Swal.fire({
-        title: 'Ã°Å¸â€â€™ Akses Terbatas (Admin Only)',
+        title: '🔒 Akses Terbatas (Admin Only)',
         text: `Maaf, ${actionName} hanya dapat diakses & dijalankan oleh pengguna dengan Peran ADMIN.`,
         icon: 'warning',
         confirmButtonText: 'Mengerti',
         confirmButtonColor: '#f59e0b'
       });
     } else {
-      alert(`Ã°Å¸â€â€™ Akses Terbatas: ${actionName} hanya dapat diakses oleh Admin.`);
+      alert(`🔒 Akses Terbatas: ${actionName} hanya dapat diakses oleh Admin.`);
     }
     return false;
   }
@@ -24286,12 +24588,12 @@ function openSetAiTimerModal() {
         </p>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
-          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(5, this)">Ã¢Å¡Â¡ 5 Menit</button>
-          <button type="button" class="btn btn-primary timer-opt-btn active" onclick="selectAiTimerOption(10, this)">Ã°Å¸Å¡â‚¬ 10 Menit (Default)</button>
-          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(15, this)">Ã°Å¸â€ºÂ¡Ã¯Â¸Â 15 Menit</button>
-          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(30, this)">Ã°Å¸Å’Â 30 Menit</button>
-          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(-1, this)">Ã¢â„¢Â¾Ã¯Â¸Â Tanpa Batas Waktu</button>
-          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(0, this)">Ã¢Å“ÂÃ¯Â¸Â Kustom Menit</button>
+          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(5, this)">⚡ 5 Menit</button>
+          <button type="button" class="btn btn-primary timer-opt-btn active" onclick="selectAiTimerOption(10, this)">🚀 10 Menit (Default)</button>
+          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(15, this)">🛡️ 15 Menit</button>
+          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(30, this)">🌐 30 Menit</button>
+          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(-1, this)">♾️ Tanpa Batas Waktu</button>
+          <button type="button" class="btn btn-outline-primary timer-opt-btn" onclick="selectAiTimerOption(0, this)">✏️ Kustom Menit</button>
         </div>
 
         <div id="customTimerMinutesGroup" style="display: none; margin-top: 10px;">
@@ -24348,7 +24650,7 @@ function openSetAiTimerModal() {
       }
 
       const durText = isAiTimerUnlimited ? 'Tanpa Batas Waktu' : `${selectedMins} Menit`;
-      updateAiLiveLog(`Ã¢â€“Â¶Ã¯Â¸Â AI Autonomous Explorer DIAKTIFKAN dengan durasi: ${durText}.`);
+      updateAiLiveLog(`▶️ AI Autonomous Explorer DIAKTIFKAN dengan durasi: ${durText}.`);
       if (typeof showToast === 'function') showToast(`AI Explorer Aktif! Durasi: ${durText}`, 'success');
     }
   });
@@ -24373,11 +24675,11 @@ function selectAiTimerOption(mins, btnEl) {
 async function repairAllRecordsAddressWithAi() {
   if (typeof Swal === 'undefined') return;
 
-  // Ã°Å¸â€â€™ STRICT ROLE GUARD: Admin Only
+  // 🔒 STRICT ROLE GUARD: Admin Only
   const currentUserRole = sessionStorage.getItem('ckg_user_role') || (typeof currentRole !== 'undefined' ? currentRole : 'Petugas');
   if (currentUserRole !== 'Admin') {
     Swal.fire({
-      title: 'Ã°Å¸â€â€™ Akses Terbatas (Admin Only)',
+      title: '🔒 Akses Terbatas (Admin Only)',
       text: 'Maaf, fitur AI Auto-Repair Alamat Rekam Medis ini hanya dapat dijalankan oleh pengguna dengan Peran ADMIN.',
       icon: 'warning',
       confirmButtonText: 'Mengerti',
@@ -24394,7 +24696,7 @@ async function repairAllRecordsAddressWithAi() {
           Fitur khusus <strong>Admin</strong> ini akan menganalisis teks alamat mentah pada seluruh rekam medis <strong>Data Record CKG / SIMPUS</strong> dan <strong>CKG Sekolah</strong>, lalu secara otomatis memvalidasi & memperbaiki:
         </p>
         <ul style="color: #059669; padding-left: 20px; line-height: 1.6; margin-bottom: 12px; font-weight: 600;">
-          <li>Desa / Kelurahan (termasuk koreksi Banjaran Kota Ã¢Å¾â€ Banjaran Kulon)</li>
+          <li>Desa / Kelurahan (termasuk koreksi Banjaran Kota ➔ Banjaran Kulon)</li>
           <li>Kecamatan</li>
           <li>Kabupaten / Kota</li>
           <li>Provinsi</li>
@@ -24406,7 +24708,7 @@ async function repairAllRecordsAddressWithAi() {
     `,
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'Ã¢Å“Â¨ Jalankan Auto-Repair AI',
+    confirmButtonText: '✨ Jalankan Auto-Repair AI',
     cancelButtonText: 'Batal',
     confirmButtonColor: '#10b981'
   });
@@ -24486,10 +24788,10 @@ async function repairAllRecordsAddressWithAi() {
 
         if (item.type === 'simpus') {
           simpusFixedCount++;
-          auditLogs.push(`[SIMPUS #${r.no || item.idx + 1}] ${r.nama || 'Pasien'}: "${rawAddr}" Ã¢Å¾â€ Desa: ${oldKel} Ã¢Å¾â€ <b>${detected.kel}</b>, Kec: ${oldKec} Ã¢Å¾â€ <b>${detected.kec}</b>`);
+          auditLogs.push(`[SIMPUS #${r.no || item.idx + 1}] ${r.nama || 'Pasien'}: "${rawAddr}" ➔ Desa: ${oldKel} ➔ <b>${detected.kel}</b>, Kec: ${oldKec} ➔ <b>${detected.kec}</b>`);
         } else {
           sekolahFixedCount++;
-          auditLogs.push(`[SEKOLAH #${r.no || item.idx + 1}] ${r.nama || 'Siswa'}: "${rawAddr}" Ã¢Å¾â€ Desa: ${oldKel} Ã¢Å¾â€ <b>${detected.kel}</b>, Kec: ${oldKec} Ã¢Å¾â€ <b>${detected.kec}</b>`);
+          auditLogs.push(`[SEKOLAH #${r.no || item.idx + 1}] ${r.nama || 'Siswa'}: "${rawAddr}" ➔ Desa: ${oldKel} ➔ <b>${detected.kel}</b>, Kec: ${oldKec} ➔ <b>${detected.kec}</b>`);
         }
       }
       processedCount++;
@@ -24533,23 +24835,23 @@ async function repairAllRecordsAddressWithAi() {
     }
 
     Swal.fire({
-      title: 'Ã°Å¸Å½â€° Auto-Repair Alamat AI Selesai!',
+      title: '🎉 Auto-Repair Alamat AI Selesai!',
       html: `
         <div style="text-align: left; font-size: 12.5px; color: #334155;">
           <div style="background: #f1f5f9; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span>Ã°Å¸â€œÅ  Total Record Di-audit:</span> <strong>${totalCount} Data</strong>
+              <span>📊 Total Record Di-audit:</span> <strong>${totalCount} Data</strong>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 4px; color: #059669;">
-              <span>Ã¢Å“Â¨ Total Record Diperbaiki:</span> <strong>${totalFixed} Data</strong>
+              <span>✨ Total Record Diperbaiki:</span> <strong>${totalFixed} Data</strong>
             </div>
             <div style="font-size: 11px; color: #64748b; margin-top: 6px; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
-              Ã¢â‚¬Â¢ SIMPUS / CKG Record: <strong>${simpusFixedCount} diperbaiki</strong><br>
-              Ã¢â‚¬Â¢ CKG Sekolah Record: <strong>${sekolahFixedCount} diperbaiki</strong>
+              • SIMPUS / CKG Record: <strong>${simpusFixedCount} diperbaiki</strong><br>
+              • CKG Sekolah Record: <strong>${sekolahFixedCount} diperbaiki</strong>
             </div>
           </div>
 
-          <div style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">Ã°Å¸â€œâ€¹ Rincian Audit Perbaikan Alamat AI:</div>
+          <div style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">📋 Rincian Audit Perbaikan Alamat AI:</div>
           <div style="max-height: 180px; overflow-y: auto; background: #0f172a; color: #38bdf8; font-family: monospace; font-size: 10.5px; padding: 8px 10px; border-radius: 8px;">
             ${logHtml}
           </div>
@@ -24598,7 +24900,7 @@ function toggleAiAutoExplorer() {
       badge.className = 'badge badge-emerald';
       badge.innerHTML = `<i class="bi bi-record-fill" style="color: #22c55e; animation: blink 1s infinite;"></i> AUTO-SCANNING AKTIF`;
     }
-    updateAiLiveLog(`Ã¢â€“Â¶Ã¯Â¸Â AI Autonomous Explorer DIAKTIFKAN kembali. Menjelajah & mencatat otomatis...`);
+    updateAiLiveLog(`▶️ AI Autonomous Explorer DIAKTIFKAN kembali. Menjelajah & mencatat otomatis...`);
     if (typeof showToast === 'function') showToast('AI Auto-Explorer Aktif! Menjelajah lokasi otomatis...', 'success');
   } else {
     if (btnHeader) btnHeader.innerHTML = `<i class="bi bi-play-fill"></i> Mulai Jelajah AI`;
@@ -24607,7 +24909,7 @@ function toggleAiAutoExplorer() {
       badge.className = 'badge badge-amber';
       badge.innerHTML = `<i class="bi bi-pause-circle-fill"></i> DI-JEDA`;
     }
-    updateAiLiveLog(`Ã¢ÂÂ¸Ã¯Â¸Â AI Autonomous Explorer di-jeda sementara.`);
+    updateAiLiveLog(`⏸️ AI Autonomous Explorer di-jeda sementara.`);
     if (typeof showToast === 'function') showToast('AI Auto-Explorer Di-jeda.', 'info');
   }
 }
@@ -24631,7 +24933,7 @@ function speedUpAiExplorer() {
   }
 
   initAiAutoExplorerEngine();
-  updateAiLiveLog(`Ã¢Å¡Â¡ Kecepatan Radar Scanning AI diubah ke interval ${aiScanSpeedMs / 1000}s!`);
+  updateAiLiveLog(`⚡ Kecepatan Radar Scanning AI diubah ke interval ${aiScanSpeedMs / 1000}s!`);
 }
 
 async function stepAiExplorerNextLocation() {
@@ -24645,7 +24947,7 @@ async function stepAiExplorerNextLocation() {
       aiCurrentKecIndex = 0;
       aiCurrentPointIndex = 0;
       const nextRegion = EXPLORATION_REGIONS[aiCurrentRegionIndex];
-      updateAiLiveLog(`Ã°Å¸Ââ€  CAKUPAN ${currentRegion.name.toUpperCase()} 100% TERKUASAI! Melanjutkan penjelajahan ke: ${nextRegion.name}`);
+      updateAiLiveLog(`🏆 CAKUPAN ${currentRegion.name.toUpperCase()} 100% TERKUASAI! Melanjutkan penjelajahan ke: ${nextRegion.name}`);
       const regLabel = document.getElementById('aiExplorerTargetRegion');
       if (regLabel) regLabel.textContent = nextRegion.name;
     } else {
@@ -24653,7 +24955,7 @@ async function stepAiExplorerNextLocation() {
       aiCurrentRegionIndex = 0;
       aiCurrentKecIndex = 0;
       aiCurrentPointIndex = 0;
-      updateAiLiveLog(`Ã°Å¸Ââ€  Seluruh Wilayah (${EXPLORATION_REGIONS.length} Region) 100% Terjangkau! Melanjutkan audit siklis...`);
+      updateAiLiveLog(`🏆 Seluruh Wilayah (${EXPLORATION_REGIONS.length} Region) 100% Terjangkau! Melanjutkan audit siklis...`);
     }
     return;
   }
@@ -24675,8 +24977,8 @@ async function stepAiExplorerNextLocation() {
   const lat = parseFloat((baseLat + stepOffsetLat).toFixed(6));
   const lng = parseFloat((baseLng + stepOffsetLng).toFixed(6));
 
-  // Ã°Å¸â€â€™ SKIP VISITED / ALREADY PINNED CHECK:
-  // Match by kampung keyword name ONLY Ã¢â‚¬â€ regardless of kel/kec (which may vary from geocode results)
+  // 🔒 SKIP VISITED / ALREADY PINNED CHECK:
+  // Match by kampung keyword name ONLY - regardless of kel/kec (which may vary from geocode results)
   const currentLearned = getLearnedKampungMap();
   const isAlreadyPinned = currentLearned.some(item => {
     const itemKw = (Array.isArray(item.keywords) ? item.keywords[0] : item.keywords) || '';
@@ -24685,7 +24987,7 @@ async function stepAiExplorerNextLocation() {
 
   if (isAlreadyPinned) {
     // Update HUD to show skipping activity
-    updateAiLiveLog(`Ã¢ÂÂ© [${new Date().toLocaleTimeString('id-ID')}] Skip: Kp. ${cleanKw} (Desa ${targetKel}, Kec. ${targetKec}) Ã¢â‚¬â€ sudah tercatat`);
+    updateAiLiveLog(`⏭️ [${new Date().toLocaleTimeString('id-ID')}] Skip: Kp. ${cleanKw} (Desa ${targetKel}, Kec. ${targetKec}) - sudah tercatat`);
 
     // Advance pointer to next location
     aiCurrentPointIndex++;
@@ -24701,7 +25003,7 @@ async function stepAiExplorerNextLocation() {
   }
 
   // Inform live ticker immediately that AI is actively scanning this coordinate
-  updateAiLiveLog(`Ã°Å¸â€Â [${new Date().toLocaleTimeString('id-ID')}] Sedang memindai: Kp. ${cleanKw} (Desa ${targetKel}, Kec. ${targetKec})...`);
+  updateAiLiveLog(`🔍 [${new Date().toLocaleTimeString('id-ID')}] Sedang memindai: Kp. ${cleanKw} (Desa ${targetKel}, Kec. ${targetKec})...`);
 
   // 1. Reverse geocode to get accurate address from Dual-API (BigDataCloud + Nominatim)
   let finalKel = targetKel;
@@ -24734,7 +25036,7 @@ async function stepAiExplorerNextLocation() {
   aiLearnedCountTotal++;
 
   // 3. Update Live Log HUD & Indicator with final resolved details
-  updateAiLiveLog(`Ã¢Å“â€¦ [${new Date().toLocaleTimeString('id-ID')}] Tersimpan D1: Kp. ${cleanKw}, Desa ${finalKel}, Kec. ${finalKec} (${finalKab})`);
+  updateAiLiveLog(`✅ [${new Date().toLocaleTimeString('id-ID')}] Tersimpan D1: Kp. ${cleanKw}, Desa ${finalKel}, Kec. ${finalKec} (${finalKab})`);
   updateAiDbSavedCounterUI();
 
   // 4. Move Live Radar Marker on Leaflet Map & update popup text
@@ -24780,10 +25082,10 @@ function updateAiRadarMarkerOnMap(lat, lng, kw, kec) {
   // Always update popup content with current location info
   const popupHtml = `
     <div style="font-family:'Plus Jakarta Sans',sans-serif; text-align:center; font-size:12px; min-width: 180px;">
-      <strong style="color:#0284c7; font-size:13px;">Ã°Å¸Â¤â€“ AI Radar Exploration Agent</strong><br>
+      <strong style="color:#0284c7; font-size:13px;">🤖 AI Radar Exploration Agent</strong><br>
       <div style="margin-top: 4px; background: #f0f9ff; border-radius: 6px; padding: 6px 8px; border: 1px solid #bae6fd;">
         <div style="font-size: 11px; color: #64748b;">Sedang memindai & mencatat:</div>
-        <div style="font-weight: 800; color: #0f172a; font-size: 13px; margin-top: 2px;">Ã°Å¸â€œÂ Kp. ${kw}</div>
+        <div style="font-weight: 800; color: #0f172a; font-size: 13px; margin-top: 2px;">📋 Kp. ${kw}</div>
         <div style="font-size: 11px; color: #475569; margin-top: 2px;">Kec. ${kec}</div>
       </div>
     </div>
@@ -24849,7 +25151,7 @@ function updateAiCoverageProgress(currentRegion) {
 }
 
 /* ==========================================================================
-   Ã°Å¸Å’Â NOMINATIM REVERSE GEOCODING Ã¢â‚¬â€ SELURUH INDONESIA
+   🌐 NOMINATIM REVERSE GEOCODING - SELURUH INDONESIA
    Mendapatkan Desa, Kecamatan, Kab/Kota, Provinsi dari koordinat GPS
    menggunakan OpenStreetMap Nominatim API (gratis, tanpa API key)
    ========================================================================== */
@@ -24970,14 +25272,14 @@ function initInteractiveMap() {
 
     // Layer switcher control for Google Maps views
     L.control.layers({
-      'Ã°Å¸â€”ÂºÃ¯Â¸Â Google Maps Standard': googleRoadmap,
-      'Ã°Å¸â€ºÂ°Ã¯Â¸Â Google Maps Satelit & Jalan': googleSatellite,
-      'Ã¢â€ºÂ°Ã¯Â¸Â Google Maps Terrain': googleTerrain
+      '🗺️ Google Maps Standard': googleRoadmap,
+      '🛰️ Google Maps Satelit & Jalan': googleSatellite,
+      '⛰️ Google Maps Terrain': googleTerrain
     }, null, { position: 'topright' }).addTo(leafletMap);
 
     mapMarkersGroup = L.layerGroup().addTo(leafletMap);
 
-    // Ã°Å¸Å’Â Nominatim Reverse Geocoding Ã¢â‚¬â€ Covers ALL Indonesia (Desa, Kecamatan, Kab/Kota, Provinsi)
+    // 🌐 Nominatim Reverse Geocoding - Covers ALL Indonesia (Desa, Kecamatan, Kab/Kota, Provinsi)
     // Map click handler to place a pin & auto-resolve accurate address
     leafletMap.on('click', async function (e) {
       const lat = parseFloat(e.latlng.lat.toFixed(6));
@@ -25108,7 +25410,7 @@ function renderMapMarkers() {
     const popupContent = `
       <div style="min-width: 220px; font-family: 'Plus Jakarta Sans', sans-serif;">
         <div style="font-weight: 800; font-size: 14px; color: #0f172a; margin-bottom: 4px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
-          <span>Ã°Å¸â€œÂ ${kw}</span>
+          <span>📋 ${kw}</span>
           <span style="font-size: 10px; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 10px; font-weight: 700;">${kec}</span>
         </div>
         <div style="font-size: 12px; color: #475569; margin-bottom: 8px;">
@@ -25229,15 +25531,15 @@ async function resetAllAddressPinsWithAi() {
   })();
 
   const result = await Swal.fire({
-    title: 'Ã¢Å¡Â Ã¯Â¸Â Reset & Hapus Seluruh Titik Alamat?',
+    title: '⚠️ Reset & Hapus Seluruh Titik Alamat?',
     html: `
       <div style="text-align: left; font-size: 13px; color: #334155;">
         <p style="color: #e11d48; font-weight: 700; margin-bottom: 8px;">
           PERHATIAN: Tindakan ini akan menghapus SELURUH titik kamus alamat tersimpan di:
         </p>
         <ul style="line-height: 1.6; padding-left: 20px; color: #64748b; margin-bottom: 10px; font-weight: 600;">
-          <li>Ã°Å¸â€™Â¾ Storage Lokal Browser Ã¢â‚¬â€ <strong style="color: #e11d48;">${currentLocal.length} Titik</strong></li>
-          <li>Ã¢ËœÂÃ¯Â¸Â Cloud D1 Database Server Ã¢â‚¬â€ <strong style="color: #e11d48;">Tabel kamus_alamat</strong></li>
+          <li>💾 Storage Lokal Browser - <strong style="color: #e11d48;">${currentLocal.length} Titik</strong></li>
+          <li>☁️ Cloud D1 Database Server - <strong style="color: #e11d48;">Tabel kamus_alamat</strong></li>
         </ul>
         <p style="font-size: 12px; color: #475569;">
           Setelah di-reset, status penjelajahan AI Autonomous Explorer akan dikembalikan ke awal (0 Titik) sehingga pemindaian dapat dimulai dari nol.
@@ -25246,7 +25548,7 @@ async function resetAllAddressPinsWithAi() {
     `,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'Ã°Å¸â€”â€˜Ã¯Â¸Â Ya, Reset Semua Titik',
+    confirmButtonText: '🗑️ Ya, Reset Semua Titik',
     cancelButtonText: 'Batal',
     confirmButtonColor: '#e11d48',
     cancelButtonColor: '#64748b'
@@ -25256,17 +25558,17 @@ async function resetAllAddressPinsWithAi() {
 
   // ====== SHOW REAL-TIME PROGRESS POPUP ======
   const progressSteps = [
-    { label: 'Ã°Å¸â€Â Menghitung data Cloud D1...', pct: 5 },
-    { label: 'Ã¢ËœÂÃ¯Â¸Â Menghapus data Cloud D1 Database...', pct: 25 },
-    { label: 'Ã¢Å“â€¦ Memverifikasi penghapusan Cloud D1...', pct: 50 },
-    { label: 'Ã°Å¸â€™Â¾ Membersihkan Storage Lokal Browser...', pct: 65 },
-    { label: 'Ã°Å¸Â¤â€“ Mereset AI Autonomous Explorer...', pct: 80 },
-    { label: 'Ã°Å¸â€”ÂºÃ¯Â¸Â Memperbarui Peta & UI...', pct: 92 },
-    { label: 'Ã¢Å“Â¨ Reset Selesai!', pct: 100 }
+    { label: '🔍 Menghitung data Cloud D1...', pct: 5 },
+    { label: '☁️ Menghapus data Cloud D1 Database...', pct: 25 },
+    { label: '✅ Memverifikasi penghapusan Cloud D1...', pct: 50 },
+    { label: '💾 Membersihkan Storage Lokal Browser...', pct: 65 },
+    { label: '🤖 Mereset AI Autonomous Explorer...', pct: 80 },
+    { label: '🗺️ Memperbarui Peta & UI...', pct: 92 },
+    { label: '✨ Reset Selesai!', pct: 100 }
   ];
 
   Swal.fire({
-    title: 'Ã°Å¸â€â€ž Reset Titik Alamat Sedang Berlangsung...',
+    title: '🔄 Reset Titik Alamat Sedang Berlangsung...',
     html: `
       <div id="resetProgressContainer" style="text-align: left; font-size: 13px; padding-top: 6px;">
         <div id="resetProgressStep" style="font-weight: 700; color: #0284c7; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
@@ -25277,7 +25579,7 @@ async function resetAllAddressPinsWithAi() {
           <div id="resetProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #0284c7); border-radius: 6px; transition: width 0.4s ease;"></div>
         </div>
         <div id="resetProgressLog" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 11.5px; color: #475569; max-height: 160px; overflow-y: auto; line-height: 1.7;">
-          <div>Ã¢ÂÂ³ Menginisialisasi proses reset...</div>
+          <div>⏳ Menginisialisasi proses reset...</div>
         </div>
         <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; font-weight: 600;">
           <span>Lokal: <strong id="resetLocalCount" style="color: #e11d48;">${currentLocal.length} Titik</strong></span>
@@ -25307,7 +25609,7 @@ async function resetAllAddressPinsWithAi() {
 
   try {
     // --- STEP 1: Count Cloud D1 Records ---
-    updateProgress(progressSteps[0], 'Ã°Å¸â€Â Mengecek jumlah record di Cloud D1 Database...');
+    updateProgress(progressSteps[0], '🔍 Mengecek jumlah record di Cloud D1 Database...');
     await delay(500);
 
     let cloudCount = '?';
@@ -25322,11 +25624,11 @@ async function resetAllAddressPinsWithAi() {
     const cloudCountEl = document.getElementById('resetCloudCount');
     if (cloudCountEl) cloudCountEl.textContent = cloudCount + ' Titik';
 
-    updateProgress(progressSteps[0], `Ã¢Å“â€¦ Cloud D1: Ditemukan <strong style="color: #e11d48;">${cloudCount} record</strong> yang akan dihapus.`);
+    updateProgress(progressSteps[0], `✅ Cloud D1: Ditemukan <strong style="color: #e11d48;">${cloudCount} record</strong> yang akan dihapus.`);
     await delay(400);
 
     // --- STEP 2: Delete all from Cloud D1 ---
-    updateProgress(progressSteps[1], 'Ã¢ËœÂÃ¯Â¸Â Mengirim perintah DELETE ke Cloud D1 Server...');
+    updateProgress(progressSteps[1], '☁️ Mengirim perintah DELETE ke Cloud D1 Server...');
     await delay(300);
 
     let deleteSuccess = false;
@@ -25335,17 +25637,17 @@ async function resetAllAddressPinsWithAi() {
       if (delRes.ok) {
         const delData = await delRes.json();
         deleteSuccess = delData.success === true;
-        updateProgress(progressSteps[1], `Ã¢ËœÂÃ¯Â¸Â Server merespon: ${delData.message || 'OK'} (success: ${deleteSuccess})`);
+        updateProgress(progressSteps[1], `☁️ Server merespon: ${delData.message || 'OK'} (success: ${deleteSuccess})`);
       } else {
-        updateProgress(progressSteps[1], `Ã¢Å¡Â Ã¯Â¸Â Server merespon HTTP ${delRes.status}. Mencoba lanjut...`);
+        updateProgress(progressSteps[1], `⚠️ Server merespon HTTP ${delRes.status}. Mencoba lanjut...`);
       }
     } catch (err) {
-      updateProgress(progressSteps[1], `Ã¢ÂÅ’ Gagal koneksi ke Cloud D1: ${err.message}`);
+      updateProgress(progressSteps[1], `❌ Gagal koneksi ke Cloud D1: ${err.message}`);
     }
     await delay(500);
 
     // --- STEP 3: Verify cloud deletion ---
-    updateProgress(progressSteps[2], 'Ã°Å¸â€Â Memverifikasi penghapusan di Cloud D1...');
+    updateProgress(progressSteps[2], '🔍 Memverifikasi penghapusan di Cloud D1...');
     await delay(400);
 
     let verifiedCount = '?';
@@ -25360,14 +25662,14 @@ async function resetAllAddressPinsWithAi() {
     if (cloudCountEl) cloudCountEl.textContent = verifiedCount + ' Titik';
 
     if (verifiedCount === 0) {
-      updateProgress(progressSteps[2], `Ã¢Å“â€¦ Verifikasi berhasil: Cloud D1 sekarang kosong (0 record).`);
+      updateProgress(progressSteps[2], `✅ Verifikasi berhasil: Cloud D1 sekarang kosong (0 record).`);
     } else {
-      updateProgress(progressSteps[2], `Ã¢Å¡Â Ã¯Â¸Â Verifikasi: Cloud D1 masih memiliki ${verifiedCount} record. Mungkin membutuhkan waktu propagasi.`);
+      updateProgress(progressSteps[2], `⚠️ Verifikasi: Cloud D1 masih memiliki ${verifiedCount} record. Mungkin membutuhkan waktu propagasi.`);
     }
     await delay(400);
 
     // --- STEP 4: Clear LocalStorage ---
-    updateProgress(progressSteps[3], 'Ã°Å¸â€™Â¾ Menghapus data lokal browser...');
+    updateProgress(progressSteps[3], '💾 Menghapus data lokal browser...');
     await delay(300);
 
     localStorage.removeItem('ckg_learned_kampung_map');
@@ -25377,11 +25679,11 @@ async function resetAllAddressPinsWithAi() {
     const localCountEl = document.getElementById('resetLocalCount');
     if (localCountEl) localCountEl.textContent = '0 Titik';
 
-    updateProgress(progressSteps[3], `Ã¢Å“â€¦ LocalStorage dibersihkan: ckg_learned_kampung_map, blacklist, dan flag reset ditetapkan.`);
+    updateProgress(progressSteps[3], `✅ LocalStorage dibersihkan: ckg_learned_kampung_map, blacklist, dan flag reset ditetapkan.`);
     await delay(400);
 
     // --- STEP 5: Reset AI Autonomous Explorer State ---
-    updateProgress(progressSteps[4], 'Ã°Å¸Â¤â€“ Mereset state AI Autonomous Explorer...');
+    updateProgress(progressSteps[4], '🤖 Mereset state AI Autonomous Explorer...');
     await delay(300);
 
     isAiExplorerActive = false;
@@ -25400,11 +25702,11 @@ async function resetAllAddressPinsWithAi() {
       aiRadarMarker = null;
     }
 
-    updateProgress(progressSteps[4], `Ã¢Å“â€¦ AI Explorer: Region/Kec/Point index di-reset ke 0, trajectory & radar dihapus.`);
+    updateProgress(progressSteps[4], `✅ AI Explorer: Region/Kec/Point index di-reset ke 0, trajectory & radar dihapus.`);
     await delay(400);
 
     // --- STEP 6: Refresh UI ---
-    updateProgress(progressSteps[5], 'Ã°Å¸â€”ÂºÃ¯Â¸Â Memperbarui tampilan peta dan badge...');
+    updateProgress(progressSteps[5], '🗺️ Memperbarui tampilan peta dan badge...');
     await delay(300);
 
     if (typeof updateAiDbSavedCounterUI === 'function') updateAiDbSavedCounterUI();
@@ -25422,27 +25724,27 @@ async function resetAllAddressPinsWithAi() {
     }
 
     if (typeof updateAiLiveLog === 'function') {
-      updateAiLiveLog(`Ã°Å¸â€â€ž Seluruh titik kamus alamat berhasil di-reset ke 0. Siap untuk scan dari nol.`);
+      updateAiLiveLog(`🔄 Seluruh titik kamus alamat berhasil di-reset ke 0. Siap untuk scan dari nol.`);
     }
 
-    updateProgress(progressSteps[5], `Ã¢Å“â€¦ Peta, sidebar, dan badge UI berhasil diperbarui.`);
+    updateProgress(progressSteps[5], `✅ Peta, sidebar, dan badge UI berhasil diperbarui.`);
     await delay(500);
 
     // --- STEP 7: Done! ---
-    updateProgress(progressSteps[6], `Ã°Å¸Å½â€° Proses reset selesai! Lokal: 0 titik | Cloud D1: ${verifiedCount} record.`);
+    updateProgress(progressSteps[6], `🎉 Proses reset selesai! Lokal: 0 titik | Cloud D1: ${verifiedCount} record.`);
     await delay(600);
 
     // Close progress and show success
     Swal.fire({
-      title: 'Ã¢Å“Â¨ Reset Berhasil!',
+      title: '✨ Reset Berhasil!',
       html: `
         <div style="text-align: left; font-size: 13px; color: #334155;">
           <div style="background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px;">
-            <div style="font-weight: 800; color: #059669; margin-bottom: 6px;">Ã°Å¸â€œÅ  Laporan Reset:</div>
+            <div style="font-weight: 800; color: #059669; margin-bottom: 6px;">📊 Laporan Reset:</div>
             <div style="font-size: 12px; line-height: 1.8; color: #047857;">
-              Ã°Å¸â€™Â¾ Lokal: <strong>${currentLocal.length} Ã¢â€ â€™ 0 titik</strong> (dihapus)<br>
-              Ã¢ËœÂÃ¯Â¸Â Cloud D1: <strong>${cloudCount} Ã¢â€ â€™ ${verifiedCount} record</strong> (${verifiedCount === 0 ? 'berhasil dikosongkan' : 'dalam proses propagasi'})<br>
-              Ã°Å¸Â¤â€“ AI Explorer: <strong>Status di-reset ke awal</strong>
+              💾 Lokal: <strong>${currentLocal.length} ➔ 0 titik</strong> (dihapus)<br>
+              ☁️ Cloud D1: <strong>${cloudCount} ➔ ${verifiedCount} record</strong> (${verifiedCount === 0 ? 'berhasil dikosongkan' : 'dalam proses propagasi'})<br>
+              🤖 AI Explorer: <strong>Status di-reset ke awal</strong>
             </div>
           </div>
           <p style="font-size: 12px; color: #64748b;">
@@ -25458,7 +25760,7 @@ async function resetAllAddressPinsWithAi() {
   } catch (e) {
     console.error('Error reset all pins:', e);
     Swal.fire({
-      title: 'Ã¢ÂÅ’ Reset Gagal',
+      title: '❌ Reset Gagal',
       text: `Terjadi kesalahan: ${e.message}`,
       icon: 'error',
       confirmButtonText: 'OK',
@@ -25645,7 +25947,7 @@ function deleteAddressPin(kw) {
 }
 
 // ==========================================================================
-// Ã°Å¸â€œÂ GOOGLE MAPS STYLE ADDRESS AUTOCOMPLETE SUGGESTIONS
+// 📋 GOOGLE MAPS STYLE ADDRESS AUTOCOMPLETE SUGGESTIONS
 // ==========================================================================
 
 let autocompleteDebounceTimer = null;
@@ -25870,7 +26172,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ==========================================================================
-   Ã°Å¸Å’â„¢ DARK MODE THEME CONTROLLER & NOTIFICATION SYNC
+   🌙 DARK MODE THEME CONTROLLER & NOTIFICATION SYNC
    ========================================================================== */
 
 function initDarkMode() {
@@ -25901,7 +26203,7 @@ function toggleDarkMode() {
     }
   }
 
-  showToast(isDark ? 'Ã°Å¸Å’â„¢ Mode Gelap Diaktifkan' : 'Ã¢Ëœâ‚¬Ã¯Â¸Â Mode Terang Diaktifkan', 'info');
+  showToast(isDark ? '🌙 Mode Gelap Diaktifkan' : '☀️ Mode Terang Diaktifkan', 'info');
 }
 
 function updateThemeToggleUI(isDark) {
@@ -25935,7 +26237,7 @@ function updateThemeToggleUI(isDark) {
 }
 
 /* ==========================================================================
-   Ã°Å¸Â¤â€“ CLOUDFLARE WORKERS AI INTEGRATION (ADDRESS AUTO-LEARNING & HEALTH AI)
+   🤖 CLOUDFLARE WORKERS AI INTEGRATION (ADDRESS AUTO-LEARNING & HEALTH AI)
    ========================================================================== */
 
 async function parseAddressWithAI(rawText) {
@@ -25944,7 +26246,7 @@ async function parseAddressWithAI(rawText) {
     return null;
   }
 
-  showToast('Ã°Å¸Â¤â€“ AI sedang menganalisis & mempelajari alamat...', 'info');
+  showToast('🤖 AI sedang menganalisis & mempelajari alamat...', 'info');
 
   try {
     const res = await fetch('/api/ai/parse-address', {
@@ -25957,7 +26259,7 @@ async function parseAddressWithAI(rawText) {
 
     if (result.success && result.data) {
       const data = result.data;
-      showToast(`Ã¢Å“Â¨ AI Berhasil (${data.source || 'Cloudflare AI'}): Kel. ${data.kelurahan}, Kec. ${data.kecamatan}`, 'success');
+      showToast(`✨ AI Berhasil (${data.source || 'Cloudflare AI'}): Kel. ${data.kelurahan}, Kec. ${data.kecamatan}`, 'success');
       return data;
     } else {
       throw new Error(result.error || 'Gagal memproses alamat');
@@ -25986,7 +26288,7 @@ async function analyzePatientHealthWithAI(patientData) {
 }
 
 /* ==========================================================================
-   Ã°Å¸Â¤â€“ MENU ENCO (ASIK Kemkes Integration & Automation Records)
+   🤖 MENU ENCO (ASIK Kemkes Integration & Automation Records)
    ========================================================================== */
 
 let encoState = {
@@ -26485,7 +26787,7 @@ async function viewEncoSessionDetail(sessionId, petugas, fileName) {
         <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <div>
             <div style="font-weight: 800; font-size: 15px; color: #1e293b;">${escapeHtml(sess.fileName || fileName || 'Sesi Otomasi')}</div>
-            <div style="font-size: 12px; color: #64748b;">Petugas: <strong>${escapeHtml(petugas || '-')}</strong> Ã¢â‚¬Â¢ ${escapeHtml(sess.dateStr || '-')}</div>
+            <div style="font-size: 12px; color: #64748b;">Petugas: <strong>${escapeHtml(petugas || '-')}</strong> • ${escapeHtml(sess.dateStr || '-')}</div>
           </div>
           <span class="badge" style="background: rgba(37,99,235,0.1); color: #2563eb; font-weight: 700; border: 1px solid rgba(37,99,235,0.25);">Cloud R2 Storage</span>
         </div>
@@ -26532,9 +26834,9 @@ async function viewEncoSessionDetail(sessionId, petugas, fileName) {
         const isAlready = p._status === 'already-screened' || (p.status || '').includes('ALREADY');
 
         let badge = '<span style="color:#64748b;">Menunggu</span>';
-        if (isDone) badge = '<span style="color:#16a34a; font-weight:700;">Ã¢Å“â€¦ Berhasil</span>';
-        else if (isError) badge = `<span style="color:#dc2626; font-weight:700;" title="${escapeHtml(p._errorMsg || 'Error')}">Ã¢ÂÅ’ Error</span>`;
-        else if (isAlready) badge = '<span style="color:#d97706; font-weight:700;">Ã¢Å¡Â Ã¯Â¸Â Pernah Input</span>';
+        if (isDone) badge = '<span style="color:#16a34a; font-weight:700;">✅ Berhasil</span>';
+        else if (isError) badge = `<span style="color:#dc2626; font-weight:700;" title="${escapeHtml(p._errorMsg || 'Error')}">❌ Error</span>`;
+        else if (isAlready) badge = '<span style="color:#d97706; font-weight:700;">⚠️ Pernah Input</span>';
 
         modalHtml += `
           <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -26786,7 +27088,7 @@ async function loadEncoReportsWeb() {
         const timeLabel = s.dateStr || new Date(s.timestamp || Date.now()).toLocaleString('id-ID');
         const fileLabel = s.fileName || 'Sesi Otomasi';
         const totalInfo = s.total ? `(${s.total} Pasien)` : '';
-        return `<option value="${escapeHtml(s.id)}" data-key="${escapeHtml(s.r2_key || '')}">${idx === 0 ? 'Ã°Å¸â€Â´ LIVE: ' : ''}${escapeHtml(fileLabel)} - ${escapeHtml(timeLabel)} ${totalInfo}</option>`;
+        return `<option value="${escapeHtml(s.id)}" data-key="${escapeHtml(s.r2_key || '')}">${idx === 0 ? '🔴 LIVE: ' : ''}${escapeHtml(fileLabel)} - ${escapeHtml(timeLabel)} ${totalInfo}</option>`;
       }).join('');
 
       await loadEncoReportSessionDetail();
@@ -26835,13 +27137,13 @@ async function loadEncoReportSessionDetail() {
         let statusBadge = '<span class="badge" style="background:#e2e8f0; color:#475569;">Menunggu</span>';
         if (isDone) {
           statusKey = 'success';
-          statusBadge = '<span class="badge" style="background:#dcfce7; color:#15803d; font-weight:700;">Ã¢Å“â€¦ Selesai</span>';
+          statusBadge = '<span class="badge" style="background:#dcfce7; color:#15803d; font-weight:700;">✅ Selesai</span>';
         } else if (isError) {
           statusKey = 'error';
-          statusBadge = '<span class="badge" style="background:#fee2e2; color:#b91c1c; font-weight:700;">Ã¢ÂÅ’ Error</span>';
+          statusBadge = '<span class="badge" style="background:#fee2e2; color:#b91c1c; font-weight:700;">❌ Error</span>';
         } else if (isAlready) {
           statusKey = 'already';
-          statusBadge = '<span class="badge" style="background:#fef3c7; color:#b45309; font-weight:700;">Ã¢Å¡Â Ã¯Â¸Â Pernah Input</span>';
+          statusBadge = '<span class="badge" style="background:#fef3c7; color:#b45309; font-weight:700;">⚠️ Pernah Input</span>';
         }
 
         // Tanggal pemeriksaan / input, Faskes pemeriksa, dan Layanan (khususnya untuk yang pernah input)
@@ -26880,8 +27182,8 @@ async function loadEncoReportSessionDetail() {
 
         return {
           index: idx + 1,
-          nama: p.nama || p.name || p.nama_pasien || p.fullname || 'Ã¢â‚¬â€',
-          nik: String(p.nik || p.NIK || 'Ã¢â‚¬â€').trim(),
+          nama: p.nama || p.name || p.nama_pasien || p.fullname || '-',
+          nik: String(p.nik || p.NIK || '-').trim(),
           kategori: p.kategori || p.category || 'UMUM',
           statusKey,
           statusBadge,
@@ -27055,21 +27357,21 @@ async function copyEncoReportWebSummary() {
   const g = items.filter(i => i.statusKey === 'error').length;
   const w = items.filter(i => i.statusKey === 'already').length;
 
-  let txt = `Ã°Å¸â€œÅ  *LAPORAN STATUS OTOMASI ENCO - ${menu.toUpperCase()}*\n`;
-  txt += `Ã°Å¸â€˜Â¤ Petugas: ${pet}\n`;
-  txt += `Ã°Å¸â€œâ€¦ Waktu: ${sess?.dateStr || new Date().toLocaleString('id-ID')}\n`;
-  txt += `Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬\n`;
-  txt += `Ã¢â‚¬Â¢ Total Data   : ${items.length}\n`;
-  txt += `Ã¢â‚¬Â¢ Ã¢Å“â€¦ Berhasil  : ${b}\n`;
-  txt += `Ã¢â‚¬Â¢ Ã¢ÂÅ’ Error     : ${g}\n`;
-  txt += `Ã¢â‚¬Â¢ Ã¢Å¡Â Ã¯Â¸Â Pernah Input: ${w}\n`;
-  txt += `Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬\n`;
+  let txt = `📊 *LAPORAN STATUS OTOMASI ENCO - ${menu.toUpperCase()}*\n`;
+  txt += `👤 Petugas: ${pet}\n`;
+  txt += `📅 Waktu: ${sess?.dateStr || new Date().toLocaleString('id-ID')}\n`;
+  txt += `-------------------------\n`;
+  txt += `• Total Data   : ${items.length}\n`;
+  txt += `• ✅ Berhasil  : ${b}\n`;
+  txt += `• ❌ Error     : ${g}\n`;
+  txt += `• ⚠️ Pernah Input: ${w}\n`;
+  txt += `-------------------------\n`;
 
   const warnings = items.filter(i => i.statusKey === 'already');
   if (warnings.length > 0) {
-    txt += `\nÃ¢Å¡Â Ã¯Â¸Â *DATA PERNAH INPUT (${warnings.length}):*\n`;
+    txt += `\n⚠️ *DATA PERNAH INPUT (${warnings.length}):*\n`;
     warnings.slice(0, 10).forEach((item, idx) => {
-      txt += `${idx + 1}. *${item.nama}* (${item.nik})\n   Ã¢â€ Â³ Tgl: ${item.tanggalInput} | Faskes: ${item.faskesPemeriksa}\n`;
+      txt += `${idx + 1}. *${item.nama}* (${item.nik})\n   ➔ Tgl: ${item.tanggalInput} | Faskes: ${item.faskesPemeriksa}\n`;
     });
     if (warnings.length > 10) txt += `... dan ${warnings.length - 10} pasien lainnya.\n`;
   }
@@ -27258,12 +27560,12 @@ function renderTtdLogsInModal(siswa) {
           </span>
           <div style="font-size: 12px; color: #831843; line-height: 1.4;">
             <div>
-              <strong style="color: #9d174d;">ðŸ“… ${dateFormatted}</strong>
-              <span style="margin: 0 4px; color: #f472b6;">â€¢</span>
+              <strong style="color: #9d174d;">📅 ${dateFormatted}</strong>
+              <span style="margin: 0 4px; color: #f472b6;">•</span>
               <span style="font-weight: 700; color: #db2777;"><i class="bi bi-clock-fill"></i> ${safeWaktu} WIB</span>
             </div>
             <div style="font-size: 11px; color: #64748b; margin-top: 1px;">
-              Petugas: <strong>${safePetugas}</strong> ${safeKet ? `â€¢ <span style="font-style: italic;">${safeKet}</span>` : ''}
+              Petugas: <strong>${safePetugas}</strong> ${safeKet ? `• <span style="font-style: italic;">${safeKet}</span>` : ''}
             </div>
           </div>
         </div>
@@ -27307,12 +27609,12 @@ async function catatAbsenMinumTtd(targetId) {
   const defaultPetugas = sessionStorage.getItem('ckg_user_name') || 'Petugas UKS / Puskesmas';
 
   const result = await Swal.fire({
-    title: `<div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:18px;color:#9d174d;"><span style="font-size:22px;">ðŸŒ¸</span> Catat Absen Minum TTD</div>`,
+    title: `<div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:18px;color:#9d174d;"><span style="font-size:22px;">🌸</span> Catat Absen Minum TTD</div>`,
     html: `
       <div style="text-align: left; font-size: 13px; line-height: 1.6;">
         <div style="background: #fdf2f8; border: 1px solid #fbcfe8; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; color: #831843;">
           <div style="font-weight: 800; font-size: 14px; color: #9d174d;">${escapeHtml(siswa.nama)}</div>
-          <div style="font-size: 12px; color: #be185d;">${escapeHtml(siswa.sekolah || '-')} â€¢ Kelas ${escapeHtml(siswa.kelas || '-')}</div>
+          <div style="font-size: 12px; color: #be185d;">${escapeHtml(siswa.sekolah || '-')} • Kelas ${escapeHtml(siswa.kelas || '-')}</div>
         </div>
 
         <div style="margin-bottom: 12px;">
@@ -27637,7 +27939,7 @@ function renderAnomaliNikTable() {
           </div>
           <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
             <span style="color: ${jkColor}; font-weight: 600;">${jkLabel}</span>
-            ${r.tanggal_lahir ? ` â€¢ Lahir: ${r.tanggal_lahir}` : ''}
+            ${r.tanggal_lahir ? ` • Lahir: ${r.tanggal_lahir}` : ''}
           </div>
         </td>
         <td style="padding: 10px 12px; text-align: center;">
@@ -27685,7 +27987,7 @@ async function editNikSiswaModal(siswaId) {
       <div style="text-align: left; font-size: 13px; line-height: 1.6;">
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;">
           <div style="font-weight: 800; font-size: 14px; color: #1e293b;">${escapeHtml(siswa.nama)}</div>
-          <div style="font-size: 12px; color: #64748b;">${escapeHtml(siswa.sekolah || '-')} â€¢ Kelas ${escapeHtml(siswa.kelas || '-')}</div>
+          <div style="font-size: 12px; color: #64748b;">${escapeHtml(siswa.sekolah || '-')} • Kelas ${escapeHtml(siswa.kelas || '-')}</div>
         </div>
 
         <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 4px; font-size: 12px;">
@@ -27967,7 +28269,7 @@ function renderAbsensiTtdTable() {
       <tr>
         <td colspan="7" style="text-align: center; padding: 45px 20px; color: #64748b;">
           <div style="width: 50px; height: 50px; margin: 0 auto 10px auto; background: #fdf2f8; color: #db2777; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">
-            ðŸŒ¸
+            🌸
           </div>
           <div style="font-size: 14px; font-weight: 800; color: #9d174d;">Tidak Ada Data Siswi</div>
           <p style="font-size: 12px; color: #64748b; margin: 4px 0 0 0;">Tidak ada siswi perempuan yang sesuai dengan kriteria filter saat ini.</p>
@@ -27990,8 +28292,8 @@ function renderAbsensiTtdTable() {
       const dFormatted = formatTtdIndoDate(lastLog.tanggal);
       lastLogHtml = `
         <div style="font-size: 12px; color: #831843;">
-          <strong>ðŸ“… ${dFormatted}</strong>
-          <span style="margin: 0 4px; color: #f472b6;">â€¢</span>
+          <strong>📅 ${dFormatted}</strong>
+          <span style="margin: 0 4px; color: #f472b6;">•</span>
           <span style="font-weight: 700; color: #db2777;"><i class="bi bi-clock-fill"></i> ${escapeHtml(lastLog.waktu || '-')} WIB</span>
         </div>
         <div style="font-size: 11px; color: #64748b; margin-top: 1px;">
@@ -28015,7 +28317,7 @@ function renderAbsensiTtdTable() {
             <span>NIK: ${safeNik}</span>
             ${(() => {
         const a = calculateRealtimeAge(r.tanggal_lahir);
-        return a ? ` â€¢ <span style="font-weight: 600; color: #047857;">${a.years} Th</span>` : '';
+        return a ? ` • <span style="font-weight: 600; color: #047857;">${a.years} Th</span>` : '';
       })()}
           </div>
         </td>
@@ -28024,7 +28326,7 @@ function renderAbsensiTtdTable() {
         </td>
         <td style="padding: 10px 12px; text-align: center;">
           <span class="badge" style="background: ${count > 0 ? '#fdf2f8' : '#f8fafc'}; color: ${count > 0 ? '#be185d' : '#64748b'}; border: 1.5px solid ${count > 0 ? '#f472b6' : '#cbd5e1'}; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 20px;">
-            ${count > 0 ? `ðŸŒ¸ ${count} Kali` : '0 Kali'}
+            ${count > 0 ? `🌸 ${count} Kali` : '0 Kali'}
           </span>
         </td>
         <td style="padding: 10px 12px;">
@@ -28071,7 +28373,7 @@ async function bulkAbsenMinumTtd() {
   const defaultPetugas = sessionStorage.getItem('ckg_user_name') || 'Petugas UKS / Puskesmas';
 
   const result = await Swal.fire({
-    title: `<div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;color:#9d174d;"><span style="font-size:22px;">ðŸŒ¸</span> Absen Masal Minum TTD (${selectedStudents.length} Siswi)</div>`,
+    title: `<div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;color:#9d174d;"><span style="font-size:22px;">🌸</span> Absen Masal Minum TTD (${selectedStudents.length} Siswi)</div>`,
     html: `
       <div style="text-align: left; font-size: 13px; line-height: 1.6;">
         <div style="background: #fdf2f8; border: 1.5px solid #fbcfe8; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; color: #831843;">
